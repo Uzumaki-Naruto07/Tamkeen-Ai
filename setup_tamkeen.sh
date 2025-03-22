@@ -1,22 +1,3 @@
-# 💼 Tamkeen AI: Career Intelligence System
-*Empowering Emirati Talent through Intelligent Career Matching & Interview Simulation*
-TamkeenAI Career System is a full-stack modular application designed to help users optimize their career journey through AI-powered tools for resume analysis, job matching, interview preparation, and career path visualization.
-Prerequisites
-Bash shell environment (Linux, macOS, or Windows with WSL/Git Bash)
-Python 3.8+ (for backend)
-Node.js 14+ (for frontend)
-pip and npm package managers
-Installation Instructions
-Step 1: Clone or create the project structure
-
-# Option 1: Clone the repository if available
-# git clone https://github.com/yourusername/TamkeenAI_CareerSystem.git
-
-# Option 2: Create the structure using our setup script
-# Save the script below as setup_tamkeen.sh
-Step 2: Create setup script
-Create a file named setup_tamkeen.sh with the following content:
-```
 #!/bin/bash
 
 # Create the root directory
@@ -93,36 +74,3 @@ touch TamkeenAI_CareerSystem/frontend/src/index.js
 touch TamkeenAI_CareerSystem/frontend/package.json
 
 echo "TamkeenAI_CareerSystem directory structure has been created successfully!"
-
-# Make the script executable
-chmod +x setup_tamkeen.sh
-
-# Run the script
-./setup_tamkeen.sh
-Project Structure
-The TamkeenAI Career System follows a modular architecture:
-
-TamkeenAI_CareerSystem/
-├── backend/                           # Flask API backend
-│   ├── core/                          # Functional logic modules
-│   ├── utils/                         # Helper utilities
-│   ├── config/                        # Configuration settings
-│   ├── app.py                         # Main Flask application
-│   └── requirements.txt               # Python dependencies
-└── frontend/                          # React frontend
-    ├── public/                        # Static assets
-    ├── src/                           # Source code
-    │   ├── assets/                    # Images and media
-    │   ├── components/                # Reusable UI components
-    │   ├── pages/                     # Page components
-    │   ├── utils/                     # Frontend utilities
-    │   ├── App.jsx                    # Main app component
-    │   └── index.js                   # Entry point
-    └── package.json                   # Node.js dependencies
-
-Running the Application
-Start the Backend
-
-cd TamkeenAI_CareerSystem/backend
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-python app.py
