@@ -2,26 +2,18 @@ import os
 import re
 import tempfile
 from typing import Dict, List, Optional, Tuple, Any
-import logging
-
-# Initialize logging
-logger = logging.getLogger(__name__)
 
 # For PDF parsing
 try:
     import pdfplumber
-    PDFPLUMBER_AVAILABLE = True
 except ImportError:
-    PDFPLUMBER_AVAILABLE = False
-    logger.warning("pdfplumber not available. PDF extraction will be limited.")
+    pdfplumber = None
 
 # For DOCX parsing
 try:
     import docx
-    DOCX_AVAILABLE = True
 except ImportError:
-    DOCX_AVAILABLE = False
-    logger.warning("python-docx not available. DOCX parsing will be limited.")
+    docx = None
 
 # For OCR fallback
 try:
@@ -31,17 +23,6 @@ except ImportError:
     pytesseract = None
     Image = None
 
-# Try to import PyPDF2
-try:
-    from PyPDF2 import PdfReader
-    PYPDF2_AVAILABLE = True
-except ImportError:
-    try:
-        from PyPDF2 import PdfFileReader as PdfReader
-        PYPDF2_AVAILABLE = True
-    except ImportError:
-        PYPDF2_AVAILABLE = False
-        logger.warning("PyPDF2 not available. Using fallback methods for PDF extraction.")
 
 class ResumeParser:
     """Extract and structure content from resume files (PDF, DOCX)"""
@@ -84,11 +65,11 @@ class ResumeParser:
         
         try:
             if file_ext == '.pdf':
-                if not PDFPLUMBER_AVAILABLE and not PYPDF2_AVAILABLE:
-                    return {"error": "Both pdfplumber and PyPDF2 are not available. Install one of them to use PDF extraction."}
+                if pdfplumber is None:
+                    return {"error": "PDF parsing library not available. Install with: pip install pdfplumber"}
                 text = self._extract_text_from_pdf(file_path)
             elif file_ext in ['.docx', '.doc']:
-                if not DOCX_AVAILABLE:
+                if docx is None:
                     return {"error": "DOCX parsing library not available. Install with: pip install python-docx"}
                 text = self._extract_text_from_docx(file_path)
             else:
@@ -109,30 +90,11 @@ class ResumeParser:
         full_text = ""
         
         try:
-            # Try with pdfplumber first (better text extraction with layout preservation)
-            if PDFPLUMBER_AVAILABLE:
-                try:
-                    with pdfplumber.open(file_path) as pdf:
-                        for page in pdf.pages:
-                            page_text = page.extract_text(x_tolerance=3) or ""
-                            full_text += page_text + "\n\n"
+            with pdfplumber.open(file_path) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text() or ""
+                    full_text += page_text + "\n"
                     
-                    if full_text.strip():
-                        return full_text
-                except Exception as e:
-                    logger.warning(f"pdfplumber extraction failed: {str(e)}")
-            
-            # Fall back to PyPDF2
-            if PYPDF2_AVAILABLE:
-                try:
-                    with open(file_path, 'rb') as file:
-                        pdf_reader = PdfReader(file)
-                        for page_num in range(len(pdf_reader.pages)):
-                            page = pdf_reader.pages[page_num]
-                            full_text += page.extract_text() + "\n\n"
-                except Exception as e:
-                    logger.warning(f"PyPDF2 extraction failed: {str(e)}")
-            
             # If text extraction failed or returned minimal content, try OCR
             if len(full_text.strip()) < 100 and self.ocr_enabled:
                 full_text = self._ocr_fallback(file_path)
@@ -147,10 +109,6 @@ class ResumeParser:
     def _extract_text_from_docx(self, file_path: str) -> str:
         """Extract text content from DOCX files"""
         full_text = ""
-        
-        if not DOCX_AVAILABLE:
-            logger.error("python-docx library not available. Cannot extract text from DOCX.")
-            return ""
         
         try:
             doc = docx.Document(file_path)
