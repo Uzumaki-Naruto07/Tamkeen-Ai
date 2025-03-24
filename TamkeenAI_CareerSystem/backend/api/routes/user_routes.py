@@ -15,6 +15,7 @@ from flask_jwt_extended import (
     create_access_token, jwt_required, get_jwt_identity,
     create_refresh_token, get_jwt
 )
+from bson.objectid import ObjectId
 
 # Import models
 from backend.database.models import User, UserActivity, JobApplication
@@ -30,6 +31,16 @@ from backend.utils.auth import (
 
 # Import settings
 from backend.config.settings import JWT_EXPIRATION
+
+# Import core functionality
+from backend.core.job_matching import JobMatcher
+from backend.core.user_profiler import UserProfiler
+
+# Import database
+from backend.database.connector import user_collection, skill_collection
+
+# Import utility functions
+from backend.utils.auth import auth_required, get_current_user
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -145,7 +156,7 @@ def login():
             return error_response("Account is not active", 403)
         
         # Check if profile exists
-        profile = User.find_by_id(user_id)
+        profile = User.find_by_id(user_bp)
         
         if not profile:
             return error_response("User not found", 404)
@@ -276,4 +287,38 @@ def get_applications():
     
     except Exception as e:
         logger.error(f"Error in get_applications: {str(e)}")
-        return error_response("Failed to get applications", 500) 
+        return error_response("Failed to get applications", 500)
+
+
+@user_bp.route('/skills/recommendations', methods=['GET'])
+@jwt_required()
+def get_skill_recommendations():
+    """
+    Get skill recommendations for the authenticated user
+    """
+    try:
+        # Get current user from auth middleware
+        current_user = get_current_user(request)
+        user_id = str(current_user["_id"])  # Convert ObjectId to string if needed
+        # Get user profile from database
+        user_profile = user_collection.find_one({"_id": ObjectId(user_id)})
+        
+        if not user_profile:
+            return error_response("User profile not found", 404)
+        # Get target role and industry from request
+        target_role = request.args.get('target_role', user_profile.get("target_role", ""))
+        industry = request.args.get('industry', user_profile.get("industry", ""))
+        
+        # Get skill recommendations
+        job_matcher = JobMatcher()
+        recommendations = job_matcher.get_skill_recommendations(
+            user_profile.get("skills", []),
+            target_role,
+            industry
+        )
+        
+        return api_response(recommendations)
+        
+    except Exception as e:
+        logger.error(f"Error getting skill recommendations: {str(e)}")
+        return error_response("Failed to get skill recommendations", 500) 

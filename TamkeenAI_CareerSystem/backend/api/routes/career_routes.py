@@ -7,6 +7,8 @@ This module provides API routes for career path planning, progression, and devel
 import logging
 from flask import Blueprint, request, jsonify, g
 from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Dict, List, Any, Optional
 
 # Import utilities
 from backend.utils.date_utils import now
@@ -21,6 +23,20 @@ from backend.core.career_planning import CareerPlanner
 # Import auth decorators
 from backend.app import require_auth, require_role
 
+# Import new modules
+from backend.models.career_models import (
+    UserProfileCreate, CareerMatchResponse, CareerTimeline, 
+    ChatbotRequest, ChatbotResponse, TimelineEntry
+)
+from backend.services.llm_service import get_chatbot_response
+from backend.utils.career_utils import (
+    perform_career_matching, generate_career_timeline, 
+    generate_resume_preview, calculate_profile_completion
+)
+from backend.services.auth_service import get_current_user
+from backend.db.database import get_db
+from sqlalchemy.orm import Session
+
 # Setup logger
 logger = logging.getLogger(__name__)
 
@@ -30,6 +46,131 @@ career_blueprint = Blueprint('career', __name__)
 # Create career planner
 career_planner = CareerPlanner()
 
+router = APIRouter(
+    prefix="/career",
+    tags=["career"]
+)
+
+@router.post("/profile", response_model=CareerMatchResponse)
+async def create_profile(
+    profile: UserProfileCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create or update user profile and return career matches"""
+    try:
+        # Convert Pydantic model to dict for processing
+        user_data = profile.dict()
+        
+        # Add user_id to the data
+        user_data["user_id"] = current_user.id
+        
+        # In a real implementation, you would save this to the database
+        # For now, we'll just perform the career matching
+        
+        # Perform career matching
+        career_matches = perform_career_matching(user_data)
+        
+        return {"matches": career_matches}
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process career profile: {str(e)}"
+        )
+
+@router.post("/chatbot", response_model=ChatbotResponse)
+async def chat_with_ai(
+    request: ChatbotRequest,
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """Get response from the career guidance AI assistant"""
+    try:
+        response = get_chatbot_response(request.query, request.language)
+        return {"response": response}
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get chatbot response: {str(e)}"
+        )
+
+@router.post("/timeline", response_model=CareerTimeline)
+async def get_career_timeline(
+    profile: UserProfileCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate a career timeline based on the user profile"""
+    try:
+        # Convert Pydantic model to dict for processing
+        user_data = profile.dict()
+        
+        # Perform career matching first
+        career_matches = perform_career_matching(user_data)
+        
+        # Get top career match
+        top_career_id = list(career_matches.keys())[0]
+        top_career = career_matches[top_career_id]
+        
+        # Generate timeline
+        timeline_data = generate_career_timeline(top_career, user_data["experience_level"])
+        
+        return {"timeline": timeline_data}
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate career timeline: {str(e)}"
+        )
+
+@router.post("/resume-preview")
+async def get_resume_preview(
+    profile: UserProfileCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate a resume preview based on the user profile"""
+    try:
+        # Convert Pydantic model to dict for processing
+        user_data = profile.dict()
+        
+        # Perform career matching first
+        career_matches = perform_career_matching(user_data)
+        
+        # Get top career match
+        top_career_id = list(career_matches.keys())[0]
+        top_career = career_matches[top_career_id]
+        
+        # Generate resume HTML
+        resume_html = generate_resume_preview(user_data, top_career)
+        
+        return {"resume_html": resume_html}
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate resume preview: {str(e)}"
+        )
+
+@router.post("/profile-completion")
+async def check_profile_completion(
+    profile: UserProfileCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Calculate the completion percentage of the user profile"""
+    try:
+        # Convert Pydantic model to dict for processing
+        user_data = profile.dict()
+        
+        # Calculate completion percentage
+        completion_percentage = calculate_profile_completion(user_data)
+        
+        return {"completion_percentage": completion_percentage}
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to calculate profile completion: {str(e)}"
+        )
 
 @career_blueprint.route('/paths', methods=['GET'])
 @require_auth

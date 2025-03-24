@@ -1,46 +1,45 @@
 """
 Job Matching Module
 
-This module provides functionality for matching resumes to jobs,
-calculating match scores, and suggesting job recommendations.
+This module provides functionality for matching users to relevant job opportunities,
+generating personalized job recommendations, and scoring job fit.
 """
 
 import logging
-import math
-from datetime import datetime
+import json
+import requests
+from backend.core.job_matching import JobMatcher
 from typing import Dict, List, Any, Optional, Tuple, Union
+from datetime import datetime
+import random
 
 # Import utilities
-from backend.utils.preprocess import (
-    preprocess_text, extract_skills, extract_keywords, 
-    calculate_similarity, normalize_job_titles
-)
+from backend.utils.preprocess import extract_skills, preprocess_text
+from backend.utils.cache_utils import cache_result
 
-# Import database models
-from backend.database.models import Job, User, Resume, JobApplication
+# Import settings
+from backend.config.settings import DEEPSEEK_API_KEY
 
 # Setup logger
 logger = logging.getLogger(__name__)
 
 
 class JobMatcher:
-    """Job matching class for matching resumes to jobs"""
+    """Class for job matching and recommendations"""
     
     def __init__(self):
         """Initialize job matcher"""
-        self.skill_importance_weight = 0.5
-        self.experience_importance_weight = 0.3
-        self.education_importance_weight = 0.2
+        self.api_key = DEEPSEEK_API_KEY
         
-        # Skills taxonomy
-        self.skills_taxonomy = self._load_skills_taxonomy()
+        # Load skill taxonomy
+        self.skill_taxonomy = self._load_skill_taxonomy()
         
-        # Job title normalization
-        self.job_title_mappings = self._load_job_title_mappings()
+        # Load industry keywords
+        self.industry_keywords = self._load_industry_keywords()
     
-    def _load_skills_taxonomy(self) -> Dict[str, List[str]]:
+    def _load_skill_taxonomy(self) -> Dict[str, List[str]]:
         """
-        Load skills taxonomy for skill normalization and grouping
+        Load skill taxonomy for skill normalization and matching
         
         Returns:
             Dict mapping skill groups to list of related skills
@@ -69,854 +68,744 @@ class JobMatcher:
                 "docker", "kubernetes", "jenkins", "ci/cd", "terraform", "ansible",
                 "aws", "azure", "gcp", "cloud", "infrastructure as code", "monitoring"
             ],
-            # Add more skill categories as needed
+            "soft_skills": [
+                "communication", "teamwork", "leadership", "problem solving",
+                "critical thinking", "time management", "project management",
+                "adaptability", "creativity", "emotional intelligence"
+            ]
         }
     
-    def _load_job_title_mappings(self) -> Dict[str, str]:
+    def _load_industry_keywords(self) -> Dict[str, List[str]]:
         """
-        Load job title mappings for normalization
+        Load industry keywords for industry matching
         
         Returns:
-            Dict mapping job title variations to standardized titles
+            Dict mapping industries to list of keywords
         """
         # In a real app, this would load from a database or file
         # This is a simplified example
         return {
-            "software engineer": "software engineer",
-            "software developer": "software engineer",
-            "programmer": "software engineer",
-            "coder": "software engineer",
-            
-            "data scientist": "data scientist",
-            "ml engineer": "data scientist",
-            "machine learning engineer": "data scientist",
-            "ai researcher": "data scientist",
-            
-            "web developer": "web developer",
-            "frontend developer": "web developer",
-            "frontend engineer": "web developer",
-            "ui developer": "web developer",
-            
-            "backend developer": "backend developer",
-            "backend engineer": "backend developer",
-            "api developer": "backend developer",
-            
-            "devops engineer": "devops engineer",
-            "site reliability engineer": "devops engineer",
-            "infrastructure engineer": "devops engineer",
-            "cloud engineer": "devops engineer",
-            
-            # Add more job title mappings as needed
+            "technology": [
+                "software", "tech", "information technology", "it", "saas", "cloud",
+                "digital", "internet", "computer", "web", "app", "application"
+            ],
+            "healthcare": [
+                "health", "medical", "hospital", "clinical", "patient", "pharma",
+                "healthcare", "biotech", "life sciences", "diagnostic"
+            ],
+            "finance": [
+                "bank", "financial", "investment", "insurance", "fintech", "wealth",
+                "asset management", "capital", "trading", "finance"
+            ],
+            "retail": [
+                "retail", "e-commerce", "ecommerce", "store", "shop", "consumer",
+                "commerce", "sales", "merchandise", "shopping"
+            ],
+            "manufacturing": [
+                "manufacturing", "factory", "production", "industrial", "assembly",
+                "fabrication", "engineering", "supply chain", "logistics"
+            ],
+            "education": [
+                "education", "academic", "school", "university", "college", "teaching",
+                "learning", "training", "edtech", "educational"
+            ],
+            "media": [
+                "media", "entertainment", "publishing", "content", "news", "digital media",
+                "broadcasting", "advertising", "marketing", "creative"
+            ]
         }
     
-    def search_jobs(self, query: str = "", filters: Dict[str, Any] = None, 
-                  page: int = 1, limit: int = 10, 
-                  sort_by: str = "date", sort_order: str = "desc") -> Tuple[List[Dict[str, Any]], int]:
+    def match_jobs(self, user_profile: Dict[str, Any], jobs: List[Dict[str, Any]], 
+                 limit: int = 10, filters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         """
-        Search for jobs with query and filters
+        Match jobs to user profile
         
         Args:
-            query: Search query
-            filters: Filters dict (location, job_type, etc.)
-            page: Page number
-            limit: Results per page
-            sort_by: Sort field
-            sort_order: Sort order ('asc' or 'desc')
+            user_profile: User profile data
+            jobs: List of job postings
+            limit: Maximum number of matches to return
+            filters: Additional filters
             
         Returns:
-            Tuple of (list of job dicts, total count)
+            List of matched jobs with scores
         """
         try:
-            # Get active jobs
-            all_jobs = Job.find_active()
+            # Extract user skills and experience
+            user_skills = user_profile.get("skills", [])
+            user_experience = user_profile.get("experience", [])
+            target_role = user_profile.get("target_role", "")
             
-            # Filter jobs
-            filtered_jobs = self._filter_jobs(all_jobs, query, filters)
+            # Extract user industries from experience
+            user_industries = set()
+            for exp in user_experience:
+                company_industry = exp.get("industry", "")
+                if company_industry:
+                    user_industries.add(company_industry.lower())
             
-            # Sort jobs
-            sorted_jobs = self._sort_jobs(filtered_jobs, sort_by, sort_order)
+            # Filter jobs if filters are provided
+            filtered_jobs = jobs
+            if filters:
+                filtered_jobs = self._apply_job_filters(jobs, filters)
             
-            # Get total count
-            total = len(sorted_jobs)
+            # Calculate match scores for each job
+            scored_jobs = []
+            for job in filtered_jobs:
+                # Initial score
+                score = self._calculate_match_score(user_profile, job)
+                
+                # Add score and job to results
+                scored_jobs.append({
+                    "job": job,
+                    "match_score": score,
+                    "match_factors": self._get_match_factors(user_profile, job, score)
+                })
             
-            # Paginate
-            start_idx = (page - 1) * limit
-            end_idx = start_idx + limit
-            paginated_jobs = sorted_jobs[start_idx:end_idx]
+            # Sort by match score descending
+            scored_jobs.sort(key=lambda x: x["match_score"], reverse=True)
             
-            # Convert to dict format
-            job_dicts = [job.to_dict() for job in paginated_jobs]
-            
-            return job_dicts, total
+            # Return top matches up to limit
+            return scored_jobs[:limit]
             
         except Exception as e:
-            logger.error(f"Error searching jobs: {str(e)}")
-            return [], 0
+            logger.error(f"Error matching jobs: {str(e)}")
+            return []
     
-    def _filter_jobs(self, jobs: List[Any], query: str = "", 
-                   filters: Dict[str, Any] = None) -> List[Any]:
+    def _apply_job_filters(self, jobs: List[Dict[str, Any]], filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Filter jobs by query and filters
+        Apply filters to job list
         
         Args:
-            jobs: List of job objects
-            query: Search query
-            filters: Filters dict
+            jobs: List of job postings
+            filters: Filters to apply
             
         Returns:
             Filtered list of jobs
         """
-        if not filters:
-            filters = {}
+        filtered_jobs = jobs
         
-        # Preprocess query for better matching
-        processed_query = preprocess_text(query) if query else ""
-        query_keywords = extract_keywords(processed_query) if query else []
+        # Filter by location
+        if "location" in filters and filters["location"]:
+            locations = [loc.lower() for loc in filters["location"]]
+            filtered_jobs = [
+                job for job in filtered_jobs 
+                if any(loc in job.get("location", "").lower() for loc in locations)
+            ]
         
-        filtered_jobs = []
+        # Filter by remote
+        if "remote" in filters:
+            remote_filter = filters["remote"]
+            if remote_filter is True:
+                filtered_jobs = [
+                    job for job in filtered_jobs 
+                    if job.get("remote", False) is True or "remote" in job.get("location", "").lower()
+                ]
+            elif remote_filter is False:
+                filtered_jobs = [
+                    job for job in filtered_jobs 
+                    if job.get("remote", False) is False and "remote" not in job.get("location", "").lower()
+                ]
         
-        for job in jobs:
-            # Check if job should be included
-            include = True
-            
-            # Filter by location
-            if filters.get('location') and filters['location'].lower() not in job.location.lower():
-                include = False
-                continue
-            
-            # Filter by job type
-            if filters.get('job_type') and filters['job_type'] != job.job_type:
-                include = False
-                continue
-            
-            # Filter by company
-            if filters.get('company') and filters['company'].lower() not in job.company.lower():
-                include = False
-                continue
-            
-            # Filter by industry
-            if filters.get('industry') and filters['industry'] != job.industry:
-                include = False
-                continue
-            
-            # Filter by experience level
-            if filters.get('experience'):
-                if not self._matches_experience_filter(job.experience_required, filters['experience']):
-                    include = False
-                    continue
-            
-            # Filter by query text
-            if query:
-                # Preprocess job text for matching
-                job_text = f"{job.title} {job.description} {job.company} {job.skills}"
-                processed_job_text = preprocess_text(job_text)
-                
-                # Check if query matches job text
-                if not any(keyword in processed_job_text for keyword in query_keywords):
-                    include = False
-                    continue
-            
-            # If all filters pass, include the job
-            if include:
-                filtered_jobs.append(job)
+        # Filter by salary
+        if "min_salary" in filters and filters["min_salary"]:
+            min_salary = filters["min_salary"]
+            filtered_jobs = [
+                job for job in filtered_jobs 
+                if job.get("salary_min", 0) >= min_salary or job.get("salary_max", 0) >= min_salary
+            ]
+        
+        if "max_salary" in filters and filters["max_salary"]:
+            max_salary = filters["max_salary"]
+            filtered_jobs = [
+                job for job in filtered_jobs 
+                if job.get("salary_min", float('inf')) <= max_salary
+            ]
+        
+        # Filter by job type
+        if "job_type" in filters and filters["job_type"]:
+            job_types = [jt.lower() for jt in filters["job_type"]]
+            filtered_jobs = [
+                job for job in filtered_jobs 
+                if job.get("job_type", "").lower() in job_types
+            ]
+        
+        # Filter by experience level
+        if "experience_level" in filters and filters["experience_level"]:
+            exp_levels = [el.lower() for el in filters["experience_level"]]
+            filtered_jobs = [
+                job for job in filtered_jobs 
+                if job.get("experience_level", "").lower() in exp_levels
+            ]
+        
+        # Filter by industry
+        if "industry" in filters and filters["industry"]:
+            industries = [ind.lower() for ind in filters["industry"]]
+            filtered_jobs = [
+                job for job in filtered_jobs 
+                if job.get("industry", "").lower() in industries
+            ]
+        
+        # Filter by date posted
+        if "posted_after" in filters and filters["posted_after"]:
+            posted_after = filters["posted_after"]
+            filtered_jobs = [
+                job for job in filtered_jobs 
+                if job.get("posted_date", datetime.now()) >= posted_after
+            ]
         
         return filtered_jobs
     
-    def _matches_experience_filter(self, job_experience: str, filter_experience: str) -> bool:
+    def _calculate_match_score(self, user_profile: Dict[str, Any], job: Dict[str, Any]) -> int:
         """
-        Check if job experience matches the experience filter
+        Calculate match score between user and job
         
         Args:
-            job_experience: Job experience level
-            filter_experience: Filter experience level
+            user_profile: User profile data
+            job: Job posting
             
         Returns:
-            True if matches, False otherwise
+            Match score (0-100)
         """
-        # Map common experience level terms
-        experience_levels = {
-            "entry": ["entry", "entry level", "junior", "0-1", "0-2"],
-            "mid": ["mid", "mid level", "intermediate", "2-5", "3-5"],
-            "senior": ["senior", "senior level", "experienced", "5-7", "5+", "7+"],
-            "expert": ["expert", "lead", "principal", "8+", "10+"]
+        # Base score
+        score = 50
+        
+        # Score components
+        skill_score = 0
+        title_score = 0
+        industry_score = 0
+        experience_score = 0
+        education_score = 0
+        
+        # Extract user data
+        user_skills = [skill.lower() for skill in user_profile.get("skills", [])]
+        user_title = user_profile.get("current_role", "").lower()
+        user_target_role = user_profile.get("target_role", "").lower()
+        user_years_experience = user_profile.get("years_experience", 0)
+        user_education = user_profile.get("education", [])
+        user_degree_level = self._get_highest_degree_level(user_education)
+        
+        # Extract job data
+        job_skills = [skill.lower() for skill in job.get("skills", [])]
+        job_title = job.get("title", "").lower()
+        job_description = job.get("description", "").lower()
+        job_industry = job.get("industry", "").lower()
+        job_min_experience = job.get("min_experience", 0)
+        job_required_degree = job.get("required_degree", "").lower()
+        
+        # Add skills from description if not provided
+        if not job_skills and job_description:
+            job_skills = extract_skills(job_description)
+        
+        # Calculate skill match score (most important)
+        if user_skills and job_skills:
+            matching_skills = 0
+            total_job_skills = len(job_skills)
+            
+            for job_skill in job_skills:
+                for user_skill in user_skills:
+                    # Exact match
+                    if job_skill == user_skill:
+                        matching_skills += 1
+                        break
+                    # Partial match
+                    elif job_skill in user_skill or user_skill in job_skill:
+                        matching_skills += 0.5
+                        break
+            
+            # Calculate skill match percentage
+            if total_job_skills > 0:
+                skill_match_percentage = (matching_skills / total_job_skills) * 100
+                skill_score = min(40, skill_match_percentage * 0.4)  # Max 40 points
+        
+        # Calculate title match score
+        if user_title or user_target_role:
+            title_match = False
+            
+            # Check if current role matches
+            if user_title and (user_title in job_title or job_title in user_title):
+                title_match = True
+            
+            # Check if target role matches
+            if user_target_role and (user_target_role in job_title or job_title in user_target_role):
+                title_match = True
+            
+            if title_match:
+                title_score = 20  # 20 points for title match
+        
+        # Calculate industry match score
+        if job_industry:
+            # Get user industries from experience
+            user_industries = set()
+            for exp in user_profile.get("experience", []):
+                exp_industry = exp.get("industry", "").lower()
+                if exp_industry:
+                    user_industries.add(exp_industry)
+            
+            # Check industry match
+            if job_industry in user_industries:
+                industry_score = 10  # 10 points for industry match
+            # Check if user has worked in related industry
+            elif any(self._are_industries_related(job_industry, ui) for ui in user_industries):
+                industry_score = 5  # 5 points for related industry
+        
+        # Calculate experience match score
+        if user_years_experience >= job_min_experience:
+            # Full points if experience matches exactly or exceeds by up to 2 years
+            if user_years_experience <= job_min_experience + 2:
+                experience_score = 15
+            # Partial points if significantly overqualified
+            else:
+                experience_score = 10
+        elif job_min_experience > 0 and user_years_experience >= job_min_experience * 0.7:
+            # Partial points if close to minimum experience
+            experience_score = 5
+        
+        # Calculate education match score
+        if job_required_degree:
+            # No education requirement or matches user's degree
+            if job_required_degree == "none" or self._meets_education_requirement(user_degree_level, job_required_degree):
+                education_score = 15
+        else:
+            # If no specific education requirement
+            education_score = 15
+        
+        # Combine scores
+        score = skill_score + title_score + industry_score + experience_score + education_score
+        
+        # Ensure score is within range
+        return max(0, min(100, score))
+    
+    def _get_match_factors(self, user_profile: Dict[str, Any], job: Dict[str, Any], score: int) -> List[Dict[str, Any]]:
+        """
+        Get factors that influenced match score
+        
+        Args:
+            user_profile: User profile data
+            job: Job posting
+            score: Match score
+            
+        Returns:
+            List of match factors
+        """
+        factors = []
+        
+        # Extract user data
+        user_skills = [skill.lower() for skill in user_profile.get("skills", [])]
+        user_title = user_profile.get("current_role", "").lower()
+        user_target_role = user_profile.get("target_role", "").lower()
+        user_years_experience = user_profile.get("years_experience", 0)
+        user_education = user_profile.get("education", [])
+        
+        # Extract job data
+        job_skills = [skill.lower() for skill in job.get("skills", [])]
+        job_title = job.get("title", "").lower()
+        job_industry = job.get("industry", "").lower()
+        job_min_experience = job.get("min_experience", 0)
+        job_required_degree = job.get("required_degree", "").lower()
+        
+        # Add skills from description if not provided
+        if not job_skills and job.get("description"):
+            job_skills = extract_skills(job.get("description", "").lower())
+        
+        # Skill match factor
+        if user_skills and job_skills:
+            matching_skills = []
+            missing_skills = []
+            
+            for job_skill in job_skills:
+                skill_found = False
+                for user_skill in user_skills:
+                    if job_skill == user_skill or job_skill in user_skill or user_skill in job_skill:
+                        matching_skills.append(job_skill)
+                        skill_found = True
+                        break
+                
+                if not skill_found:
+                    missing_skills.append(job_skill)
+            
+            # Calculate match percentage
+            skill_match_percent = len(matching_skills) / len(job_skills) * 100 if job_skills else 0
+            
+            # Add factor
+            factors.append({
+                "name": "Skill Match",
+                "score": int(skill_match_percent),
+                "details": {
+                    "matching_skills": matching_skills[:5],  # Limit to top 5
+                    "missing_skills": missing_skills[:5],    # Limit to top 5
+                    "total_matching": len(matching_skills),
+                    "total_required": len(job_skills)
+                }
+            })
+        
+        # Job title match factor
+        title_match = False
+        if user_title and (user_title in job_title or job_title in user_title):
+            title_match = True
+        elif user_target_role and (user_target_role in job_title or job_title in user_target_role):
+            title_match = True
+        
+        factors.append({
+            "name": "Job Title Match",
+            "score": 100 if title_match else 0,
+            "details": {
+                "user_current_role": user_title,
+                "user_target_role": user_target_role,
+                "job_title": job_title
+            }
+        })
+        
+        # Experience match factor
+        experience_match_percent = min(100, (user_years_experience / job_min_experience) * 100) if job_min_experience > 0 else 100
+        
+        factors.append({
+            "name": "Experience Match",
+            "score": int(experience_match_percent),
+            "details": {
+                "user_years": user_years_experience,
+                "required_years": job_min_experience
+            }
+        })
+        
+        # Education match factor
+        user_degree_level = self._get_highest_degree_level(user_education)
+        meets_education = self._meets_education_requirement(user_degree_level, job_required_degree)
+        
+        factors.append({
+            "name": "Education Match",
+            "score": 100 if meets_education else 50 if user_degree_level else 0,
+            "details": {
+                "user_highest_degree": user_degree_level,
+                "required_degree": job_required_degree
+            }
+        })
+        
+        return factors
+    
+    def _get_highest_degree_level(self, education: List[Dict[str, Any]]) -> str:
+        """
+        Get highest degree level from education history
+        
+        Args:
+            education: List of education entries
+            
+        Returns:
+            Highest degree level
+        """
+        # Define degree hierarchy
+        degree_levels = {
+            "phd": 5,
+            "doctorate": 5,
+            "doctoral": 5,
+            "master": 4,
+            "ms": 4,
+            "ma": 4,
+            "mba": 4,
+            "bachelor": 3,
+            "bs": 3,
+            "ba": 3,
+            "bsc": 3,
+            "associate": 2,
+            "diploma": 1,
+            "certificate": 1,
+            "high school": 0
         }
         
-        # Check if filter matches job experience
-        if filter_experience in experience_levels:
-            job_exp_lower = job_experience.lower()
-            for term in experience_levels[filter_experience]:
-                if term in job_exp_lower:
-                    return True
-            
-            # Also check years of experience
-            try:
-                # Extract numbers from experience string
-                import re
-                numbers = re.findall(r'\d+', job_exp_lower)
-                if numbers:
-                    min_years = min(int(num) for num in numbers)
-                    
-                    # Match based on minimum years
-                    if filter_experience == "entry" and min_years <= 2:
-                        return True
-                    elif filter_experience == "mid" and 2 <= min_years <= 5:
-                        return True
-                    elif filter_experience == "senior" and 5 <= min_years <= 8:
-                        return True
-                    elif filter_experience == "expert" and min_years >= 8:
-                        return True
-            except:
-                pass
-            
-            return False
+        highest_level = ""
+        highest_value = -1
         
-        # If filter isn't one of our defined levels, do direct text matching
-        return filter_experience.lower() in job_experience.lower()
+        for edu in education:
+            degree = edu.get("degree", "").lower()
+            
+            for level, value in degree_levels.items():
+                if level in degree and value > highest_value:
+                    highest_level = level
+                    highest_value = value
+        
+        return highest_level
     
-    def _sort_jobs(self, jobs: List[Any], sort_by: str = "date", 
-                 sort_order: str = "desc") -> List[Any]:
+    def _meets_education_requirement(self, user_degree: str, required_degree: str) -> bool:
         """
-        Sort jobs by specified field
+        Check if user's education meets job requirement
         
         Args:
-            jobs: List of job objects
-            sort_by: Field to sort by
-            sort_order: Sort order ('asc' or 'desc')
+            user_degree: User's highest degree
+            required_degree: Required degree
             
         Returns:
-            Sorted list of jobs
+            True if requirement is met
         """
-        reverse = sort_order.lower() == "desc"
+        # Define degree hierarchy
+        degree_levels = {
+            "phd": 5,
+            "doctorate": 5,
+            "doctoral": 5,
+            "master": 4,
+            "ms": 4,
+            "ma": 4,
+            "mba": 4,
+            "bachelor": 3,
+            "bs": 3,
+            "ba": 3,
+            "bsc": 3,
+            "associate": 2,
+            "diploma": 1,
+            "certificate": 1,
+            "high school": 0
+        }
         
-        if sort_by == "date":
-            return sorted(jobs, key=lambda x: x.created_at, reverse=reverse)
-        elif sort_by == "title":
-            return sorted(jobs, key=lambda x: x.title, reverse=reverse)
-        elif sort_by == "company":
-            return sorted(jobs, key=lambda x: x.company, reverse=reverse)
-        elif sort_by == "location":
-            return sorted(jobs, key=lambda x: x.location, reverse=reverse)
-        elif sort_by == "salary":
-            # Sort by minimum salary in range if available
-            def get_min_salary(job):
-                try:
-                    if hasattr(job, 'salary_range') and isinstance(job.salary_range, dict):
-                        return job.salary_range.get('min', 0)
-                    return 0
-                except:
-                    return 0
-            return sorted(jobs, key=get_min_salary, reverse=reverse)
-        else:
-            # Default to date sorting
-            return sorted(jobs, key=lambda x: x.created_at, reverse=reverse)
+        # Get level values
+        user_level = -1
+        for level, value in degree_levels.items():
+            if user_degree and level in user_degree:
+                user_level = value
+                break
+        
+        required_level = -1
+        for level, value in degree_levels.items():
+            if required_degree and level in required_degree:
+                required_level = value
+                break
+        
+        # Check if user meets or exceeds required level
+        return user_level >= required_level if required_level >= 0 else True
     
-    def get_recommended_jobs(self, user_id: str, resume_data: Dict[str, Any] = None,
-                           page: int = 1, limit: int = 10) -> Tuple[List[Dict[str, Any]], int]:
+    def _are_industries_related(self, industry1: str, industry2: str) -> bool:
         """
-        Get recommended jobs for a user
+        Check if two industries are related
         
         Args:
-            user_id: User ID
-            resume_data: Parsed resume data
-            page: Page number
-            limit: Results per page
+            industry1: First industry
+            industry2: Second industry
             
         Returns:
-            Tuple of (recommended jobs list, total count)
+            True if industries are related
+        """
+        # Direct match
+        if industry1 == industry2:
+            return True
+        
+        # Check industry keywords
+        industry1_keywords = set()
+        industry2_keywords = set()
+        
+        for industry, keywords in self.industry_keywords.items():
+            if industry.lower() == industry1 or any(kw in industry1 for kw in keywords):
+                industry1_keywords.update(keywords)
+            
+            if industry.lower() == industry2 or any(kw in industry2 for kw in keywords):
+                industry2_keywords.update(keywords)
+        
+        # Check if industries share keywords
+        common_keywords = industry1_keywords.intersection(industry2_keywords)
+        return len(common_keywords) > 0
+    
+    def get_job_recommendations(self, user_profile: Dict[str, Any], jobs: List[Dict[str, Any]], 
+                              limit: int = 5) -> Dict[str, Any]:
+        """
+        Get personalized job recommendations with AI analysis
+        
+        Args:
+            user_profile: User profile data
+            jobs: List of job postings
+            limit: Maximum number of recommendations
+            
+        Returns:
+            Job recommendations
         """
         try:
-            # Get active jobs
-            all_jobs = Job.find_active()
+            # Get base matches
+            matched_jobs = self.match_jobs(user_profile, jobs, limit * 2)
             
-            # Get user's applied jobs to exclude them
-            user_applications = JobApplication.find_by_user(user_id)
-            applied_job_ids = set(app.job_id for app in user_applications)
+            # Get top matches
+            top_matches = matched_jobs[:limit]
             
-            # Filter out jobs the user has already applied to
-            available_jobs = [job for job in all_jobs if job.id not in applied_job_ids]
+            # Get AI insights for top matches
+            ai_insights = {}
+            if self.api_key:
+                ai_insights = self._get_job_recommendation_insights_from_ai(user_profile, top_matches)
             
-            # Calculate match scores
-            job_scores = []
-            for job in available_jobs:
-                score = self.calculate_job_match(job.to_dict(), resume_data)
-                job_scores.append((job, score.get('overall_score', 0)))
-            
-            # Sort by match score (descending)
-            job_scores.sort(key=lambda x: x[1], reverse=True)
-            
-            # Get total count
-            total = len(job_scores)
-            
-            # Paginate
-            start_idx = (page - 1) * limit
-            end_idx = start_idx + limit
-            paginated_jobs = job_scores[start_idx:end_idx]
-            
-            # Convert to dict format and add match score
-            result = []
-            for job, score in paginated_jobs:
-                job_dict = job.to_dict()
-                job_dict['match_score'] = score
-                result.append(job_dict)
-            
-            return result, total
-            
-        except Exception as e:
-            logger.error(f"Error getting recommended jobs: {str(e)}")
-            return [], 0
-    
-    def calculate_job_match(self, job: Dict[str, Any], 
-                          resume_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Calculate match score between resume and job
-        
-        Args:
-            job: Job data dictionary
-            resume_data: Resume data dictionary
-            
-        Returns:
-            Match score dictionary with overall and category scores
-        """
-        try:
-            # Initialize scores
-            skills_score = 0.0
-            experience_score = 0.0
-            education_score = 0.0
-            
-            # Get skills from job and resume
-            job_skills = self._extract_job_skills(job)
-            resume_skills = self._extract_resume_skills(resume_data)
-            
-            # Calculate skills match score
-            if job_skills and resume_skills:
-                skills_score = self._calculate_skills_match(job_skills, resume_skills)
-            
-            # Calculate experience match score
-            experience_score = self._calculate_experience_match(job, resume_data)
-            
-            # Calculate education match score
-            education_score = self._calculate_education_match(job, resume_data)
-            
-            # Calculate overall score
-            overall_score = (
-                (skills_score * self.skill_importance_weight) +
-                (experience_score * self.experience_importance_weight) +
-                (education_score * self.education_importance_weight)
-            )
-            
-            # Format score as percentage
-            overall_percent = min(round(overall_score * 100), 100)
-            skills_percent = min(round(skills_score * 100), 100)
-            experience_percent = min(round(experience_score * 100), 100)
-            education_percent = min(round(education_score * 100), 100)
-            
-            # Prepare result
-            result = {
-                'overall_score': overall_percent,
-                'skills_score': skills_percent,
-                'experience_score': experience_percent,
-                'education_score': education_percent,
-                'matching_skills': self._get_matching_skills(job_skills, resume_skills),
-                'missing_skills': self._get_missing_skills(job_skills, resume_skills)
+            # Format recommendations
+            recommendations = {
+                "matches": top_matches,
+                "match_count": len(matched_jobs),
+                "generated_at": datetime.now().isoformat()
             }
             
-            return result
+            if ai_insights:
+                recommendations["ai_insights"] = ai_insights
+            
+            return recommendations
             
         except Exception as e:
-            logger.error(f"Error calculating job match: {str(e)}")
+            logger.error(f"Error getting job recommendations: {str(e)}")
             return {
-                'overall_score': 0,
-                'skills_score': 0,
-                'experience_score': 0,
-                'education_score': 0,
-                'matching_skills': [],
-                'missing_skills': []
+                "error": str(e),
+                "matches": []
             }
     
-    def _extract_job_skills(self, job: Dict[str, Any]) -> List[str]:
+    def get_similar_jobs(self, job_id: str, job_title: str, jobs: List[Dict[str, Any]], 
+                       limit: int = 5) -> List[Dict[str, Any]]:
         """
-        Extract skills from job data
+        Get similar jobs to a given job
         
         Args:
-            job: Job data dictionary
+            job_id: ID of the reference job
+            job_title: Title of the reference job
+            jobs: List of job postings
+            limit: Maximum number of similar jobs
             
         Returns:
-            List of skills
-        """
-        skills = []
-        
-        # Extract skills from dedicated skills field if available
-        if job.get('skills'):
-            if isinstance(job['skills'], list):
-                skills.extend(job['skills'])
-            elif isinstance(job['skills'], str):
-                # Extract skills from skills text
-                skills.extend(extract_skills(job['skills']))
-        
-        # Extract skills from job description
-        if job.get('description'):
-            skills.extend(extract_skills(job['description']))
-        
-        # Clean and normalize skills
-        normalized_skills = []
-        for skill in skills:
-            skill = skill.lower().strip()
-            if skill:
-                normalized_skills.append(skill)
-        
-        # Remove duplicates
-        return list(set(normalized_skills))
-    
-    def _extract_resume_skills(self, resume_data: Dict[str, Any]) -> List[str]:
-        """
-        Extract skills from resume data
-        
-        Args:
-            resume_data: Resume data dictionary
-            
-        Returns:
-            List of skills
-        """
-        skills = []
-        
-        # Extract skills from dedicated skills field if available
-        if resume_data.get('skills'):
-            if isinstance(resume_data['skills'], list):
-                skills.extend(resume_data['skills'])
-            elif isinstance(resume_data['skills'], str):
-                # Extract skills from skills text
-                skills.extend(extract_skills(resume_data['skills']))
-        
-        # Extract skills from work experience
-        if resume_data.get('experience') and isinstance(resume_data['experience'], list):
-            for exp in resume_data['experience']:
-                if exp.get('description'):
-                    skills.extend(extract_skills(exp['description']))
-        
-        # Clean and normalize skills
-        normalized_skills = []
-        for skill in skills:
-            skill = skill.lower().strip()
-            if skill:
-                normalized_skills.append(skill)
-        
-        # Remove duplicates
-        return list(set(normalized_skills))
-    
-    def _calculate_skills_match(self, job_skills: List[str], 
-                              resume_skills: List[str]) -> float:
-        """
-        Calculate skills match score
-        
-        Args:
-            job_skills: List of job skills
-            resume_skills: List of resume skills
-            
-        Returns:
-            Match score (0.0 to 1.0)
-        """
-        if not job_skills:
-            return 0.0
-        
-        # Direct matches
-        direct_matches = set(job_skills).intersection(set(resume_skills))
-        direct_match_count = len(direct_matches)
-        
-        # Semantic matches (skills that are not exact matches but are related)
-        semantic_matches = set()
-        
-        for job_skill in job_skills:
-            if job_skill in direct_matches:
-                continue
-                
-            for resume_skill in resume_skills:
-                # Skip already matched skills
-                if resume_skill in direct_matches or resume_skill in semantic_matches:
-                    continue
-                
-                # Check if skills are semantically similar
-                similarity = calculate_similarity(job_skill, resume_skill)
-                if similarity > 0.8:  # Threshold for semantic similarity
-                    semantic_matches.add(resume_skill)
-                    break
-        
-        semantic_match_count = len(semantic_matches)
-        
-        # Calculate total match score
-        # Direct matches count fully, semantic matches count partially
-        total_match_score = direct_match_count + (semantic_match_count * 0.5)
-        
-        # Normalize by number of job skills
-        return min(total_match_score / len(job_skills), 1.0)
-    
-    def _calculate_experience_match(self, job: Dict[str, Any], 
-                                  resume_data: Dict[str, Any]) -> float:
-        """
-        Calculate experience match score
-        
-        Args:
-            job: Job data dictionary
-            resume_data: Resume data dictionary
-            
-        Returns:
-            Match score (0.0 to 1.0)
-        """
-        # Extract job experience requirement
-        job_experience_years = self._extract_job_experience_years(job)
-        if job_experience_years is None:
-            return 0.5  # Default when job doesn't specify experience
-        
-        # Extract resume experience
-        resume_experience_years = self._extract_resume_experience_years(resume_data)
-        if resume_experience_years is None:
-            return 0.0  # No experience found in resume
-        
-        # Calculate score based on how close the experience is to the requirement
-        if resume_experience_years >= job_experience_years:
-            # Candidate meets or exceeds the requirement
-            return 1.0
-        else:
-            # Candidate has some experience but less than required
-            # Score decreases linearly as the gap increases
-            ratio = resume_experience_years / job_experience_years
-            return max(0.0, min(ratio, 1.0))
-    
-    def _extract_job_experience_years(self, job: Dict[str, Any]) -> Optional[float]:
-        """
-        Extract years of experience required from job data
-        
-        Args:
-            job: Job data dictionary
-            
-        Returns:
-            Years of experience or None
+            List of similar jobs
         """
         try:
-            # Check for dedicated experience field
-            if job.get('experience_required'):
-                experience_text = job['experience_required']
-                return self._parse_experience_text(experience_text)
+            # Filter out the reference job
+            other_jobs = [job for job in jobs if job.get("id") != job_id]
             
-            # Check for experience in job description
-            if job.get('description'):
-                import re
-                # Look for common experience patterns in the description
-                patterns = [
-                    r'(\d+)\+?\s*years?(?:\s*of)?(?:\s*experience)?',
-                    r'(\d+)(?:\s*to|-)\s*(\d+)(?:\s*years)?(?:\s*of)?(?:\s*experience)?',
-                    r'(?:minimum|min|at least)(?:\s*of)?\s*(\d+)(?:\s*years)?(?:\s*of)?(?:\s*experience)?'
-                ]
-                
-                for pattern in patterns:
-                    matches = re.search(pattern, job['description'], re.IGNORECASE)
-                    if matches:
-                        # If range (e.g., "3-5 years"), take the lower number
-                        if len(matches.groups()) > 1 and matches.group(2):
-                            return float(matches.group(1))
-                        return float(matches.group(1))
+            # Sort jobs by title similarity
+            similar_jobs = []
+            for job in other_jobs:
+                similarity_score = self._calculate_job_similarity(job_title, job.get("title", ""))
+                similar_jobs.append({
+                    "job": job,
+                    "similarity_score": similarity_score
+                })
             
-            return None
+            # Sort by similarity score descending
+            similar_jobs.sort(key=lambda x: x["similarity_score"], reverse=True)
+            
+            # Return top similar jobs
+            return [item["job"] for item in similar_jobs[:limit]]
             
         except Exception as e:
-            logger.error(f"Error extracting job experience: {str(e)}")
-            return None
+            logger.error(f"Error getting similar jobs: {str(e)}")
+            return []
     
-    def _extract_resume_experience_years(self, resume_data: Dict[str, Any]) -> Optional[float]:
+    def _calculate_job_similarity(self, title1: str, title2: str) -> float:
         """
-        Extract years of experience from resume data
+        Calculate similarity between two job titles
         
         Args:
-            resume_data: Resume data dictionary
+            title1: First job title
+            title2: Second job title
             
         Returns:
-            Years of experience or None
+            Similarity score (0-100)
         """
+        # Normalize titles
+        title1 = title1.lower()
+        title2 = title2.lower()
+        
+        # Exact match
+        if title1 == title2:
+            return 100
+        
+        # Check for title containment
+        if title1 in title2 or title2 in title1:
+            return 90
+        
+        # Split into words and count common words
+        words1 = set(title1.split())
+        words2 = set(title2.split())
+        
+        common_words = words1.intersection(words2)
+        
+        # Calculate word overlap
+        similarity = len(common_words) / max(len(words1), len(words2)) * 100
+        
+        return similarity
+    
+    def _get_job_recommendation_insights_from_ai(self, user_profile: Dict[str, Any], 
+                                               matched_jobs: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Get job recommendation insights from DeepSeek AI
+        
+        Args:
+            user_profile: User profile data
+            matched_jobs: List of matched jobs
+            
+        Returns:
+            AI-generated insights
+        """
+        if not self.api_key:
+            logger.warning("DeepSeek API key not available, skipping AI insights")
+            return {}
+        
         try:
-            total_years = 0.0
-            
-            # Check for work experience entries
-            if resume_data.get('experience') and isinstance(resume_data['experience'], list):
-                for exp in resume_data['experience']:
-                    # If experience has explicit duration
-                    if exp.get('duration_years'):
-                        try:
-                            total_years += float(exp['duration_years'])
-                        except:
-                            pass
-                    # If experience has start and end dates
-                    elif exp.get('start_date') and exp.get('end_date'):
-                        try:
-                            start_date = self._parse_date(exp['start_date'])
-                            
-                            # End date could be "present" or similar
-                            if exp['end_date'].lower() in ['present', 'current', 'now']:
-                                end_date = datetime.now()
-                            else:
-                                end_date = self._parse_date(exp['end_date'])
-                            
-                            if start_date and end_date:
-                                duration = end_date - start_date
-                                duration_years = duration.days / 365.25
-                                total_years += duration_years
-                        except:
-                            pass
-            
-            return total_years if total_years > 0 else None
-            
-        except Exception as e:
-            logger.error(f"Error extracting resume experience: {str(e)}")
-            return None
-    
-    def _parse_experience_text(self, text: str) -> Optional[float]:
-        """
-        Parse experience text to extract years
-        
-        Args:
-            text: Experience text
-            
-        Returns:
-            Years of experience or None
-        """
-        try:
-            import re
-            text = text.lower()
-            
-            # Check for ranges like "3-5 years"
-            range_match = re.search(r'(\d+)(?:\s*-\s*|\s*to\s*)(\d+)', text)
-            if range_match:
-                # Take the minimum years in the range
-                return float(range_match.group(1))
-            
-            # Check for "X+ years"
-            plus_match = re.search(r'(\d+)\+', text)
-            if plus_match:
-                return float(plus_match.group(1))
-            
-            # Check for "X years"
-            years_match = re.search(r'(\d+)(?:\s*years?)', text)
-            if years_match:
-                return float(years_match.group(1))
-            
-            # Check for experience levels
-            if any(term in text for term in ['entry', 'junior', 'fresher']):
-                return 0.0
-            if any(term in text for term in ['mid', 'intermediate']):
-                return 3.0
-            if any(term in text for term in ['senior', 'experienced']):
-                return 5.0
-            if any(term in text for term in ['expert', 'lead', 'principal']):
-                return 8.0
-            
-            return None
-            
-        except Exception as e:
-            logger.error(f"Error parsing experience text: {str(e)}")
-            return None
-    
-    def _parse_date(self, date_str: str) -> Optional[datetime]:
-        """
-        Parse date string
-        
-        Args:
-            date_str: Date string
-            
-        Returns:
-            Datetime object or None
-        """
-        try:
-            from dateutil import parser
-            return parser.parse(date_str)
-        except:
-            return None
-    
-    def _calculate_education_match(self, job: Dict[str, Any], 
-                                 resume_data: Dict[str, Any]) -> float:
-        """
-        Calculate education match score
-        
-        Args:
-            job: Job data dictionary
-            resume_data: Resume data dictionary
-            
-        Returns:
-            Match score (0.0 to 1.0)
-        """
-        # Extract job education requirement
-        required_education = self._extract_job_education(job)
-        if not required_education:
-            return 0.5  # Default when job doesn't specify education
-        
-        # Extract highest education from resume
-        highest_education = self._extract_resume_education(resume_data)
-        if not highest_education:
-            return 0.0  # No education found in resume
-        
-        # Education levels with weights
-        education_levels = {
-            'high school': 1,
-            'associate': 2,
-            'bachelor': 3,
-            'undergraduate': 3,
-            'master': 4,
-            'mba': 4,
-            'phd': 5,
-            'doctorate': 5
-        }
-        
-        # Get the level weights
-        required_level = 0
-        for level, weight in education_levels.items():
-            if level in required_education.lower():
-                required_level = max(required_level, weight)
-        
-        highest_level = 0
-        for level, weight in education_levels.items():
-            if level in highest_education.lower():
-                highest_level = max(highest_level, weight)
-        
-        # If no specific level was identified
-        if required_level == 0:
-            required_level = 3  # Default to bachelor's
-        if highest_level == 0:
-            highest_level = 1  # Default to high school
-        
-        # Calculate match score
-        if highest_level >= required_level:
-            return 1.0  # Meets or exceeds requirements
-        else:
-            # Partial credit for being close to the requirement
-            return max(0.0, highest_level / required_level)
-    
-    def _extract_job_education(self, job: Dict[str, Any]) -> Optional[str]:
-        """
-        Extract education requirement from job data
-        
-        Args:
-            job: Job data dictionary
-            
-        Returns:
-            Education requirement or None
-        """
-        try:
-            # Check for dedicated education field
-            if job.get('education_required'):
-                return job['education_required']
-            
-            # Check for education in job description
-            if job.get('description'):
-                import re
-                # Look for common education patterns in the description
-                patterns = [
-                    r'(?:requires?|requiring|need|with)(?:\s*a)?\s*(bachelor|master|phd|doctorate|mba|undergraduate|associate)(?:\'s)?(?:\s*degree)?',
-                    r'(bachelor|master|phd|doctorate|mba|undergraduate|associate)(?:\'s)?(?:\s*degree)(?:\s*required)?',
-                    r'(?:degree)(?:\s*in)(?:\s*[a-zA-Z\s,]+)?(?:\s*or related field)?'
-                ]
-                
-                for pattern in patterns:
-                    matches = re.search(pattern, job['description'], re.IGNORECASE)
-                    if matches and matches.group(1):
-                        return matches.group(1)
-            
-            return None
-            
-        except Exception as e:
-            logger.error(f"Error extracting job education: {str(e)}")
-            return None
-    
-    def _extract_resume_education(self, resume_data: Dict[str, Any]) -> Optional[str]:
-        """
-        Extract highest education from resume data
-        
-        Args:
-            resume_data: Resume data dictionary
-            
-        Returns:
-            Highest education level or None
-        """
-        try:
-            # Education level weights for comparison
-            education_weights = {
-                'high school': 1,
-                'associate': 2,
-                'bachelor': 3,
-                'undergrad': 3,
-                'master': 4,
-                'mba': 4,
-                'phd': 5,
-                'doctorate': 5
+            # Simplify data to avoid token limits
+            simplified_profile = {
+                "current_role": user_profile.get("current_role", ""),
+                "years_experience": user_profile.get("years_experience", 0),
+                "skills": user_profile.get("skills", [])[:10]
             }
             
-            highest_education = None
-            highest_weight = 0
+            simplified_jobs = []
+            for match in matched_jobs:
+                job = match["job"]
+                simplified_jobs.append({
+                    "title": job.get("title", ""),
+                    "company": job.get("company", ""),
+                    "match_score": match.get("match_score", 0),
+                    "skills": job.get("skills", [])[:5]
+                })
             
-            # Check for education entries
-            if resume_data.get('education') and isinstance(resume_data['education'], list):
-                for edu in resume_data['education']:
-                    if edu.get('degree') or edu.get('level'):
-                        degree_text = (edu.get('degree') or '') + ' ' + (edu.get('level') or '')
-                        degree_text = degree_text.lower()
-                        
-                        # Find the highest education level
-                        for level, weight in education_weights.items():
-                            if level in degree_text and weight > highest_weight:
-                                highest_education = degree_text
-                                highest_weight = weight
+            # Prepare the API request
+            prompt = f"""Based on this user profile and matched jobs, provide personalized insights:
             
-            return highest_education
+            User Profile: {json.dumps(simplified_profile)}
+            
+            Matched Jobs: {json.dumps(simplified_jobs)}
+            
+            Please provide:
+            1. Overall pattern analysis of the matched jobs
+            2. Skill alignment between the user and opportunities
+            3. Specific application strategy recommendations
+            4. Skill development suggestions to improve match quality
+            
+            Format as a JSON object with keys: "patterns", "skill_alignment", "application_strategy", 
+            and "skill_development". Each containing an array of objects with "title" and "description" fields.
+            """
+            
+            # API endpoint
+            url = "https://api.deepseek.com/v1/chat/completions"
+            
+            # Prepare the payload
+            payload = {
+                "model": "deepseek-chat",
+                "messages": [
+                    {"role": "system", "content": "You are an expert career advisor providing personalized job search insights and strategies."},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.3,
+                "response_format": {"type": "json_object"},
+                "max_tokens": 1000
+            }
+            
+            # Set up headers with API key
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}"
+            }
+            
+            # Make the API request
+            response = requests.post(url, headers=headers, data=json.dumps(payload))
+            
+            # Check if the request was successful
+            if response.status_code == 200:
+                # Parse the response
+                result = response.json()
+                content = result["choices"][0]["message"]["content"]
+                
+                # Parse the JSON content
+                try:
+                    parsed = json.loads(content)
+                    return parsed
+                except json.JSONDecodeError:
+                    logger.error("Failed to parse DeepSeek response as JSON")
+                    return {}
+            else:
+                logger.error(f"DeepSeek API error: {response.status_code} - {response.text}")
+                return {}
             
         except Exception as e:
-            logger.error(f"Error extracting resume education: {str(e)}")
-            return None
-    
-    def _get_matching_skills(self, job_skills: List[str], 
-                           resume_skills: List[str]) -> List[str]:
-        """
-        Get skills that match between job and resume
-        
-        Args:
-            job_skills: List of job skills
-            resume_skills: List of resume skills
-            
-        Returns:
-            List of matching skills
-        """
-        # Direct matches
-        direct_matches = set(job_skills).intersection(set(resume_skills))
-        
-        # Semantic matches
-        semantic_matches = set()
-        
-        for job_skill in job_skills:
-            if job_skill in direct_matches:
-                continue
-                
-            for resume_skill in resume_skills:
-                # Skip already matched skills
-                if resume_skill in direct_matches or resume_skill in semantic_matches:
-                    continue
-                
-                # Check if skills are semantically similar
-                similarity = calculate_similarity(job_skill, resume_skill)
-                if similarity > 0.8:
-                    semantic_matches.add(job_skill)
-                    break
-        
-        return list(direct_matches) + list(semantic_matches)
-    
-    def _get_missing_skills(self, job_skills: List[str], 
-                          resume_skills: List[str]) -> List[str]:
-        """
-        Get skills in the job that are missing from the resume
-        
-        Args:
-            job_skills: List of job skills
-            resume_skills: List of resume skills
-            
-        Returns:
-            List of missing skills
-        """
-        # Get matching skills
-        matching = self._get_matching_skills(job_skills, resume_skills)
-        
-        # Return skills that are not in the matching set
-        return [skill for skill in job_skills if skill not in matching] 
+            logger.error(f"Error getting job recommendation insights from AI: {str(e)}")
+            return {} 
