@@ -1,17 +1,106 @@
 """
 Authentication Utility Module
 
-This module provides utilities for authentication, authorization, and user management.
+This module provides utilities for user authentication, authorization, and security.
 """
 
+import os
 import re
-from typing import Dict, Any, Optional, Tuple, List
-from functools import wraps
-from flask import request, current_app, g
-from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+import json
+import uuid
+import time
+import logging
+import hashlib
+import secrets
+import string
+from typing import Dict, List, Any, Optional, Tuple, Union
+from datetime import datetime, timedelta
+
+# Try to import optional dependencies
+try:
+    import bcrypt
+    BCRYPT_AVAILABLE = True
+except ImportError:
+    BCRYPT_AVAILABLE = False
+    logging.warning("bcrypt not installed. Install with: pip install bcrypt")
+
+# Import settings
+from backend.config.settings import (
+    SECRET_KEY, JWT_SECRET_KEY, PASSWORD_MIN_LENGTH, PASSWORD_REQUIRE_UPPERCASE,
+    PASSWORD_REQUIRE_LOWERCASE, PASSWORD_REQUIRE_DIGITS, PASSWORD_REQUIRE_SPECIAL
+)
 
 # Import database models
-from backend.database.models import User
+from backend.database.models import User, PasswordReset
+
+# Setup logger
+logger = logging.getLogger(__name__)
+
+
+def hash_password(password: str) -> str:
+    """
+    Hash password using bcrypt or fallback to PBKDF2
+    
+    Args:
+        password: Plain text password
+        
+    Returns:
+        str: Hashed password
+    """
+    if BCRYPT_AVAILABLE:
+        # Generate salt and hash with bcrypt
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+        return hashed.decode('utf-8')
+    else:
+        # Fallback to PBKDF2
+        salt = secrets.token_hex(16)
+        iterations = 100000  # High iteration count for security
+        
+        hash_obj = hashlib.pbkdf2_hmac(
+            'sha256',
+            password.encode('utf-8'),
+            salt.encode('utf-8'),
+            iterations
+        )
+        
+        # Format: algorithm$iterations$salt$hash
+        return f"pbkdf2_sha256${iterations}${salt}${hash_obj.hex()}"
+
+
+def verify_password(password: str, hashed_password: str) -> bool:
+    """
+    Verify password against hash
+    
+    Args:
+        password: Plain text password
+        hashed_password: Hashed password
+        
+    Returns:
+        bool: True if password matches
+    """
+    if BCRYPT_AVAILABLE and not hashed_password.startswith('pbkdf2_sha256$'):
+        # Verify with bcrypt
+        return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+    else:
+        # Verify with PBKDF2
+        try:
+            # Parse hash components
+            algorithm, iterations, salt, hash_value = hashed_password.split('$', 3)
+            iterations = int(iterations)
+            
+            # Calculate hash with same parameters
+            hash_obj = hashlib.pbkdf2_hmac(
+                'sha256',
+                password.encode('utf-8'),
+                salt.encode('utf-8'),
+                iterations
+            )
+            
+            return hash_obj.hex() == hash_value
+        except Exception as e:
+            logger.error(f"Password verification error: {str(e)}")
+            return False
 
 
 def validate_password(password: str) -> Tuple[bool, Optional[str]]:
@@ -24,20 +113,25 @@ def validate_password(password: str) -> Tuple[bool, Optional[str]]:
     Returns:
         tuple: (is_valid, error_message)
     """
-    if len(password) < 8:
-        return False, "Password must be at least 8 characters long"
+    if not password:
+        return False, "Password cannot be empty"
     
-    if not re.search(r'[A-Z]', password):
+    if len(password) < PASSWORD_MIN_LENGTH:
+        return False, f"Password must be at least {PASSWORD_MIN_LENGTH} characters long"
+    
+    if PASSWORD_REQUIRE_UPPERCASE and not any(c.isupper() for c in password):
         return False, "Password must contain at least one uppercase letter"
     
-    if not re.search(r'[a-z]', password):
+    if PASSWORD_REQUIRE_LOWERCASE and not any(c.islower() for c in password):
         return False, "Password must contain at least one lowercase letter"
     
-    if not re.search(r'[0-9]', password):
-        return False, "Password must contain at least one number"
+    if PASSWORD_REQUIRE_DIGITS and not any(c.isdigit() for c in password):
+        return False, "Password must contain at least one digit"
     
-    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-        return False, "Password must contain at least one special character"
+    if PASSWORD_REQUIRE_SPECIAL:
+        special_chars = set(string.punctuation)
+        if not any(c in special_chars for c in password):
+            return False, "Password must contain at least one special character"
     
     return True, None
 
@@ -52,16 +146,68 @@ def validate_email(email: str) -> Tuple[bool, Optional[str]]:
     Returns:
         tuple: (is_valid, error_message)
     """
-    # Basic email regex pattern
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not email:
+        return False, "Email cannot be empty"
     
-    if not re.match(pattern, email):
+    # Simple regex for email validation
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    
+    if not re.match(email_pattern, email):
         return False, "Invalid email format"
     
     return True, None
 
 
-def authenticate_user(email: str, password: str) -> Tuple[bool, Optional[User], Optional[str]]:
+def generate_password_reset_token() -> str:
+    """
+    Generate secure token for password reset
+    
+    Returns:
+        str: Reset token
+    """
+    # Generate a secure random token
+    token = secrets.token_urlsafe(32)
+    
+    return token
+
+
+def verify_password_reset_token(token: str) -> Tuple[bool, Optional[str]]:
+    """
+    Verify password reset token
+    
+    Args:
+        token: Reset token
+        
+    Returns:
+        tuple: (is_valid, user_id)
+    """
+    try:
+        # Find token in database
+        resets = PasswordReset.find_by_token(token)
+        
+        if not resets:
+            return False, None
+        
+        reset = resets[0]
+        
+        # Check if token is expired
+        expires_at = datetime.fromisoformat(reset.expires_at)
+        
+        if datetime.now() > expires_at:
+            return False, None
+        
+        # Check if token is used
+        if reset.used:
+            return False, None
+        
+        return True, reset.user_id
+    
+    except Exception as e:
+        logger.error(f"Token verification error: {str(e)}")
+        return False, None
+
+
+def authenticate_user(email: str, password: str) -> Tuple[bool, Optional[Dict[str, Any]]]:
     """
     Authenticate user with email and password
     
@@ -70,175 +216,79 @@ def authenticate_user(email: str, password: str) -> Tuple[bool, Optional[User], 
         password: User password
         
     Returns:
-        tuple: (success, user, message)
+        tuple: (success, user_data)
     """
-    # Validate email format
-    is_valid, error = validate_email(email)
-    if not is_valid:
-        return False, None, error
-    
-    # Find user by email
-    user = User.find_by_email(email)
-    
-    if not user:
-        return False, None, "Invalid email or password"
-    
-    # Check password
-    if not user.check_password(password):
-        return False, None, "Invalid email or password"
-    
-    # Check if user is active
-    if not user.is_active:
-        return False, None, "Account is disabled"
-    
-    return True, user, None
-
-
-def admin_required(fn):
-    """
-    Decorator for routes that require admin access
-    """
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        # Verify JWT
-        verify_jwt_in_request()
-        
-        # Get user ID from JWT
-        user_id = get_jwt_identity()
-        
-        # Find user
-        user = User.find_by_id(user_id)
-        
-        # Check if user is admin
-        if not user or not user.is_admin:
-            return {
-                "error": True,
-                "message": "Admin privileges required"
-            }, 403
-        
-        # Store user in g for future use
-        g.current_user = user
-        
-        return fn(*args, **kwargs)
-    
-    return wrapper
-
-
-def get_current_user() -> Optional[User]:
-    """
-    Get current authenticated user
-    
-    Returns:
-        User: Current user or None
-    """
-    # Check if user is already in g
-    if hasattr(g, 'current_user'):
-        return g.current_user
-    
     try:
-        # Verify JWT without raising exception
-        verify_jwt_in_request(optional=True)
+        # Find user by email
+        users = User.find_by_email(email)
         
-        # Get user ID from JWT
-        user_id = get_jwt_identity()
+        if not users:
+            return False, None
         
-        if user_id:
-            # Find user
-            user = User.find_by_id(user_id)
-            
-            # Store user in g for future use
-            g.current_user = user
-            
-            return user
-    except:
-        pass
+        user = users[0]
+        
+        # Check if user is active
+        if not user.is_active:
+            return False, None
+        
+        # Verify password
+        if not verify_password(password, user.password):
+            return False, None
+        
+        # Return user data
+        return True, user.to_dict()
     
-    return None
+    except Exception as e:
+        logger.error(f"Authentication error: {str(e)}")
+        return False, None
 
 
-def generate_password_reset_token(user: User) -> str:
+def generate_api_key() -> str:
     """
-    Generate password reset token for user
+    Generate API key
+    
+    Returns:
+        str: API key
+    """
+    # Format: prefix_random_checksum
+    prefix = "tamkeen"
+    random_part = secrets.token_hex(16)
+    
+    # Add checksum
+    data = f"{prefix}_{random_part}"
+    checksum = hashlib.sha256(data.encode('utf-8')).hexdigest()[:8]
+    
+    return f"{data}_{checksum}"
+
+
+def verify_api_key(api_key: str) -> bool:
+    """
+    Verify API key format and checksum
     
     Args:
-        user: User object
+        api_key: API key
         
     Returns:
-        str: Reset token
+        bool: True if valid format
     """
-    import uuid
-    import hashlib
-    from datetime import datetime, timedelta
-    
-    # Generate token
-    token = str(uuid.uuid4())
-    
-    # Hash token
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    
-    # Set expiration to 24 hours from now
-    expiration = datetime.now() + timedelta(hours=24)
-    
-    # Store token hash and expiration in user
-    user.reset_token = token_hash
-    user.reset_token_expiry = expiration
-    user.save()
-    
-    return token
-
-
-def verify_password_reset_token(token: str) -> Tuple[bool, Optional[User], Optional[str]]:
-    """
-    Verify password reset token
-    
-    Args:
-        token: Reset token
+    try:
+        # Split components
+        parts = api_key.split('_')
         
-    Returns:
-        tuple: (is_valid, user, error_message)
-    """
-    import hashlib
-    from datetime import datetime
+        if len(parts) != 3:
+            return False
+        
+        prefix, random_part, checksum = parts
+        
+        # Verify prefix
+        if prefix != "tamkeen":
+            return False
+        
+        # Verify checksum
+        data = f"{prefix}_{random_part}"
+        expected_checksum = hashlib.sha256(data.encode('utf-8')).hexdigest()[:8]
+        
+        return checksum == expected_checksum
     
-    # Hash token
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    
-    # Find user with this token
-    users = User.find_by_reset_token(token_hash)
-    
-    if not users:
-        return False, None, "Invalid or expired token"
-    
-    user = users[0]
-    
-    # Check if token has expired
-    if user.reset_token_expiry and user.reset_token_expiry < datetime.now():
-        return False, None, "Token has expired"
-    
-    return True, user, None
-
-
-def log_login_attempt(user_id: str, success: bool, ip_address: str, user_agent: str) -> None:
-    """
-    Log login attempt
-    
-    Args:
-        user_id: User ID
-        success: Whether login was successful
-        ip_address: Client IP address
-        user_agent: Client user agent
-    """
-    from backend.database.models import UserActivity
-    
-    # Create activity log
-    activity = UserActivity(
-        user_id=user_id,
-        activity_type="login" if success else "login_failed",
-        activity_data=json.dumps({
-            "ip_address": ip_address,
-            "user_agent": user_agent,
-            "timestamp": datetime.now().isoformat()
-        })
-    )
-    
-    activity.save() 
+    except Exception:
+        return False 

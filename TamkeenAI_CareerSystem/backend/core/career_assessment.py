@@ -12,6 +12,7 @@ import random
 from typing import Dict, List, Any, Optional, Tuple, Union
 from datetime import datetime
 import uuid
+import logging
 
 # Import other core modules
 from .user_info import UserProfile
@@ -19,6 +20,13 @@ from .keyword_recommender import extract_keywords, find_matching_keywords, Keywo
 
 # Import settings
 from config.settings import CAREER_READINESS_THRESHOLD, BASE_DIR
+
+# Import database models
+from backend.database.models import User, Resume, ResumeVersion, Career, CareerAssessment, UserSkill
+from backend.database.connector import get_db, DatabaseError
+
+# Setup logger
+logger = logging.getLogger(__name__)
 
 # Define paths for industry data
 INDUSTRY_DATA_DIR = os.path.join(BASE_DIR, 'data', 'industries')
@@ -1052,3 +1060,386 @@ def get_skill_gap_analysis(user_skills: List[str], target_role: str) -> Dict[str
     """
     assessment_engine = CareerAssessment()
     return assessment_engine.analyze_skill_gaps(user_skills, target_role)
+
+
+class CareerAssessor:
+    """Career assessment and recommendation class"""
+    
+    def __init__(self):
+        """Initialize assessor with careers data"""
+        self.careers = self._load_careers()
+        self.skills_weights = self._load_skills_weights()
+    
+    def _load_careers(self) -> List[Dict[str, Any]]:
+        """
+        Load careers data
+        
+        Returns:
+            list: Careers with skills and requirements
+        """
+        try:
+            careers_path = os.path.join(os.path.dirname(__file__), '../data/careers.json')
+            
+            if os.path.exists(careers_path):
+                with open(careers_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            
+            # Default careers if file not found
+            return [
+                {
+                    "id": "software-developer",
+                    "title": "Software Developer",
+                    "description": "Designs, develops, and maintains software applications",
+                    "skills": ["Python", "JavaScript", "SQL", "Git", "Problem Solving"],
+                    "education": ["Computer Science", "Software Engineering"],
+                    "experience_levels": {
+                        "entry": {
+                            "years": 0,
+                            "skills": ["Python", "JavaScript", "Problem Solving"]
+                        },
+                        "mid": {
+                            "years": 2,
+                            "skills": ["Python", "JavaScript", "SQL", "Git", "Problem Solving", "API Development"]
+                        },
+                        "senior": {
+                            "years": 5,
+                            "skills": ["Python", "JavaScript", "SQL", "Git", "Problem Solving", "API Development", 
+                                      "System Design", "Leadership"]
+                        }
+                    }
+                },
+                {
+                    "id": "data-scientist",
+                    "title": "Data Scientist",
+                    "description": "Analyzes and interprets complex data to help organizations make decisions",
+                    "skills": ["Python", "R", "SQL", "Machine Learning", "Statistics", "Data Visualization"],
+                    "education": ["Data Science", "Statistics", "Computer Science", "Mathematics"],
+                    "experience_levels": {
+                        "entry": {
+                            "years": 0,
+                            "skills": ["Python", "SQL", "Statistics"]
+                        },
+                        "mid": {
+                            "years": 2,
+                            "skills": ["Python", "R", "SQL", "Machine Learning", "Statistics", "Data Visualization"]
+                        },
+                        "senior": {
+                            "years": 5,
+                            "skills": ["Python", "R", "SQL", "Machine Learning", "Statistics", "Data Visualization",
+                                      "Big Data", "Deep Learning", "Leadership"]
+                        }
+                    }
+                }
+            ]
+        
+        except Exception as e:
+            logger.error(f"Error loading careers data: {str(e)}")
+            return []
+    
+    def _load_skills_weights(self) -> Dict[str, float]:
+        """
+        Load skills weights for assessment
+        
+        Returns:
+            dict: Skills and their importance weights
+        """
+        try:
+            weights_path = os.path.join(os.path.dirname(__file__), '../data/skills_weights.json')
+            
+            if os.path.exists(weights_path):
+                with open(weights_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            
+            # Default weights if file not found
+            return {
+                # Technical skills
+                "Programming": 0.8,
+                "Data Analysis": 0.7,
+                "Machine Learning": 0.6,
+                "Web Development": 0.7,
+                "Mobile Development": 0.6,
+                "DevOps": 0.6,
+                "Cloud Computing": 0.7,
+                "Database": 0.6,
+                
+                # Soft skills
+                "Communication": 0.9,
+                "Problem Solving": 0.9,
+                "Teamwork": 0.8,
+                "Leadership": 0.7,
+                "Time Management": 0.7,
+                "Creativity": 0.6,
+                
+                # Business skills
+                "Project Management": 0.7,
+                "Business Analysis": 0.6,
+                "Product Management": 0.6,
+                "Marketing": 0.5,
+                "Sales": 0.5,
+                "Customer Service": 0.6
+            }
+        
+        except Exception as e:
+            logger.error(f"Error loading skills weights: {str(e)}")
+            return {}
+    
+    def perform_skills_gap_analysis(self, user_id: str, target_career_id: str, resume_id: Optional[str] = None) -> Dict[str, Any]:
+        """Perform skills gap analysis for a target career"""
+        try:
+            # Find target career
+            target_career = None
+            for career in self.careers:
+                if career.get('id') == target_career_id:
+                    target_career = career
+                    break
+            
+            if not target_career:
+                return {"error": "Target career not found"}
+            
+            # Get user skills
+            user_skills = UserSkill.find_by_user_id(user_id)
+            user_skill_names = [skill.name for skill in user_skills]
+            
+            # Find user resumes
+            resumes = Resume.find_by_user_id(user_id)
+            
+            if not resumes:
+                return {"error": "No resumes found for the user"}
+            
+            # Get latest resume
+            latest_resume = max(resumes, key=lambda r: r.created_at)
+            
+            # Get latest version
+            versions = ResumeVersion.find_by_resume_id(latest_resume.id)
+            
+            if versions:
+                latest_version = max(versions, key=lambda v: v.created_at)
+                
+                # Parse resume data
+                try:
+                    parsed_data = json.loads(latest_version.parsed_data)
+                    
+                    # Get resume skills
+                    if parsed_data.get('skills'):
+                        resume_skills = parsed_data.get('skills', [])
+                        user_skill_names.extend(skill for skill in resume_skills if skill not in user_skill_names)
+                
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            
+            # Determine missing skills
+            missing_skills = [skill for skill in target_career.get('skills', []) if skill not in user_skill_names]
+            
+            if missing_skills:
+                # Generate assessment data
+                assessment_data = {
+                    "user_id": user_id,
+                    "resume_id": latest_resume.id if resumes else None,
+                    "target_career": target_career,
+                    "missing_skills": missing_skills
+                }
+                
+                # Create assessment
+                assessment = CareerAssessment(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    resume_id=resume_id,
+                    assessment_type='skills-gap',
+                    assessment_data=json.dumps(assessment_data),
+                    created_at=datetime.now().isoformat()
+                )
+                
+                # Save assessment
+                assessment.save()
+                
+                logger.info(f"Skills gap analysis completed for user {user_id}, resume {resume_id}")
+                
+                return assessment_data
+            
+            return {"error": "No skills gaps found"}
+        
+        except Exception as e:
+            error_msg = f"Error performing skills gap analysis: {str(e)}"
+            logger.error(error_msg)
+            return {"error": error_msg}
+    
+    def generate_career_path(self, user_id: str, target_career_id: str) -> Dict[str, Any]:
+        """
+        Generate career path for a target career
+        
+        Args:
+            user_id: User ID
+            target_career_id: Target career ID
+            
+        Returns:
+            dict: Career path data
+        """
+        try:
+            # Find target career
+            target_career = None
+            for career in self.careers:
+                if career.get('id') == target_career_id:
+                    target_career = career
+                    break
+            
+            if not target_career:
+                return {"error": "Target career not found"}
+            
+            # Get user skills
+            user_skills = UserSkill.find_by_user_id(user_id)
+            user_skill_names = [skill.name for skill in user_skills]
+            
+            # Find user resumes
+            resumes = Resume.find_by_user_id(user_id)
+            
+            if not resumes:
+                return {
+                    "user_id": user_id,
+                    "target_career": target_career,
+                    "current_level": "entry",
+                    "missing_skills": target_career.get('skills', []),
+                    "path": [
+                        {
+                            "level": "entry",
+                            "skills_to_acquire": target_career.get('experience_levels', {}).get('entry', {}).get('skills', []),
+                            "estimated_time": "1-2 years"
+                        }
+                    ]
+                }
+            
+            # Get latest resume
+            latest_resume = max(resumes, key=lambda r: r.created_at)
+            
+            # Get latest version
+            versions = ResumeVersion.find_by_resume_id(latest_resume.id)
+            
+            if versions:
+                latest_version = max(versions, key=lambda v: v.created_at)
+                
+                # Parse resume data
+                try:
+                    parsed_data = json.loads(latest_version.parsed_data)
+                    
+                    # Get resume skills
+                    if parsed_data.get('skills'):
+                        resume_skills = parsed_data.get('skills', [])
+                        user_skill_names.extend(skill for skill in resume_skills if skill not in user_skill_names)
+                
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            
+            # Determine current level
+            levels = ['entry', 'mid', 'senior']
+            current_level = 'entry'
+            
+            for level in levels:
+                level_skills = target_career.get('experience_levels', {}).get(level, {}).get('skills', [])
+                required_years = target_career.get('experience_levels', {}).get(level, {}).get('years', 0)
+                
+                # Calculate skills match
+                matching_skills = [skill for skill in level_skills if skill in user_skill_names]
+                skills_ratio = len(matching_skills) / len(level_skills) if level_skills else 0
+                
+                # If user has most of the skills for this level, consider them at this level
+                if skills_ratio >= 0.7:
+                    current_level = level
+                    continue
+                
+                # Otherwise stop at previous level
+                break
+            
+            # Generate path based on current level and target career
+            path = []
+            current_index = levels.index(current_level)
+            
+            for i in range(current_index, len(levels)):
+                level = levels[i]
+                level_skills = target_career.get('experience_levels', {}).get(level, {}).get('skills', [])
+                required_years = target_career.get('experience_levels', {}).get(level, {}).get('years', 0)
+                
+                # Skills to acquire
+                skills_to_acquire = [skill for skill in level_skills if skill not in user_skill_names]
+                
+                if skills_to_acquire:
+                    # Estimate time based on number of skills to acquire
+                    if level == 'entry':
+                        estimated_time = "3-6 months"
+                    elif level == 'mid':
+                        estimated_time = "6-12 months"
+                    elif level == 'senior':
+                        estimated_time = "1-2 years"
+                    
+                    path.append({
+                        "level": level,
+                        "skills_to_acquire": skills_to_acquire,
+                        "estimated_time": estimated_time
+                    })
+                
+                # Add skills to user skills for next level calculation
+                user_skill_names.extend(skills_to_acquire)
+            
+            # Generate result
+            result = {
+                "user_id": user_id,
+                "target_career": target_career,
+                "current_level": current_level,
+                "path": path
+            }
+            
+            # Save assessment
+            assessment = CareerAssessment(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                resume_id=latest_resume.id if resumes else None,
+                assessment_type='career-path',
+                assessment_data=json.dumps(result),
+                created_at=datetime.now().isoformat()
+            )
+            
+            # Save assessment
+            assessment.save()
+            
+            logger.info(f"Career path generated for user {user_id}, target career {target_career_id}")
+            
+            return result
+        
+        except Exception as e:
+            error_msg = f"Error generating career path: {str(e)}"
+            logger.error(error_msg)
+            return {"error": error_msg}
+
+# Convenience functions
+
+def get_career_options() -> List[Dict[str, Any]]:
+    """Get available career options"""
+    assessor = CareerAssessor()
+    return assessor.get_career_options()
+
+
+def assess_career_compatibility(user_id: str, resume_id: Optional[str] = None, limit: int = 5) -> Dict[str, Any]:
+    """Assess career compatibility based on skills and experience"""
+    assessor = CareerAssessor()
+    return assessor.assess_career_compatibility(user_id, resume_id, limit)
+
+
+def perform_skills_gap_analysis(user_id: str, target_career_id: str, resume_id: Optional[str] = None) -> Dict[str, Any]:
+    """Perform skills gap analysis for a target career"""
+    assessor = CareerAssessor()
+    return assessor.perform_skills_gap_analysis(user_id, target_career_id, resume_id)
+
+
+def generate_career_path(user_id: str, target_career_id: str) -> Dict[str, Any]:
+    """Generate career path for a target career"""
+    assessor = CareerAssessor()
+    return assessor.generate_career_path(user_id, target_career_id)
+
+
+def get_user_assessments(user_id: str) -> List[Dict[str, Any]]:
+    """Get user's career assessments"""
+    try:
+        assessments = CareerAssessment.find_by_user_id(user_id)
+        return [assessment.to_dict() for assessment in assessments]
+    
+    except Exception as e:
+        logger.error(f"Error retrieving user assessments: {str(e)}")
+        return []

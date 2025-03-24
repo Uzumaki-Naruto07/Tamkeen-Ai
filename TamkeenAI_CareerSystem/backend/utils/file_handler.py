@@ -1,496 +1,638 @@
 """
 File Handler Module
 
-This module provides utilities for reading, processing, and extracting content from
-different file types used in the Tamkeen AI Career Intelligence System.
+This module provides utilities for handling, processing, and extracting information from files.
 """
 
 import os
 import re
-import tempfile
-from typing import Dict, List, Any, Optional, Tuple, Union, BinaryIO
+import json
+import uuid
+from typing import Dict, List, Any, Optional, Tuple, Union
 import logging
+from datetime import datetime
+import mimetypes
 
-# Import file utilities
-from .file_utils import get_file_extension
+# Import settings
+from backend.config.settings import UPLOAD_FOLDER, ALLOWED_EXTENSIONS, STORAGE_TYPE, STORAGE_CONFIG
 
 # Setup logger
 logger = logging.getLogger(__name__)
 
-# Try importing document parsing libraries
+# Try to import optional dependencies
 try:
     import docx
     DOCX_AVAILABLE = True
 except ImportError:
     DOCX_AVAILABLE = False
-    logger.warning("python-docx not available. Install with: pip install python-docx")
+    logger.warning("python-docx not installed. Install with: pip install python-docx")
 
 try:
     import PyPDF2
     PYPDF2_AVAILABLE = True
 except ImportError:
     PYPDF2_AVAILABLE = False
-    logger.warning("PyPDF2 not available. Install with: pip install PyPDF2")
+    logger.warning("PyPDF2 not installed. Install with: pip install PyPDF2")
 
 try:
-    from pdfminer.high_level import extract_text as pdf_extract_text
-    PDFMINER_AVAILABLE = True
+    import pdfplumber
+    PDFPLUMBER_AVAILABLE = True
 except ImportError:
-    PDFMINER_AVAILABLE = False
-    logger.warning("pdfminer.six not available. Install with: pip install pdfminer.six")
+    PDFPLUMBER_AVAILABLE = False
+    logger.warning("pdfplumber not installed. Install with: pip install pdfplumber")
+
+try:
+    from odf import text as odf_text
+    from odf.opendocument import load as odf_load
+    ODF_AVAILABLE = True
+except ImportError:
+    ODF_AVAILABLE = False
+    logger.warning("odfpy not installed. Install with: pip install odfpy")
+
+try:
+    import boto3
+    AWS_AVAILABLE = True
+except ImportError:
+    AWS_AVAILABLE = False
+    logger.warning("boto3 not installed. Install with: pip install boto3")
+
+try:
+    from azure.storage.blob import BlobServiceClient
+    AZURE_AVAILABLE = True
+except ImportError:
+    AZURE_AVAILABLE = False
+    logger.warning("azure-storage-blob not installed. Install with: pip install azure-storage-blob")
 
 
-def read_text_file(file_path: str) -> str:
+def get_file_extension(filename: str) -> str:
     """
-    Read content from a text file
+    Get file extension from filename
     
     Args:
-        file_path: Path to text file
+        filename: Filename
         
     Returns:
-        str: Text content
+        str: File extension without dot
     """
-    try:
-        with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
-            return f.read()
-    except Exception as e:
-        logger.error(f"Error reading text file {file_path}: {e}")
-        return ""
+    return os.path.splitext(filename)[1][1:].lower()
 
 
-def read_docx_file(file_path: str) -> str:
+def allowed_file(filename: str, file_type: str = 'document') -> bool:
     """
-    Extract text from a DOCX file
+    Check if file has allowed extension
     
     Args:
-        file_path: Path to DOCX file
+        filename: Filename
+        file_type: File type category (document, image, resume)
+        
+    Returns:
+        bool: Is allowed
+    """
+    if not filename:
+        return False
+    
+    extension = get_file_extension(filename)
+    
+    if file_type not in ALLOWED_EXTENSIONS:
+        return False
+    
+    return extension in ALLOWED_EXTENSIONS[file_type]
+
+
+def get_mime_type(filename: str) -> str:
+    """
+    Get MIME type for file
+    
+    Args:
+        filename: Filename
+        
+    Returns:
+        str: MIME type
+    """
+    mime_type, _ = mimetypes.guess_type(filename)
+    return mime_type or 'application/octet-stream'
+
+
+def generate_unique_filename(filename: str) -> str:
+    """
+    Generate unique filename
+    
+    Args:
+        filename: Original filename
+        
+    Returns:
+        str: Unique filename
+    """
+    extension = get_file_extension(filename)
+    unique_id = str(uuid.uuid4())
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    new_filename = f"{unique_id}_{timestamp}.{extension}"
+    
+    return new_filename
+
+
+def save_uploaded_file(file, folder_path: str = None, allowed_types: set = None) -> Optional[str]:
+    """
+    Save uploaded file to local storage
+    
+    Args:
+        file: File object
+        folder_path: Optional sub-folder path
+        allowed_types: Optional set of allowed file extensions
+        
+    Returns:
+        str or None: File path or None if save failed
+    """
+    try:
+        if not file:
+            return None
+        
+        # Check filename
+        if not file.filename:
+            return None
+        
+        # Check file extension if allowed_types provided
+        if allowed_types:
+            extension = get_file_extension(file.filename)
+            if extension not in allowed_types:
+                logger.warning(f"Invalid file type: {extension}")
+                return None
+        
+        # Generate unique filename
+        filename = generate_unique_filename(file.filename)
+        
+        # Determine full path
+        if folder_path:
+            full_folder_path = os.path.join(UPLOAD_FOLDER, folder_path)
+        else:
+            full_folder_path = UPLOAD_FOLDER
+        
+        # Ensure directory exists
+        os.makedirs(full_folder_path, exist_ok=True)
+        
+        # Full file path
+        file_path = os.path.join(full_folder_path, filename)
+        
+        # Save file
+        file.save(file_path)
+        
+        logger.info(f"File saved: {file_path}")
+        
+        return file_path
+    
+    except Exception as e:
+        logger.error(f"Error saving file: {str(e)}")
+        return None
+
+
+def upload_to_cloud_storage(file_path: str, destination_path: str = None) -> Optional[str]:
+    """
+    Upload file to cloud storage
+    
+    Args:
+        file_path: Local file path
+        destination_path: Optional destination path in storage
+        
+    Returns:
+        str or None: Storage URL or None if upload failed
+    """
+    try:
+        if not os.path.exists(file_path):
+            logger.error(f"File not found: {file_path}")
+            return None
+        
+        filename = os.path.basename(file_path)
+        
+        if not destination_path:
+            destination_path = filename
+        
+        if STORAGE_TYPE == 's3':
+            return _upload_to_s3(file_path, destination_path)
+        elif STORAGE_TYPE == 'azure':
+            return _upload_to_azure(file_path, destination_path)
+        else:
+            # Local storage, just return the file path
+            return file_path
+    
+    except Exception as e:
+        logger.error(f"Error uploading to cloud storage: {str(e)}")
+        return None
+
+
+def _upload_to_s3(file_path: str, destination_path: str) -> Optional[str]:
+    """Upload file to S3"""
+    if not AWS_AVAILABLE:
+        logger.error("boto3 not installed. Cannot upload to S3.")
+        return None
+    
+    try:
+        config = STORAGE_CONFIG.get('s3', {})
+        bucket = config.get('bucket')
+        
+        if not bucket:
+            logger.error("S3 bucket not configured")
+            return None
+        
+        # Initialize S3 client
+        s3_client = boto3.client(
+            's3',
+            region_name=config.get('region'),
+            aws_access_key_id=config.get('access_key'),
+            aws_secret_access_key=config.get('secret_key'),
+            endpoint_url=config.get('endpoint_url')
+        )
+        
+        # Upload file
+        s3_client.upload_file(file_path, bucket, destination_path)
+        
+        # Generate URL
+        url = f"https://{bucket}.s3.amazonaws.com/{destination_path}"
+        
+        logger.info(f"File uploaded to S3: {url}")
+        
+        return url
+    
+    except Exception as e:
+        logger.error(f"Error uploading to S3: {str(e)}")
+        return None
+
+
+def _upload_to_azure(file_path: str, destination_path: str) -> Optional[str]:
+    """Upload file to Azure Blob Storage"""
+    if not AZURE_AVAILABLE:
+        logger.error("azure-storage-blob not installed. Cannot upload to Azure.")
+        return None
+    
+    try:
+        config = STORAGE_CONFIG.get('azure', {})
+        connection_string = config.get('connection_string')
+        container_name = config.get('container')
+        
+        if not connection_string or not container_name:
+            logger.error("Azure Storage not configured properly")
+            return None
+        
+        # Initialize Azure client
+        blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+        container_client = blob_service_client.get_container_client(container_name)
+        
+        # Upload file
+        with open(file_path, "rb") as data:
+            blob_client = container_client.upload_blob(destination_path, data, overwrite=True)
+        
+        # Generate URL
+        url = f"{blob_service_client.url}/{container_name}/{destination_path}"
+        
+        logger.info(f"File uploaded to Azure: {url}")
+        
+        return url
+    
+    except Exception as e:
+        logger.error(f"Error uploading to Azure: {str(e)}")
+        return None
+
+
+def delete_file(file_path: str) -> bool:
+    """
+    Delete file from storage
+    
+    Args:
+        file_path: File path or URL
+        
+    Returns:
+        bool: Success status
+    """
+    try:
+        # If it's a local file
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logger.info(f"File deleted: {file_path}")
+            return True
+        
+        # If it's a cloud storage URL
+        if STORAGE_TYPE == 's3' and file_path.startswith('https://'):
+            return _delete_from_s3(file_path)
+        elif STORAGE_TYPE == 'azure' and file_path.startswith('https://'):
+            return _delete_from_azure(file_path)
+        
+        logger.warning(f"File not found: {file_path}")
+        return False
+    
+    except Exception as e:
+        logger.error(f"Error deleting file: {str(e)}")
+        return False
+
+
+def _delete_from_s3(file_url: str) -> bool:
+    """Delete file from S3"""
+    if not AWS_AVAILABLE:
+        logger.error("boto3 not installed. Cannot delete from S3.")
+        return False
+    
+    try:
+        config = STORAGE_CONFIG.get('s3', {})
+        bucket = config.get('bucket')
+        
+        if not bucket:
+            logger.error("S3 bucket not configured")
+            return False
+        
+        # Extract object key from URL
+        # URL format: https://bucket-name.s3.amazonaws.com/object-key
+        object_key = file_url.split(f"{bucket}.s3.amazonaws.com/")[1]
+        
+        # Initialize S3 client
+        s3_client = boto3.client(
+            's3',
+            region_name=config.get('region'),
+            aws_access_key_id=config.get('access_key'),
+            aws_secret_access_key=config.get('secret_key'),
+            endpoint_url=config.get('endpoint_url')
+        )
+        
+        # Delete file
+        s3_client.delete_object(Bucket=bucket, Key=object_key)
+        
+        logger.info(f"File deleted from S3: {file_url}")
+        
+        return True
+    
+    except Exception as e:
+        logger.error(f"Error deleting from S3: {str(e)}")
+        return False
+
+
+def _delete_from_azure(file_url: str) -> bool:
+    """Delete file from Azure Blob Storage"""
+    if not AZURE_AVAILABLE:
+        logger.error("azure-storage-blob not installed. Cannot delete from Azure.")
+        return False
+    
+    try:
+        config = STORAGE_CONFIG.get('azure', {})
+        connection_string = config.get('connection_string')
+        container_name = config.get('container')
+        
+        if not connection_string or not container_name:
+            logger.error("Azure Storage not configured properly")
+            return False
+        
+        # Extract blob name from URL
+        # URL format: https://account.blob.core.windows.net/container/blob-name
+        blob_name = file_url.split(f"{container_name}/")[1]
+        
+        # Initialize Azure client
+        blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+        container_client = blob_service_client.get_container_client(container_name)
+        
+        # Delete blob
+        container_client.delete_blob(blob_name)
+        
+        logger.info(f"File deleted from Azure: {file_url}")
+        
+        return True
+    
+    except Exception as e:
+        logger.error(f"Error deleting from Azure: {str(e)}")
+        return False
+
+
+def get_file_url(file_path: str) -> str:
+    """
+    Get public URL for file
+    
+    Args:
+        file_path: File path
+        
+    Returns:
+        str: File URL
+    """
+    # If already a URL, return as is
+    if file_path.startswith(('http://', 'https://')):
+        return file_path
+    
+    # For local storage, determine relative path from UPLOAD_FOLDER
+    if file_path.startswith(UPLOAD_FOLDER):
+        rel_path = os.path.relpath(file_path, UPLOAD_FOLDER)
+        return f"/uploads/{rel_path}"
+    
+    # Otherwise return as is
+    return file_path
+
+
+def extract_text_from_file(file_path: str) -> str:
+    """
+    Extract text from document file
+    
+    Args:
+        file_path: File path
         
     Returns:
         str: Extracted text
     """
+    try:
+        extension = get_file_extension(file_path)
+        
+        if extension == 'txt':
+            return _extract_text_from_txt(file_path)
+        elif extension == 'pdf':
+            return _extract_text_from_pdf(file_path)
+        elif extension in ['doc', 'docx']:
+            return _extract_text_from_docx(file_path)
+        elif extension in ['odt']:
+            return _extract_text_from_odt(file_path)
+        elif extension == 'rtf':
+            return _extract_text_from_rtf(file_path)
+        else:
+            logger.warning(f"Unsupported file format for text extraction: {extension}")
+            return ""
+    
+    except Exception as e:
+        logger.error(f"Error extracting text from file: {str(e)}")
+        return ""
+
+
+def _extract_text_from_txt(file_path: str) -> str:
+    """Extract text from .txt file"""
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as file:
+            return file.read()
+    except Exception as e:
+        logger.error(f"Error reading .txt file: {str(e)}")
+        
+        # Try another encoding
+        try:
+            with open(file_path, 'r', encoding='latin-1', errors='ignore') as file:
+                return file.read()
+        except Exception as e2:
+            logger.error(f"Error reading .txt file with latin-1 encoding: {str(e2)}")
+            return ""
+
+
+def _extract_text_from_pdf(file_path: str) -> str:
+    """Extract text from PDF file"""
+    text = ""
+    
+    # Try using pdfplumber first (better quality)
+    if PDFPLUMBER_AVAILABLE:
+        try:
+            with pdfplumber.open(file_path) as pdf:
+                for page in pdf.pages:
+                    text += page.extract_text() or ""
+                    text += "\n\n"
+            
+            if text.strip():
+                return text
+            # If text is empty, fall back to PyPDF2
+        except Exception as e:
+            logger.warning(f"pdfplumber extraction failed, falling back to PyPDF2: {str(e)}")
+    
+    # Fall back to PyPDF2
+    if PYPDF2_AVAILABLE:
+        try:
+            with open(file_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                for page_num in range(len(reader.pages)):
+                    text += reader.pages[page_num].extract_text() or ""
+                    text += "\n\n"
+            
+            return text
+        except Exception as e:
+            logger.error(f"Error extracting text from PDF with PyPDF2: {str(e)}")
+    
+    logger.error("No PDF extraction library available. Install PyPDF2 or pdfplumber.")
+    return ""
+
+
+def _extract_text_from_docx(file_path: str) -> str:
+    """Extract text from .docx file"""
     if not DOCX_AVAILABLE:
-        logger.error("python-docx is not installed")
+        logger.error("python-docx not installed. Cannot extract text from .docx file.")
         return ""
     
     try:
         doc = docx.Document(file_path)
-        full_text = []
+        text = []
         
-        # Extract text from paragraphs
         for para in doc.paragraphs:
-            full_text.append(para.text)
+            text.append(para.text)
         
         # Extract text from tables
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
-                    full_text.append(cell.text)
+                    text.append(cell.text)
         
-        return '\n'.join(full_text)
+        return "\n".join(text)
     except Exception as e:
-        logger.error(f"Error reading DOCX file {file_path}: {e}")
+        logger.error(f"Error extracting text from .docx: {str(e)}")
         return ""
 
 
-def read_pdf_file(file_path: str) -> str:
-    """
-    Extract text from a PDF file
+def _extract_text_from_odt(file_path: str) -> str:
+    """Extract text from .odt file"""
+    if not ODF_AVAILABLE:
+        logger.error("odfpy not installed. Cannot extract text from .odt file.")
+        return ""
     
-    Args:
-        file_path: Path to PDF file
+    try:
+        doc = odf_load(file_path)
+        allparas = doc.getElementsByType(odf_text.P)
+        text = []
         
-    Returns:
-        str: Extracted text
-    """
-    # Try pdfminer.six first (better quality)
-    if PDFMINER_AVAILABLE:
-        try:
-            return pdf_extract_text(file_path)
-        except Exception as e:
-            logger.warning(f"pdfminer.six extraction failed, trying PyPDF2: {e}")
-    
-    # Fall back to PyPDF2
-    if PYPDF2_AVAILABLE:
-        try:
-            text = ""
-            with open(file_path, 'rb') as f:
-                reader = PyPDF2.PdfReader(f)
-                for page_num in range(len(reader.pages)):
-                    text += reader.pages[page_num].extract_text() + "\n"
-            return text
-        except Exception as e:
-            logger.error(f"Error reading PDF file {file_path}: {e}")
-            return ""
-    
-    logger.error("No PDF extraction library available")
-    return ""
+        for para in allparas:
+            text.append(odf_text.teletype.extractText(para))
+        
+        return "\n".join(text)
+    except Exception as e:
+        logger.error(f"Error extracting text from .odt: {str(e)}")
+        return ""
 
 
-def read_rtf_file(file_path: str) -> str:
+def _extract_text_from_rtf(file_path: str) -> str:
     """
-    Extract text from an RTF file
+    Extract text from .rtf file
     
-    Args:
-        file_path: Path to RTF file
-        
-    Returns:
-        str: Extracted text
+    Note: This is a very simple RTF parser. For complex RTF files,
+    consider using a specialized library.
     """
     try:
-        # Convert RTF to text using a simple approach
-        with open(file_path, 'r', errors='ignore') as f:
-            content = f.read()
+        with open(file_path, 'r', encoding='latin-1', errors='ignore') as file:
+            content = file.read()
         
-        # Remove RTF control sequences
-        text = re.sub(r'\\[a-z]{1,32}[-]?[0-9]*[ ]?', ' ', content)
-        text = re.sub(r'[{}]|\\\n|\\\r', '', text)
-        text = re.sub(r'\s+', ' ', text)
+        # Very basic RTF parsing - removing RTF markup
+        # Remove RTF header
+        text = re.sub(r'^.*\\rtf1\\.*?\\pard', '', content, flags=re.DOTALL)
+        
+        # Remove RTF commands
+        text = re.sub(r'\\[a-z0-9]+', ' ', text)
+        text = re.sub(r'\\\'[0-9a-f]{2}', '', text)
+        text = re.sub(r'\\[^a-z]', '', text)
+        text = re.sub(r'\{.*?\}', '', text, flags=re.DOTALL)
+        
+        # Replace RTF line breaks with normal line breaks
+        text = re.sub(r'\\par\s*', '\n', text)
+        
+        # Remove any remaining braces
+        text = text.replace('{', '').replace('}', '')
         
         return text
     except Exception as e:
-        logger.error(f"Error reading RTF file {file_path}: {e}")
+        logger.error(f"Error extracting text from .rtf: {str(e)}")
         return ""
 
 
-def extract_text_from_file(file_path: str) -> str:
+def detect_sections(text: str) -> Dict[str, str]:
     """
-    Extract text from a file based on its extension
-    
-    Args:
-        file_path: Path to file
-        
-    Returns:
-        str: Extracted text
-    """
-    extension = get_file_extension(file_path).lower()
-    
-    if extension == 'txt':
-        return read_text_file(file_path)
-    elif extension == 'docx':
-        return read_docx_file(file_path)
-    elif extension == 'doc':
-        logger.warning("DOC format is not directly supported. Convert to DOCX for better results.")
-        return ""
-    elif extension == 'pdf':
-        return read_pdf_file(file_path)
-    elif extension == 'rtf':
-        return read_rtf_file(file_path)
-    else:
-        logger.warning(f"Unsupported file extension: {extension}")
-        return ""
-
-
-def extract_images_from_file(file_path: str, output_dir: Optional[str] = None) -> List[str]:
-    """
-    Extract images from a document file
-    
-    Args:
-        file_path: Path to document file
-        output_dir: Directory to save extracted images
-        
-    Returns:
-        list: Paths to extracted images
-    """
-    extension = get_file_extension(file_path).lower()
-    image_paths = []
-    
-    # Create temp directory if output_dir not provided
-    if output_dir is None:
-        output_dir = tempfile.mkdtemp()
-    else:
-        os.makedirs(output_dir, exist_ok=True)
-    
-    # Extract from DOCX
-    if extension == 'docx' and DOCX_AVAILABLE:
-        try:
-            doc = docx.Document(file_path)
-            image_index = 0
-            
-            for rel in doc.part.rels.values():
-                if "image" in rel.target_ref:
-                    image_index += 1
-                    image_path = os.path.join(output_dir, f"image_{image_index}.png")
-                    
-                    with open(image_path, 'wb') as f:
-                        f.write(rel.target_part.blob)
-                    
-                    image_paths.append(image_path)
-        except Exception as e:
-            logger.error(f"Error extracting images from DOCX: {e}")
-    
-    # Extract from PDF
-    elif extension == 'pdf' and PYPDF2_AVAILABLE:
-        # Note: Image extraction from PDFs is complex
-        # This is a simplified placeholder for the functionality
-        logger.warning("Image extraction from PDF not implemented")
-    
-    return image_paths
-
-
-def preprocess_text(text: str, 
-                  remove_stopwords: bool = False,
-                  normalize_whitespace: bool = True,
-                  lowercase: bool = True) -> str:
-    """
-    Preprocess text for analysis
-    
-    Args:
-        text: Input text
-        remove_stopwords: Whether to remove stopwords
-        normalize_whitespace: Whether to normalize whitespace
-        lowercase: Whether to convert to lowercase
-        
-    Returns:
-        str: Preprocessed text
-    """
-    if not text:
-        return ""
-    
-    # Lowercase
-    if lowercase:
-        text = text.lower()
-    
-    # Normalize whitespace
-    if normalize_whitespace:
-        text = re.sub(r'\s+', ' ', text)
-        text = text.strip()
-    
-    # Remove stopwords
-    if remove_stopwords:
-        try:
-            import nltk
-            from nltk.corpus import stopwords
-            
-            # Download stopwords if needed
-            try:
-                nltk.data.find('corpora/stopwords')
-            except LookupError:
-                nltk.download('stopwords', quiet=True)
-            
-            stop_words = set(stopwords.words('english'))
-            words = text.split()
-            filtered_words = [w for w in words if w.lower() not in stop_words]
-            text = ' '.join(filtered_words)
-        except ImportError:
-            logger.warning("NLTK not available. Skipping stopword removal.")
-    
-    return text
-
-
-def extract_metadata(file_path: str) -> Dict[str, Any]:
-    """
-    Extract metadata from a file
-    
-    Args:
-        file_path: Path to file
-        
-    Returns:
-        dict: File metadata
-    """
-    extension = get_file_extension(file_path).lower()
-    metadata = {
-        'file_name': os.path.basename(file_path),
-        'file_size': os.path.getsize(file_path),
-        'file_type': extension,
-        'creation_time': os.path.getctime(file_path),
-        'modification_time': os.path.getmtime(file_path)
-    }
-    
-    # Extract document-specific metadata
-    if extension == 'docx' and DOCX_AVAILABLE:
-        try:
-            doc = docx.Document(file_path)
-            core_props = doc.core_properties
-            
-            # Add document properties
-            metadata.update({
-                'title': core_props.title,
-                'author': core_props.author,
-                'created': core_props.created,
-                'modified': core_props.modified,
-                'last_modified_by': core_props.last_modified_by,
-                'revision': core_props.revision,
-                'word_count': len(doc.paragraphs)
-            })
-        except Exception as e:
-            logger.error(f"Error extracting DOCX metadata: {e}")
-    
-    elif extension == 'pdf' and PYPDF2_AVAILABLE:
-        try:
-            with open(file_path, 'rb') as f:
-                reader = PyPDF2.PdfReader(f)
-                info = reader.metadata
-                
-                if info:
-                    # Add PDF properties
-                    metadata.update({
-                        'title': info.get('/Title', ''),
-                        'author': info.get('/Author', ''),
-                        'creator': info.get('/Creator', ''),
-                        'producer': info.get('/Producer', ''),
-                        'page_count': len(reader.pages)
-                    })
-        except Exception as e:
-            logger.error(f"Error extracting PDF metadata: {e}")
-    
-    return metadata
-
-
-def is_parseable(file_path: str) -> bool:
-    """
-    Check if a file can be parsed for text
-    
-    Args:
-        file_path: Path to file
-        
-    Returns:
-        bool: True if file can be parsed
-    """
-    extension = get_file_extension(file_path).lower()
-    parseable_extensions = ['txt', 'pdf', 'docx', 'rtf']
-    
-    if extension not in parseable_extensions:
-        return False
-    
-    # Additional checks for specific formats
-    if extension == 'pdf' and not (PDFMINER_AVAILABLE or PYPDF2_AVAILABLE):
-        return False
-    
-    if extension == 'docx' and not DOCX_AVAILABLE:
-        return False
-    
-    return True
-
-
-def convert_file_to_text(file_path: str, output_path: Optional[str] = None) -> str:
-    """
-    Convert a document file to plain text file
-    
-    Args:
-        file_path: Path to source file
-        output_path: Path to output text file (optional)
-        
-    Returns:
-        str: Path to output text file
-    """
-    # Extract text from file
-    text = extract_text_from_file(file_path)
-    
-    # Generate output path if not provided
-    if output_path is None:
-        base_name = os.path.splitext(os.path.basename(file_path))[0]
-        output_dir = os.path.dirname(file_path)
-        output_path = os.path.join(output_dir, f"{base_name}.txt")
-    
-    # Write text to file
-    try:
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(text)
-        return output_path
-    except Exception as e:
-        logger.error(f"Error writing text to file: {e}")
-        return ""
-
-
-def extract_file_sections(text: str) -> Dict[str, str]:
-    """
-    Extract common document sections based on headings
+    Detect document sections
     
     Args:
         text: Document text
         
     Returns:
-        dict: Sections with their content
+        dict: Detected sections
     """
-    # Common section titles in resumes and documents
+    # Common resume section headings
     section_patterns = {
-        'summary': r'(?i)(professional\s+summary|summary|profile|objective)',
-        'experience': r'(?i)(work\s+experience|experience|employment|work\s+history)',
-        'education': r'(?i)(education|academic|qualifications|training)',
-        'skills': r'(?i)(skills|technical\s+skills|core\s+competencies|expertise)',
-        'projects': r'(?i)(projects|personal\s+projects)',
-        'achievements': r'(?i)(achievements|accomplishments|awards)',
-        'certificates': r'(?i)(certifications|certificates|credentials)',
-        'languages': r'(?i)(languages|language\s+proficiencies)',
-        'interests': r'(?i)(interests|activities|hobbies)',
-        'references': r'(?i)(references)'
+        'contact': r'(?i)(contact|personal)(?:\s+information)?',
+        'summary': r'(?i)(summary|profile|objective|about me|personal statement)',
+        'education': r'(?i)(education|academic|qualifications)',
+        'experience': r'(?i)(experience|employment|work|history|background)',
+        'skills': r'(?i)(skills|expertise|competencies|technologies)',
+        'projects': r'(?i)(projects|portfolio)',
+        'certifications': r'(?i)(certifications|certificates|licenses)',
+        'languages': r'(?i)(languages)',
+        'awards': r'(?i)(awards|honors|achievements)',
+        'publications': r'(?i)(publications|research)',
+        'references': r'(?i)(references|recommendations)',
+        'volunteer': r'(?i)(volunteer|community)'
     }
     
-    # Find all section headers and their positions
-    sections = {}
+    # Find all potential section headings and their positions
     section_positions = []
+    for section, pattern in section_patterns.items():
+        for match in re.finditer(pattern, text, re.MULTILINE):
+            section_positions.append((match.start(), section, match.group()))
     
-    for section_name, pattern in section_patterns.items():
-        for match in re.finditer(pattern, text):
-            # Find the start of the line containing the match
-            line_start = text.rfind('\n', 0, match.start()) + 1
-            if line_start == 0:  # Handle case where the section is at the start of text
-                line_start = 0
-            
-            # Find the end of the line
-            line_end = text.find('\n', match.end())
-            if line_end == -1:  # Handle case where the section is at the end of text
-                line_end = len(text)
-            
-            # Extract the full header line
-            header = text[line_start:line_end].strip()
-            
-            section_positions.append((line_start, section_name, header))
-    
-    # Sort sections by their position in the document
+    # Sort by position
     section_positions.sort()
     
-    # Extract content between sections
-    for i, (start_pos, section_name, header) in enumerate(section_positions):
-        # Find the end of this section (start of next section or end of text)
+    if not section_positions:
+        return {'full_text': text}
+    
+    # Extract text for each section
+    sections = {}
+    for i, (pos, section, heading) in enumerate(section_positions):
+        start = pos
+        
+        # Find end position (start of next section or end of text)
         if i < len(section_positions) - 1:
-            end_pos = section_positions[i+1][0]
+            end = section_positions[i + 1][0]
         else:
-            end_pos = len(text)
+            end = len(text)
         
-        # Extract section content (excluding the header)
-        header_end = start_pos + len(header)
-        content = text[header_end:end_pos].strip()
-        
-        sections[section_name] = content
+        # Extract section text
+        section_text = text[start:end].strip()
+        sections[section] = section_text
     
     return sections
-
-
-def count_words(text: str) -> int:
-    """
-    Count words in text
-    
-    Args:
-        text: Input text
-        
-    Returns:
-        int: Word count
-    """
-    if not text:
-        return 0
-    
-    # Split by whitespace and count non-empty words
-    words = [w for w in re.split(r'\s+', text) if w]
-    return len(words)
-
-
-def detect_language(text: str) -> str:
-    """
-    Detect the language of text
-    
-    Args:
-        text: Input text
-        
-    Returns:
-        str: Detected language code
-    """
-    try:
-        from langdetect import detect
-        return detect(text)
-    except ImportError:
-        logger.warning("langdetect not available. Install with: pip install langdetect")
-        return "unknown"
-    except Exception as e:
-        logger.error(f"Error detecting language: {e}")
-        return "unknown"

@@ -1,25 +1,32 @@
 """
-Application Module
+Main Application Module
 
-This module initializes and configures the Flask application for the
+This module creates and configures the Flask application for the 
 Tamkeen AI Career Intelligence System.
 """
 
 import os
+import json
 import logging
-from flask import Flask, jsonify
+import logging.config
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from logging.config import dictConfig
+from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Import settings
-from config.settings import SECRET_KEY, JWT_SECRET_KEY, LOG_CONFIG, API_PREFIX
+from backend.config.settings import (
+    DEBUG, SECRET_KEY, JWT_SECRET_KEY, JWT_ACCESS_TOKEN_EXPIRES,
+    JWT_REFRESH_TOKEN_EXPIRES, CORS_ORIGINS, LOG_CONFIG, UPLOAD_FOLDER
+)
 
-# Import API blueprint
-from api.endpoints import get_api_blueprint
+# Import API endpoints
+from backend.api.endpoints import get_api_blueprint
 
-# Configure logging
-dictConfig(LOG_CONFIG)
+# Setup logger
+logging.config.dictConfig(LOG_CONFIG)
+logger = logging.getLogger(__name__)
 
 
 def create_app(test_config=None):
@@ -30,89 +37,105 @@ def create_app(test_config=None):
         test_config: Test configuration
         
     Returns:
-        Flask application
+        Flask: Flask application
     """
     # Create and configure the app
     app = Flask(__name__, instance_relative_config=True)
     
-    # Configure app
+    # Load configuration
     app.config.from_mapping(
         SECRET_KEY=SECRET_KEY,
         JWT_SECRET_KEY=JWT_SECRET_KEY,
-        JWT_ACCESS_TOKEN_EXPIRES=3600,  # 1 hour
-        JWT_REFRESH_TOKEN_EXPIRES=2592000,  # 30 days
-        UPLOAD_FOLDER=os.path.join(os.getcwd(), 'uploads'),
+        JWT_ACCESS_TOKEN_EXPIRES=JWT_ACCESS_TOKEN_EXPIRES,
+        JWT_REFRESH_TOKEN_EXPIRES=JWT_REFRESH_TOKEN_EXPIRES,
+        UPLOAD_FOLDER=UPLOAD_FOLDER,
+        DEBUG=DEBUG
     )
     
-    if test_config is None:
-        # Load the instance config, if it exists, when not testing
-        app.config.from_pyfile('config.py', silent=True)
-    else:
-        # Load the test config if passed in
+    # Handle test configuration
+    if test_config is not None:
         app.config.from_mapping(test_config)
+    
+    # Configure CORS
+    CORS(app, origins=CORS_ORIGINS, supports_credentials=True)
+    
+    # Configure JWT
+    jwt = JWTManager(app)
+    
+    # Configure proxy for proper IP handling
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    
+    # Create upload directory if it doesn't exist
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
     # Register API blueprint
     app.register_blueprint(get_api_blueprint())
     
-    # Initialize JWT
-    jwt = JWTManager(app)
+    # Error handlers
+    @app.errorhandler(HTTPException)
+    def handle_http_exception(e):
+        """Handle HTTP exceptions"""
+        response = {
+            "error": {
+                "code": e.code,
+                "name": e.name,
+                "description": e.description
+            }
+        }
+        return jsonify(response), e.code
     
-    # Enable CORS
-    CORS(app)
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        """Handle generic exceptions"""
+        logger.exception("Unhandled exception")
+        
+        response = {
+            "error": {
+                "code": 500,
+                "name": "Internal Server Error",
+                "description": "An unexpected error occurred"
+            }
+        }
+        
+        if DEBUG:
+            response["error"]["exception"] = str(e)
+        
+        return jsonify(response), 500
     
-    # Register a simple route
+    # Log requests in development mode
+    if DEBUG:
+        @app.before_request
+        def log_request():
+            """Log request details"""
+            logger.debug(f"Request: {request.method} {request.url}")
+            if request.headers:
+                logger.debug(f"Headers: {dict(request.headers)}")
+            if request.args:
+                logger.debug(f"Args: {dict(request.args)}")
+            if request.form:
+                logger.debug(f"Form: {dict(request.form)}")
+            if request.json:
+                logger.debug(f"JSON: {request.json}")
+    
+    # Default route
     @app.route('/')
-    def home():
+    def index():
+        """Root endpoint"""
         return jsonify({
-            "name": "Tamkeen AI Career Intelligence System",
-            "version": "1.0.0",
+            "name": "Tamkeen AI Career Intelligence System API",
             "status": "online",
-            "api_endpoint": API_PREFIX
+            "version": "1.0.0"
         })
     
-    # Register error handlers
-    @app.errorhandler(404)
-    def not_found(e):
-        return jsonify({"error": "Resource not found"}), 404
-    
-    @app.errorhandler(500)
-    def server_error(e):
-        app.logger.error(f"Server error: {e}")
-        return jsonify({"error": "Internal server error"}), 500
-    
-    @app.errorhandler(400)
-    def bad_request(e):
-        return jsonify({"error": "Bad request", "message": str(e)}), 400
-    
-    @app.errorhandler(401)
-    def unauthorized(e):
-        return jsonify({"error": "Unauthorized", "message": str(e)}), 401
-    
-    @app.errorhandler(403)
-    def forbidden(e):
-        return jsonify({"error": "Forbidden", "message": str(e)}), 403
-    
-    @app.errorhandler(405)
-    def method_not_allowed(e):
-        return jsonify({"error": "Method not allowed"}), 405
-    
-    @app.errorhandler(422)
-    def unprocessable_entity(e):
-        return jsonify({"error": "Unprocessable entity", "message": str(e)}), 422
-    
-    # Create necessary directories
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    
-    # Log application startup
-    app.logger.info("Tamkeen AI Career Intelligence System initialized")
+    logger.info("Application initialized")
     
     return app
 
 
-# For running with 'flask run'
-app = create_app()
-
 if __name__ == '__main__':
-    # Run the app if script is executed directly
+    # Get port from environment or use default
     port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    
+    # Create and run app
+    app = create_app()
+    app.run(host='0.0.0.0', port=port, debug=DEBUG)
