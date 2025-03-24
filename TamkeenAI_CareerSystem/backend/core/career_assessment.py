@@ -1,19 +1,21 @@
 """
 Career Assessment Module
 
-This module calculates career readiness scores, assesses skills against industry standards,
-and provides recommendations for career development.
+This module provides assessments for career interests, skills, and personality traits
+to help users discover suitable career paths and development opportunities.
 """
 
 import os
 import json
 import math
+import random
 from typing import Dict, List, Any, Optional, Tuple, Union
 from datetime import datetime
+import uuid
 
 # Import other core modules
 from .user_info import UserProfile
-from .keyword_recommender import extract_keywords, find_matching_keywords
+from .keyword_recommender import extract_keywords, find_matching_keywords, KeywordRecommender
 
 # Import settings
 from config.settings import CAREER_READINESS_THRESHOLD, BASE_DIR
@@ -21,6 +23,16 @@ from config.settings import CAREER_READINESS_THRESHOLD, BASE_DIR
 # Define paths for industry data
 INDUSTRY_DATA_DIR = os.path.join(BASE_DIR, 'data', 'industries')
 os.makedirs(INDUSTRY_DATA_DIR, exist_ok=True)
+
+# Define paths for assessment data
+ASSESSMENT_DIR = os.path.join(BASE_DIR, 'data', 'assessments')
+INTEREST_ASSESSMENT_DIR = os.path.join(ASSESSMENT_DIR, 'interests')
+SKILL_ASSESSMENT_DIR = os.path.join(ASSESSMENT_DIR, 'skills')
+PERSONALITY_ASSESSMENT_DIR = os.path.join(ASSESSMENT_DIR, 'personality')
+
+# Create directories
+for directory in [ASSESSMENT_DIR, INTEREST_ASSESSMENT_DIR, SKILL_ASSESSMENT_DIR, PERSONALITY_ASSESSMENT_DIR]:
+    os.makedirs(directory, exist_ok=True)
 
 # Try importing scikit-learn for prediction models
 try:
@@ -34,716 +46,1009 @@ except ImportError:
 
 
 class CareerAssessment:
-    """Class for handling career assessments and scoring"""
+    """Class for generating and evaluating various career assessments"""
     
-    def __init__(self, user_profile: Optional[UserProfile] = None):
-        """
-        Initialize with optional user profile
-        
-        Args:
-            user_profile: User profile object (optional)
-        """
-        self.user_profile = user_profile
-        self.assessment_data = {
-            "timestamp": datetime.now().isoformat(),
-            "overall_score": 0,
-            "category_scores": {},
-            "strengths": [],
-            "weaknesses": [],
-            "recommendations": []
-        }
-        
-        # Load industry data for benchmarking
-        self.industry_benchmarks = self._load_industry_benchmarks()
+    def __init__(self):
+        """Initialize assessment resources"""
+        self.interest_data = self._load_interest_data()
+        self.skill_categories = self._load_skill_categories()
+        self.personality_assessment = self._load_personality_assessment()
+        self.career_paths = self._load_career_paths()
+        self.keyword_recommender = KeywordRecommender()
     
-    def _load_industry_benchmarks(self) -> Dict[str, Any]:
-        """Load industry benchmark data for skill comparisons"""
-        benchmarks = {}
+    def _load_interest_data(self) -> Dict[str, Any]:
+        """Load interest assessment data"""
+        # Try to load from file
+        interest_file = os.path.join(INTEREST_ASSESSMENT_DIR, 'interest_areas.json')
+        interest_data = {}
         
         try:
-            # Look for industry JSON files in the data directory
-            for filename in os.listdir(INDUSTRY_DATA_DIR):
-                if filename.endswith('.json'):
-                    industry_name = os.path.splitext(filename)[0]
-                    file_path = os.path.join(INDUSTRY_DATA_DIR, filename)
-                    
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        benchmarks[industry_name] = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError, OSError) as e:
-            print(f"Error loading industry benchmarks: {e}")
+            if os.path.exists(interest_file):
+                with open(interest_file, 'r', encoding='utf-8') as f:
+                    interest_data = json.load(f)
+                return interest_data
+        except Exception as e:
+            print(f"Error loading interest assessment data: {e}")
+        
+        # Default data if file not available
+        return {
+            "categories": {
+                "technical": {
+                    "name": "Technical & Scientific",
+                    "description": "Work that involves technology, science, engineering, data analysis, and solving complex technical problems."
+                },
+                "creative": {
+                    "name": "Creative & Artistic",
+                    "description": "Work that involves creative expression, design, writing, visual arts, and innovative thinking."
+                },
+                "business": {
+                    "name": "Business & Management",
+                    "description": "Work that involves leadership, strategy, financial analysis, and organizational management."
+                },
+                "social": {
+                    "name": "Social & Service",
+                    "description": "Work that involves helping others, teaching, counseling, healthcare, and community service."
+                },
+                "investigative": {
+                    "name": "Research & Analysis",
+                    "description": "Work that involves investigation, research, data analysis, and intellectual exploration."
+                },
+                "structured": {
+                    "name": "Organizational & Structured",
+                    "description": "Work that involves organization, attention to detail, processes, and systematic approaches."
+                }
+            },
+            "questions": [
+                {
+                    "id": "q1",
+                    "text": "I enjoy solving technical problems and working with technology",
+                    "category": "technical"
+                },
+                {
+                    "id": "q2",
+                    "text": "I like to express myself creatively and think outside the box",
+                    "category": "creative"
+                },
+                {
+                    "id": "q3",
+                    "text": "I enjoy leading teams and making strategic business decisions",
+                    "category": "business"
+                },
+                {
+                    "id": "q4",
+                    "text": "I find satisfaction in helping others and making a positive impact",
+                    "category": "social"
+                },
+                {
+                    "id": "q5",
+                    "text": "I enjoy analyzing information and finding patterns in data",
+                    "category": "investigative"
+                },
+                {
+                    "id": "q6",
+                    "text": "I prefer working with clear processes and organized systems",
+                    "category": "structured"
+                },
+                {
+                    "id": "q7",
+                    "text": "I enjoy building or fixing things",
+                    "category": "technical"
+                },
+                {
+                    "id": "q8",
+                    "text": "I like designing visually appealing content",
+                    "category": "creative"
+                },
+                {
+                    "id": "q9",
+                    "text": "I enjoy analyzing financial information and making investment decisions",
+                    "category": "business"
+                },
+                {
+                    "id": "q10",
+                    "text": "I prefer working directly with people rather than things",
+                    "category": "social"
+                },
+                {
+                    "id": "q11",
+                    "text": "I enjoy conducting research and testing hypotheses",
+                    "category": "investigative"
+                },
+                {
+                    "id": "q12",
+                    "text": "I like creating detailed plans and following schedules",
+                    "category": "structured"
+                },
+                {
+                    "id": "q13",
+                    "text": "I enjoy learning how things work and solving complex problems",
+                    "category": "technical"
+                },
+                {
+                    "id": "q14",
+                    "text": "I find satisfaction in creative writing or artistic expression",
+                    "category": "creative"
+                },
+                {
+                    "id": "q15",
+                    "text": "I enjoy negotiating deals and strategic planning",
+                    "category": "business"
+                },
+                {
+                    "id": "q16",
+                    "text": "I like teaching or mentoring others",
+                    "category": "social"
+                },
+                {
+                    "id": "q17",
+                    "text": "I enjoy collecting and analyzing data to solve problems",
+                    "category": "investigative"
+                },
+                {
+                    "id": "q18",
+                    "text": "I prefer environments with clear rules and expectations",
+                    "category": "structured"
+                }
+            ],
+            "career_mappings": {
+                "technical": ["Software Engineer", "Data Scientist", "IT Specialist", "Systems Analyst", "Network Engineer"],
+                "creative": ["Graphic Designer", "Content Creator", "UX Designer", "Marketing Creative", "Digital Media Specialist"],
+                "business": ["Business Analyst", "Project Manager", "Financial Analyst", "Marketing Manager", "Business Development"],
+                "social": ["HR Specialist", "Customer Success Manager", "Training Specialist", "Community Manager", "Support Specialist"],
+                "investigative": ["Data Analyst", "Research Scientist", "Market Researcher", "Business Intelligence", "Quality Assurance"],
+                "structured": ["Operations Manager", "Process Analyst", "Compliance Specialist", "Administrative Manager", "Logistics Coordinator"]
+            }
+        }
+    
+    def _load_skill_categories(self) -> Dict[str, Dict[str, Any]]:
+        """Load skill assessment categories and questions"""
+        # Try to load from file
+        skills_file = os.path.join(SKILL_ASSESSMENT_DIR, 'skill_categories.json')
+        skill_categories = {}
+        
+        try:
+            if os.path.exists(skills_file):
+                with open(skills_file, 'r', encoding='utf-8') as f:
+                    skill_categories = json.load(f)
+                return skill_categories
+        except Exception as e:
+            print(f"Error loading skill categories: {e}")
+        
+        # Default data if file not available
+        return {
+            "technical": {
+                "name": "Technical Skills",
+                "description": "Skills related to technology, programming, and technical systems",
+                "questions": [
+                    {
+                        "id": "tech1",
+                        "text": "I can efficiently write code in at least one programming language",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "tech2",
+                        "text": "I can set up and manage databases effectively",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "tech3",
+                        "text": "I can troubleshoot technical issues systematically",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "tech4",
+                        "text": "I can learn new technologies quickly",
+                        "weight": 1.0
+                    }
+                ]
+            },
+            "data": {
+                "name": "Data Analysis",
+                "description": "Skills related to analyzing, interpreting, and using data",
+                "questions": [
+                    {
+                        "id": "data1",
+                        "text": "I can identify patterns and insights in complex data",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "data2",
+                        "text": "I can create effective data visualizations",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "data3",
+                        "text": "I can use statistical methods to analyze information",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "data4",
+                        "text": "I can interpret data to make informed decisions",
+                        "weight": 1.0
+                    }
+                ]
+            },
+            "communication": {
+                "name": "Communication Skills",
+                "description": "Skills related to verbal and written communication",
+                "questions": [
+                    {
+                        "id": "comm1",
+                        "text": "I can explain complex concepts in simple terms",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "comm2",
+                        "text": "I can write clear and concise professional documents",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "comm3",
+                        "text": "I can deliver effective presentations",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "comm4",
+                        "text": "I am an active listener who understands others' perspectives",
+                        "weight": 1.0
+                    }
+                ]
+            },
+            "leadership": {
+                "name": "Leadership & Management",
+                "description": "Skills related to leading teams and managing projects",
+                "questions": [
+                    {
+                        "id": "lead1",
+                        "text": "I can motivate team members to achieve goals",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "lead2",
+                        "text": "I can delegate tasks effectively",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "lead3",
+                        "text": "I can manage projects from planning to completion",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "lead4",
+                        "text": "I can make difficult decisions when necessary",
+                        "weight": 1.0
+                    }
+                ]
+            },
+            "problem_solving": {
+                "name": "Problem Solving",
+                "description": "Skills related to analytical thinking and problem resolution",
+                "questions": [
+                    {
+                        "id": "prob1",
+                        "text": "I can break down complex problems into manageable parts",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "prob2",
+                        "text": "I can generate multiple solutions to a problem",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "prob3",
+                        "text": "I can evaluate options objectively to find the best solution",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "prob4",
+                        "text": "I can implement solutions effectively",
+                        "weight": 1.0
+                    }
+                ]
+            },
+            "creativity": {
+                "name": "Creativity & Innovation",
+                "description": "Skills related to generating new ideas and approaches",
+                "questions": [
+                    {
+                        "id": "creat1",
+                        "text": "I can think outside the box to develop innovative ideas",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "creat2",
+                        "text": "I can design visually appealing content",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "creat3",
+                        "text": "I can find creative solutions to challenges",
+                        "weight": 1.0
+                    },
+                    {
+                        "id": "creat4",
+                        "text": "I am comfortable experimenting with new approaches",
+                        "weight": 1.0
+                    }
+                ]
+            }
+        }
+    
+    def _load_personality_assessment(self) -> Dict[str, Any]:
+        """Load personality assessment data"""
+        # Try to load from file
+        personality_file = os.path.join(PERSONALITY_ASSESSMENT_DIR, 'personality_assessment.json')
+        personality_data = {}
+        
+        try:
+            if os.path.exists(personality_file):
+                with open(personality_file, 'r', encoding='utf-8') as f:
+                    personality_data = json.load(f)
+                return personality_data
+        except Exception as e:
+            print(f"Error loading personality assessment data: {e}")
+        
+        # Default data if file not available
+        return {
+            "dimensions": {
+                "analytical": {
+                    "name": "Analytical Thinking",
+                    "description": "Preference for logical analysis and data-driven approaches",
+                    "high_description": "You prefer logical, analytical approaches and value data-driven decision making",
+                    "low_description": "You tend to rely more on intuition and emotional judgment than detailed analysis"
+                },
+                "creative": {
+                    "name": "Creative Thinking",
+                    "description": "Preference for innovation and unconventional approaches",
+                    "high_description": "You enjoy thinking outside the box and finding innovative solutions",
+                    "low_description": "You prefer established, proven approaches rather than experimental methods"
+                },
+                "social": {
+                    "name": "Social Orientation",
+                    "description": "Preference for working with others vs. independently",
+                    "high_description": "You thrive in collaborative environments and enjoy working with others",
+                    "low_description": "You prefer working independently and may find extensive teamwork draining"
+                },
+                "structured": {
+                    "name": "Structure Preference",
+                    "description": "Preference for ordered, planned approaches vs. flexibility",
+                    "high_description": "You prefer well-defined processes, planning, and structured environments",
+                    "low_description": "You prefer flexibility and adaptability over rigid structure"
+                },
+                "leadership": {
+                    "name": "Leadership Orientation",
+                    "description": "Preference for taking charge vs. supporting roles",
+                    "high_description": "You naturally gravitate toward leadership positions and enjoy directing projects",
+                    "low_description": "You prefer supportive roles rather than being in charge of directing others"
+                }
+            },
+            "questions": [
+                {
+                    "id": "q1",
+                    "text": "I enjoy solving technical problems and working with technology",
+                    "category": "technical"
+                },
+                {
+                    "id": "q2",
+                    "text": "I like to express myself creatively and think outside the box",
+                    "category": "creative"
+                },
+                {
+                    "id": "q3",
+                    "text": "I enjoy leading teams and making strategic business decisions",
+                    "category": "business"
+                },
+                {
+                    "id": "q4",
+                    "text": "I find satisfaction in helping others and making a positive impact",
+                    "category": "social"
+                },
+                {
+                    "id": "q5",
+                    "text": "I enjoy analyzing information and finding patterns in data",
+                    "category": "investigative"
+                },
+                {
+                    "id": "q6",
+                    "text": "I prefer working with clear processes and organized systems",
+                    "category": "structured"
+                },
+                {
+                    "id": "q7",
+                    "text": "I enjoy building or fixing things",
+                    "category": "technical"
+                },
+                {
+                    "id": "q8",
+                    "text": "I like designing visually appealing content",
+                    "category": "creative"
+                },
+                {
+                    "id": "q9",
+                    "text": "I enjoy analyzing financial information and making investment decisions",
+                    "category": "business"
+                },
+                {
+                    "id": "q10",
+                    "text": "I prefer working directly with people rather than things",
+                    "category": "social"
+                },
+                {
+                    "id": "q11",
+                    "text": "I enjoy conducting research and testing hypotheses",
+                    "category": "investigative"
+                },
+                {
+                    "id": "q12",
+                    "text": "I like creating detailed plans and following schedules",
+                    "category": "structured"
+                },
+                {
+                    "id": "q13",
+                    "text": "I enjoy learning how things work and solving complex problems",
+                    "category": "technical"
+                },
+                {
+                    "id": "q14",
+                    "text": "I find satisfaction in creative writing or artistic expression",
+                    "category": "creative"
+                },
+                {
+                    "id": "q15",
+                    "text": "I enjoy negotiating deals and strategic planning",
+                    "category": "business"
+                },
+                {
+                    "id": "q16",
+                    "text": "I like teaching or mentoring others",
+                    "category": "social"
+                },
+                {
+                    "id": "q17",
+                    "text": "I enjoy collecting and analyzing data to solve problems",
+                    "category": "investigative"
+                },
+                {
+                    "id": "q18",
+                    "text": "I prefer environments with clear rules and expectations",
+                    "category": "structured"
+                }
+            ],
+            "career_mappings": {
+                "technical": ["Software Engineer", "Data Scientist", "IT Specialist", "Systems Analyst", "Network Engineer"],
+                "creative": ["Graphic Designer", "Content Creator", "UX Designer", "Marketing Creative", "Digital Media Specialist"],
+                "business": ["Business Analyst", "Project Manager", "Financial Analyst", "Marketing Manager", "Business Development"],
+                "social": ["HR Specialist", "Customer Success Manager", "Training Specialist", "Community Manager", "Support Specialist"],
+                "investigative": ["Data Analyst", "Research Scientist", "Market Researcher", "Business Intelligence", "Quality Assurance"],
+                "structured": ["Operations Manager", "Process Analyst", "Compliance Specialist", "Administrative Manager", "Logistics Coordinator"]
+            }
+        }
+    
+    def _load_career_paths(self) -> Dict[str, List[str]]:
+        """Load career paths data"""
+        # Try to load from file
+        career_paths_file = os.path.join(ASSESSMENT_DIR, 'career_paths.json')
+        career_paths = {}
+        
+        try:
+            if os.path.exists(career_paths_file):
+                with open(career_paths_file, 'r', encoding='utf-8') as f:
+                    career_paths = json.load(f)
+                return career_paths
+        except Exception as e:
+            print(f"Error loading career paths data: {e}")
+        
+        # Default data if file not available
+        return {
+            "technical": ["Software Engineer", "Data Scientist", "IT Specialist", "Systems Analyst", "Network Engineer"],
+            "creative": ["Graphic Designer", "Content Creator", "UX Designer", "Marketing Creative", "Digital Media Specialist"],
+            "business": ["Business Analyst", "Project Manager", "Financial Analyst", "Marketing Manager", "Business Development"],
+            "social": ["HR Specialist", "Customer Success Manager", "Training Specialist", "Community Manager", "Support Specialist"],
+            "investigative": ["Data Analyst", "Research Scientist", "Market Researcher", "Business Intelligence", "Quality Assurance"],
+            "structured": ["Operations Manager", "Process Analyst", "Compliance Specialist", "Administrative Manager", "Logistics Coordinator"]
+        }
+    
+    def create_assessment(self, assessment_id: str) -> Dict[str, Any]:
+        """
+        Create a new career assessment
+        
+        Args:
+            assessment_id: Assessment ID
             
-            # Create minimal default data if no files exist
-            benchmarks = {
-                "technology": {
-                    "required_skills": ["programming", "problem solving", "communication"],
-                    "skill_thresholds": {"programming": 0.7, "problem solving": 0.6}
-                },
-                "finance": {
-                    "required_skills": ["financial analysis", "excel", "accounting"],
-                    "skill_thresholds": {"financial analysis": 0.7, "excel": 0.6}
-                },
-                "healthcare": {
-                    "required_skills": ["patient care", "medical knowledge", "teamwork"],
-                    "skill_thresholds": {"patient care": 0.8, "medical knowledge": 0.7}
+        Returns:
+            dict: Assessment data
+        """
+        # Generate the assessment questions
+        questions = []
+        
+        # Interest questions
+        interest_questions = self.interest_data.get("questions", [])
+        if interest_questions:
+            # Randomly select a subset of questions
+            selected_interest_questions = random.sample(interest_questions, min(len(interest_questions), 10))
+            for q in selected_interest_questions:
+                questions.append({
+                    "id": q["id"],
+                    "text": q["text"],
+                    "type": "interest",
+                    "category": q["category"],
+                    "response_type": "likert_5"
+                })
+        
+        # Skill questions
+        all_skill_questions = []
+        for category, data in self.skill_categories.items():
+            category_questions = data.get("questions", [])
+            if category_questions:
+                for q in category_questions:
+                    q["category"] = category
+                    all_skill_questions.append(q)
+        
+        if all_skill_questions:
+            # Randomly select a subset of skill questions
+            selected_skill_questions = random.sample(all_skill_questions, min(len(all_skill_questions), 15))
+            for q in selected_skill_questions:
+                questions.append({
+                    "id": q["id"],
+                    "text": q["text"],
+                    "type": "skill",
+                    "category": q["category"],
+                    "response_type": "likert_5"
+                })
+        
+        # Personality questions
+        personality_questions = self.personality_assessment.get("questions", [])
+        if personality_questions:
+            # Randomly select a subset of personality questions
+            selected_personality_questions = random.sample(personality_questions, min(len(personality_questions), 10))
+            for q in selected_personality_questions:
+                questions.append({
+                    "id": q["id"],
+                    "text": q["text"],
+                    "type": "personality",
+                    "dimension": q["dimension"],
+                    "direction": q.get("direction", "positive"),
+                    "response_type": "likert_5"
+                })
+        
+        # Randomize the order of all questions
+        random.shuffle(questions)
+        
+        # Create the assessment structure
+        assessment = {
+            "id": assessment_id,
+            "title": "Career Assessment",
+            "description": "This assessment will help identify your career interests, skills, and work style preferences.",
+            "created_at": datetime.now().isoformat(),
+            "questions": questions,
+            "response_scales": {
+                "likert_5": {
+                    "type": "scale",
+                    "options": [
+                        {"value": 1, "label": "Strongly Disagree"},
+                        {"value": 2, "label": "Disagree"},
+                        {"value": 3, "label": "Neutral"},
+                        {"value": 4, "label": "Agree"},
+                        {"value": 5, "label": "Strongly Agree"}
+                    ]
                 }
             }
+        }
         
-        return benchmarks
+        return assessment
     
-    def calculate_career_readiness(self, user_profile: Optional[UserProfile] = None,
-                                  resume_text: Optional[str] = None,
-                                  target_industry: Optional[str] = None) -> Dict[str, Any]:
+    def evaluate_assessment(self, assessment_id: str, responses: Dict[str, int]) -> Dict[str, Any]:
         """
-        Calculate career readiness score based on profile and resume
+        Evaluate assessment responses
         
         Args:
-            user_profile: User profile object (optional)
-            resume_text: Resume text content (optional)
-            target_industry: Target industry for assessment (optional)
+            assessment_id: Assessment ID
+            responses: Dictionary of question IDs and response values
             
         Returns:
-            dict: Assessment data with scores and recommendations
+            dict: Assessment results
         """
-        # Use provided profile or the one initialized with the class
-        profile = user_profile if user_profile else self.user_profile
-        
-        # Initialize category scores
-        category_scores = {
-            "profile_completeness": 0,
-            "skill_relevance": 0,
-            "experience_alignment": 0,
-            "education_match": 0,
-            "certification_value": 0
+        # Initialize results structure
+        results = {
+            "assessment_id": assessment_id,
+            "evaluated_at": datetime.now().isoformat(),
+            "interest_areas": {},
+            "skill_areas": {},
+            "personality_dimensions": {},
+            "career_matches": [],
+            "skill_recommendations": [],
+            "overall_career_orientation": "",
+            "career_path_suggestions": []
         }
         
-        # If no profile or resume, return zero scores
-        if not profile and not resume_text:
-            self.assessment_data["overall_score"] = 0
-            self.assessment_data["category_scores"] = category_scores
-            self.assessment_data["recommendations"].append(
-                "Please complete your profile or upload a resume for assessment."
-            )
-            return self.assessment_data
+        # Try to load the assessment to get the questions
+        assessment_file = os.path.join(ASSESSMENT_DIR, f"assessment_{assessment_id}.json")
+        assessment = None
         
-        # Calculate profile completeness score
-        if profile:
-            profile_data = profile.get_profile_data()
-            category_scores["profile_completeness"] = self._calculate_profile_completeness(profile_data)
-            
-            # Get career readiness score from user profile if available
-            if hasattr(profile, 'get_career_readiness_score'):
-                profile_score = profile.get_career_readiness_score()
-                category_scores["profile_completeness"] = profile_score
-        
-        # Calculate skill relevance if resume and target industry provided
-        if resume_text and target_industry and target_industry in self.industry_benchmarks:
-            category_scores["skill_relevance"] = self._calculate_skill_relevance(
-                resume_text, target_industry
-            )
-        
-        # Calculate experience alignment
-        if profile and 'experience' in profile.profile_data:
-            category_scores["experience_alignment"] = self._calculate_experience_alignment(
-                profile.profile_data["experience"], target_industry
-            )
-        
-        # Calculate education match
-        if profile and 'education' in profile.profile_data:
-            category_scores["education_match"] = self._calculate_education_match(
-                profile.profile_data["education"], target_industry
-            )
-        
-        # Calculate certification value
-        if profile and 'certifications' in profile.profile_data:
-            category_scores["certification_value"] = self._calculate_certification_value(
-                profile.profile_data["certifications"], target_industry
-            )
-        
-        # Calculate overall weighted score
-        weights = {
-            "profile_completeness": 0.2,
-            "skill_relevance": 0.3,
-            "experience_alignment": 0.25,
-            "education_match": 0.15,
-            "certification_value": 0.1
-        }
-        
-        overall_score = sum(
-            score * weights[category] for category, score in category_scores.items()
-        )
-        
-        # Update assessment data
-        self.assessment_data["overall_score"] = round(overall_score, 1)
-        self.assessment_data["category_scores"] = {
-            k: round(v, 1) for k, v in category_scores.items()
-        }
-        
-        # Identify strengths and weaknesses
-        self._identify_strengths_weaknesses(category_scores)
-        
-        # Generate recommendations
-        self._generate_recommendations(category_scores, target_industry)
-        
-        return self.assessment_data
-    
-    def _calculate_profile_completeness(self, profile_data: Dict[str, Any]) -> float:
-        """Calculate profile completeness score (0-100)"""
-        if not profile_data:
-            return 0
-        
-        # Define weights for different sections
-        section_weights = {
-            "personal_info": 0.2,
-            "education": 0.15,
-            "experience": 0.25,
-            "skills": 0.25,
-            "certifications": 0.1,
-            "career_goals": 0.05
-        }
-        
-        total_score = 0
-        
-        # Personal info completeness
-        if "personal_info" in profile_data:
-            personal_info = profile_data["personal_info"]
-            required_fields = ["name", "email"]
-            optional_fields = ["phone", "location", "linkedin", "website"]
-            
-            fields_present = 0
-            for field in required_fields:
-                if field in personal_info and personal_info[field]:
-                    fields_present += 1
-                    
-            for field in optional_fields:
-                if field in personal_info and personal_info[field]:
-                    fields_present += 0.5  # Optional fields worth half
-            
-            max_fields = len(required_fields) + len(optional_fields) * 0.5
-            personal_score = (fields_present / max_fields) * 100 if max_fields > 0 else 0
-            total_score += personal_score * section_weights["personal_info"]
-        
-        # Education completeness
-        if "education" in profile_data:
-            education_count = len(profile_data["education"])
-            education_score = min(100, education_count * 50)  # 2 entries = 100%
-            total_score += education_score * section_weights["education"]
-        
-        # Experience completeness
-        if "experience" in profile_data:
-            experience_count = len(profile_data["experience"])
-            experience_score = min(100, experience_count * 33.3)  # 3 entries = 100%
-            total_score += experience_score * section_weights["experience"]
-        
-        # Skills completeness
-        if "skills" in profile_data:
-            skill_count = len(profile_data["skills"])
-            skill_score = min(100, skill_count * 10)  # 10 skills = 100%
-            total_score += skill_score * section_weights["skills"]
-        
-        # Certifications completeness
-        if "certifications" in profile_data:
-            cert_count = len(profile_data["certifications"])
-            cert_score = min(100, cert_count * 33.3)  # 3 certs = 100%
-            total_score += cert_score * section_weights["certifications"]
-        
-        # Career goals completeness
-        if "career_goals" in profile_data and profile_data["career_goals"]:
-            # Simply check if career goals exist
-            career_score = 100 if len(profile_data["career_goals"]) > 0 else 0
-            total_score += career_score * section_weights["career_goals"]
-        
-        return total_score
-    
-    def _calculate_skill_relevance(self, resume_text: str, target_industry: str) -> float:
-        """Calculate skill relevance score based on industry benchmark"""
-        # Extract keywords from resume
-        resume_keywords = extract_keywords(resume_text, method="auto", top_n=30)
-        resume_keywords_set = {kw.lower() for kw, _ in resume_keywords}
-        
-        # Get industry benchmark skills
-        industry = self.industry_benchmarks.get(target_industry, {})
-        required_skills = set(s.lower() for s in industry.get("required_skills", []))
-        
-        if not required_skills:
-            return 50  # Default score if no industry benchmark
-        
-        # Calculate match percentage
-        matches = resume_keywords_set.intersection(required_skills)
-        match_percent = (len(matches) / len(required_skills)) * 100 if required_skills else 0
-        
-        # Apply skill threshold weighting if available
-        skill_thresholds = industry.get("skill_thresholds", {})
-        
-        if skill_thresholds and matches:
-            weighted_score = 0
-            total_weight = 0
-            
-            for skill in matches:
-                if skill in skill_thresholds:
-                    weight = skill_thresholds[skill]
-                    weighted_score += weight * 100
-                    total_weight += weight
-                else:
-                    weighted_score += 50  # Default weight for matched skills not in threshold
-                    total_weight += 0.5
-            
-            if total_weight > 0:
-                return weighted_score / total_weight
-        
-        return match_percent
-    
-    def _calculate_experience_alignment(self, experience_list: List[Dict[str, Any]], 
-                                        target_industry: Optional[str] = None) -> float:
-        """Calculate experience alignment score"""
-        if not experience_list:
-            return 0
-        
-        # Basic score based on years of experience
-        total_years = 0
-        relevant_years = 0
-        
-        for exp in experience_list:
-            # Calculate duration for this position
-            start_date = exp.get("start_date", "")
-            end_date = exp.get("end_date", "present")
-            
-            if not start_date:
-                continue
-                
-            try:
-                # Parse dates
-                start_year = int(start_date.split("-")[0]) if "-" in start_date else int(start_date)
-                
-                if end_date.lower() == "present":
-                    end_year = datetime.now().year
-                else:
-                    end_year = int(end_date.split("-")[0]) if "-" in end_date else int(end_date)
-                
-                years = end_year - start_year
-                if years < 0:
-                    years = 0
-                
-                total_years += years
-                
-                # Check if experience is relevant to target industry
-                if target_industry and target_industry in self.industry_benchmarks:
-                    description = exp.get("description", "").lower()
-                    title = exp.get("title", "").lower()
-                    company = exp.get("company", "").lower()
-                    
-                    # Check for industry keywords in experience
-                    industry_keywords = set(k.lower() for k in 
-                                          self.industry_benchmarks[target_industry].get("keywords", []))
-                    
-                    # If no keywords defined, use required skills
-                    if not industry_keywords:
-                        industry_keywords = set(s.lower() for s in 
-                                              self.industry_benchmarks[target_industry].get("required_skills", []))
-                    
-                    # Look for matches in title, company, and description
-                    text_to_check = f"{title} {company} {description}"
-                    matches = any(kw in text_to_check for kw in industry_keywords)
-                    
-                    if matches:
-                        relevant_years += years
-            except (ValueError, IndexError):
-                continue
-        
-        # Base experience score on total years (max out at 10 years)
-        experience_score = min(100, total_years * 10)
-        
-        # If target industry specified, weight by relevance
-        if target_industry and total_years > 0:
-            relevance_factor = relevant_years / total_years
-            experience_score = experience_score * (0.4 + 0.6 * relevance_factor)
-        
-        return experience_score
-    
-    def _calculate_education_match(self, education_list: List[Dict[str, Any]], 
-                                   target_industry: Optional[str] = None) -> float:
-        """Calculate education match score"""
-        if not education_list:
-            return 0
-        
-        # Basic score based on education level
-        education_levels = {
-            "high school": 30,
-            "associate": 50,
-            "bachelor": 70,
-            "master": 85,
-            "doctorate": 100,
-            "phd": 100,
-            "certificate": 40
-        }
-        
-        # Get highest education score
-        highest_score = 0
-        for edu in education_list:
-            degree = edu.get("degree", "").lower()
-            
-            # Try to match education level
-            edu_score = 0
-            for level, score in education_levels.items():
-                if level in degree:
-                    edu_score = score
-                    break
-            
-            highest_score = max(highest_score, edu_score)
-        
-        # If target industry specified, check for relevant field of study
-        if target_industry and target_industry in self.industry_benchmarks:
-            relevant_fields = set(f.lower() for f in 
-                                self.industry_benchmarks[target_industry].get("relevant_fields", []))
-            
-            if relevant_fields:
-                has_relevant = False
-                for edu in education_list:
-                    field = edu.get("field", "").lower()
-                    institution = edu.get("institution", "").lower()
-                    
-                    # Check for field match
-                    if any(rf in field for rf in relevant_fields):
-                        has_relevant = True
-                        break
-                
-                # Adjust score based on relevance
-                if not has_relevant:
-                    highest_score *= 0.7  # Reduce score if no relevant field
-        
-        return highest_score
-    
-    def _calculate_certification_value(self, certification_list: List[Dict[str, Any]],
-                                      target_industry: Optional[str] = None) -> float:
-        """Calculate certification value score"""
-        if not certification_list:
-            return 0
-        
-        # Basic score based on number of certifications (max out at 5)
-        cert_count = len(certification_list)
-        cert_score = min(100, cert_count * 20)
-        
-        # If target industry specified, check for relevant certifications
-        if target_industry and target_industry in self.industry_benchmarks:
-            valuable_certs = set(c.lower() for c in 
-                               self.industry_benchmarks[target_industry].get("valuable_certifications", []))
-            
-            if valuable_certs:
-                matches = 0
-                for cert in certification_list:
-                    name = cert.get("name", "").lower()
-                    issuer = cert.get("issuer", "").lower()
-                    
-                    # Check for certification match
-                    cert_text = f"{name} {issuer}"
-                    if any(vc in cert_text for vc in valuable_certs):
-                        matches += 1
-                
-                # Weight score by relevant certifications
-                relevance_factor = matches / cert_count if cert_count > 0 else 0
-                cert_score = cert_score * (0.5 + 0.5 * relevance_factor)
-        
-        return cert_score
-    
-    def _identify_strengths_weaknesses(self, category_scores: Dict[str, float]) -> None:
-        """Identify strengths and weaknesses based on category scores"""
-        self.assessment_data["strengths"] = []
-        self.assessment_data["weaknesses"] = []
-        
-        # Define threshold for strength/weakness classification
-        strength_threshold = 70
-        weakness_threshold = 50
-        
-        # Map score categories to friendly names
-        category_names = {
-            "profile_completeness": "Profile Completeness",
-            "skill_relevance": "Skill Relevance",
-            "experience_alignment": "Experience Alignment",
-            "education_match": "Educational Background",
-            "certification_value": "Professional Certifications"
-        }
-        
-        # Classify each category
-        for category, score in category_scores.items():
-            if score >= strength_threshold:
-                self.assessment_data["strengths"].append(category_names.get(category, category))
-            elif score <= weakness_threshold:
-                self.assessment_data["weaknesses"].append(category_names.get(category, category))
-    
-    def _generate_recommendations(self, category_scores: Dict[str, float],
-                                target_industry: Optional[str] = None) -> None:
-        """Generate recommendations based on assessment results"""
-        self.assessment_data["recommendations"] = []
-        
-        # Check overall score against threshold
-        overall_score = self.assessment_data["overall_score"]
-        if overall_score < CAREER_READINESS_THRESHOLD:
-            self.assessment_data["recommendations"].append(
-                f"Your overall score of {overall_score} is below the recommended level of "
-                f"{CAREER_READINESS_THRESHOLD}. Focus on the areas mentioned below."
-            )
-        
-        # Recommendations for profile completeness
-        if category_scores["profile_completeness"] < 70:
-            self.assessment_data["recommendations"].append(
-                "Complete your profile with more detailed information about your experience, "
-                "education, and skills to improve your assessment."
-            )
-        
-        # Recommendations for skill relevance
-        if category_scores["skill_relevance"] < 60:
-            if target_industry:
-                self.assessment_data["recommendations"].append(
-                    f"Your skills don't strongly align with the {target_industry} industry. "
-                    f"Consider developing these key skills: " + 
-                    ", ".join(self.industry_benchmarks.get(target_industry, {})
-                             .get("required_skills", ["relevant technical skills"])[:3])
-                )
-            else:
-                self.assessment_data["recommendations"].append(
-                    "Add more specific skills to your profile that align with your target role."
-                )
-        
-        # Recommendations for experience
-        if category_scores["experience_alignment"] < 50:
-            self.assessment_data["recommendations"].append(
-                "Your experience could better align with your career goals. Consider internships, "
-                "volunteer work, or projects that demonstrate relevant capabilities."
-            )
-        
-        # Recommendations for education
-        if category_scores["education_match"] < 60:
-            self.assessment_data["recommendations"].append(
-                "Consider additional education or training programs that align with your target career."
-            )
-        
-        # Recommendations for certifications
-        if category_scores["certification_value"] < 40:
-            if target_industry:
-                valuable_certs = self.industry_benchmarks.get(target_industry, {}).get("valuable_certifications", [])
-                if valuable_certs:
-                    self.assessment_data["recommendations"].append(
-                        f"Pursue industry-recognized certifications like: " + 
-                        ", ".join(valuable_certs[:2])
-                    )
-                else:
-                    self.assessment_data["recommendations"].append(
-                        "Industry-recognized certifications could strengthen your profile."
-                    )
-            else:
-                self.assessment_data["recommendations"].append(
-                    "Adding relevant certifications can boost your profile strength."
-                )
-    
-    def get_assessment_report(self) -> Dict[str, Any]:
-        """
-        Get the complete assessment report
-        
-        Returns:
-            dict: Assessment report with scores, strengths, weaknesses and recommendations
-        """
-        return self.assessment_data
-    
-    def analyze_career_trajectory(self, experience_list: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """
-        Analyze career trajectory based on experience history
-        
-        Args:
-            experience_list: List of experience entries
-            
-        Returns:
-            dict: Career trajectory analysis
-        """
-        if not experience_list:
-            return {
-                "trajectory": "undefined",
-                "growth_rate": 0,
-                "job_changes": 0,
-                "avg_tenure": 0,
-                "analysis": "Not enough experience data to analyze career trajectory."
-            }
-        
-        # Sort experiences by start date
         try:
-            sorted_exp = sorted(experience_list, 
-                               key=lambda x: datetime.strptime(x.get("start_date", "2000-01"), "%Y-%m")
-                               if "-" in x.get("start_date", "") else datetime.strptime(x.get("start_date", "2000"), "%Y"))
-        except ValueError:
-            # If date parsing fails, assume order is already correct
-            sorted_exp = experience_list
+            if os.path.exists(assessment_file):
+                with open(assessment_file, 'r', encoding='utf-8') as f:
+                    assessment = json.load(f)
+        except Exception as e:
+            print(f"Error loading assessment: {e}")
+            return {"error": f"Assessment not found: {e}"}
         
-        # Calculate job changes and average tenure
-        job_changes = len(experience_list) - 1
-        total_tenure = 0
-        tenures = []
+        if not assessment:
+            return {"error": "Assessment not found"}
         
-        for i, exp in enumerate(sorted_exp):
-            start_date = exp.get("start_date", "")
-            end_date = exp.get("end_date", "present")
+        # Process responses by question type
+        interest_scores = {}
+        skill_scores = {}
+        personality_scores = {}
+        
+        # Initialize counters for each category/dimension
+        for category in self.interest_data.get("categories", {}).keys():
+            interest_scores[category] = {"total": 0, "count": 0}
+        
+        for category in self.skill_categories.keys():
+            skill_scores[category] = {"total": 0, "count": 0}
+        
+        for dimension in self.personality_assessment.get("dimensions", {}).keys():
+            personality_scores[dimension] = {"total": 0, "count": 0}
+        
+        # Process each question response
+        for question in assessment.get("questions", []):
+            question_id = question.get("id")
+            if question_id not in responses:
+                continue  # Skip questions without responses
             
-            if not start_date:
-                continue
-                
-            try:
-                # Parse dates
-                if "-" in start_date:
-                    start = datetime.strptime(start_date, "%Y-%m")
-                else:
-                    start = datetime.strptime(start_date, "%Y")
-                
-                if end_date.lower() == "present":
-                    end = datetime.now()
-                elif "-" in end_date:
-                    end = datetime.strptime(end_date, "%Y-%m")
-                else:
-                    end = datetime.strptime(end_date, "%Y")
-                
-                # Calculate tenure in years
-                tenure = (end.year - start.year) + (end.month - start.month) / 12
-                if tenure < 0:
-                    tenure = 0
-                
-                total_tenure += tenure
-                tenures.append(tenure)
-            except (ValueError, AttributeError):
-                continue
+            response_value = responses[question_id]
+            
+            if question.get("type") == "interest":
+                category = question.get("category")
+                if category in interest_scores:
+                    interest_scores[category]["total"] += response_value
+                    interest_scores[category]["count"] += 1
+            
+            elif question.get("type") == "skill":
+                category = question.get("category")
+                if category in skill_scores:
+                    skill_scores[category]["total"] += response_value
+                    skill_scores[category]["count"] += 1
+            
+            elif question.get("type") == "personality":
+                dimension = question.get("dimension")
+                if dimension in personality_scores:
+                    # Adjust for negative direction questions
+                    if question.get("direction") == "negative":
+                        response_value = 6 - response_value  # Invert scale (1→5, 2→4, etc.)
+                    
+                    personality_scores[dimension]["total"] += response_value
+                    personality_scores[dimension]["count"] += 1
         
-        avg_tenure = total_tenure / len(tenures) if tenures else 0
+        # Calculate average scores for each category
+        for category, data in interest_scores.items():
+            if data["count"] > 0:
+                avg_score = data["total"] / data["count"]
+                results["interest_areas"][category] = {
+                    "score": round(avg_score, 2),
+                    "percentage": round((avg_score / 5) * 100, 1),
+                    "name": self.interest_data.get("categories", {}).get(category, {}).get("name", category)
+                }
         
-        # Analyze job titles for growth
-        job_titles = [exp.get("title", "").lower() for exp in sorted_exp]
+        for category, data in skill_scores.items():
+            if data["count"] > 0:
+                avg_score = data["total"] / data["count"]
+                results["skill_areas"][category] = {
+                    "score": round(avg_score, 2),
+                    "percentage": round((avg_score / 5) * 100, 1),
+                    "name": self.skill_categories.get(category, {}).get("name", category)
+                }
         
-        # Simple trajectory analysis based on title keywords
-        leadership_keywords = ["senior", "lead", "manager", "director", "head", "chief", "vp", "president"]
-        specialist_keywords = ["specialist", "expert", "analyst", "engineer", "developer"]
+        for dimension, data in personality_scores.items():
+            if data["count"] > 0:
+                avg_score = data["total"] / data["count"]
+                results["personality_dimensions"][dimension] = {
+                    "score": round(avg_score, 2),
+                    "percentage": round((avg_score / 5) * 100, 1),
+                    "name": self.personality_assessment.get("dimensions", {}).get(dimension, {}).get("name", dimension),
+                    "description": self._get_dimension_description(dimension, avg_score)
+                }
         
-        leadership_progression = 0
-        for i, title in enumerate(job_titles):
-            for keyword in leadership_keywords:
-                if keyword in title:
-                    leadership_progression += (i + 1)  # Weight by position (newer jobs count more)
+        # Generate career matches based on interest and skill scores
+        results["career_matches"] = self._generate_career_matches(results["interest_areas"], results["skill_areas"])
         
-        # Normalize by number of positions
-        growth_rate = leadership_progression / len(job_titles) if job_titles else 0
+        # Suggest skill improvements
+        results["skill_recommendations"] = self._generate_skill_recommendations(results["skill_areas"], results["career_matches"])
         
-        # Determine trajectory
-        if growth_rate > 3:
-            trajectory = "rapid growth"
-        elif growth_rate > 1.5:
-            trajectory = "steady growth"
-        elif growth_rate > 0.5:
-            trajectory = "moderate growth"
-        elif growth_rate > 0:
-            trajectory = "slow growth"
+        # Determine overall career orientation
+        results["overall_career_orientation"] = self._determine_career_orientation(results["interest_areas"], results["personality_dimensions"])
+        
+        # Generate career path suggestions
+        results["career_path_suggestions"] = self._generate_career_paths(results)
+        
+        return results
+    
+    def _get_dimension_description(self, dimension: str, score: float) -> str:
+        """Get appropriate description for personality dimension based on score"""
+        dimensions = self.personality_assessment.get("dimensions", {})
+        dim_data = dimensions.get(dimension, {})
+        
+        if score >= 3.5:
+            return dim_data.get("high_description", "")
         else:
-            trajectory = "stable"
+            return dim_data.get("low_description", "")
+    
+    def _generate_career_matches(self, interest_areas: Dict[str, Any], skill_areas: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate career matches based on interests and skills"""
+        # Get top interest areas
+        top_interests = sorted(
+            interest_areas.items(), 
+            key=lambda x: x[1]["score"], 
+            reverse=True
+        )[:3]
         
-        # Consider job hopping
-        if avg_tenure < 1 and job_changes > 2:
-            trajectory_note = "Frequent job changes may impact stability perception."
-        elif avg_tenure > 5:
-            trajectory_note = "Long tenure demonstrates stability and commitment."
-        else:
-            trajectory_note = "Career progression shows typical industry mobility."
+        # Get top skill areas
+        top_skills = sorted(
+            skill_areas.items(), 
+            key=lambda x: x[1]["score"], 
+            reverse=True
+        )[:3]
         
-        return {
-            "trajectory": trajectory,
-            "growth_rate": round(growth_rate, 1),
-            "job_changes": job_changes,
-            "avg_tenure": round(avg_tenure, 1),
-            "analysis": trajectory_note
+        # Get career mappings from interest areas
+        career_matches = []
+        seen_careers = set()
+        
+        # Add careers from top interests
+        for interest_category, interest_data in top_interests:
+            interest_score = interest_data["score"]
+            careers = self.interest_data.get("career_mappings", {}).get(interest_category, [])
+            
+            for career in careers:
+                if career not in seen_careers:
+                    # Calculate match score (50% from interest, will add skill contribution later)
+                    match_score = interest_score / 5 * 50  # 50% from interest
+                    
+                    career_match = {
+                        "career": career,
+                        "match_score": match_score,
+                        "interest_match": interest_score / 5 * 100,
+                        "skill_match": 0,  # Will be updated if matching skills found
+                        "primary_interest": interest_category,
+                        "relevant_skills": []
+                    }
+                    
+                    career_matches.append(career_match)
+                    seen_careers.add(career)
+        
+        # Update career matches with skill information
+        for career_match in career_matches:
+            career = career_match["career"]
+            
+            # Find relevant skills for this career
+            career_relevant_skills = self._get_relevant_skills_for_career(career)
+            
+            # Calculate skill match
+            skill_match_score = 0
+            skill_match_count = 0
+            
+            for skill_category, skill_relevance in career_relevant_skills.items():
+                if skill_category in skill_areas:
+                    skill_score = skill_areas[skill_category]["score"]
+                    skill_match_score += skill_score * skill_relevance
+                    skill_match_count += skill_relevance
+                    
+                    # Add to relevant skills if score is decent
+                    if skill_score >= 3:
+                        career_match["relevant_skills"].append(skill_category)
+            
+            # Calculate final skill match percentage
+            if skill_match_count > 0:
+                skill_match_percent = (skill_match_score / skill_match_count) / 5 * 100
+                career_match["skill_match"] = round(skill_match_percent, 1)
+                
+                # Update overall match score (50% interest, 50% skills)
+                career_match["match_score"] += skill_match_percent / 2
+            
+            # Round final score
+            career_match["match_score"] = round(career_match["match_score"], 1)
+        
+        # Sort by match score
+        career_matches.sort(key=lambda x: x["match_score"], reverse=True)
+        
+        return career_matches
+    
+    def _get_relevant_skills_for_career(self, career: str) -> Dict[str, float]:
+        """Get relevance of each skill category for a career"""
+        # Default skill relevance mapping for common careers
+        common_careers = {
+            "Software Engineer": {
+                "technical": 1.0,
+                "problem_solving": 0.8,
+                "creativity": 0.5,
+                "communication": 0.4,
+                "data": 0.6
+            },
+            "Data Scientist": {
+                "data": 1.0,
+                "technical": 0.8,
+                "problem_solving": 0.9,
+                "communication": 0.5,
+                "creativity": 0.3
+            },
+            "Graphic Designer": {
+                "creative": 1.0,
+                "problem_solving": 0.5,
+                "communication": 0.4,
+                "data": 0.3
+            },
+            "Content Creator": {
+                "creative": 1.0,
+                "problem_solving": 0.5,
+                "communication": 0.4,
+                "data": 0.3
+            },
+            "UX Designer": {
+                "creative": 1.0,
+                "problem_solving": 0.5,
+                "communication": 0.4,
+                "data": 0.3
+            },
+            "Marketing Creative": {
+                "creative": 1.0,
+                "problem_solving": 0.5,
+                "communication": 0.4,
+                "data": 0.3
+            },
+            "Digital Media Specialist": {
+                "creative": 1.0,
+                "problem_solving": 0.5,
+                "communication": 0.4,
+                "data": 0.3
+            },
+            "Business Analyst": {
+                "problem_solving": 1.0,
+                "communication": 0.8,
+                "data": 0.7
+            },
+            "Project Manager": {
+                "problem_solving": 0.9,
+                "communication": 0.8,
+                "leadership": 0.7
+            },
+            "Financial Analyst": {
+                "problem_solving": 0.9,
+                "communication": 0.7,
+                "data": 0.8
+            },
+            "Marketing Manager": {
+                "problem_solving": 0.8,
+                "communication": 0.9,
+                "leadership": 0.7
+            },
+            "Business Development": {
+                "problem_solving": 0.8,
+                "communication": 0.7,
+                "leadership": 0.6
+            },
+            "HR Specialist": {
+                "social": 1.0,
+                "communication": 0.8,
+                "leadership": 0.7
+            },
+            "Customer Success Manager": {
+                "social": 1.0,
+                "communication": 0.8,
+                "leadership": 0.7
+            },
+            "Training Specialist": {
+                "social": 0.9,
+                "communication": 0.8,
+                "leadership": 0.7
+            },
+            "Community Manager": {
+                "social": 0.9,
+                "communication": 0.8,
+                "leadership": 0.7
+            },
+            "Support Specialist": {
+                "social": 1.0,
+                "communication": 0.9,
+                "leadership": 0.8
+            },
+            "Operations Manager": {
+                "structured": 1.0,
+                "leadership": 0.9
+            },
+            "Process Analyst": {
+                "structured": 0.9,
+                "leadership": 0.8
+            },
+            "Compliance Specialist": {
+                "structured": 0.8,
+                "leadership": 0.7
+            },
+            "Administrative Manager": {
+                "structured": 0.8,
+                "leadership": 0.7
+            },
+            "Logistics Coordinator": {
+                "structured": 0.8,
+                "leadership": 0.7
+            }
         }
+        
+        return common_careers.get(career, {})
+    
+    def _generate_career_paths(self, results: Dict[str, Any]) -> List[str]:
+        """Generate career path suggestions based on assessment results"""
+        # Implementation of career path generation logic
+        # This is a placeholder and should be replaced with actual implementation
+        return ["Software Engineer", "Data Scientist"]
+    
+    def _determine_career_orientation(self, interest_areas: Dict[str, Any], personality_dimensions: Dict[str, Any]) -> str:
+        """Determine overall career orientation based on interest and personality dimensions"""
+        # Implementation of career orientation determination logic
+        # This is a placeholder and should be replaced with actual implementation
+        return "Technical"
+    
+    def _generate_skill_recommendations(self, skill_areas: Dict[str, Any], career_matches: List[Dict[str, Any]]) -> List[str]:
+        """Generate skill recommendations based on skill areas and career matches"""
+        # Implementation of skill recommendation generation logic
+        # This is a placeholder and should be replaced with actual implementation
+        return ["Python Programming", "Data Visualization"]
 
 
-def assess_resume_for_job(resume_text: str, job_description: str) -> Dict[str, Any]:
+def create_assessment(user_id: Optional[str] = None) -> Dict[str, Any]:
     """
-    Standalone function to assess a resume against a job description
+    Create a new career assessment
     
     Args:
-        resume_text: Resume text content
-        job_description: Job description text
+        user_id: Optional user ID
         
     Returns:
-        dict: Assessment results with fit score and recommendations
+        dict: Assessment data
     """
-    # Extract keywords from both texts
-    resume_keywords = extract_keywords(resume_text, method="auto", top_n=30)
-    job_keywords = extract_keywords(job_description, method="auto", top_n=30)
-    
-    # Find keyword matches
-    matches = find_matching_keywords(resume_text, job_description)
-    match_percent = matches.get("match_percent", 0)
-    
-    # Calculate overall fit score (70% keyword match, 30% document similarity)
-    fit_score = match_percent
-    
-    # Generate recommendations
-    recommendations = []
-    missing_keywords = matches.get("missing_keywords", [])
-    
-    if match_percent < 70:
-        recommendations.append(
-            "Your resume could better match this job description. Consider highlighting these keywords: " +
-            ", ".join(missing_keywords[:5])
-        )
-    
-    if match_percent < 50:
-        recommendations.append(
-            "Your resume needs significant tailoring for this position. Review the job requirements carefully."
-        )
-    
-    if match_percent >= 80:
-        recommendations.append(
-            "Your resume is well-aligned with this position. Highlight your achievements for these key areas."
-        )
-    
-    return {
-        "fit_score": round(fit_score, 1),
-        "keyword_match": round(match_percent, 1),
-        "matched_keywords": matches.get("matching_keywords", []),
-        "missing_keywords": missing_keywords,
-        "recommendations": recommendations
-    }
+    assessment_engine = CareerAssessment()
+    assessment_id = str(uuid.uuid4()) if 'uuid' in globals() else datetime.now().strftime("%Y%m%d%H%M%S")
+    return assessment_engine.create_assessment(assessment_id)
 
 
-def predict_career_readiness(user_features: Dict[str, Any]) -> Optional[float]:
+def evaluate_assessment(assessment_id: str, responses: Dict[str, int]) -> Dict[str, Any]:
     """
-    Use ML model to predict career readiness (if available)
+    Evaluate career assessment responses
     
     Args:
-        user_features: Dictionary of user features
+        assessment_id: Assessment ID
+        responses: Dictionary of question IDs and response values
         
     Returns:
-        float or None: Predicted career readiness score, or None if ML not available
+        dict: Assessment results
     """
-    if not ML_AVAILABLE:
-        return None
+    assessment_engine = CareerAssessment()
+    return assessment_engine.evaluate_assessment(assessment_id, responses)
+
+
+def assess_career_readiness(user_profile: Dict[str, Any], target_career: str) -> Dict[str, Any]:
+    """
+    Assess user's readiness for a specific career
     
-    try:
-        # This is a placeholder for a real ML model
-        # In a real implementation, you would load a trained model from disk
+    Args:
+        user_profile: User profile data
+        target_career: Target career
         
-        # Extract features
-        features = [
-            user_features.get("profile_completeness", 0),
-            user_features.get("skill_count", 0),
-            user_features.get("experience_years", 0),
-            user_features.get("education_level", 0),
-            user_features.get("certification_count", 0)
-        ]
+    Returns:
+        dict: Career readiness assessment
+    """
+    assessment_engine = CareerAssessment()
+    return assessment_engine.assess_career_readiness(user_profile, target_career)
+
+
+def get_skill_gap_analysis(user_skills: List[str], target_role: str) -> Dict[str, Any]:
+    """
+    Analyze skill gaps for a target role
+    
+    Args:
+        user_skills: User's current skills
+        target_role: Target job role
         
-        # Normalize features
-        scaler = StandardScaler()
-        normalized_features = scaler.fit_transform([features])[0]
-        
-        # Simple weighted sum as a placeholder for a real model
-        weights = [0.2, 0.3, 0.25, 0.15, 0.1]
-        predicted_score = sum(f * w for f, w in zip(normalized_features, weights))
-        
-        # Scale to 0-100 range
-        min_val, max_val = -2, 2  # Typical range for normalized values
-        predicted_score = ((predicted_score - min_val) / (max_val - min_val)) * 100
-        
-        return max(0, min(100, predicted_score))
-    except Exception as e:
-        print(f"Error in ML prediction: {e}")
-        return None
+    Returns:
+        dict: Skill gap analysis
+    """
+    assessment_engine = CareerAssessment()
+    return assessment_engine.analyze_skill_gaps(user_skills, target_role)
