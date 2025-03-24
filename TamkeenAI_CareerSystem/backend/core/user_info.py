@@ -1,262 +1,484 @@
+"""
+User Information Module
+
+This module handles the collection, validation, and storage of user profile data
+and career goals for the Tamkeen AI Career Intelligence System.
+"""
+
+import os
+import json
 import uuid
 from datetime import datetime
-import re
+from typing import Dict, List, Optional, Any, Union
 
-def collect_user_data(data):
-    """
-    Collect and process user profile information
+# Import settings
+from config.settings import BASE_DIR
+
+# Define path for user data storage
+USER_DATA_DIR = os.path.join(BASE_DIR, 'data', 'users')
+os.makedirs(USER_DATA_DIR, exist_ok=True)
+
+class UserProfile:
+    """Class to handle user profile information and operations"""
     
-    Args:
-        data (dict): User submitted information
+    def __init__(self, user_id: Optional[str] = None):
+        """
+        Initialize user profile with optional existing user ID
         
-    Returns:
-        dict: Processed user information with validation
-    """
-    # Generate unique user ID if not provided
-    user_id = data.get("user_id", str(uuid.uuid4()))
-    
-    # Extract and validate core user data
-    name = data.get("name", "").strip()
-    email = data.get("email", "").strip().lower()
-    
-    # Basic email validation
-    if email and not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-        email = ""  # Invalid email format
-    
-    phone = data.get("phone", "").strip()
-    age = data.get("age", 0)
-    try:
-        age = int(age)
-    except (ValueError, TypeError):
-        age = 0
-    
-    # Process career goals as list
-    if isinstance(data.get("career_goals"), list):
-        career_goals = data.get("career_goals", [])
-    else:
-        career_goals = [goal.strip() for goal in data.get("career_goals", "").split(",") if goal.strip()]
-    
-    # Validate career goals
-    career_goals = validate_career_goals(career_goals)
-    
-    # Process skills with confidence levels
-    skills_raw = data.get("skills", {})
-    if isinstance(skills_raw, dict):
-        skills = skills_raw
-    else:
-        # Handle skills as comma-separated string
-        skills = {}
-        skill_list = [s.strip() for s in skills_raw.split(",") if s.strip()]
-        for skill in skill_list:
-            skills[skill] = {"level": "intermediate", "verified": False}
-    
-    # Add language proficiency
-    languages = data.get("languages", [])
-    if not isinstance(languages, list):
-        languages = [lang.strip() for lang in data.get("languages", "").split(",") if lang.strip()]
-    
-    # Create user profile structure
-    user_profile = {
-        "user_id": user_id,
-        "name": name,
-        "email": email,
-        "phone": phone,
-        "age": age,
-        "career_goals": career_goals,
-        "skills": skills,
-        "languages": languages,
-        "education": data.get("education", []),
-        "experience": data.get("experience", []),
-        "certifications": data.get("certifications", []),
-        "preferences": data.get("preferences", {}),
-        "resume_data": data.get("resume_data", {}),
-        "interview_scores": data.get("interview_scores", {}),
-        "created_at": datetime.utcnow().isoformat(),
-        "updated_at": datetime.utcnow().isoformat(),
-        "profile_completion": calculate_profile_completion(data),
-        "tamkeen_score": calculate_tamkeen_score(data)
-    }
-    
-    return user_profile
-
-def calculate_profile_completion(data):
-    """Calculate profile completion percentage based on filled fields"""
-    total_fields = 7  # name, email, age, career_goals, skills, education, experience
-    filled_fields = 0
-    
-    if data.get("name", "").strip():
-        filled_fields += 1
-    
-    if data.get("email", "").strip():
-        filled_fields += 1
-    
-    if data.get("age"):
-        filled_fields += 1
-    
-    if data.get("career_goals"):
-        filled_fields += 1
-    
-    if data.get("skills"):
-        filled_fields += 1
-    
-    if data.get("education"):
-        filled_fields += 1
-    
-    if data.get("experience"):
-        filled_fields += 1
-    
-    completion_percentage = (filled_fields / total_fields) * 100
-    return round(completion_percentage)
-
-def validate_career_goals(goals):
-    """Validate and standardize career goals"""
-    valid_goals = []
-    common_goals = [
-        "promotion", "leadership", "entrepreneurship", "career change",
-        "skill development", "work-life balance", "salary increase",
-        "job security", "relocation", "professional recognition", 
-        "technical advancement", "industry expertise", "work abroad",
-        "government sector", "private sector", "freelancing"
-    ]
-    
-    for goal in goals:
-        goal = goal.lower().strip()
-        # Find closest match in common goals if similar
-        matched = False
-        for common_goal in common_goals:
-            if common_goal in goal or goal in common_goal:
-                valid_goals.append(common_goal)
-                matched = True
-                break
-        
-        # If no match found, keep original if it's reasonable length
-        if not matched and 3 <= len(goal) <= 50:
-            valid_goals.append(goal)
-    
-    return valid_goals
-
-def generate_initial_recommendations(user_profile):
-    """Generate initial career recommendations based on user profile"""
-    recommendations = {
-        "skills_to_develop": [],
-        "potential_roles": [],
-        "immediate_actions": [],
-        "learning_resources": [],
-        "networking_suggestions": []
-    }
-    
-    # Simple recommendation logic based on profile completion
-    completion = user_profile.get("profile_completion", 0)
-    
-    if completion < 50:
-        recommendations["immediate_actions"].append(
-            "Complete your profile to get more accurate recommendations"
-        )
-    
-    # Based on career goals
-    career_goals = user_profile.get("career_goals", [])
-    for goal in career_goals:
-        if "leadership" in goal.lower():
-            recommendations["skills_to_develop"].append("Leadership & Management")
-            recommendations["potential_roles"].append("Team Lead")
-            recommendations["learning_resources"].append({
-                "type": "course",
-                "name": "Leadership Fundamentals",
-                "link": "https://example.com/leadership-course"
-            })
-        elif "career change" in goal.lower():
-            recommendations["immediate_actions"].append(
-                "Research required skills for your target industry"
-            )
-            recommendations["networking_suggestions"].append(
-                "Connect with professionals in your target industry on LinkedIn"
-            )
-        elif "entrepreneurship" in goal.lower():
-            recommendations["skills_to_develop"].append("Business Planning")
-            recommendations["skills_to_develop"].append("Financial Management")
-            recommendations["potential_roles"].append("Startup Founder")
-    
-    # Based on age - suggest appropriate development paths
-    age = user_profile.get("age", 0)
-    if 18 <= age <= 25:
-        recommendations["immediate_actions"].append(
-            "Focus on building fundamental skills through internships and entry-level positions"
-        )
-    elif 26 <= age <= 35:
-        recommendations["immediate_actions"].append(
-            "Consider specializing in a high-demand area of your field"
-        )
-    elif 36 <= age <= 50:
-        recommendations["potential_roles"].append("Senior Specialist")
-        recommendations["potential_roles"].append("Department Manager")
-    
-    # Add recommendations based on skills
-    skills = user_profile.get("skills", {})
-    if "Python" in skills:
-        recommendations["potential_roles"].append("Python Developer")
-        recommendations["potential_roles"].append("Data Scientist")
-    if "Leadership" in skills:
-        recommendations["potential_roles"].append("Team Manager")
-    
-    return recommendations
-
-def calculate_tamkeen_score(data):
-    """
-    Calculate a comprehensive career readiness score
-    
-    This score combines profile completeness, skill relevance,
-    experience quality, and education-career alignment
-    
-    Args:
-        data (dict): User profile data
-        
-    Returns:
-        int: Tamkeen Career Readiness Score (0-100)
-    """
-    base_score = calculate_profile_completion(data)
-    
-    # Add bonus points for complete sections
-    bonus_points = 0
-    
-    # Education quality and relevance
-    education = data.get("education", [])
-    if education and isinstance(education, list):
-        bonus_points += min(len(education) * 3, 10)
-    
-    # Experience quality and duration
-    experience = data.get("experience", [])
-    if experience and isinstance(experience, list):
-        bonus_points += min(len(experience) * 4, 15)
-    
-    # Skills diversity and relevance
-    skills = data.get("skills", {})
-    if skills:
-        if isinstance(skills, dict):
-            skill_count = len(skills)
+        Args:
+            user_id: Existing user ID, or None to create a new user
+        """
+        if user_id:
+            self.user_id = user_id
         else:
-            skill_count = len(skills.split(","))
-        bonus_points += min(skill_count, 10)
+            self.user_id = str(uuid.uuid4())
+        
+        self.profile_data = {
+            "user_id": self.user_id,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+            "personal_info": {},
+            "education": [],
+            "experience": [],
+            "skills": [],
+            "certifications": [],
+            "career_goals": {},
+            "personality_assessment": {},
+            "preferences": {
+                "language": "en",
+                "work_environment": "",
+                "industry": ""
+            },
+            "gamification": {
+                "level": 1,
+                "xp": 0,
+                "badges": []
+            }
+        }
+        
+        # Try to load existing data if user_id was provided
+        if user_id:
+            self.load_profile()
     
-    # Certifications
-    certifications = data.get("certifications", [])
-    if certifications and isinstance(certifications, list):
-        bonus_points += min(len(certifications) * 2, 10)
+    def load_profile(self) -> bool:
+        """
+        Load user profile from storage
+        
+        Returns:
+            bool: True if profile was loaded successfully, False otherwise
+        """
+        profile_path = os.path.join(USER_DATA_DIR, f"{self.user_id}.json")
+        
+        if os.path.exists(profile_path):
+            try:
+                with open(profile_path, 'r', encoding='utf-8') as file:
+                    self.profile_data = json.load(file)
+                return True
+            except (json.JSONDecodeError, IOError) as e:
+                print(f"Error loading profile: {e}")
+                return False
+        return False
     
-    # Calculate final score, cap at 100
-    final_score = min(base_score + bonus_points, 100)
-    return final_score
+    def save_profile(self) -> bool:
+        """
+        Save user profile to storage
+        
+        Returns:
+            bool: True if profile was saved successfully, False otherwise
+        """
+        # Update the last modified timestamp
+        self.profile_data["updated_at"] = datetime.now().isoformat()
+        
+        profile_path = os.path.join(USER_DATA_DIR, f"{self.user_id}.json")
+        
+        try:
+            with open(profile_path, 'w', encoding='utf-8') as file:
+                json.dump(self.profile_data, file, indent=2, ensure_ascii=False)
+            return True
+        except IOError as e:
+            print(f"Error saving profile: {e}")
+            return False
+    
+    def update_personal_info(self, data: Dict[str, str]) -> bool:
+        """
+        Update personal information
+        
+        Args:
+            data: Dictionary containing personal information fields
+            
+        Returns:
+            bool: True if update was successful
+        """
+        # Validate required fields
+        required_fields = ['name', 'email']
+        for field in required_fields:
+            if field in data and not data[field]:
+                return False
+        
+        # Update personal info
+        self.profile_data["personal_info"].update(data)
+        return self.save_profile()
+    
+    def add_education(self, education_data: Dict[str, str]) -> bool:
+        """
+        Add education entry
+        
+        Args:
+            education_data: Dictionary containing education information
+            
+        Returns:
+            bool: True if addition was successful
+        """
+        # Validate required fields
+        required_fields = ['degree', 'institution']
+        for field in required_fields:
+            if field not in education_data or not education_data[field]:
+                return False
+        
+        # Add unique ID to education entry
+        education_data['id'] = str(uuid.uuid4())
+        
+        # Add education entry
+        self.profile_data["education"].append(education_data)
+        return self.save_profile()
+    
+    def add_experience(self, experience_data: Dict[str, str]) -> bool:
+        """
+        Add work experience entry
+        
+        Args:
+            experience_data: Dictionary containing experience information
+            
+        Returns:
+            bool: True if addition was successful
+        """
+        # Validate required fields
+        required_fields = ['title', 'company', 'start_date']
+        for field in required_fields:
+            if field not in experience_data or not experience_data[field]:
+                return False
+        
+        # Add unique ID to experience entry
+        experience_data['id'] = str(uuid.uuid4())
+        
+        # Add experience entry
+        self.profile_data["experience"].append(experience_data)
+        return self.save_profile()
+    
+    def update_skills(self, skills: List[Dict[str, Union[str, int]]]) -> bool:
+        """
+        Update skills list
+        
+        Args:
+            skills: List of skills with name and proficiency level
+            
+        Returns:
+            bool: True if update was successful
+        """
+        if not isinstance(skills, list):
+            return False
+        
+        # Validate each skill entry
+        for skill in skills:
+            if not isinstance(skill, dict) or 'name' not in skill:
+                return False
+            
+            # Ensure proficiency is an integer between 1-5 if provided
+            if 'proficiency' in skill:
+                try:
+                    proficiency = int(skill['proficiency'])
+                    if proficiency < 1 or proficiency > 5:
+                        skill['proficiency'] = 3  # Default to medium if out of range
+                except (ValueError, TypeError):
+                    skill['proficiency'] = 3  # Default to medium if invalid
+        
+        # Update skills
+        self.profile_data["skills"] = skills
+        return self.save_profile()
+    
+    def add_certification(self, cert_data: Dict[str, str]) -> bool:
+        """
+        Add certification entry
+        
+        Args:
+            cert_data: Dictionary containing certification information
+            
+        Returns:
+            bool: True if addition was successful
+        """
+        # Validate required fields
+        required_fields = ['name', 'issuer']
+        for field in required_fields:
+            if field not in cert_data or not cert_data[field]:
+                return False
+        
+        # Add unique ID to certification entry
+        cert_data['id'] = str(uuid.uuid4())
+        
+        # Add certification entry
+        self.profile_data["certifications"].append(cert_data)
+        return self.save_profile()
+    
+    def update_career_goals(self, goals_data: Dict[str, Any]) -> bool:
+        """
+        Update career goals
+        
+        Args:
+            goals_data: Dictionary containing career goals information
+            
+        Returns:
+            bool: True if update was successful
+        """
+        self.profile_data["career_goals"].update(goals_data)
+        return self.save_profile()
+    
+    def update_personality_assessment(self, assessment_data: Dict[str, Any]) -> bool:
+        """
+        Update personality assessment results
+        
+        Args:
+            assessment_data: Dictionary containing personality assessment results
+            
+        Returns:
+            bool: True if update was successful
+        """
+        self.profile_data["personality_assessment"].update(assessment_data)
+        return self.save_profile()
+    
+    def update_preferences(self, preferences: Dict[str, str]) -> bool:
+        """
+        Update user preferences
+        
+        Args:
+            preferences: Dictionary containing user preferences
+            
+        Returns:
+            bool: True if update was successful
+        """
+        self.profile_data["preferences"].update(preferences)
+        return self.save_profile()
+    
+    def add_xp(self, points: int) -> int:
+        """
+        Add experience points and handle level progression
+        
+        Args:
+            points: Number of XP points to add
+            
+        Returns:
+            int: New user level after adding XP
+        """
+        # Current gamification data
+        gamification = self.profile_data["gamification"]
+        current_xp = gamification["xp"]
+        current_level = gamification["level"]
+        
+        # Add XP
+        new_xp = current_xp + points
+        gamification["xp"] = new_xp
+        
+        # Calculate new level (simple formula: level up every 1000 XP)
+        new_level = 1 + (new_xp // 1000)
+        
+        # Check if user leveled up
+        level_up = new_level > current_level
+        if level_up:
+            gamification["level"] = new_level
+        
+        # Save changes
+        self.save_profile()
+        
+        return new_level
+    
+    def add_badge(self, badge_id: str, badge_name: str, description: str) -> bool:
+        """
+        Award a badge to the user
+        
+        Args:
+            badge_id: Unique identifier for the badge
+            badge_name: Display name of the badge
+            description: Description of the badge achievement
+            
+        Returns:
+            bool: True if badge was added, False if already exists
+        """
+        # Check if badge already exists
+        existing_badges = self.profile_data["gamification"]["badges"]
+        if any(badge["id"] == badge_id for badge in existing_badges):
+            return False
+        
+        # Add new badge
+        badge_data = {
+            "id": badge_id,
+            "name": badge_name,
+            "description": description,
+            "awarded_at": datetime.now().isoformat()
+        }
+        
+        self.profile_data["gamification"]["badges"].append(badge_data)
+        return self.save_profile()
+    
+    def get_profile(self) -> Dict[str, Any]:
+        """
+        Get complete user profile
+        
+        Returns:
+            dict: Complete user profile data
+        """
+        return self.profile_data
+    
+    def get_career_readiness_score(self) -> int:
+        """
+        Calculate career readiness score based on profile completeness
+        
+        Returns:
+            int: Career readiness score (0-100)
+        """
+        score = 0
+        
+        # Personal info completeness (20%)
+        personal_info = self.profile_data["personal_info"]
+        required_personal = ['name', 'email']
+        optional_personal = ['phone', 'location', 'linkedin', 'website']
+        
+        personal_score = 0
+        for field in required_personal:
+            if field in personal_info and personal_info[field]:
+                personal_score += 10
+        
+        for field in optional_personal:
+            if field in personal_info and personal_info[field]:
+                personal_score += 2.5
+        
+        score += min(20, personal_score)
+        
+        # Education (15%)
+        if len(self.profile_data["education"]) > 0:
+            score += 15
+        
+        # Experience (20%)
+        experience_count = len(self.profile_data["experience"])
+        if experience_count > 0:
+            experience_score = min(20, experience_count * 7)
+            score += experience_score
+        
+        # Skills (20%)
+        skill_count = len(self.profile_data["skills"])
+        if skill_count > 0:
+            skill_score = min(20, skill_count * 2)
+            score += skill_score
+        
+        # Certifications (10%)
+        cert_count = len(self.profile_data["certifications"])
+        if cert_count > 0:
+            cert_score = min(10, cert_count * 3)
+            score += cert_score
+        
+        # Career goals (10%)
+        if self.profile_data["career_goals"] and len(self.profile_data["career_goals"]) > 0:
+            score += 10
+        
+        # Personality assessment (5%)
+        if self.profile_data["personality_assessment"] and len(self.profile_data["personality_assessment"]) > 0:
+            score += 5
+        
+        return int(score)
 
-def update_user_profile(user_id, updates):
-    """Update existing user profile with new information"""
-    # In a real system, this would fetch from a database
-    # For this demo, we'll just return the updates with timestamp
+
+def create_new_user() -> str:
+    """
+    Create a new user profile
     
-    updates["updated_at"] = datetime.utcnow().isoformat()
+    Returns:
+        str: New user ID
+    """
+    user = UserProfile()
+    user.save_profile()
+    return user.user_id
+
+
+def get_user_by_id(user_id: str) -> Optional[UserProfile]:
+    """
+    Get user profile by ID
     
-    if "profile_completion" not in updates:
-        updates["profile_completion"] = calculate_profile_completion(updates)
+    Args:
+        user_id: User ID to retrieve
+        
+    Returns:
+        UserProfile or None: User profile if found, None otherwise
+    """
+    user = UserProfile(user_id)
+    if user.load_profile():
+        return user
+    return None
+
+
+def get_user_by_email(email: str) -> Optional[UserProfile]:
+    """
+    Get user profile by email
     
-    return {
-        "user_id": user_id,
-        **updates
-    } 
+    Args:
+        email: User email to search for
+        
+    Returns:
+        UserProfile or None: User profile if found, None otherwise
+    """
+    # This is inefficient for large systems - would use a database in production
+    for filename in os.listdir(USER_DATA_DIR):
+        if filename.endswith(".json"):
+            file_path = os.path.join(USER_DATA_DIR, filename)
+            try:
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    data = json.load(file)
+                    if data.get("personal_info", {}).get("email") == email:
+                        return UserProfile(data["user_id"])
+            except (json.JSONDecodeError, IOError):
+                continue
+    return None
+
+
+def validate_profile_data(data: Dict[str, Any]) -> Dict[str, List[str]]:
+    """
+    Validate profile data and return errors if any
+    
+    Args:
+        data: User profile data to validate
+        
+    Returns:
+        dict: Dictionary of validation errors by field
+    """
+    errors = {}
+    
+    # Validate personal info
+    if 'personal_info' in data:
+        personal_info = data['personal_info']
+        
+        # Name validation
+        if 'name' in personal_info:
+            name = personal_info['name']
+            if not name or len(name) < 2:
+                errors.setdefault('personal_info', {}).setdefault('name', []).append(
+                    "Name must be at least 2 characters long")
+        
+        # Email validation
+        if 'email' in personal_info:
+            email = personal_info['email']
+            import re
+            email_pattern = re.compile(r"^[\w\.-]+@[\w\.-]+\.\w+$")
+            if not email or not email_pattern.match(email):
+                errors.setdefault('personal_info', {}).setdefault('email', []).append(
+                    "Please provide a valid email address")
+    
+    # Validate skills
+    if 'skills' in data:
+        skills = data['skills']
+        if not isinstance(skills, list):
+            errors.setdefault('skills', []).append("Skills must be a list")
+        else:
+            for i, skill in enumerate(skills):
+                if not isinstance(skill, dict) or 'name' not in skill:
+                    errors.setdefault('skills', []).append(
+                        f"Skill at position {i} must have a name")
+    
+    # Return validation errors
+    return errors 

@@ -1,645 +1,872 @@
+"""
+Report Generator Module
+
+This module creates customized PDF reports of career assessments, resume analyses,
+and other insights for users of the Tamkeen AI Career Intelligence System.
+"""
+
 import os
 import json
-import base64
-import tempfile
-from typing import Dict, List, Tuple, Any, Optional, Union
+from typing import Dict, List, Any, Optional, Union
 from datetime import datetime
-import io
+import uuid
 
-# Optional dependencies with graceful fallback
-try:
-    import jinja2
-    JINJA2_AVAILABLE = True
-except ImportError:
-    JINJA2_AVAILABLE = False
+# Import settings
+from config.settings import BASE_DIR, REPORT_FOLDER
 
+# Try importing PDF generation libraries
 try:
-    import markdown
-    MARKDOWN_AVAILABLE = True
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak
+    from reportlab.pdfgen import canvas
+    from reportlab.graphics.shapes import Drawing
+    from reportlab.graphics.charts.barcharts import VerticalBarChart
+    from reportlab.graphics.charts.piecharts import Pie
+    REPORTLAB_AVAILABLE = True
 except ImportError:
-    MARKDOWN_AVAILABLE = False
+    REPORTLAB_AVAILABLE = False
+    print("Warning: ReportLab not available. Install with: pip install reportlab")
 
+# Try importing matplotlib for chart generation
 try:
-    import pdfkit
-    PDFKIT_AVAILABLE = True
+    import matplotlib
+    matplotlib.use('Agg')  # Use non-interactive backend
+    import matplotlib.pyplot as plt
+    import numpy as np
+    MATPLOTLIB_AVAILABLE = True
 except ImportError:
-    PDFKIT_AVAILABLE = False
-
-try:
-    import weasyprint
-    WEASYPRINT_AVAILABLE = True
-except ImportError:
-    WEASYPRINT_AVAILABLE = False
+    MATPLOTLIB_AVAILABLE = False
+    print("Warning: matplotlib not available. Install with: pip install matplotlib")
 
 
 class ReportGenerator:
-    """
-    Generates career assessment reports in HTML, PDF, or Markdown formats.
-    Uses templates to create professional reports with visualization support.
-    """
+    """Class for generating PDF reports"""
     
-    def __init__(self, 
-              template_dir: Optional[str] = None, 
-              output_dir: Optional[str] = None,
-              pdf_engine: str = "auto"):
+    def __init__(self, user_id: Optional[str] = None):
         """
-        Initialize the report generator
+        Initialize report generator
         
         Args:
-            template_dir: Optional directory containing report templates
-            output_dir: Optional directory for report output files
-            pdf_engine: Engine for PDF generation ("weasyprint", "pdfkit", or "auto")
+            user_id: Optional user ID for personalization
         """
-        self.pdf_engine = pdf_engine
-        self.available_pdf_engines = []
-        self.initialized = False
+        self.user_id = user_id
+        self.report_folder = REPORT_FOLDER
+        os.makedirs(self.report_folder, exist_ok=True)
         
-        # Check available PDF engines
-        if PDFKIT_AVAILABLE:
-            self.available_pdf_engines.append("pdfkit")
+        # Create user folder if user_id provided
+        if user_id:
+            self.user_report_folder = os.path.join(self.report_folder, user_id)
+            os.makedirs(self.user_report_folder, exist_ok=True)
+        else:
+            self.user_report_folder = self.report_folder
+        
+        # Initialize reportlab resources if available
+        if REPORTLAB_AVAILABLE:
+            self.styles = getSampleStyleSheet()
             
-        if WEASYPRINT_AVAILABLE:
-            self.available_pdf_engines.append("weasyprint")
+            # Add custom styles
+            self.styles.add(ParagraphStyle(
+                name='Title',
+                parent=self.styles['Heading1'],
+                fontSize=18,
+                spaceAfter=12,
+                textColor=colors.darkblue
+            ))
             
-        # Determine PDF engine
-        if pdf_engine == "auto":
-            if "weasyprint" in self.available_pdf_engines:
-                self.pdf_engine = "weasyprint"
-            elif "pdfkit" in self.available_pdf_engines:
-                self.pdf_engine = "pdfkit"
-            else:
-                self.pdf_engine = None
-        elif pdf_engine not in self.available_pdf_engines:
-            self.pdf_engine = None
-        
-        # Initialize template engine
-        self.jinja_env = None
-        if JINJA2_AVAILABLE:
-            # Find template directory
-            if template_dir is None or not os.path.exists(template_dir):
-                # Check standard locations
-                possible_dirs = [
-                    os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates"),
-                    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates"),
-                    os.path.join(os.path.expanduser("~"), ".tamkeen", "templates")
-                ]
-                
-                for d in possible_dirs:
-                    if os.path.exists(d):
-                        template_dir = d
-                        break
+            self.styles.add(ParagraphStyle(
+                name='Subtitle',
+                parent=self.styles['Heading2'],
+                fontSize=14,
+                spaceAfter=10,
+                textColor=colors.darkblue
+            ))
             
-            if template_dir and os.path.exists(template_dir):
-                try:
-                    self.jinja_env = jinja2.Environment(
-                        loader=jinja2.FileSystemLoader(template_dir),
-                        autoescape=jinja2.select_autoescape(['html', 'xml'])
-                    )
-                    # Register custom filters
-                    self.jinja_env.filters['format_date'] = self._format_date
-                    self.jinja_env.filters['format_percent'] = self._format_percent
-                except Exception as e:
-                    print(f"ERROR initializing Jinja2: {str(e)}")
-        
-        # Set output directory
-        if output_dir is None:
-            output_dir = os.path.join(tempfile.gettempdir(), "tamkeen_reports")
-        
-        os.makedirs(output_dir, exist_ok=True)
-        self.output_dir = output_dir
-        
-        # Set initialized state
-        self.initialized = JINJA2_AVAILABLE or MARKDOWN_AVAILABLE
-        
-    def generate_report(self, 
-                      data: Dict[str, Any], 
-                      report_type: str = "career_assessment",
-                      output_format: str = "pdf", 
-                      output_path: Optional[str] = None,
-                      custom_template: Optional[str] = None) -> Union[str, bytes, None]:
+            self.styles.add(ParagraphStyle(
+                name='SectionTitle',
+                parent=self.styles['Heading3'],
+                fontSize=12,
+                spaceAfter=6,
+                textColor=colors.darkblue
+            ))
+            
+            self.styles.add(ParagraphStyle(
+                name='BodyText',
+                parent=self.styles['Normal'],
+                fontSize=10,
+                spaceAfter=6
+            ))
+            
+            self.styles.add(ParagraphStyle(
+                name='Bullet',
+                parent=self.styles['Normal'],
+                fontSize=10,
+                leftIndent=20,
+                firstLineIndent=-15,
+                spaceBefore=2,
+                spaceAfter=2
+            ))
+    
+    def generate_chart_image(self, chart_data: Dict[str, Any], chart_type: str, 
+                           filename: str = "chart.png") -> Optional[str]:
         """
-        Generate a report from the provided data
+        Generate chart image using matplotlib
         
         Args:
-            data: Dictionary containing the data for the report
-            report_type: Type of report to generate
-            output_format: Format of the report ("pdf", "html", or "markdown")
-            output_path: Optional path to save the report
-            custom_template: Optional custom template path to use
+            chart_data: Data for chart
+            chart_type: Type of chart (bar, pie, radar, etc.)
+            filename: Output filename
             
         Returns:
-            Depending on output_format:
-              - Path to the file if output_path provided
-              - Bytes containing PDF data if output_format is "pdf"
-              - String containing HTML or Markdown if other formats
-              - None if generation fails
+            str or None: Path to generated image, or None if failed
         """
-        if not self.initialized:
-            print("ERROR: Report generator not properly initialized")
+        if not MATPLOTLIB_AVAILABLE:
             return None
-            
-        # Validate and prepare data
-        if not data:
-            print("ERROR: No data provided for report generation")
-            return None
-            
-        # Add metadata
-        report_data = data.copy()
-        report_data.update({
-            "generation_date": datetime.now(),
-            "report_type": report_type,
-        })
         
-        # Generate report content
-        if output_format == "markdown":
-            content = self._generate_markdown(report_data, report_type, custom_template)
-        else:  # HTML or PDF (both need HTML)
-            content = self._generate_html(report_data, report_type, custom_template)
-            
-        if content is None:
-            return None
-            
-        # Output handling
-        if output_format == "pdf":
-            return self._html_to_pdf(content, output_path)
-        elif output_format == "html":
-            if output_path:
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
-                return output_path
-            return content
-        else:  # markdown
-            if output_path:
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
-                return output_path
-            return content
-            
-    def _generate_html(self, 
-                    data: Dict[str, Any], 
-                    report_type: str, 
-                    custom_template: Optional[str] = None) -> Optional[str]:
-        """Generate HTML content from template and data"""
-        if not JINJA2_AVAILABLE or not self.jinja_env:
-            print("ERROR: Jinja2 not available for HTML template rendering")
-            return None
-            
         try:
-            # Determine template
-            template_name = custom_template if custom_template else f"{report_type}.html"
+            plt.figure(figsize=(6, 4))
             
-            # Try to load template
-            try:
-                template = self.jinja_env.get_template(template_name)
-            except jinja2.exceptions.TemplateNotFound:
-                # Fall back to default template
-                template = self.jinja_env.get_template("default.html")
+            if chart_type == "bar":
+                labels = chart_data.get("labels", [])
+                values = chart_data.get("values", [])
                 
-            # Render template with data
-            html_content = template.render(**data)
-            return html_content
+                if not labels or not values or len(labels) != len(values):
+                    return None
+                
+                plt.bar(labels, values, color=chart_data.get("colors", "skyblue"))
+                plt.xlabel(chart_data.get("x_label", ""))
+                plt.ylabel(chart_data.get("y_label", ""))
+                plt.title(chart_data.get("title", ""))
+                plt.xticks(rotation=45, ha="right")
+                plt.tight_layout()
+                
+            elif chart_type == "pie":
+                labels = chart_data.get("labels", [])
+                values = chart_data.get("values", [])
+                
+                if not labels or not values or len(labels) != len(values):
+                    return None
+                
+                plt.pie(values, labels=labels, autopct='%1.1f%%', startangle=90,
+                       colors=chart_data.get("colors", None))
+                plt.axis('equal')
+                plt.title(chart_data.get("title", ""))
+                
+            elif chart_type == "radar":
+                categories = chart_data.get("categories", [])
+                values = chart_data.get("values", [])
+                
+                if not categories or not values or len(categories) != len(values):
+                    return None
+                
+                # Number of variables
+                N = len(categories)
+                
+                # What will be the angle of each axis in the plot
+                angles = [n / float(N) * 2 * np.pi for n in range(N)]
+                angles += angles[:1]  # Close the loop
+                
+                # Add values for plot
+                values += values[:1]  # Close the loop
+                
+                # Create radar plot
+                ax = plt.subplot(111, polar=True)
+                plt.xticks(angles[:-1], categories, color='grey', size=10)
+                ax.set_rlabel_position(0)
+                plt.yticks([20, 40, 60, 80, 100], ["20", "40", "60", "80", "100"], color="grey", size=8)
+                plt.ylim(0, 100)
+                
+                # Plot data
+                ax.plot(angles, values, linewidth=1, linestyle='solid')
+                ax.fill(angles, values, 'skyblue', alpha=0.4)
+                
+                # Add title
+                plt.title(chart_data.get("title", ""), size=15, y=1.1)
+            
+            else:
+                return None
+            
+            # Save image
+            temp_dir = os.path.join(self.report_folder, 'temp')
+            os.makedirs(temp_dir, exist_ok=True)
+            image_path = os.path.join(temp_dir, filename)
+            plt.savefig(image_path, dpi=100, bbox_inches='tight')
+            plt.close()
+            
+            return image_path
             
         except Exception as e:
-            print(f"ERROR generating HTML: {str(e)}")
+            print(f"Error generating chart: {e}")
             return None
-            
-    def _generate_markdown(self, 
-                        data: Dict[str, Any], 
-                        report_type: str,
-                        custom_template: Optional[str] = None) -> Optional[str]:
-        """Generate Markdown content from template and data"""
-        if JINJA2_AVAILABLE and self.jinja_env:
-            try:
-                # Determine template
-                template_name = custom_template if custom_template else f"{report_type}.md"
-                
-                # Try to load template
-                try:
-                    template = self.jinja_env.get_template(template_name)
-                except jinja2.exceptions.TemplateNotFound:
-                    # Fall back to default template
-                    template = self.jinja_env.get_template("default.md")
-                    
-                # Render template with data
-                md_content = template.render(**data)
-                return md_content
-                
-            except Exception as e:
-                print(f"ERROR generating Markdown: {str(e)}")
-                
-        # Fallback to basic markdown generation without templates
-        return self._generate_basic_markdown(data, report_type)
-            
-    def _generate_basic_markdown(self, 
-                              data: Dict[str, Any], 
-                              report_type: str) -> str:
-        """Generate basic markdown without templates"""
-        md_lines = [
-            f"# {self._get_report_title(report_type)}",
-            f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-            ""
-        ]
-        
-        # Add user information if available
-        if "user" in data:
-            user = data["user"]
-            md_lines.extend([
-                "## User Information",
-                f"- Name: {user.get('name', 'Not provided')}",
-                f"- Email: {user.get('email', 'Not provided')}",
-                ""
-            ])
-            
-        # Add assessment results if available
-        if "assessment" in data:
-            assessment = data["assessment"]
-            md_lines.extend([
-                "## Assessment Results",
-                ""
-            ])
-            
-            # Add overall score if available
-            if "overall_score" in assessment:
-                md_lines.extend([
-                    f"### Overall Score: {assessment['overall_score']}/100",
-                    ""
-                ])
-                
-            # Add category scores if available
-            if "categories" in assessment:
-                md_lines.append("### Category Scores")
-                for category in assessment["categories"]:
-                    md_lines.append(f"- {category['name']}: {category['score']}/100")
-                md_lines.append("")
-                
-        # Add recommendations if available
-        if "recommendations" in data:
-            recommendations = data["recommendations"]
-            md_lines.extend([
-                "## Recommendations",
-                ""
-            ])
-            
-            for i, rec in enumerate(recommendations, 1):
-                md_lines.extend([
-                    f"### {i}. {rec.get('title', 'Recommendation')}",
-                    f"{rec.get('description', '')}",
-                    ""
-                ])
-                
-                if "action_items" in rec:
-                    md_lines.append("Action Items:")
-                    for item in rec["action_items"]:
-                        md_lines.append(f"- {item}")
-                    md_lines.append("")
-        
-        # Join all lines
-        return "\n".join(md_lines)
-        
-    def _html_to_pdf(self, 
-                   html_content: str, 
-                   output_path: Optional[str] = None) -> Union[bytes, str, None]:
-        """Convert HTML content to PDF"""
-        if not self.pdf_engine:
-            print("ERROR: No PDF engine available")
-            return None
-            
-        # Generate a temporary file path if none provided
-        if output_path is None:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_path = os.path.join(
-                self.output_dir, 
-                f"report_{timestamp}.pdf"
-            )
-            
-        try:
-            if self.pdf_engine == "weasyprint":
-                # Use WeasyPrint
-                pdf_bytes = weasyprint.HTML(string=html_content).write_pdf()
-                
-                # Save to file if output_path provided
-                if output_path:
-                    with open(output_path, 'wb') as f:
-                        f.write(pdf_bytes)
-                    return output_path
-                    
-                return pdf_bytes
-                
-            elif self.pdf_engine == "pdfkit":
-                # Use pdfkit (wkhtmltopdf)
-                options = {
-                    'encoding': 'UTF-8',
-                    'page-size': 'A4',
-                    'margin-top': '0.75in',
-                    'margin-right': '0.75in',
-                    'margin-bottom': '0.75in',
-                    'margin-left': '0.75in',
-                }
-                
-                # Generate PDF
-                pdf_bytes = pdfkit.from_string(html_content, False, options=options)
-                
-                # Save to file if output_path provided
-                if output_path:
-                    with open(output_path, 'wb') as f:
-                        f.write(pdf_bytes)
-                    return output_path
-                    
-                return pdf_bytes
-                
-        except Exception as e:
-            print(f"ERROR generating PDF: {str(e)}")
-            return None
-            
-    def _get_report_title(self, report_type: str) -> str:
-        """Generate appropriate title based on report type"""
-        title_map = {
-            "career_assessment": "Career Assessment Report",
-            "resume_analysis": "Resume Analysis Report",
-            "interview_feedback": "Interview Feedback Report",
-            "skill_gap": "Skill Gap Analysis Report",
-            "career_path": "Career Path Recommendations Report"
-        }
-        
-        return title_map.get(report_type, "Tamkeen AI Career Report")
-        
-    # Custom Jinja2 filters
-    def _format_date(self, value):
-        """Format date for templates"""
-        if isinstance(value, str):
-            try:
-                value = datetime.fromisoformat(value)
-            except:
-                return value
-                
-        if isinstance(value, datetime):
-            return value.strftime("%B %d, %Y")
-            
-        return value
-        
-    def _format_percent(self, value):
-        """Format percentage for templates"""
-        if isinstance(value, (int, float)):
-            return f"{value:.1f}%"
-        return value
-
-
-class CareerReportGenerator(ReportGenerator):
-    """
-    Specialized report generator for career assessments with visualization capabilities
-    and interactive elements for digital reports
-    """
     
-    def __init__(self, 
-              template_dir: Optional[str] = None, 
-              output_dir: Optional[str] = None,
-              pdf_engine: str = "auto",
-              include_visualizations: bool = True):
+    def generate_resume_analysis_report(self, analysis_data: Dict[str, Any], 
+                                      job_title: Optional[str] = None) -> Optional[str]:
         """
-        Initialize career report generator
+        Generate PDF report for resume analysis
         
         Args:
-            template_dir: Optional directory containing report templates
-            output_dir: Optional directory for report output files
-            pdf_engine: Engine for PDF generation
-            include_visualizations: Whether to include data visualizations
-        """
-        super().__init__(template_dir, output_dir, pdf_engine)
-        self.include_visualizations = include_visualizations
-        
-        # Check for visualization dependencies
-        self.visualization_available = False
-        try:
-            import matplotlib
-            import matplotlib.pyplot as plt
-            import seaborn as sns
-            self.visualization_available = True
-        except ImportError:
-            pass
+            analysis_data: Resume analysis data
+            job_title: Optional job title for context
             
-    def generate_assessment_report(self, 
-                                assessment_data: Dict[str, Any],
-                                user_data: Optional[Dict[str, Any]] = None,
-                                output_format: str = "pdf",
-                                output_path: Optional[str] = None) -> Union[str, bytes, None]:
+        Returns:
+            str or None: Path to generated PDF, or None if failed
         """
-        Generate a comprehensive career assessment report
+        if not REPORTLAB_AVAILABLE:
+            return None
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_name = f"resume_analysis_{timestamp}.pdf"
+        report_path = os.path.join(self.user_report_folder, report_name)
+        
+        # Create document
+        doc = SimpleDocTemplate(report_path, pagesize=letter,
+                               rightMargin=72, leftMargin=72,
+                               topMargin=72, bottomMargin=72)
+        
+        # Container for elements
+        elements = []
+        
+        # Add title
+        title = "Resume Analysis Report"
+        if job_title:
+            title += f" for {job_title} Position"
+        elements.append(Paragraph(title, self.styles['Title']))
+        
+        # Add date
+        date_str = datetime.now().strftime("%B %d, %Y")
+        elements.append(Paragraph(f"Generated on: {date_str}", self.styles['BodyText']))
+        elements.append(Spacer(1, 12))
+        
+        # Overall score
+        if "overall_score" in analysis_data:
+            score = analysis_data["overall_score"]
+            score_color = "green"
+            if score < 40:
+                score_color = "red"
+            elif score < 70:
+                score_color = "orange"
+                
+            score_text = f"<font color='{score_color}'>Overall Score: {score}/100</font>"
+            elements.append(Paragraph(score_text, self.styles['Subtitle']))
+            elements.append(Spacer(1, 12))
+        
+        # Format Analysis
+        if "analysis" in analysis_data and "format" in analysis_data["analysis"]:
+            format_data = analysis_data["analysis"]["format"]
+            
+            elements.append(Paragraph("Format Analysis", self.styles['Subtitle']))
+            
+            format_score = format_data.get("format_score", 0)
+            format_score_text = f"<font color='{score_color}'>Format Score: {format_score}/100</font>"
+            elements.append(Paragraph(format_score_text, self.styles['BodyText']))
+            
+            # Format details
+            if "detected_format" in format_data:
+                elements.append(Paragraph(f"File Format: {format_data['detected_format']}", self.styles['BodyText']))
+            
+            if "file_format_compatible" in format_data:
+                compat_text = "Yes" if format_data["file_format_compatible"] else "No"
+                elements.append(Paragraph(f"ATS Compatible Format: {compat_text}", self.styles['BodyText']))
+            
+            # Format issues
+            if "format_issues" in format_data and format_data["format_issues"]:
+                elements.append(Paragraph("Format Issues:", self.styles['SectionTitle']))
+                for issue in format_data["format_issues"]:
+                    elements.append(Paragraph(f"• {issue}", self.styles['Bullet']))
+            
+            elements.append(Spacer(1, 12))
+        
+        # Content Analysis
+        if "analysis" in analysis_data and "content" in analysis_data["analysis"]:
+            content_data = analysis_data["analysis"]["content"]
+            
+            elements.append(Paragraph("Content Analysis", self.styles['Subtitle']))
+            
+            # Detected sections
+            if "sections" in content_data:
+                elements.append(Paragraph("Detected Sections:", self.styles['SectionTitle']))
+                sections_text = ", ".join(content_data["sections"])
+                elements.append(Paragraph(sections_text, self.styles['BodyText']))
+            
+            # Skills
+            if "detected_skills" in content_data and content_data["detected_skills"]:
+                elements.append(Paragraph("Detected Skills:", self.styles['SectionTitle']))
+                skills_text = ", ".join(content_data["detected_skills"][:15])  # Limit to 15 skills
+                if len(content_data["detected_skills"]) > 15:
+                    skills_text += ", and more..."
+                elements.append(Paragraph(skills_text, self.styles['BodyText']))
+            
+            # Keyword density chart
+            if "keyword_density" in content_data and content_data["keyword_density"]:
+                elements.append(Paragraph("Keyword Analysis", self.styles['SectionTitle']))
+                
+                # Create chart data
+                keywords = list(content_data["keyword_density"].keys())[:8]  # Limit to top 8
+                densities = [content_data["keyword_density"][k]["density"] for k in keywords]
+                
+                chart_data = {
+                    "labels": keywords,
+                    "values": densities,
+                    "title": "Keyword Density (%)",
+                    "colors": "skyblue"
+                }
+                
+                chart_path = self.generate_chart_image(chart_data, "bar", f"kw_density_{timestamp}.png")
+                if chart_path:
+                    elements.append(Image(chart_path, width=400, height=300))
+                    elements.append(Spacer(1, 6))
+            
+            # Content recommendations
+            if "content_recommendations" in content_data and content_data["content_recommendations"]:
+                elements.append(Paragraph("Content Recommendations:", self.styles['SectionTitle']))
+                for rec in content_data["content_recommendations"]:
+                    elements.append(Paragraph(f"• {rec}", self.styles['Bullet']))
+            
+            elements.append(Spacer(1, 12))
+        
+        # Job Match Analysis
+        if "analysis" in analysis_data and "job_match" in analysis_data["analysis"]:
+            job_match = analysis_data["analysis"]["job_match"]
+            
+            elements.append(Paragraph("Job Match Analysis", self.styles['Subtitle']))
+            
+            # Match score
+            match_score = job_match.get("match_score", 0)
+            match_color = "green"
+            if match_score < 40:
+                match_color = "red"
+            elif match_score < 70:
+                match_color = "orange"
+            
+            match_text = f"<font color='{match_color}'>Match Score: {match_score}/100</font>"
+            elements.append(Paragraph(match_text, self.styles['BodyText']))
+            
+            if "keyword_match_percent" in job_match:
+                elements.append(Paragraph(
+                    f"Keyword Match: {job_match['keyword_match_percent']}%", 
+                    self.styles['BodyText']
+                ))
+            
+            # Matched keywords
+            if "keyword_matches" in job_match and job_match["keyword_matches"]:
+                elements.append(Paragraph("Matched Keywords:", self.styles['SectionTitle']))
+                
+                # Create a two-column table for matched keywords
+                keyword_rows = []
+                row = []
+                for i, kw in enumerate(job_match["keyword_matches"]):
+                    if isinstance(kw, dict) and "keyword" in kw:
+                        row.append(kw["keyword"])
+                    else:
+                        row.append(str(kw))
+                    
+                    if len(row) == 2 or i == len(job_match["keyword_matches"]) - 1:
+                        while len(row) < 2:
+                            row.append("")
+                        keyword_rows.append(row)
+                        row = []
+                
+                if keyword_rows:
+                    table = Table(keyword_rows, colWidths=[180, 180])
+                    table.setStyle(TableStyle([
+                        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                        ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
+                        ('PADDING', (0, 0), (-1, -1), 4),
+                    ]))
+                    elements.append(table)
+                    elements.append(Spacer(1, 6))
+            
+            # Missing keywords
+            if "missing_keywords" in job_match and job_match["missing_keywords"]:
+                elements.append(Paragraph("Missing Keywords:", self.styles['SectionTitle']))
+                for kw in job_match["missing_keywords"][:10]:  # Limit to top 10
+                    if isinstance(kw, dict) and "keyword" in kw:
+                        importance = round(kw.get("importance", 0) * 100)
+                        elements.append(Paragraph(
+                            f"• {kw['keyword']} (Importance: {importance}%)", 
+                            self.styles['Bullet']
+                        ))
+                    else:
+                        elements.append(Paragraph(f"• {kw}", self.styles['Bullet']))
+            
+            # Job match recommendations
+            if "match_recommendations" in job_match and job_match["match_recommendations"]:
+                elements.append(Paragraph("Job Match Recommendations:", self.styles['SectionTitle']))
+                for rec in job_match["match_recommendations"]:
+                    elements.append(Paragraph(f"• {rec}", self.styles['Bullet']))
+            
+            elements.append(Spacer(1, 12))
+        
+        # Overall recommendations
+        if "recommendations" in analysis_data and analysis_data["recommendations"]:
+            elements.append(Paragraph("Key Recommendations", self.styles['Subtitle']))
+            for rec in analysis_data["recommendations"]:
+                elements.append(Paragraph(f"• {rec}", self.styles['Bullet']))
+        
+        # Add footer with page numbers
+        def add_page_number(canvas, doc):
+            canvas.saveState()
+            canvas.setFont('Helvetica', 9)
+            page_num_text = f"Page {canvas.getPageNumber()}"
+            canvas.drawRightString(letter[0] - 30, 30, page_num_text)
+            canvas.drawString(30, 30, "Tamkeen AI Career Intelligence System")
+            canvas.restoreState()
+        
+        # Build PDF
+        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        
+        return report_path
+    
+    def generate_career_assessment_report(self, assessment_data: Dict[str, Any],
+                                        user_profile: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        """
+        Generate PDF report for career assessment
         
         Args:
             assessment_data: Career assessment data
-            user_data: Optional user profile data
-            output_format: Format of the report
-            output_path: Optional path to save the report
+            user_profile: Optional user profile data
             
         Returns:
-            Report content or path depending on output_format
+            str or None: Path to generated PDF, or None if failed
         """
-        # Combine assessment and user data
-        report_data = {
-            "assessment": assessment_data,
-            "generation_date": datetime.now()
-        }
+        if not REPORTLAB_AVAILABLE:
+            return None
         
-        if user_data:
-            report_data["user"] = user_data
-            
-        # Add visualizations if enabled and available
-        if self.include_visualizations and self.visualization_available:
-            visualizations = self._generate_visualizations(assessment_data)
-            report_data["visualizations"] = visualizations
-            
-        # Generate the report
-        return self.generate_report(
-            data=report_data,
-            report_type="career_assessment",
-            output_format=output_format,
-            output_path=output_path
-        )
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_name = f"career_assessment_{timestamp}.pdf"
+        report_path = os.path.join(self.user_report_folder, report_name)
         
-    def generate_interview_report(self,
-                               interview_data: Dict[str, Any],
-                               user_data: Optional[Dict[str, Any]] = None,
-                               output_format: str = "pdf",
-                               output_path: Optional[str] = None) -> Union[str, bytes, None]:
+        # Create document
+        doc = SimpleDocTemplate(report_path, pagesize=letter,
+                               rightMargin=72, leftMargin=72,
+                               topMargin=72, bottomMargin=72)
+        
+        # Container for elements
+        elements = []
+        
+        # Add title
+        elements.append(Paragraph("Career Assessment Report", self.styles['Title']))
+        
+        # Add date
+        date_str = datetime.now().strftime("%B %d, %Y")
+        elements.append(Paragraph(f"Generated on: {date_str}", self.styles['BodyText']))
+        
+        # User info if available
+        if user_profile:
+            user_name = user_profile.get("name", "")
+            if user_name:
+                elements.append(Paragraph(f"Prepared for: {user_name}", self.styles['BodyText']))
+        
+        elements.append(Spacer(1, 12))
+        
+        # Career Readiness Score
+        if "career_readiness" in assessment_data:
+            readiness = assessment_data["career_readiness"]
+            readiness_score = readiness.get("overall_score", 0)
+            
+            score_color = "green"
+            if readiness_score < 40:
+                score_color = "red"
+            elif readiness_score < 70:
+                score_color = "orange"
+            
+            score_text = f"<font color='{score_color}'>Career Readiness Score: {readiness_score}/100</font>"
+            elements.append(Paragraph(score_text, self.styles['Subtitle']))
+            
+            elements.append(Spacer(1, 6))
+            
+            # Readiness summary
+            if "summary" in readiness:
+                elements.append(Paragraph("Summary:", self.styles['SectionTitle']))
+                elements.append(Paragraph(readiness["summary"], self.styles['BodyText']))
+            
+            # Readiness chart
+            if "category_scores" in readiness and readiness["category_scores"]:
+                categories = []
+                scores = []
+                
+                for category, score in readiness["category_scores"].items():
+                    # Format category name
+                    category_name = category.replace("_", " ").title()
+                    categories.append(category_name)
+                    scores.append(score)
+                
+                chart_data = {
+                    "categories": categories,
+                    "values": scores,
+                    "title": "Career Readiness by Category"
+                }
+                
+                chart_path = self.generate_chart_image(chart_data, "radar", f"readiness_{timestamp}.png")
+                if chart_path:
+                    elements.append(Image(chart_path, width=400, height=300))
+                    
+            elements.append(Spacer(1, 12))
+            
+            # Detailed category analysis
+            if "category_scores" in readiness:
+                elements.append(Paragraph("Category Analysis", self.styles['Subtitle']))
+                
+                for category, score in readiness["category_scores"].items():
+                    # Skip if no commentary available
+                    if f"{category}_commentary" not in readiness:
+                        continue
+                    
+                    # Format category name
+                    category_name = category.replace("_", " ").title()
+                    
+                    # Get color based on score
+                    cat_color = "green"
+                    if score < 40:
+                        cat_color = "red"
+                    elif score < 70:
+                        cat_color = "orange"
+                    
+                    cat_title = f"{category_name}: <font color='{cat_color}'>{score}/100</font>"
+                    elements.append(Paragraph(cat_title, self.styles['SectionTitle']))
+                    
+                    # Add commentary
+                    commentary = readiness.get(f"{category}_commentary", "")
+                    elements.append(Paragraph(commentary, self.styles['BodyText']))
+                    
+                    # Add recommendations if available
+                    if f"{category}_recommendations" in readiness:
+                        elements.append(Paragraph("Recommendations:", self.styles['SectionTitle']))
+                        recommendations = readiness[f"{category}_recommendations"]
+                        
+                        if isinstance(recommendations, list):
+                            for rec in recommendations:
+                                elements.append(Paragraph(f"• {rec}", self.styles['Bullet']))
+                        else:
+                            elements.append(Paragraph(recommendations, self.styles['BodyText']))
+                    
+                    elements.append(Spacer(1, 6))
+            
+            # Add page break before skills gap analysis
+            elements.append(PageBreak())
+        
+        # Skills Gap Analysis
+        if "skills_gap" in assessment_data:
+            skills_gap = assessment_data["skills_gap"]
+            
+            elements.append(Paragraph("Skills Gap Analysis", self.styles['Subtitle']))
+            
+            # Summary
+            if "summary" in skills_gap:
+                elements.append(Paragraph(skills_gap["summary"], self.styles['BodyText']))
+                elements.append(Spacer(1, 6))
+            
+            # Target role
+            if "target_role" in skills_gap:
+                elements.append(Paragraph(f"Target Role: {skills_gap['target_role']}", self.styles['SectionTitle']))
+                elements.append(Spacer(1, 6))
+            
+            # Missing critical skills
+            if "missing_critical_skills" in skills_gap and skills_gap["missing_critical_skills"]:
+                elements.append(Paragraph("Critical Skills to Develop:", self.styles['SectionTitle']))
+                for skill in skills_gap["missing_critical_skills"]:
+                    elements.append(Paragraph(f"• {skill}", self.styles['Bullet']))
+                elements.append(Spacer(1, 6))
+            
+            # Missing nice-to-have skills
+            if "missing_nice_to_have_skills" in skills_gap and skills_gap["missing_nice_to_have_skills"]:
+                elements.append(Paragraph("Recommended Skills to Develop:", self.styles['SectionTitle']))
+                for skill in skills_gap["missing_nice_to_have_skills"]:
+                    elements.append(Paragraph(f"• {skill}", self.styles['Bullet']))
+                elements.append(Spacer(1, 6))
+            
+            # Learning resources
+            if "learning_resources" in skills_gap and skills_gap["learning_resources"]:
+                elements.append(Paragraph("Learning Resources", self.styles['SectionTitle']))
+                
+                resources = skills_gap["learning_resources"]
+                if isinstance(resources, dict):
+                    for skill, resource_list in resources.items():
+                        elements.append(Paragraph(f"Resources for {skill}:", self.styles['BodyText']))
+                        for resource in resource_list:
+                            if isinstance(resource, dict):
+                                title = resource.get("title", "")
+                                url = resource.get("url", "")
+                                description = resource.get("description", "")
+                                
+                                resource_text = f"• {title}"
+                                if url:
+                                    resource_text += f" - <a href='{url}'>{url}</a>"
+                                elements.append(Paragraph(resource_text, self.styles['Bullet']))
+                                
+                                if description:
+                                    elements.append(Paragraph(description, self.styles['BodyText']))
+                            else:
+                                elements.append(Paragraph(f"• {resource}", self.styles['Bullet']))
+                elif isinstance(resources, list):
+                    for resource in resources:
+                        if isinstance(resource, dict):
+                            title = resource.get("title", "")
+                            url = resource.get("url", "")
+                            
+                            resource_text = f"• {title}"
+                            if url:
+                                resource_text += f" - <a href='{url}'>{url}</a>"
+                            elements.append(Paragraph(resource_text, self.styles['Bullet']))
+                        else:
+                            elements.append(Paragraph(f"• {resource}", self.styles['Bullet']))
+            
+            elements.append(Spacer(1, 12))
+        
+        # Career Path Recommendations
+        if "career_paths" in assessment_data:
+            elements.append(PageBreak())
+            career_paths = assessment_data["career_paths"]
+            
+            elements.append(Paragraph("Career Path Recommendations", self.styles['Subtitle']))
+            
+            # Introduction
+            if "introduction" in career_paths:
+                elements.append(Paragraph(career_paths["introduction"], self.styles['BodyText']))
+                elements.append(Spacer(1, 6))
+            
+            # Paths
+            if "paths" in career_paths and career_paths["paths"]:
+                for i, path in enumerate(career_paths["paths"]):
+                    path_name = path.get("name", f"Career Path {i+1}")
+                    fit_score = path.get("fit_score", 0)
+                    
+                    # Get color based on fit score
+                    fit_color = "green"
+                    if fit_score < 40:
+                        fit_color = "red"
+                    elif fit_score < 70:
+                        fit_color = "orange"
+                    
+                    path_title = f"{path_name} <font color='{fit_color}'>(Fit: {fit_score}%)</font>"
+                    elements.append(Paragraph(path_title, self.styles['SectionTitle']))
+                    
+                    # Description
+                    if "description" in path:
+                        elements.append(Paragraph(path["description"], self.styles['BodyText']))
+                    
+                    # Requirements
+                    if "requirements" in path:
+                        elements.append(Paragraph("Requirements:", self.styles['BodyText']))
+                        for req in path["requirements"]:
+                            elements.append(Paragraph(f"• {req}", self.styles['Bullet']))
+                    
+                    # Progression steps
+                    if "progression" in path and path["progression"]:
+                        elements.append(Paragraph("Career Progression:", self.styles['BodyText']))
+                        for step in path["progression"]:
+                            step_title = step.get("title", "")
+                            step_years = step.get("experience_years", "")
+                            step_text = f"• {step_title}"
+                            if step_years:
+                                step_text += f" ({step_years} years)"
+                            elements.append(Paragraph(step_text, self.styles['Bullet']))
+                    
+                    elements.append(Spacer(1, 6))
+            
+            # Next steps
+            if "next_steps" in career_paths:
+                elements.append(Paragraph("Recommended Next Steps:", self.styles['SectionTitle']))
+                for step in career_paths["next_steps"]:
+                    elements.append(Paragraph(f"• {step}", self.styles['Bullet']))
+        
+        # Add footer with page numbers
+        def add_page_number(canvas, doc):
+            canvas.saveState()
+            canvas.setFont('Helvetica', 9)
+            page_num_text = f"Page {canvas.getPageNumber()}"
+            canvas.drawRightString(letter[0] - 30, 30, page_num_text)
+            canvas.drawString(30, 30, "Tamkeen AI Career Intelligence System")
+            canvas.restoreState()
+        
+        # Build PDF
+        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        
+        return report_path
+    
+    def generate_custom_report(self, report_data: Dict[str, Any], 
+                             report_title: str = "Custom Report") -> Optional[str]:
         """
-        Generate an interview feedback report
+        Generate a custom PDF report with specified data
         
         Args:
-            interview_data: Interview assessment data
-            user_data: Optional user profile data
-            output_format: Format of the report
-            output_path: Optional path to save the report
+            report_data: Custom report data
+            report_title: Title for the report
             
         Returns:
-            Report content or path depending on output_format
+            str or None: Path to generated PDF, or None if failed
         """
-        # Combine interview and user data
-        report_data = {
-            "interview": interview_data,
-            "generation_date": datetime.now()
-        }
+        if not REPORTLAB_AVAILABLE:
+            return None
         
-        if user_data:
-            report_data["user"] = user_data
-            
-        # Add visualizations for interview analytics
-        if self.include_visualizations and self.visualization_available:
-            visualizations = self._generate_interview_visualizations(interview_data)
-            report_data["visualizations"] = visualizations
-            
-        # Generate the report
-        return self.generate_report(
-            data=report_data,
-            report_type="interview_feedback",
-            output_format=output_format,
-            output_path=output_path
-        )
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_name = f"custom_report_{timestamp}.pdf"
+        report_path = os.path.join(self.user_report_folder, report_name)
         
-    def _generate_visualizations(self, assessment_data: Dict[str, Any]) -> Dict[str, str]:
-        """Generate data visualizations for assessment reports"""
-        if not self.visualization_available:
-            return {}
+        # Create document
+        doc = SimpleDocTemplate(report_path, pagesize=letter,
+                               rightMargin=72, leftMargin=72,
+                               topMargin=72, bottomMargin=72)
+        
+        # Container for elements
+        elements = []
+        
+        # Add title
+        elements.append(Paragraph(report_title, self.styles['Title']))
+        
+        # Add date
+        date_str = datetime.now().strftime("%B %d, %Y")
+        elements.append(Paragraph(f"Generated on: {date_str}", self.styles['BodyText']))
+        elements.append(Spacer(1, 12))
+        
+        # Loop through sections
+        for section_title, section_data in report_data.items():
+            elements.append(Paragraph(section_title, self.styles['Subtitle']))
             
-        try:
-            import matplotlib.pyplot as plt
-            import seaborn as sns
-            import io
-            import base64
+            # Handle different section types
+            if isinstance(section_data, str):
+                # Simple text section
+                elements.append(Paragraph(section_data, self.styles['BodyText']))
+                
+            elif isinstance(section_data, list):
+                # List of items
+                for item in section_data:
+                    if isinstance(item, dict) and "title" in item and "content" in item:
+                        # Item with title and content
+                        elements.append(Paragraph(item["title"], self.styles['SectionTitle']))
+                        
+                        if isinstance(item["content"], str):
+                            elements.append(Paragraph(item["content"], self.styles['BodyText']))
+                        elif isinstance(item["content"], list):
+                            for point in item["content"]:
+                                elements.append(Paragraph(f"• {point}", self.styles['Bullet']))
+                    else:
+                        # Simple bullet point
+                        elements.append(Paragraph(f"• {item}", self.styles['Bullet']))
             
-            visualizations = {}
+            elif isinstance(section_data, dict):
+                # Dictionary section
+                if "chart" in section_data:
+                    # Chart data
+                    chart_type = section_data.get("chart_type", "bar")
+                    chart_path = self.generate_chart_image(
+                        section_data["chart"], 
+                        chart_type, 
+                        f"chart_{section_title.lower().replace(' ', '_')}_{timestamp}.png"
+                    )
+                    if chart_path:
+                        elements.append(Image(chart_path, width=400, height=300))
+                
+                elif "table" in section_data:
+                    # Table data
+                    table_data = section_data["table"]
+                    if table_data and isinstance(table_data, list):
+                        # Get column widths
+                        col_count = max(len(row) if isinstance(row, list) else 0 for row in table_data)
+                        col_width = 400 / col_count if col_count > 0 else 400
+                        
+                        table = Table(table_data, colWidths=[col_width] * col_count)
+                        
+                        # Add styles
+                        style = [
+                            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                            ('PADDING', (0, 0), (-1, -1), 4),
+                        ]
+                        table.setStyle(TableStyle(style))
+                        elements.append(table)
+                
+                elif "text" in section_data:
+                    # Text with optional title
+                    if "subtitle" in section_data:
+                        elements.append(Paragraph(section_data["subtitle"], self.styles['SectionTitle']))
+                    
+                    elements.append(Paragraph(section_data["text"], self.styles['BodyText']))
+                
+                elif "bullets" in section_data:
+                    # Bullet points with optional title
+                    if "subtitle" in section_data:
+                        elements.append(Paragraph(section_data["subtitle"], self.styles['SectionTitle']))
+                    
+                    for bullet in section_data["bullets"]:
+                        elements.append(Paragraph(f"• {bullet}", self.styles['Bullet']))
+                
+                else:
+                    # Generic key-value section
+                    for key, value in section_data.items():
+                        if isinstance(value, list):
+                            elements.append(Paragraph(key, self.styles['SectionTitle']))
+                            for item in value:
+                                elements.append(Paragraph(f"• {item}", self.styles['Bullet']))
+                        else:
+                            elements.append(Paragraph(f"{key}: {value}", self.styles['BodyText']))
             
-            # Radar chart for skills alignment
-            if "skills_alignment" in assessment_data:
-                skills_data = assessment_data["skills_alignment"]
-                if isinstance(skills_data, dict) and len(skills_data) > 0:
-                    plt.figure(figsize=(8, 8))
-                    categories = list(skills_data.keys())
-                    values = list(skills_data.values())
-                    
-                    # Number of variables
-                    N = len(categories)
-                    
-                    # Create angles for each category
-                    angles = [n / float(N) * 2 * 3.14159 for n in range(N)]
-                    angles += angles[:1]  # Close the loop
-                    
-                    # Add values (and close the loop)
-                    values += values[:1]
-                    
-                    # Plot
-                    ax = plt.subplot(111, polar=True)
-                    plt.xticks(angles[:-1], categories, color='grey', size=10)
-                    ax.plot(angles, values, linewidth=1, linestyle='solid')
-                    ax.fill(angles, values, 'b', alpha=0.1)
-                    
-                    # Convert to base64
-                    buf = io.BytesIO()
-                    plt.savefig(buf, format='png')
-                    buf.seek(0)
-                    img_str = base64.b64encode(buf.read()).decode('utf-8')
-                    visualizations['skills_radar'] = f"data:image/png;base64,{img_str}"
-                    plt.close()
-            
-            # Bar chart for category scores
-            if "categories" in assessment_data:
-                categories = assessment_data["categories"]
-                if isinstance(categories, list) and len(categories) > 0:
-                    plt.figure(figsize=(10, 6))
-                    names = [c["name"] for c in categories]
-                    scores = [c["score"] for c in categories]
-                    
-                    # Create bar chart
-                    sns.barplot(x=scores, y=names)
-                    plt.xlabel('Score')
-                    plt.title('Category Performance')
-                    
-                    # Convert to base64
-                    buf = io.BytesIO()
-                    plt.savefig(buf, format='png')
-                    buf.seek(0)
-                    img_str = base64.b64encode(buf.read()).decode('utf-8')
-                    visualizations['categories_bar'] = f"data:image/png;base64,{img_str}"
-                    plt.close()
-                    
-            return visualizations
-            
-        except Exception as e:
-            print(f"ERROR generating visualizations: {str(e)}")
-            return {}
-            
-    def _generate_interview_visualizations(self, interview_data: Dict[str, Any]) -> Dict[str, str]:
-        """Generate visualizations for interview reports"""
-        if not self.visualization_available:
-            return {}
-            
-        try:
-            import matplotlib.pyplot as plt
-            import seaborn as sns
-            import numpy as np
-            import io
-            import base64
-            
-            visualizations = {}
-            
-            # Emotion timeline if available
-            if "emotion_timeline" in interview_data:
-                timeline = interview_data["emotion_timeline"]
-                if isinstance(timeline, list) and len(timeline) > 0:
-                    plt.figure(figsize=(12, 6))
-                    
-                    # Extract timestamps and emotions
-                    timestamps = [t.get("timestamp", i) for i, t in enumerate(timeline)]
-                    emotions = {}
-                    
-                    # Gather all emotion types
-                    for point in timeline:
-                        if "emotions" in point and isinstance(point["emotions"], dict):
-                            for emotion, value in point["emotions"].items():
-                                if emotion not in emotions:
-                                    emotions[emotion] = []
-                                emotions[emotion].append(value)
-                    
-                    # Plot each emotion line
-                    for emotion, values in emotions.items():
-                        if len(values) == len(timestamps):
-                            plt.plot(timestamps, values, label=emotion)
-                    
-                    plt.legend()
-                    plt.title('Emotion Timeline During Interview')
-                    plt.xlabel('Time')
-                    plt.ylabel('Emotion Intensity')
-                    
-                    # Convert to base64
-                    buf = io.BytesIO()
-                    plt.savefig(buf, format='png')
-                    buf.seek(0)
-                    img_str = base64.b64encode(buf.read()).decode('utf-8')
-                    visualizations['emotion_timeline'] = f"data:image/png;base64,{img_str}"
-                    plt.close()
-            
-            # Feedback categories
-            if "feedback_categories" in interview_data:
-                categories = interview_data["feedback_categories"]
-                if isinstance(categories, dict) and len(categories) > 0:
-                    plt.figure(figsize=(10, 6))
-                    names = list(categories.keys())
-                    scores = list(categories.values())
-                    
-                    # Create bar chart
-                    sns.barplot(x=scores, y=names)
-                    plt.xlabel('Score')
-                    plt.title('Interview Performance by Category')
-                    
-                    # Convert to base64
-                    buf = io.BytesIO()
-                    plt.savefig(buf, format='png')
-                    buf.seek(0)
-                    img_str = base64.b64encode(buf.read()).decode('utf-8')
-                    visualizations['feedback_categories'] = f"data:image/png;base64,{img_str}"
-                    plt.close()
-                    
-            return visualizations
-            
-        except Exception as e:
-            print(f"ERROR generating interview visualizations: {str(e)}")
-            return {}
+            elements.append(Spacer(1, 12))
+        
+        # Add footer with page numbers
+        def add_page_number(canvas, doc):
+            canvas.saveState()
+            canvas.setFont('Helvetica', 9)
+            page_num_text = f"Page {canvas.getPageNumber()}"
+            canvas.drawRightString(letter[0] - 30, 30, page_num_text)
+            canvas.drawString(30, 30, "Tamkeen AI Career Intelligence System")
+            canvas.restoreState()
+        
+        # Build PDF
+        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        
+        return report_path
+
+
+# Standalone functions for report generation
+
+def generate_resume_analysis_report(user_id: str, analysis_data: Dict[str, Any],
+                                  job_title: Optional[str] = None) -> Optional[str]:
+    """
+    Generate PDF report for resume analysis
+    
+    Args:
+        user_id: User ID
+        analysis_data: Resume analysis data
+        job_title: Optional job title
+        
+    Returns:
+        str or None: Path to generated PDF, or None if failed
+    """
+    generator = ReportGenerator(user_id)
+    return generator.generate_resume_analysis_report(analysis_data, job_title)
+
+
+def generate_career_assessment_report(user_id: str, assessment_data: Dict[str, Any],
+                                    user_profile: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    """
+    Generate PDF report for career assessment
+    
+    Args:
+        user_id: User ID
+        assessment_data: Career assessment data
+        user_profile: Optional user profile data
+        
+    Returns:
+        str or None: Path to generated PDF, or None if failed
+    """
+    generator = ReportGenerator(user_id)
+    return generator.generate_career_assessment_report(assessment_data, user_profile)
+
+
+def generate_custom_report(user_id: str, report_data: Dict[str, Any],
+                         report_title: str = "Custom Report") -> Optional[str]:
+    """
+    Generate a custom PDF report
+    
+    Args:
+        user_id: User ID
+        report_data: Custom report data
+        report_title: Report title
+        
+    Returns:
+        str or None: Path to generated PDF, or None if failed
+    """
+    generator = ReportGenerator(user_id)
+    return generator.generate_custom_report(report_data, report_title)
