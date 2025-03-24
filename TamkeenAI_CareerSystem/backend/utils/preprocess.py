@@ -1,66 +1,51 @@
 """
-Text Preprocessing Utility Module
+Preprocessing Utility Module
 
-This module provides utilities for text preprocessing, analysis, and information extraction
-used in resume parsing, job matching, and other NLP-related tasks.
+This module provides utilities for text preprocessing, normalization, and extraction
+used across various components of the system.
 """
 
+import os
 import re
-import string
 import json
-from typing import Dict, List, Any, Optional, Tuple, Union
 import logging
+import string
+from typing import Dict, List, Any, Optional, Tuple, Union
 from datetime import datetime
-import unicodedata
 
-# Try importing NLP libraries
-try:
-    import spacy
-    SPACY_AVAILABLE = True
-    try:
-        # Try to load English model
-        nlp = spacy.load("en_core_web_sm")
-    except:
-        # If model not found, try to download it
-        try:
-            import subprocess
-            subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"], check=True)
-            nlp = spacy.load("en_core_web_sm")
-        except:
-            nlp = None
-            SPACY_AVAILABLE = False
-except ImportError:
-    SPACY_AVAILABLE = False
-    nlp = None
-
-# Import educational background data
-try:
-    EDUCATION_DATA_PATH = "backend/data/education_data.json"
-    with open(EDUCATION_DATA_PATH, "r", encoding="utf-8") as f:
-        EDUCATION_DATA = json.load(f)
-except:
-    EDUCATION_DATA = {
-        "degrees": [
-            "bachelor", "bachelors", "b.a.", "b.s.", "b.e.", "b.tech", "b.sc", "undergraduate",
-            "master", "masters", "m.a.", "m.s.", "m.e.", "m.tech", "m.sc", "mba", "postgraduate",
-            "phd", "ph.d.", "doctorate", "doctoral", "doctor of philosophy",
-            "associate", "diploma", "certificate", "certification"
-        ],
-        "majors": [
-            "computer science", "information technology", "software engineering", "data science",
-            "artificial intelligence", "machine learning", "cybersecurity", "networking",
-            "business administration", "finance", "accounting", "marketing", "economics",
-            "electrical engineering", "mechanical engineering", "civil engineering",
-            "psychology", "sociology", "communications", "english", "history", "mathematics",
-            "physics", "chemistry", "biology", "medicine", "nursing"
-        ],
-        "institutions": [
-            "university", "college", "institute", "school", "academy"
-        ]
-    }
+# Import settings
+from backend.config.settings import SKILLS_FILE, EDUCATION_PATTERNS, JOB_TITLE_PATTERNS
 
 # Setup logger
 logger = logging.getLogger(__name__)
+
+# Try to import optional dependencies
+try:
+    import nltk
+    from nltk.corpus import stopwords
+    from nltk.tokenize import word_tokenize
+    from nltk.stem import WordNetLemmatizer
+    
+    # Ensure NLTK resources are downloaded
+    try:
+        nltk.data.find('tokenizers/punkt')
+    except LookupError:
+        nltk.download('punkt')
+    
+    try:
+        nltk.data.find('corpora/stopwords')
+    except LookupError:
+        nltk.download('stopwords')
+    
+    try:
+        nltk.data.find('corpora/wordnet')
+    except LookupError:
+        nltk.download('wordnet')
+    
+    NLTK_AVAILABLE = True
+except ImportError:
+    NLTK_AVAILABLE = False
+    logging.warning("NLTK not installed. Some NLP functions will be unavailable. Install with: pip install nltk")
 
 
 def clean_text(text: str) -> str:
@@ -76,98 +61,760 @@ def clean_text(text: str) -> str:
     if not text:
         return ""
     
-    # Normalize unicode
-    text = unicodedata.normalize('NFKD', text)
+    # Convert to lowercase
+    text = text.lower()
     
-    # Replace multiple spaces with single space
+    # Replace multiple whitespace with single space
     text = re.sub(r'\s+', ' ', text)
     
-    # Remove excessive line breaks
-    text = re.sub(r'\n\s*\n', '\n\n', text)
+    # Replace tabs and newlines with spaces
+    text = re.sub(r'[\t\n\r]+', ' ', text)
     
-    # Replace tab characters with spaces
-    text = text.replace('\t', ' ')
+    # Remove URLs
+    text = re.sub(r'https?://\S+|www\.\S+', '', text)
     
-    # Remove non-printable characters
-    text = ''.join(c for c in text if c.isprintable() or c == '\n')
+    # Remove email addresses
+    text = re.sub(r'\S+@\S+', '', text)
+    
+    # Remove phone numbers
+    text = re.sub(r'\+?\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}', '', text)
+    
+    # Replace punctuation with space (except for + and # in technical terms)
+    for p in string.punctuation.replace('+', '').replace('#', ''):
+        text = text.replace(p, ' ')
+    
+    # Remove extra spaces again
+    text = re.sub(r'\s+', ' ', text)
     
     return text.strip()
 
 
-def extract_emails(text: str) -> List[str]:
+def normalize_skill(skill: str) -> str:
     """
-    Extract email addresses from text
+    Normalize skill name
+    
+    Args:
+        skill: Skill name
+        
+    Returns:
+        str: Normalized skill name
+    """
+    if not skill:
+        return ""
+    
+    # Clean skill text
+    normalized = skill.lower().strip()
+    
+    # Remove common prefixes
+    for prefix in ["knowledge of ", "experience with ", "proficient in ", "skilled in "]:
+        if normalized.startswith(prefix):
+            normalized = normalized[len(prefix):]
+    
+    # Remove common suffixes
+    for suffix in [" experience", " knowledge", " skills", " proficiency"]:
+        if normalized.endswith(suffix):
+            normalized = normalized[:-len(suffix)]
+    
+    # Handle special cases
+    replacements = {
+        "js": "javascript",
+        "ts": "typescript",
+        "py": "python",
+        "c/c++": "c++",
+        "reactjs": "react",
+        "react.js": "react",
+        "node.js": "nodejs",
+        "vuejs": "vue",
+        "vue.js": "vue",
+        "aws": "amazon web services",
+        "ml": "machine learning",
+        "ai": "artificial intelligence",
+        "dl": "deep learning",
+        "oop": "object oriented programming"
+    }
+    
+    # Apply replacements
+    for old, new in replacements.items():
+        if normalized == old:
+            normalized = new
+    
+    return normalized.strip()
+
+
+def extract_skills_from_text(text: str) -> List[str]:
+    """
+    Extract skills from text
     
     Args:
         text: Input text
         
     Returns:
-        list: Found email addresses
+        list: Extracted skills
     """
-    if not text:
+    try:
+        # Clean text
+        clean = clean_text(text)
+        
+        # Load skills list if available
+        skills_list = []
+        try:
+            if os.path.exists(SKILLS_FILE):
+                with open(SKILLS_FILE, 'r') as f:
+                    skills_list = json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading skills file: {str(e)}")
+        
+        # Find skills in text
+        found_skills = []
+        
+        # Match skills from list
+        if skills_list:
+            for skill in skills_list:
+                # Check if skill is in text
+                skill_pattern = r'\b' + re.escape(skill.lower()) + r'\b'
+                if re.search(skill_pattern, clean):
+                    found_skills.append(skill)
+        
+        # Extract additional skills using patterns
+        skill_patterns = [
+            r'(?:proficient|experience|skilled) (?:in|with) ([^.,;:]+)',
+            r'knowledge of ([^.,;:]+)',
+            r'expertise in ([^.,;:]+)'
+        ]
+        
+        for pattern in skill_patterns:
+            matches = re.findall(pattern, clean)
+            for match in matches:
+                skill = normalize_skill(match.strip())
+                if skill and skill not in found_skills:
+                    found_skills.append(skill)
+        
+        # Extract skills from bullet points
+        bullet_pattern = r'[•\-\*]\s+([^•\-\*\n]+)'
+        bullet_matches = re.findall(bullet_pattern, text)
+        for match in bullet_matches:
+            if 3 < len(match) < 50:  # Filter by reasonable skill description length
+                skill = normalize_skill(match.strip())
+                if skill and skill not in found_skills:
+                    found_skills.append(skill)
+        
+        return found_skills
+    
+    except Exception as e:
+        logger.error(f"Error extracting skills: {str(e)}")
         return []
-    
-    # Regex pattern for email addresses
-    pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-    emails = re.findall(pattern, text)
-    
-    # Remove duplicates and return
-    return list(set(emails))
 
 
-def extract_phone_numbers(text: str) -> List[str]:
+def normalize_job_title(title: str) -> str:
     """
-    Extract phone numbers from text
+    Normalize job title
+    
+    Args:
+        title: Job title
+        
+    Returns:
+        str: Normalized job title
+    """
+    if not title:
+        return ""
+    
+    # Clean title text
+    normalized = title.lower().strip()
+    
+    # Handle common abbreviations and variations
+    replacements = {
+        "sr.": "senior",
+        "jr.": "junior",
+        "mgr": "manager",
+        "eng": "engineer",
+        "dev": "developer",
+        "admin": "administrator",
+        "architect": "architect",
+        "specialist": "specialist",
+        "analyst": "analyst",
+        "tech": "technician",
+        "frontend": "front end",
+        "backend": "back end",
+        "fullstack": "full stack"
+    }
+    
+    # Apply replacements
+    for old, new in replacements.items():
+        if old in normalized:
+            normalized = normalized.replace(old, new)
+    
+    return normalized.strip()
+
+
+def extract_education_from_text(text: str) -> List[Dict[str, Any]]:
+    """
+    Extract education information from text
     
     Args:
         text: Input text
         
     Returns:
-        list: Found phone numbers
+        list: Extracted education items
     """
-    if not text:
+    try:
+        # Clean text
+        clean = clean_text(text)
+        
+        # Find education section
+        education_section = None
+        
+        # Common section headers
+        section_headers = {
+            "education": ["education", "academic background", "educational background", "academic qualifications"],
+            "experience": ["experience", "work experience", "employment history", "professional experience"],
+            "skills": ["skills", "technical skills", "core competencies", "qualifications"],
+            "projects": ["projects", "professional projects", "academic projects"],
+            "certifications": ["certifications", "certificates", "professional certifications"],
+        }
+        
+        # Split text into sections
+        sections = {}
+        current_section = "header"
+        lines = text.split("\n")
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Check if line is a section header
+            found_section = None
+            for section, headers in section_headers.items():
+                for header in headers:
+                    if re.search(r'\b' + re.escape(header) + r'\b', line.lower()):
+                        found_section = section
+                        break
+                if found_section:
+                    break
+            
+            if found_section:
+                current_section = found_section
+                sections[current_section] = []
+            else:
+                if current_section not in sections:
+                    sections[current_section] = []
+                sections[current_section].append(line)
+        
+        # Get education section
+        if "education" in sections:
+            education_section = "\n".join(sections["education"])
+        
+        if not education_section:
+            # Try to find education from whole text
+            education_section = text
+        
+        # Extract education using patterns
+        education_items = []
+        
+        # Define patterns for degrees
+        degree_patterns = [
+            r"(bachelor|bachelor's|bachelors|bs|ba|bsc|btech|b\.tech|undergraduate)",
+            r"(master|master's|masters|ms|msc|mtech|m\.tech|mba|graduate)",
+            r"(phd|ph\.d|doctorate|doctoral)",
+            r"(associate|associate's|associates|diploma)"
+        ]
+        
+        # Define patterns for fields of study
+        field_patterns = [
+            r"(computer science|cs|software engineering|information technology|it)",
+            r"(business administration|business|management|finance|accounting|economics)",
+            r"(electrical engineering|ee|mechanical engineering|civil engineering|engineering)",
+            r"(mathematics|math|physics|chemistry|biology|science)",
+            r"(arts|humanities|psychology|sociology|literature|history)"
+        ]
+        
+        # Define patterns for institutions
+        institution_patterns = [
+            r"(university|college|institute|school) of ([a-z ]+)",
+            r"([a-z ]+) (university|college|institute|school)",
+            r"([a-z ]+) (university|college|institute|school) of ([a-z ]+)"
+        ]
+        
+        # Define patterns for dates
+        date_patterns = [
+            r"(19|20)\d{2}\s*-\s*(19|20)\d{2}",
+            r"(19|20)\d{2}\s*to\s*(19|20)\d{2}",
+            r"(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* (19|20)\d{2}"
+        ]
+        
+        # Special case: extract education blocks using a combined pattern
+        education_blocks = re.findall(r'(' + '|'.join(degree_patterns) + r').{0,30}(' + '|'.join(field_patterns) + r').{0,50}(' + '|'.join(institution_patterns) + r')', education_section, re.IGNORECASE)
+        
+        for block in education_blocks:
+            # Process each block
+            block_text = ' '.join(block)
+            
+            # Extract degree
+            degree = None
+            for pattern in degree_patterns:
+                degree_match = re.search(pattern, block_text, re.IGNORECASE)
+                if degree_match:
+                    degree = degree_match.group(0)
+                    break
+            
+            # Extract field
+            field = None
+            for pattern in field_patterns:
+                field_match = re.search(pattern, block_text, re.IGNORECASE)
+                if field_match:
+                    field = field_match.group(0)
+                    break
+            
+            # Extract institution
+            institution = None
+            for pattern in institution_patterns:
+                institution_match = re.search(pattern, block_text, re.IGNORECASE)
+                if institution_match:
+                    institution = institution_match.group(0)
+                    break
+            
+            # Extract dates
+            dates = []
+            for pattern in date_patterns:
+                date_matches = re.findall(pattern, block_text, re.IGNORECASE)
+                for date_match in date_matches:
+                    if isinstance(date_match, tuple):
+                        date = ' '.join(date_match)
+                    else:
+                        date = date_match
+                    dates.append(date)
+            
+            # Create education item
+            if degree or field or institution:
+                education_item = {
+                    "degree": degree,
+                    "field": field,
+                    "institution": institution
+                }
+                
+                if dates:
+                    education_item["dates"] = dates[0]
+                
+                education_items.append(education_item)
+        
+        # If no blocks found, try simple patterns
+        if not education_items:
+            # Extract each component separately
+            degrees = []
+            for pattern in degree_patterns:
+                degree_matches = re.findall(pattern, education_section, re.IGNORECASE)
+                degrees.extend(degree_matches)
+            
+            fields = []
+            for pattern in field_patterns:
+                field_matches = re.findall(pattern, education_section, re.IGNORECASE)
+                fields.extend(field_matches)
+            
+            institutions = []
+            for pattern in institution_patterns:
+                institution_matches = re.findall(pattern, education_section, re.IGNORECASE)
+                for match in institution_matches:
+                    if isinstance(match, tuple):
+                        institution = ' '.join(match)
+                    else:
+                        institution = match
+                    institutions.append(institution)
+            
+            dates = []
+            for pattern in date_patterns:
+                date_matches = re.findall(pattern, education_section, re.IGNORECASE)
+                for match in date_matches:
+                    if isinstance(match, tuple):
+                        date = ' '.join(match)
+                    else:
+                        date = match
+                    dates.append(date)
+            
+            # Create education items
+            if len(degrees) > 0:
+                for i in range(min(len(degrees), max(len(fields), len(institutions)))):
+                    education_item = {
+                        "degree": degrees[i] if i < len(degrees) else None,
+                        "field": fields[i] if i < len(fields) else None,
+                        "institution": institutions[i] if i < len(institutions) else None
+                    }
+                    
+                    if i < len(dates):
+                        education_item["dates"] = dates[i]
+                    
+                    education_items.append(education_item)
+            
+        return education_items
+    
+    except Exception as e:
+        logger.error(f"Error extracting education: {str(e)}")
         return []
-    
-    # Regex patterns for different phone number formats
-    patterns = [
-        r'\+\d{1,3}\s?\(\d{1,4}\)\s?\d{3,4}[-\s]?\d{3,4}',  # +1 (123) 456-7890
-        r'\+\d{1,3}\s?\d{1,4}\s?\d{3,4}\s?\d{3,4}',          # +1 123 456 7890
-        r'\(\d{3,4}\)\s?\d{3,4}[-\s]?\d{3,4}',               # (123) 456-7890
-        r'\d{3}[-\s]?\d{3}[-\s]?\d{4}',                      # 123-456-7890
-        r'\d{5}[-\s]?\d{5,7}'                                # 12345-67890
-    ]
-    
-    phone_numbers = []
-    for pattern in patterns:
-        matches = re.findall(pattern, text)
-        phone_numbers.extend(matches)
-    
-    # Remove duplicates and return
-    return list(set(phone_numbers))
 
 
-def extract_urls(text: str) -> List[str]:
+def extract_experience_from_text(text: str) -> List[Dict[str, Any]]:
     """
-    Extract URLs from text
+    Extract work experience information from text
     
     Args:
         text: Input text
         
     Returns:
-        list: Found URLs
+        list: Extracted experience items
     """
-    if not text:
+    try:
+        # Clean text
+        clean = text.strip()
+        
+        # Find experience section
+        experience_section = None
+        
+        # Common section headers
+        section_headers = {
+            "education": ["education", "academic background", "educational background", "academic qualifications"],
+            "experience": ["experience", "work experience", "employment history", "professional experience"],
+            "skills": ["skills", "technical skills", "core competencies", "qualifications"],
+            "projects": ["projects", "professional projects", "academic projects"],
+            "certifications": ["certifications", "certificates", "professional certifications"],
+        }
+        
+        # Split text into sections
+        sections = {}
+        current_section = "header"
+        lines = text.split("\n")
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Check if line is a section header
+            found_section = None
+            for section, headers in section_headers.items():
+                for header in headers:
+                    if re.search(r'\b' + re.escape(header) + r'\b', line.lower()):
+                        found_section = section
+                        break
+                if found_section:
+                    break
+            
+            if found_section:
+                current_section = found_section
+                sections[current_section] = []
+            else:
+                if current_section not in sections:
+                    sections[current_section] = []
+                sections[current_section].append(line)
+        
+        # Get experience section
+        if "experience" in sections:
+            experience_section = "\n".join(sections["experience"])
+        
+        if not experience_section:
+            # Try to find experience from whole text
+            experience_section = text
+        
+        # Extract experience using patterns
+        experience_items = []
+        
+        # Define patterns for job titles
+        title_patterns = [
+            r"(senior|lead|staff|principal|junior) (software|systems|data|frontend|backend|full stack|mobile|ios|android|devops|cloud|network|security) (engineer|developer|architect|administrator|specialist|analyst)",
+            r"(software|systems|data|frontend|backend|full stack|mobile|ios|android|devops|cloud|network|security) (engineer|developer|architect|administrator|specialist|analyst)",
+            r"(engineering|product|project|program|technical|team) (manager|lead|director|head)",
+            r"(chief|vp|director|head) of (technology|engineering|product|information|technical)",
+            r"(cto|cio|ceo|cpo|vp)"
+        ]
+        
+        # Define patterns for companies
+        company_patterns = [
+            r"(?:at|with|for) ([A-Z][A-Za-z]+(?:\s[A-Z][A-Za-z]+)*)",
+            r"([A-Z][A-Za-z]+(?:\s[A-Z][A-Za-z]+)*) (?:Inc\.|LLC|Ltd\.|Corp\.|Corporation|Company)",
+            r"(?:at|with|for) ([A-Z][A-Za-z]+(?:[.,\-&]\s?[A-Z][A-Za-z]+)+)"
+        ]
+        
+        # Define patterns for dates
+        date_patterns = [
+            r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* (19|20)\d{2} (?:-|to|–) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* (19|20)\d{2}",
+            r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* (19|20)\d{2} (?:-|to|–) (?:Present|Current)",
+            r"(19|20)\d{2} (?:-|to|–) (19|20)\d{2}",
+            r"(19|20)\d{2} (?:-|to|–) (?:Present|Current)"
+        ]
+        
+        # Split experience section into blocks
+        # Try to find blocks that start with dates or titles
+        experience_blocks = []
+        block_start_pattern = r'(' + '|'.join(date_patterns) + '|' + '|'.join(title_patterns) + ')'
+        block_matches = re.finditer(block_start_pattern, experience_section, re.IGNORECASE)
+        
+        prev_start = 0
+        prev_match = None
+        
+        for match in block_matches:
+            if prev_match:
+                block_text = experience_section[prev_start:match.start()].strip()
+                experience_blocks.append(block_text)
+            
+            prev_start = match.start()
+            prev_match = match
+        
+        # Add the last block
+        if prev_match:
+            block_text = experience_section[prev_start:].strip()
+            experience_blocks.append(block_text)
+        
+        # If we couldn't find blocks, just use the entire section
+        if not experience_blocks:
+            experience_blocks = [experience_section]
+        
+        # Process each block
+        for block in experience_blocks:
+            # Skip short blocks (likely not an experience item)
+            if len(block) < 50:
+                continue
+            
+            # Extract title
+            title = None
+            for pattern in title_patterns:
+                title_match = re.search(pattern, block, re.IGNORECASE)
+                if title_match:
+                    title = title_match.group(0)
+                    break
+            
+            # Extract company
+            company = None
+            for pattern in company_patterns:
+                company_match = re.search(pattern, block, re.IGNORECASE)
+                if company_match:
+                    company = company_match.group(1)
+                    break
+            
+            # Extract dates
+            start_date = None
+            end_date = None
+            for pattern in date_patterns:
+                date_match = re.search(pattern, block, re.IGNORECASE)
+                if date_match:
+                    date_text = date_match.group(0)
+                    
+                    # Parse date range
+                    if "present" in date_text.lower() or "current" in date_text.lower():
+                        # Extract start date
+                        start_match = re.search(r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* (19|20)\d{2}|^(19|20)\d{2}', date_text, re.IGNORECASE)
+                        if start_match:
+                            start_date = start_match.group(0)
+                        
+                        end_date = "Present"
+                    else:
+                        # Extract start and end dates
+                        dates = re.findall(r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* (19|20)\d{2}|(19|20)\d{2}', date_text, re.IGNORECASE)
+                        if len(dates) >= 2:
+                            if isinstance(dates[0], tuple):
+                                start_date = ' '.join(filter(None, dates[0]))
+                            else:
+                                start_date = dates[0]
+                            
+                            if isinstance(dates[1], tuple):
+                                end_date = ' '.join(filter(None, dates[1]))
+                            else:
+                                end_date = dates[1]
+                    
+                    break
+            
+            # Extract description
+            description = block
+            
+            # Clean description
+            if title:
+                description = description.replace(title, "", 1)
+            if company:
+                description = description.replace(company, "", 1)
+            if start_date:
+                description = description.replace(start_date, "", 1)
+            if end_date and end_date != "Present":
+                description = description.replace(end_date, "", 1)
+            
+            # Clean up description
+            description = re.sub(r'\s+', ' ', description).strip()
+            description = re.sub(r'^[^a-zA-Z0-9]*', '', description)  # Remove non-alphanumeric chars at start
+            
+            # Extract responsibilities
+            responsibilities = []
+            bullet_pattern = r'[•\-\*]\s+([^•\-\*\n]+)'
+            bullet_matches = re.findall(bullet_pattern, block)
+            if bullet_matches:
+                responsibilities = [match.strip() for match in bullet_matches]
+            
+            # Create experience item
+            if title or company:
+                experience_item = {
+                    "title": title,
+                    "company": company,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "description": description
+                }
+                
+                if responsibilities:
+                    experience_item["responsibilities"] = responsibilities
+                
+                experience_items.append(experience_item)
+        
+        return experience_items
+    
+    except Exception as e:
+        logger.error(f"Error extracting experience: {str(e)}")
         return []
-    
-    # Regex pattern for URLs
-    pattern = r'https?://[^\s<>"]+|www\.[^\s<>"]+\.[^\s<>"]{2,}'
-    urls = re.findall(pattern, text)
-    
-    # Remove duplicates and return
-    return list(set(urls))
 
 
-def extract_dates(text: str) -> List[Dict[str, Any]]:
+def extract_personal_info_from_text(text: str) -> Dict[str, Any]:
+    """
+    Extract personal information from text
+    
+    Args:
+        text: Input text
+        
+    Returns:
+        dict: Extracted personal information
+    """
+    try:
+        # Initialize result
+        personal_info = {}
+        
+        # Extract name
+        name_patterns = [
+            r'^([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)',  # Name at start of resume
+            r'(?:name:?\s+)([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)',  # Name with label
+            r'^(?:curriculum vitae|resume|cv)\s+of\s+([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)'  # Name with CV/resume label
+        ]
+        
+        for pattern in name_patterns:
+            name_match = re.search(pattern, text)
+            if name_match:
+                personal_info["name"] = name_match.group(1).strip()
+                break
+        
+        # Extract email
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        email_match = re.search(email_pattern, text)
+        if email_match:
+            personal_info["email"] = email_match.group(0)
+        
+        # Extract phone
+        phone_patterns = [
+            r'\b\+?1?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b',  # US/Canada format
+            r'\b\+?\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}\b'  # International format
+        ]
+        
+        for pattern in phone_patterns:
+            phone_match = re.search(pattern, text)
+            if phone_match:
+                personal_info["phone"] = phone_match.group(0)
+                break
+        
+        # Extract location
+        location_patterns = [
+            r'(?:location|address|residing in|based in):\s+([^,\n]+(?:,\s+[^,\n]+)?)',
+            r'\b([A-Z][a-z]+(?:,\s+[A-Z]{2})?(?:,\s+\d{5})?)\b'  # City, State ZIP
+        ]
+        
+        for pattern in location_patterns:
+            location_match = re.search(pattern, text, re.IGNORECASE)
+            if location_match:
+                personal_info["location"] = location_match.group(1).strip()
+                break
+        
+        # Extract LinkedIn profile
+        linkedin_patterns = [
+            r'(?:linkedin|linkedin\.com)\/in\/([a-z0-9_-]+)',
+            r'(?:linkedin|linkedin\.com).{0,5}(?:profile|\/in).{0,5}([a-z0-9_-]+)'
+        ]
+        
+        for pattern in linkedin_patterns:
+            linkedin_match = re.search(pattern, text, re.IGNORECASE)
+            if linkedin_match:
+                personal_info["linkedin"] = "linkedin.com/in/" + linkedin_match.group(1).strip()
+                break
+        
+        # Extract website/portfolio
+        website_patterns = [
+            r'(?:website|portfolio|blog):\s+(https?:\/\/[^\s,]+)',
+            r'(https?:\/\/(?:www\.)?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+(?:\/[^\s]*)?)'
+        ]
+        
+        for pattern in website_patterns:
+            website_match = re.search(pattern, text, re.IGNORECASE)
+            if website_match:
+                personal_info["website"] = website_match.group(1).strip()
+                break
+        
+        return personal_info
+    
+    except Exception as e:
+        logger.error(f"Error extracting personal info: {str(e)}")
+        return {}
+
+
+def extract_sections(text: str) -> Dict[str, str]:
+    """
+    Extract sections from text
+    
+    Args:
+        text: Input text
+        
+    Returns:
+        dict: Extracted sections
+    """
+    try:
+        # Common section headers
+        section_headers = {
+            "education": ["education", "academic background", "educational background", "academic qualifications"],
+            "experience": ["experience", "work experience", "employment history", "professional experience"],
+            "skills": ["skills", "technical skills", "core competencies", "qualifications"],
+            "projects": ["projects", "professional projects", "academic projects"],
+            "certifications": ["certifications", "certificates", "professional certifications"],
+        }
+        
+        # Split text into sections
+        sections = {}
+        current_section = "header"
+        lines = text.split("\n")
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Check if line is a section header
+            found_section = None
+            for section, headers in section_headers.items():
+                for header in headers:
+                    if re.search(r'\b' + re.escape(header) + r'\b', line.lower()):
+                        found_section = section
+                        break
+                if found_section:
+                    break
+            
+            if found_section:
+                current_section = found_section
+                sections[current_section] = []
+            else:
+                if current_section not in sections:
+                    sections[current_section] = []
+                sections[current_section].append(line)
+        
+        # Convert lists to strings
+        section_texts = {}
+        for section, lines in sections.items():
+            section_texts[section] = "\n".join(lines)
+        
+        return section_texts
+    
+    except Exception as e:
+        logger.error(f"Error extracting sections: {str(e)}")
+        return {}
+
+
+def extract_dates(text: str) -> List[str]:
     """
     Extract dates from text
     
@@ -177,309 +824,177 @@ def extract_dates(text: str) -> List[Dict[str, Any]]:
     Returns:
         list: Extracted dates
     """
-    if not text:
+    try:
+        date_patterns = [
+            r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* (19|20)\d{2}",
+            r"(19|20)\d{2}-(19|20)\d{2}",
+            r"(19|20)\d{2} to (19|20)\d{2}",
+            r"(19|20)\d{2} - (19|20)\d{2}",
+            r"(19|20)\d{2} – (19|20)\d{2}",
+            r"(19|20)\d{2} to Present",
+            r"(19|20)\d{2} - Present",
+            r"(19|20)\d{2} – Present"
+        ]
+        
+        # Extract dates
+        dates = []
+        for pattern in date_patterns:
+            matches = re.findall(pattern, text)
+            if matches:
+                for match in matches:
+                    if isinstance(match, tuple):
+                        date = ' '.join(match)
+                    else:
+                        date = match
+                    dates.append(date)
+        
+        return dates
+    
+    except Exception as e:
+        logger.error(f"Error extracting dates: {str(e)}")
         return []
-    
-    # Patterns for different date formats
-    date_patterns = [
-        # Year ranges (e.g., 2018-2020, 2019-Present)
-        r'\b((?:19|20)\d{2})\s*[-–—]\s*((?:19|20)\d{2}|[Pp]resent|[Cc]urrent|[Nn]ow)\b',
-        
-        # Month Year ranges
-        r'\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}\s*[-–—]\s*(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}\b',
-        
-        # Single years
-        r'\b((?:19|20)\d{2})\b',
-        
-        # Month Year
-        r'\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}\b',
-        
-        # MM/YYYY or MM-YYYY
-        r'\b(0?[1-9]|1[0-2])[/-]((?:19|20)\d{2})\b',
-        
-        # Full dates (MM/DD/YYYY)
-        r'\b(0?[1-9]|1[0-2])[/-](0?[1-9]|[12][0-9]|3[01])[/-]((?:19|20)\d{2})\b'
-    ]
-    
-    dates = []
-    
-    for pattern in date_patterns:
-        matches = re.findall(pattern, text)
-        if matches:
-            for match in matches:
-                if isinstance(match, tuple):
-                    # If the pattern captured groups, join them
-                    date_str = '-'.join([part for part in match if part])
-                else:
-                    date_str = match
-                
-                dates.append({
-                    'date': date_str,
-                    'type': 'date'
-                })
-    
-    return dates
 
 
-def extract_languages(text: str) -> List[Dict[str, str]]:
+def extract_job_titles(text: str) -> List[str]:
     """
-    Extract languages from text
+    Extract job titles from text
     
     Args:
         text: Input text
         
     Returns:
-        list: Extracted languages
+        list: Extracted job titles
     """
-    if not text:
-        return []
-    
-    # List of common language keywords
-    language_keywords = [
-        "English", "Spanish", "French", "German", "Chinese", "Japanese", "Korean",
-        "Portuguese", "Russian", "Italian", "Dutch", "Arabic", "Hindi", "Bengali",
-        "Marathi", "Tamil", "Telugu", "Urdu", "Punjabi", "Gujarati", "Bhojpuri",
-        "Hakka", "Cantonese", "Mandarin", "Shanghainese", "Wu", "Xinjiang", "Tibetan",
-        "Uyghur", "Tajik", "Kazakh", "Uzbek", "Turkish", "Greek", "Hebrew", "Aramaic",
-        "Amharic", "Somali", "Swahili", "Kiswahili", "Kinyarwanda", "Rwanda", "Burundi",
-        "French", "German", "Italian", "Spanish", "Portuguese", "Dutch", "Russian",
-        "Chinese", "Japanese", "Korean", "Arabic", "Hebrew", "Amharic", "Swahili"
-    ]
-    
-    languages = []
-    
-    # If spaCy is available, use NER
-    if SPACY_AVAILABLE and nlp:
-        doc = nlp(text)
+    try:
+        title_patterns = [
+            r"(senior|lead|staff|principal|junior) (software|systems|data|frontend|backend|full stack|mobile|ios|android|devops|cloud|network|security) (engineer|developer|architect|administrator|specialist|analyst)",
+            r"(software|systems|data|frontend|backend|full stack|mobile|ios|android|devops|cloud|network|security) (engineer|developer|architect|administrator|specialist|analyst)",
+            r"(engineering|product|project|program|technical|team) (manager|lead|director|head)",
+            r"(chief|vp|director|head) of (technology|engineering|product|information|technical)",
+            r"(cto|cio|ceo|cpo|vp)"
+        ]
         
-        for ent in doc.ents:
-            if ent.label_ == "LANGUAGE":
-                language = ent.text
-                if language.title() in language_keywords:
-                    languages.append({
-                        'language': language.title(),
-                        'type': 'native'
-                    })
+        # Extract titles
+        titles = []
+        for pattern in title_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            if matches:
+                for match in matches:
+                    if isinstance(match, tuple):
+                        title = ' '.join(match)
+                    else:
+                        title = match
+                    titles.append(title)
+        
+        # Normalize and deduplicate
+        normalized_titles = []
+        for title in titles:
+            normalized = normalize_job_title(title)
+            if normalized and normalized not in normalized_titles:
+                normalized_titles.append(normalized)
+        
+        return normalized_titles
     
-    # Use regex patterns to find language mentions
-    for keyword in language_keywords:
-        for window in get_text_windows(text, 200, 100):
-            if keyword.lower() in window.lower():
-                # Extract language mentions
-                for line in window.split('\n'):
-                    if keyword.lower() in line.lower():
-                        # Common languages
-                        for lang in EDUCATION_DATA["degrees"]:
-                            if lang.lower() in line.lower():
-                                languages.append({
-                                    'language': lang.title(),
-                                    'type': 'degree'
-                                })
-    
-    # Remove duplicates
-    unique_langs = []
-    seen = set()
-    for lang in languages:
-        lang_name = lang['language'] if isinstance(lang, dict) else lang
-        if lang_name.lower() not in seen:
-            seen.add(lang_name.lower())
-            unique_langs.append(lang)
-    
-    return unique_langs
+    except Exception as e:
+        logger.error(f"Error extracting job titles: {str(e)}")
+        return []
 
 
-def extract_entities(text: str, entity_types: List[str] = None) -> Dict[str, List[str]]:
+def extract_companies(text: str) -> List[str]:
+    """
+    Extract company names from text
+    
+    Args:
+        text: Input text
+        
+    Returns:
+        list: Extracted company names
+    """
+    try:
+        company_patterns = [
+            r"(?:at|with|for) ([A-Z][A-Za-z]+(?:\s[A-Z][A-Za-z]+)*)",
+            r"([A-Z][A-Za-z]+(?:\s[A-Z][A-Za-z]+)*) (?:Inc\.|LLC|Ltd\.|Corp\.|Corporation|Company)",
+            r"(?:at|with|for) ([A-Z][A-Za-z]+(?:[.,\-&]\s?[A-Z][A-Za-z]+)+)"
+        ]
+        
+        # Extract companies
+        companies = []
+        for pattern in company_patterns:
+            matches = re.findall(pattern, text)
+            companies.extend(matches)
+        
+        # Deduplicate
+        companies = list(set(companies))
+        
+        return companies
+    
+    except Exception as e:
+        logger.error(f"Error extracting companies: {str(e)}")
+        return []
+
+
+def extract_locations(text: str) -> List[str]:
+    """
+    Extract locations from text
+    
+    Args:
+        text: Input text
+        
+    Returns:
+        list: Extracted locations
+    """
+    try:
+        location_patterns = [
+            r"(?:in|at) ([A-Z][a-z]+(?:,\s+[A-Z]{2})?)",  # City, State
+            r"([A-Z][a-z]+(?:,\s+[A-Z]{2})(?:,\s+\d{5})?)",  # City, State ZIP
+            r"(?:relocated to|based in|located in) ([A-Z][a-z]+(?:,\s+[A-Z]{2})?)"  # Descriptive location
+        ]
+        
+        # Extract locations
+        locations = []
+        for pattern in location_patterns:
+            matches = re.findall(pattern, text)
+            locations.extend(matches)
+        
+        # Deduplicate
+        locations = list(set(locations))
+        
+        return locations
+    
+    except Exception as e:
+        logger.error(f"Error extracting locations: {str(e)}")
+        return []
+
+
+def extract_entities(text: str) -> Dict[str, List[str]]:
     """
     Extract named entities from text
     
     Args:
         text: Input text
-        entity_types: List of entity types to extract (e.g., ["PERSON", "ORG"])
         
     Returns:
-        dict: Dictionary of entity types and their values
+        dict: Extracted entities by type
     """
-    if not text or not SPACY_AVAILABLE or not nlp:
-        return {}
-    
-    if not entity_types:
-        entity_types = ["PERSON", "ORG", "GPE", "LOC", "PRODUCT", "EVENT", "DATE"]
-    
     try:
-        doc = nlp(text)
-        entities = {}
-        
-        for ent in doc.ents:
-            if ent.label_ in entity_types:
-                if ent.label_ not in entities:
-                    entities[ent.label_] = []
-                
-                entities[ent.label_].append(ent.text)
-        
-        # Remove duplicates
-        for entity_type, values in entities.items():
-            entities[entity_type] = list(set(values))
+        entities = {
+            "skills": extract_skills_from_text(text),
+            "job_titles": extract_job_titles(text),
+            "companies": extract_companies(text),
+            "locations": extract_locations(text),
+            "dates": extract_dates(text),
+            "education": extract_education_from_text(text)
+        }
         
         return entities
     
     except Exception as e:
         logger.error(f"Error extracting entities: {str(e)}")
-        return {}
-
-
-def get_text_windows(text: str, window_size: int = 200, overlap: int = 50) -> List[str]:
-    """
-    Split text into overlapping windows for processing
-    
-    Args:
-        text: Input text
-        window_size: Size of each window
-        overlap: Overlap between windows
-        
-    Returns:
-        list: Text windows
-    """
-    if not text:
-        return []
-    
-    windows = []
-    lines = text.split('\n')
-    current_window = []
-    current_size = 0
-    
-    for line in lines:
-        current_window.append(line)
-        current_size += len(line)
-        
-        if current_size >= window_size:
-            windows.append('\n'.join(current_window))
-            
-            # Keep overlap for next window
-            overlap_lines = []
-            overlap_size = 0
-            for i in range(len(current_window) - 1, -1, -1):
-                line_size = len(current_window[i])
-                if overlap_size + line_size <= overlap:
-                    overlap_lines.insert(0, current_window[i])
-                    overlap_size += line_size
-                else:
-                    break
-            
-            current_window = overlap_lines
-            current_size = overlap_size
-    
-    # Add final window if not empty
-    if current_window:
-        windows.append('\n'.join(current_window))
-    
-    return windows
-
-
-def calculate_text_similarity(text1: str, text2: str) -> float:
-    """
-    Calculate text similarity using Jaccard similarity
-    
-    Args:
-        text1: First text
-        text2: Second text
-        
-    Returns:
-        float: Similarity score (0-1)
-    """
-    if not text1 or not text2:
-        return 0.0
-    
-    # Tokenize texts
-    tokens1 = set(text1.lower().split())
-    tokens2 = set(text2.lower().split())
-    
-    # Calculate Jaccard similarity
-    intersection = len(tokens1.intersection(tokens2))
-    union = len(tokens1.union(tokens2))
-    
-    if union == 0:
-        return 0.0
-    
-    return intersection / union
-
-
-def extract_text_segments(text: str, start_marker: str, end_marker: Optional[str] = None, 
-                         case_insensitive: bool = True) -> List[str]:
-    """
-    Extract text segments between markers
-    
-    Args:
-        text: Input text
-        start_marker: Start marker
-        end_marker: End marker (if None, extracts to next start marker or end of text)
-        case_insensitive: Whether to ignore case
-        
-    Returns:
-        list: Extracted text segments
-    """
-    if not text or not start_marker:
-        return []
-    
-    if case_insensitive:
-        flags = re.IGNORECASE
-    else:
-        flags = 0
-    
-    segments = []
-    
-    if end_marker:
-        pattern = f"{re.escape(start_marker)}(.*?){re.escape(end_marker)}"
-        matches = re.finditer(pattern, text, re.DOTALL | flags)
-        segments = [match.group(1).strip() for match in matches]
-    else:
-        # Find all start marker positions
-        start_positions = [m.start() for m in re.finditer(re.escape(start_marker), text, flags)]
-        
-        if not start_positions:
-            return []
-        
-        for i, start_pos in enumerate(start_positions):
-            start = start_pos + len(start_marker)
-            
-            # End at next start marker or end of text
-            if i < len(start_positions) - 1:
-                end = start_positions[i + 1]
-            else:
-                end = len(text)
-            
-            segment = text[start:end].strip()
-            segments.append(segment)
-    
-    return segments
-
-
-def clean_html(text: str) -> str:
-    """
-    Remove HTML tags from text
-    
-    Args:
-        text: HTML text
-        
-    Returns:
-        str: Clean text
-    """
-    if not text:
-        return ""
-    
-    # Remove HTML tags
-    clean = re.sub(r'<[^>]+>', ' ', text)
-    
-    # Replace HTML entities
-    entities = {
-        '&nbsp;': ' ', '&lt;': '<', '&gt;': '>', '&amp;': '&',
-        '&quot;': '"', '&apos;': "'", '&cent;': '¢', '&pound;': '£',
-        '&yen;': '¥', '&euro;': '€', '&copy;': '©', '&reg;': '®'
-    }
-    
-    for entity, char in entities.items():
-        clean = clean.replace(entity, char)
-    
-    # Remove excessive whitespace
-    clean = re.sub(r'\s+', ' ', clean)
-    
-    return clean.strip()
+        return {
+            "skills": [],
+            "job_titles": [],
+            "companies": [],
+            "locations": [],
+            "dates": [],
+            "education": []
+        }

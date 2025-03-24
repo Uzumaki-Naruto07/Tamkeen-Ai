@@ -1,3936 +1,997 @@
+"""
+Job Recommendation Engine Module
+
+This module provides functionality for recommending jobs to users based on their
+profile, skills, experience, and other factors.
+"""
+
 import os
 import json
 import logging
-import hashlib
-import time
-import uuid
-from typing import Dict, List, Tuple, Any, Optional, Union
-from datetime import datetime, timedelta
-from collections import defaultdict, Counter
-import re
-import math
 import random
+from typing import Dict, List, Any, Optional, Tuple, Union
+from datetime import datetime
 
-# Optional dependencies - allow graceful fallback if not available
-try:
-    import numpy as np
-    NUMPY_AVAILABLE = True
-except ImportError:
-    NUMPY_AVAILABLE = False
+# Import utilities
+from backend.utils.preprocess import (
+    clean_text, normalize_skill, extract_skills_from_text,
+    normalize_job_title, extract_education_from_text,
+    extract_experience_from_text
+)
+from backend.utils.cache_utils import cache_result
 
-try:
-    import pandas as pd
-    PANDAS_AVAILABLE = True
-except ImportError:
-    PANDAS_AVAILABLE = False
-
+# Try to import optional dependencies
 try:
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.metrics.pairwise import cosine_similarity
+    import numpy as np
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
+    logging.warning("scikit-learn not installed. Advanced recommendations will be unavailable. Install with: pip install scikit-learn")
+
+# Setup logger
+logger = logging.getLogger(__name__)
 
 
-class JobRecommendationEngine:
-    """
-    AI-powered job recommendation engine that suggests personalized job opportunities
-    based on user profiles, skills, and career goals.
+class JobRecommender:
+    """Job recommendation engine class"""
     
-    Key features:
-    - Personalized job matching based on multiple factors
-    - Skill-based job recommendations
-    - Career path progression suggestions
-    - Trending jobs in user's industry
-    - Geographic and remote job filtering
-    - Salary optimization recommendations
-    - Application success probability estimation
-    """
+    def __init__(self):
+        """Initialize job recommender"""
+        # Initialize TF-IDF vectorizer if scikit-learn is available
+        if SKLEARN_AVAILABLE:
+            self.vectorizer = TfidfVectorizer(
+                stop_words='english',
+                min_df=2,
+                max_df=0.85,
+                ngram_range=(1, 2)
+            )
+        else:
+            self.vectorizer = None
     
-    def __init__(self,
-                 data_dir: Optional[str] = None,
-                 job_data_sources: Optional[List[str]] = None,
-                 cache_dir: Optional[str] = None,
-                 cache_ttl: int = 3600,
-                 market_data_refresh: int = 86400):
+    def recommend_jobs_for_user(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
-        Initialize the job recommendation engine
+        Recommend jobs for a user
         
         Args:
-            data_dir: Directory for storing job data
-            job_data_sources: List of job data source names or URLs
-            cache_dir: Directory for caching recommendation results
-            cache_ttl: Cache time-to-live in seconds
-            market_data_refresh: Job market data refresh interval in seconds
-        """
-        self.logger = logging.getLogger(__name__)
-        
-        # Set up data directory
-        if data_dir:
-            os.makedirs(data_dir, exist_ok=True)
-            self.data_dir = data_dir
-        else:
-            self.data_dir = os.path.join(os.getcwd(), "job_data")
-            os.makedirs(self.data_dir, exist_ok=True)
-            
-        # Set up cache directory
-        if cache_dir:
-            os.makedirs(cache_dir, exist_ok=True)
-            self.cache_dir = cache_dir
-        else:
-            self.cache_dir = os.path.join(self.data_dir, "cache")
-            os.makedirs(self.cache_dir, exist_ok=True)
-        
-        self.cache_ttl = cache_ttl
-        self.market_data_refresh = market_data_refresh
-        
-        # Initialize job data sources
-        self.job_data_sources = job_data_sources or ["default"]
-        
-        # Initialize caches
-        self.job_cache = {}
-        self.recommendation_cache = {}
-        self.last_market_refresh = 0
-        
-        # Load any existing job data
-        self._load_job_data()
-        
-        self.logger.info(f"Job recommendation engine initialized with {len(self.job_sources)} sources")
-        
-    def get_personalized_recommendations(self,
-                                        user_id: str,
-                                        resume_data: Optional[Dict[str, Any]] = None,
-                                        skill_data: Optional[Dict[str, Any]] = None,
-                                        user_preferences: Optional[Dict[str, Any]] = None,
-                                        job_history: Optional[List[Dict[str, Any]]] = None,
-                                        limit: int = 10) -> Dict[str, Any]:
-        """
-        Get personalized job recommendations for a user
-        
-        Args:
-            user_id: User identifier
-            resume_data: User's resume data
-            skill_data: User's skill assessment data
-            user_preferences: User's job preferences
-            job_history: User's job application history
-            limit: Maximum number of recommendations to return
+            user_id: User ID
+            limit: Maximum number of recommendations
             
         Returns:
-            Dictionary with personalized job recommendations
+            list: Recommended jobs
         """
-        # Generate cache key
-        cache_key = f"rec_{user_id}_{hashlib.md5(json.dumps({
-            'resume': hashlib.md5(str(resume_data).encode()).hexdigest()[:8] if resume_data else 'none',
-            'skills': hashlib.md5(str(skill_data).encode()).hexdigest()[:8] if skill_data else 'none',
-            'prefs': hashlib.md5(str(user_preferences).encode()).hexdigest()[:8] if user_preferences else 'none',
-            'history': hashlib.md5(str(job_history).encode()).hexdigest()[:8] if job_history else 'none',
-            'limit': limit
-        }).encode()).hexdigest()[:16]}"
-        
-        # Check cache
-        if cache_key in self.recommendation_cache:
-            cache_entry = self.recommendation_cache[cache_key]
-            if time.time() - cache_entry["timestamp"] < self.cache_ttl:
-                return cache_entry["data"]
-        
         try:
-            # Ensure job data is fresh
-            self._refresh_job_data_if_needed()
+            # Import models here to avoid circular imports
+            from backend.database.models import User, Job, UserActivity
             
-            # Extract user information
-            user_skills = self._extract_user_skills(resume_data, skill_data)
-            user_experience = self._extract_user_experience(resume_data)
-            user_education = self._extract_user_education(resume_data)
-            user_location = self._extract_user_location(resume_data, user_preferences)
-            career_level = self._determine_career_level(resume_data, job_history)
+            # Get user
+            users = User.find_by_id(user_id)
             
-            # Apply user preferences
-            preferences = self._process_user_preferences(user_preferences)
+            if not users:
+                logger.error(f"User not found: {user_id}")
+                return []
             
-            # Get relevant jobs
-            all_relevant_jobs = self._find_relevant_jobs(
-                user_skills=user_skills,
-                user_experience=user_experience,
-                user_education=user_education,
-                user_location=user_location,
-                career_level=career_level,
-                preferences=preferences
-            )
+            user = users[0]
+            profile = user.profile
             
-            # Score and rank jobs
-            scored_jobs = self._score_jobs(
-                jobs=all_relevant_jobs,
-                user_skills=user_skills,
-                user_experience=user_experience,
-                user_education=user_education,
-                user_location=user_location,
-                career_level=career_level,
-                preferences=preferences,
-                job_history=job_history
-            )
+            # Get user activities
+            activities = UserActivity.find_by_user_id(user_id)
             
-            # Filter out jobs the user has already applied to
-            if job_history:
-                applied_job_ids = set()
-                for job in job_history:
-                    if "job_id" in job:
-                        applied_job_ids.add(job["job_id"])
-                
-                scored_jobs = [job for job in scored_jobs if job["job_id"] not in applied_job_ids]
-            
-            # Get top recommendations
-            top_recommendations = scored_jobs[:limit]
-            
-            # Organize recommendations by type
-            recommendation_types = self._categorize_recommendations(
-                top_recommendations, user_skills, career_level, preferences)
-            
-            # Generate insights
-            insights = self._generate_recommendation_insights(
-                top_recommendations, user_skills, user_experience, preferences)
-            
-            # Create result with metadata
-            result = {
-                "user_id": user_id,
-                "generated_at": datetime.now().isoformat(),
-                "total_matches": len(scored_jobs),
-                "recommended_jobs": top_recommendations,
-                "recommendation_types": recommendation_types,
-                "insights": insights
-            }
-            
-            # Cache result
-            self.recommendation_cache[cache_key] = {
-                "timestamp": time.time(),
-                "data": result
-            }
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error generating job recommendations: {str(e)}")
-            return {
-                "user_id": user_id,
-                "generated_at": datetime.now().isoformat(),
-                "error": str(e),
-                "recommended_jobs": []
-            }
-    
-    def get_career_path_recommendations(self,
-                                       user_id: str,
-                                       current_role: str,
-                                       target_role: Optional[str] = None,
-                                       timeline_years: int = 5,
-                                       resume_data: Optional[Dict[str, Any]] = None,
-                                       skill_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Get career path recommendations showing progression from current to target role
-        
-        Args:
-            user_id: User identifier
-            current_role: User's current role or job title
-            target_role: User's target role (if known)
-            timeline_years: Timeline for career progression in years
-            resume_data: User's resume data
-            skill_data: User's skill assessment data
-            
-        Returns:
-            Dictionary with career path recommendations
-        """
-        # Generate cache key
-        cache_key = f"path_{user_id}_{hashlib.md5(json.dumps({
-            'current': current_role,
-            'target': target_role,
-            'years': timeline_years,
-            'resume': hashlib.md5(str(resume_data).encode()).hexdigest()[:8] if resume_data else 'none',
-            'skills': hashlib.md5(str(skill_data).encode()).hexdigest()[:8] if skill_data else 'none'
-        }).encode()).hexdigest()[:16]}"
-        
-        # Check cache
-        if cache_key in self.recommendation_cache:
-            cache_entry = self.recommendation_cache[cache_key]
-            if time.time() - cache_entry["timestamp"] < self.cache_ttl:
-                return cache_entry["data"]
-        
-        try:
-            # Extract user information
-            user_skills = self._extract_user_skills(resume_data, skill_data)
-            user_experience = self._extract_user_experience(resume_data)
-            current_level = self._estimate_role_level(current_role, user_experience)
-            
-            # Determine potential career paths
-            if target_role:
-                # Directed career path
-                career_paths = self._find_paths_between_roles(
-                    current_role, target_role, timeline_years, user_skills)
+            # Get user skills
+            if profile and "skills" in profile:
+                user_skills = profile["skills"]
             else:
-                # Exploratory career paths
-                career_paths = self._find_career_growth_paths(
-                    current_role, timeline_years, user_skills)
+                user_skills = []
             
-            # Analyze skill gaps for each path
-            for path in career_paths:
-                path["skill_gaps"] = self._analyze_path_skill_gaps(
-                    path["roles"], user_skills)
-                
-                # Add time estimates based on skill gaps
-                path["timeline"] = self._estimate_path_timeline(
-                    path["roles"], path["skill_gaps"], timeline_years)
+            # Get user job titles
+            user_job_titles = []
+            if profile and "experience" in profile:
+                for exp in profile["experience"]:
+                    if "title" in exp:
+                        user_job_titles.append(normalize_job_title(exp["title"]))
             
-            # Add example job listings for each role in the paths
-            for path in career_paths:
-                self._add_example_jobs_to_path(path)
+            # Get active jobs
+            jobs = Job.find_active_jobs()
+            job_dicts = [job.to_dict() for job in jobs]
             
-            # Create result with metadata
-            result = {
-                "user_id": user_id,
-                "current_role": current_role,
-                "target_role": target_role,
-                "career_paths": career_paths,
-                "generated_at": datetime.now().isoformat()
-            }
-            
-            # Cache result
-            self.recommendation_cache[cache_key] = {
-                "timestamp": time.time(),
-                "data": result
-            }
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error generating career path recommendations: {str(e)}")
-            return {
-                "user_id": user_id,
-                "current_role": current_role,
-                "target_role": target_role,
-                "error": str(e),
-                "career_paths": []
-            }
-    
-    def get_trending_jobs(self,
-                        industry: Optional[str] = None,
-                        location: Optional[str] = None,
-                        career_level: Optional[str] = None,
-                        limit: int = 10) -> Dict[str, Any]:
-        """
-        Get trending jobs based on market analysis
-        
-        Args:
-            industry: Target industry
-            location: Target location
-            career_level: Career level
-            limit: Maximum number of jobs to return
-            
-        Returns:
-            Dictionary with trending job recommendations
-        """
-        # Generate cache key
-        cache_key = f"trend_{hashlib.md5(json.dumps({
-            'industry': industry,
-            'location': location,
-            'level': career_level,
-            'limit': limit
-        }).encode()).hexdigest()[:16]}"
-        
-        # Check cache
-        if cache_key in self.recommendation_cache:
-            cache_entry = self.recommendation_cache[cache_key]
-            if time.time() - cache_entry["timestamp"] < self.cache_ttl:
-                return cache_entry["data"]
-        
-        try:
-            # Ensure job data is fresh
-            self._refresh_job_data_if_needed()
-            
-            # Get all jobs matching the criteria
-            matching_jobs = self._find_jobs_by_criteria(
-                industry=industry,
-                location=location,
-                career_level=career_level
-            )
-            
-            # Calculate trend metrics
-            job_trends = self._calculate_job_trends(matching_jobs)
-            
-            # Get top trending jobs
-            trending_jobs = sorted(
-                job_trends, 
-                key=lambda x: x["trend_score"], 
-                reverse=True
-            )[:limit]
-            
-            # Add example job listings
-            for trend in trending_jobs:
-                trend["example_jobs"] = self._get_example_jobs_for_title(
-                    trend["job_title"], 
-                    industry, 
-                    location, 
-                    limit=3
+            # Generate recommendations
+            if SKLEARN_AVAILABLE and len(user_skills) > 0:
+                # Use content-based filtering
+                recommendations = self._content_based_recommendations(
+                    job_dicts, user_skills, user_job_titles, limit
+                )
+            else:
+                # Fall back to simple matching
+                recommendations = self._simple_recommendations(
+                    job_dicts, user_skills, user_job_titles, limit
                 )
             
-            # Create result with metadata
-            result = {
-                "generated_at": datetime.now().isoformat(),
-                "industry": industry,
-                "location": location,
-                "career_level": career_level,
-                "trending_jobs": trending_jobs
-            }
-            
-            # Cache result
-            self.recommendation_cache[cache_key] = {
-                "timestamp": time.time(),
-                "data": result
-            }
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error finding trending jobs: {str(e)}")
-            return {
-                "generated_at": datetime.now().isoformat(),
-                "industry": industry,
-                "location": location,
-                "career_level": career_level,
-                "error": str(e),
-                "trending_jobs": []
-            }
-    
-    def get_skill_based_recommendations(self,
-                                      skills: List[str],
-                                      industry: Optional[str] = None,
-                                      location: Optional[str] = None,
-                                      career_level: Optional[str] = None,
-                                      limit: int = 10) -> Dict[str, Any]:
-        """
-        Get job recommendations based on specific skills
-        
-        Args:
-            skills: List of skills to match
-            industry: Target industry
-            location: Target location
-            career_level: Career level
-            limit: Maximum number of jobs to return
-            
-        Returns:
-            Dictionary with skill-based job recommendations
-        """
-        # Generate cache key
-        cache_key = f"skill_rec_{hashlib.md5(json.dumps({
-            'skills': sorted(skills),
-            'industry': industry,
-            'location': location,
-            'level': career_level,
-            'limit': limit
-        }).encode()).hexdigest()[:16]}"
-        
-        # Check cache
-        if cache_key in self.recommendation_cache:
-            cache_entry = self.recommendation_cache[cache_key]
-            if time.time() - cache_entry["timestamp"] < self.cache_ttl:
-                return cache_entry["data"]
-        
-        try:
-            # Ensure job data is fresh
-            self._refresh_job_data_if_needed()
-            
-            # Find jobs matching the skills
-            skill_job_matches = self._find_jobs_by_skills(
-                skills, industry, location, career_level)
-            
-            # Score matches based on skill relevance
-            scored_matches = []
-            for job, skill_matches in skill_job_matches:
-                match_score = len(skill_matches) / max(1, len(job.get("required_skills", [])))
-                skill_match_pct = len(skill_matches) / max(1, len(skills))
-                
-                scored_matches.append({
-                    "job": job,
-                    "match_score": match_score,
-                    "skill_match_pct": skill_match_pct,
-                    "matched_skills": skill_matches
-                })
-            
-            # Sort by match score
-            scored_matches.sort(key=lambda x: x["match_score"], reverse=True)
-            
-            # Format results
-            recommended_jobs = []
-            for match in scored_matches[:limit]:
-                job = match["job"]
-                recommended_jobs.append({
-                    "job_id": job.get("job_id", ""),
-                    "title": job.get("title", ""),
-                    "company": job.get("company", ""),
-                    "location": job.get("location", ""),
-                    "salary_range": job.get("salary_range", ""),
-                    "job_type": job.get("job_type", ""),
-                    "remote": job.get("remote", False),
-                    "url": job.get("url", ""),
-                    "posted_date": job.get("posted_date", ""),
-                    "match_score": round(match["match_score"] * 100, 1),
-                    "skill_match_pct": round(match["skill_match_pct"] * 100, 1),
-                    "matched_skills": match["matched_skills"],
-                    "missing_skills": list(set(job.get("required_skills", [])) - set(match["matched_skills"]))
-                })
-            
-            # Group recommendations by match quality
-            recommendation_groups = {
-                "excellent_matches": [],
-                "good_matches": [],
-                "partial_matches": []
-            }
-            
-            for job in recommended_jobs:
-                if job["match_score"] >= 80:
-                    recommendation_groups["excellent_matches"].append(job)
-                elif job["match_score"] >= 60:
-                    recommendation_groups["good_matches"].append(job)
-                else:
-                    recommendation_groups["partial_matches"].append(job)
-            
-            # Create result with metadata
-            result = {
-                "generated_at": datetime.now().isoformat(),
-                "skills": skills,
-                "industry": industry,
-                "location": location,
-                "career_level": career_level,
-                "recommended_jobs": recommended_jobs,
-                "recommendation_groups": recommendation_groups
-            }
-            
-            # Cache result
-            self.recommendation_cache[cache_key] = {
-                "timestamp": time.time(),
-                "data": result
-            }
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error generating skill-based recommendations: {str(e)}")
-            return {
-                "generated_at": datetime.now().isoformat(),
-                "skills": skills,
-                "industry": industry,
-                "location": location,
-                "career_level": career_level,
-                "error": str(e),
-                "recommended_jobs": []
-            }
-    
-    def estimate_application_success(self,
-                                    user_id: str,
-                                    job_id: str,
-                                    resume_data: Optional[Dict[str, Any]] = None,
-                                    skill_data: Optional[Dict[str, Any]] = None,
-                                    interview_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Estimate probability of success for a specific job application
-        
-        Args:
-            user_id: User identifier
-            job_id: Job identifier
-            resume_data: User's resume data
-            skill_data: User's skill assessment data
-            interview_data: User's interview performance data
-            
-        Returns:
-            Dictionary with application success probability and insights
-        """
-        try:
-            # Get job details
-            job = self._get_job_by_id(job_id)
-            if not job:
-                return {
-                    "user_id": user_id,
-                    "job_id": job_id,
-                    "error": "job_not_found",
-                    "success_probability": 0
-                }
-            
-            # Extract user information
-            user_skills = self._extract_user_skills(resume_data, skill_data)
-            user_experience = self._extract_user_experience(resume_data)
-            user_education = self._extract_user_education(resume_data)
-            
-            # Calculate match scores for different dimensions
-            skill_match = self._calculate_skill_match(user_skills, job.get("required_skills", []))
-            experience_match = self._calculate_experience_match(
-                user_experience, job.get("experience_required", 0), job.get("title", ""))
-            education_match = self._calculate_education_match(
-                user_education, job.get("education_required", ""))
-            
-            # Calculate resume quality factor
-            resume_quality = 0.7  # Default
-            if resume_data and "scores" in resume_data:
-                resume_quality = resume_data["scores"].get("overall", 70) / 100
-            
-            # Calculate interview readiness
-            interview_readiness = 0.7  # Default
-            if interview_data:
-                interview_readiness = interview_data.get("overall_score", 70) / 100
-            
-            # Calculate competition factor (simplified)
-            competition_factor = job.get("competition_level", 0.5)  # 0-1 scale
-            
-            # Calculate overall success probability
-            weights = {
-                "skill_match": 0.35,
-                "experience_match": 0.25,
-                "education_match": 0.15,
-                "resume_quality": 0.15,
-                "interview_readiness": 0.10
-            }
-            
-            raw_probability = (
-                skill_match * weights["skill_match"] +
-                experience_match * weights["experience_match"] +
-                education_match * weights["education_match"] +
-                resume_quality * weights["resume_quality"] +
-                interview_readiness * weights["interview_readiness"]
+            # Record recommendation
+            UserActivity.record_activity(
+                user_id=user_id,
+                activity_type="job_recommendations",
+                activity_data={"count": len(recommendations)}
             )
             
-            # Adjust for competition
-            adjusted_probability = raw_probability * (1 - (competition_factor * 0.5))
+            return recommendations
+        
+        except Exception as e:
+            logger.error(f"Error recommending jobs for user: {str(e)}")
+            return []
+    
+    def recommend_similar_jobs(self, job_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Recommend similar jobs
+        
+        Args:
+            job_id: Job ID
+            limit: Maximum number of recommendations
             
-            # Cap between 0.05 and 0.95
-            final_probability = max(0.05, min(0.95, adjusted_probability))
+        Returns:
+            list: Similar jobs
+        """
+        try:
+            # Import models here to avoid circular imports
+            from backend.database.models import Job
             
-            # Generate insights
-            insights = []
+            # Get job
+            jobs = Job.find_by_id(job_id)
             
-            # Skill insights
-            if skill_match < 0.6:
-                missing_skills = set(job.get("required_skills", [])) - set(user_skills)
-                if missing_skills:
-                    insights.append({
-                        "type": "skill_gap",
-                        "impact": "high" if skill_match < 0.4 else "medium",
-                        "message": f"You're missing {len(missing_skills)} required skills for this position.",
-                        "missing_skills": list(missing_skills)[:5]  # Top 5 missing
+            if not jobs:
+                logger.error(f"Job not found: {job_id}")
+                return []
+            
+            job = jobs[0].to_dict()
+            
+            # Get active jobs
+            all_jobs = Job.find_active_jobs()
+            job_dicts = [j.to_dict() for j in all_jobs if j.id != job_id]
+            
+            # Generate recommendations
+            if SKLEARN_AVAILABLE:
+                # Use content-based filtering
+                recommendations = self._find_similar_jobs(job, job_dicts, limit)
+            else:
+                # Fall back to simple matching
+                recommendations = self._simple_similar_jobs(job, job_dicts, limit)
+            
+            return recommendations
+        
+        except Exception as e:
+            logger.error(f"Error recommending similar jobs: {str(e)}")
+            return []
+    
+    def get_career_path(self, current_job: str, years_experience: int) -> List[Dict[str, Any]]:
+        """
+        Get career path from current job
+        
+        Args:
+            current_job: Current job title
+            years_experience: Years of experience
+            
+        Returns:
+            list: Career path
+        """
+        try:
+            # Import models here to avoid circular imports
+            from backend.database.models import Job, CareerPath
+            
+            # Normalize job title
+            normalized_job = normalize_job_title(current_job)
+            
+            # Get career paths for this job
+            paths = CareerPath.find_by_job_title(normalized_job)
+            
+            if not paths or len(paths) == 0:
+                # Fallback to generated path
+                return self._generate_career_path(current_job, years_experience)
+            
+            # Get most relevant path based on experience
+            path = paths[0]
+            
+            # Convert path to list of job steps
+            path_data = path.path_data
+            
+            # Adjust starting point based on experience
+            experience_level = self._map_experience_to_level(years_experience)
+            
+            # Find starting point in path
+            start_index = 0
+            for i, step in enumerate(path_data):
+                if step.get("level") == experience_level:
+                    start_index = i
+                    break
+            
+            # Return path from current position forward
+            return path_data[start_index:]
+        
+        except Exception as e:
+            logger.error(f"Error getting career path: {str(e)}")
+            return self._generate_career_path(current_job, years_experience)
+    
+    def get_personalized_skill_recommendations(self, user_id: str) -> List[Dict[str, Any]]:
+        """
+        Get personalized skill recommendations
+        
+        Args:
+            user_id: User ID
+            
+        Returns:
+            list: Recommended skills
+        """
+        try:
+            # Import models here to avoid circular imports
+            from backend.database.models import User, Job, UserActivity
+            
+            # Get user
+            users = User.find_by_id(user_id)
+            
+            if not users:
+                logger.error(f"User not found: {user_id}")
+                return []
+            
+            user = users[0]
+            profile = user.profile
+            
+            # Get user skills
+            if profile and "skills" in profile:
+                user_skills = profile["skills"]
+            else:
+                user_skills = []
+            
+            # Get user job titles
+            user_job_titles = []
+            if profile and "experience" in profile:
+                for exp in profile["experience"]:
+                    if "title" in exp:
+                        user_job_titles.append(normalize_job_title(exp["title"]))
+            
+            # Get skill recommendations based on job roles
+            role_skills = self._get_skills_for_roles(user_job_titles)
+            
+            # Get skill recommendations based on career progression
+            career_skills = self._get_career_progression_skills(user_job_titles, user_skills)
+            
+            # Get trending skills
+            from backend.core.job_market_insights import get_trending_skills
+            industry = profile.get("industry") if profile else None
+            location = profile.get("location") if profile else None
+            trending_skills = get_trending_skills(industry, location, 5)
+            
+            # Combine recommendations
+            recommendations = []
+            
+            # Add missing role skills first
+            for skill in role_skills:
+                if skill["name"] not in user_skills:
+                    skill["reason"] = "Common skill for your role"
+                    recommendations.append(skill)
+            
+            # Add career progression skills
+            for skill in career_skills:
+                if skill["name"] not in user_skills and skill["name"] not in [r["name"] for r in recommendations]:
+                    skill["reason"] = "Important for career advancement"
+                    recommendations.append(skill)
+            
+            # Add trending skills
+            for skill in trending_skills:
+                if skill["name"] not in user_skills and skill["name"] not in [r["name"] for r in recommendations]:
+                    skill["reason"] = "Trending in the job market"
+                    recommendations.append(skill)
+            
+            # Record recommendation
+            UserActivity.record_activity(
+                user_id=user_id,
+                activity_type="skill_recommendations",
+                activity_data={"count": len(recommendations)}
+            )
+            
+            return recommendations[:10]  # Return top 10
+        
+        except Exception as e:
+            logger.error(f"Error getting skill recommendations: {str(e)}")
+            return []
+    
+    def _content_based_recommendations(self, jobs, user_skills, user_job_titles, limit):
+        """Generate content-based job recommendations"""
+        try:
+            if not jobs:
+                return []
+            
+            # Create job texts for vectorization
+            job_texts = []
+            for job in jobs:
+                # Combine relevant fields
+                job_text = f"{job.get('title', '')} {job.get('description', '')} "
+                job_text += f"{' '.join(job.get('skills', []))} "
+                job_text += f"{job.get('company', '')} {job.get('location', '')}"
+                job_texts.append(job_text.lower())
+            
+            # Create user profile text
+            user_text = f"{' '.join(user_job_titles)} {' '.join(user_skills)}"
+            
+            # Add user text to corpus
+            all_texts = job_texts + [user_text]
+            
+            # Transform texts to TF-IDF features
+            tfidf_matrix = self.vectorizer.fit_transform(all_texts)
+            
+            # Calculate similarity between user profile and jobs
+            user_vector = tfidf_matrix[-1]
+            job_vectors = tfidf_matrix[:-1]
+            
+            # Calculate cosine similarity
+            cosine_similarities = cosine_similarity(user_vector, job_vectors).flatten()
+            
+            # Get top job indices
+            top_indices = cosine_similarities.argsort()[-limit:][::-1]
+            
+            # Create recommendation results
+            recommendations = []
+            for idx in top_indices:
+                if cosine_similarities[idx] > 0:
+                    job = jobs[idx]
+                    recommendations.append({
+                        "job": job,
+                        "score": float(cosine_similarities[idx]),
+                        "match_reason": self._get_match_reason(job, user_skills, user_job_titles)
                     })
             
-            # Experience insights
-            if experience_match < 0.7:
-                insights.append({
-                    "type": "experience_gap",
-                    "impact": "high" if experience_match < 0.5 else "medium",
-                    "message": f"Your experience level is below what's typically expected for this role."
-                })
-            
-            # Education insights
-            if education_match < 0.7:
-                insights.append({
-                    "type": "education_gap",
-                    "impact": "medium",
-                    "message": f"Your education background may not fully meet the requirements for this position."
-                })
-            
-            # Resume insights
-            if resume_quality < 0.7:
-                insights.append({
-                    "type": "resume_quality",
-                    "impact": "medium",
-                    "message": "Improving your resume quality could increase your chances of success."
-                })
-            
-            # Competition insights
-            if competition_factor > 0.7:
-                insights.append({
-                    "type": "high_competition",
-                    "impact": "medium",
-                    "message": "This position has high competition. Consider applying early and following up."
-                })
-            
-            return {
-                "user_id": user_id,
-                "job_id": job_id,
-                "job_title": job.get("title", ""),
-                "company": job.get("company", ""),
-                "success_probability": round(final_probability * 100, 1),
-                "match_scores": {
-                    "skill_match": round(skill_match * 100, 1),
-                    "experience_match": round(experience_match * 100, 1),
-                    "education_match": round(education_match * 100, 1),
-                    "resume_quality": round(resume_quality * 100, 1),
-                    "interview_readiness": round(interview_readiness * 100, 1)
-                },
-                "competition_level": round(competition_factor * 100, 1),
-                "insights": insights
-            }
-            
-        except Exception as e:
-            self.logger.error(f"Error estimating application success: {str(e)}")
-            return {
-                "user_id": user_id,
-                "job_id": job_id,
-                "error": str(e),
-                "success_probability": 0
-            }
-    
-    def get_career_path_suggestions(self,
-                                  user_id: str,
-                                  current_role: str,
-                                  career_goal: Optional[str] = None,
-                                  skill_data: Optional[Dict[str, Any]] = None,
-                                  years_experience: Optional[int] = None,
-                                  max_paths: int = 3,
-                                  steps_per_path: int = 5) -> Dict[str, Any]:
-        """
-        Generate career path suggestions to help users progress toward their goals
+            return recommendations
         
-        Args:
-            user_id: User identifier
-            current_role: User's current job role
-            career_goal: User's target career position (if any)
-            skill_data: User's skill assessment data
-            years_experience: User's years of experience
-            max_paths: Maximum number of career paths to suggest
-            steps_per_path: Maximum steps per career path
-            
-        Returns:
-            Dictionary with career path suggestions
-        """
-        try:
-            # Ensure job data is fresh
-            self._refresh_job_data_if_needed()
-            
-            # Extract user skills
-            user_skills = []
-            if skill_data:
-                user_skills = skill_data.get("current_skills", [])
-                
-            # Determine user's current level
-            if not years_experience and skill_data:
-                # Estimate from skill data if available
-                years_experience = skill_data.get("experience_years", 3)
-            
-            current_level = "entry"
-            if years_experience:
-                if years_experience >= 10:
-                    current_level = "senior"
-                elif years_experience >= 5:
-                    current_level = "mid"
-                elif years_experience >= 2:
-                    current_level = "junior"
-            
-            # Normalize current role
-            normalized_current_role = current_role.lower().strip()
-            
-            # Generate career paths
-            if career_goal:
-                # Goal-directed paths
-                normalized_goal = career_goal.lower().strip()
-                career_paths = self._generate_goal_directed_paths(
-                    normalized_current_role, normalized_goal, current_level, user_skills, max_paths, steps_per_path)
-            else:
-                # Exploratory paths
-                career_paths = self._generate_exploratory_paths(
-                    normalized_current_role, current_level, user_skills, max_paths, steps_per_path)
-            
-            # Add skill requirements for each step
-            for path in career_paths:
-                for step in path["steps"]:
-                    # Get required skills for this position
-                    role_skills = self._get_skills_for_role(step["role"], step["level"])
-                    
-                    # Determine which skills user has and which are missing
-                    step["required_skills"] = role_skills
-                    step["missing_skills"] = [s for s in role_skills if s not in user_skills]
-                    step["has_skills"] = [s for s in role_skills if s in user_skills]
-                    
-                    # Calculate skill match percentage
-                    if role_skills:
-                        step["skill_match"] = round(len(step["has_skills"]) / len(role_skills) * 100, 1)
-                    else:
-                        step["skill_match"] = 100.0
-            
-            # Add metadata to result
-            result = {
-                "user_id": user_id,
-                "current_role": current_role,
-                "career_goal": career_goal,
-                "current_level": current_level,
-                "generated_at": datetime.now().isoformat(),
-                "career_paths": career_paths
-            }
-            
-            return result
-            
         except Exception as e:
-            self.logger.error(f"Error generating career path suggestions: {str(e)}")
-            return {
-                "user_id": user_id,
-                "current_role": current_role,
-                "career_goal": career_goal,
-                "error": str(e),
-                "career_paths": []
-            }
+            logger.error(f"Error in content-based recommendations: {str(e)}")
+            return self._simple_recommendations(jobs, user_skills, user_job_titles, limit)
     
-    def get_trending_jobs(self,
-                         industry: Optional[str] = None,
-                         location: Optional[str] = None,
-                         skill_set: Optional[List[str]] = None,
-                         limit: int = 10) -> Dict[str, Any]:
-        """
-        Get trending jobs in the market with growth potential
-        
-        Args:
-            industry: Industry filter
-            location: Location filter
-            skill_set: Filter by skill set
-            limit: Maximum number of trending jobs to return
-            
-        Returns:
-            Dictionary with trending jobs and analysis
-        """
+    def _simple_recommendations(self, jobs, user_skills, user_job_titles, limit):
+        """Generate simple job recommendations"""
         try:
-            # Ensure job data is fresh
-            self._refresh_job_data_if_needed()
+            if not jobs:
+                return []
             
-            # Apply filters
-            filtered_jobs = self._filter_jobs_by_criteria({
-                "industry": industry,
-                "location": location
-            })
+            scored_jobs = []
             
-            # Calculate trend scores based on growth metrics
-            # In a real implementation, this would use actual job market data
-            trending_jobs = []
-            for job in filtered_jobs:
-                # Calculate growth rate (mock implementation)
-                growth_rate = job.get("growth_rate", 0)
-                if not growth_rate:
-                    # Generate synthetic data for demo
-                    base_rate = random.uniform(0.02, 0.15)
-                    variance = random.uniform(-0.02, 0.02)
-                    growth_rate = base_rate + variance
-                    
-                    # Boost certain industries/roles based on current trends
-                    if job.get("industry") in ["technology", "healthcare", "data"]:
-                        growth_rate += 0.05
-                    if any(kw in job.get("title", "").lower() for kw in 
-                           ["engineer", "developer", "data", "ai", "cloud"]):
-                        growth_rate += 0.03
+            for job in jobs:
+                score = 0
+                job_skills = job.get('skills', [])
+                job_title = job.get('title', '')
                 
-                # Calculate demand score
-                demand_score = job.get("demand_score", 0)
-                if not demand_score:
-                    # Generate synthetic data
-                    base_demand = random.uniform(50, 90)
-                    if growth_rate > 0.1:
-                        base_demand += 10
-                    demand_score = base_demand
+                # Score based on skill match
+                for skill in user_skills:
+                    if skill.lower() in [s.lower() for s in job_skills]:
+                        score += 1
                 
-                # Calculate salary growth
-                salary_growth = job.get("salary_growth", 0)
-                if not salary_growth:
-                    # Generate synthetic data
-                    base_growth = random.uniform(0.01, 0.04)
-                    if growth_rate > 0.1:
-                        base_growth += 0.02
-                    salary_growth = base_growth
+                # Score based on title similarity
+                for title in user_job_titles:
+                    if title.lower() in job_title.lower() or job_title.lower() in title.lower():
+                        score += 2
                 
-                # Add trend data to job
-                job_with_trends = job.copy()
-                job_with_trends.update({
-                    "growth_rate": round(growth_rate * 100, 1),
-                    "demand_score": round(demand_score, 1),
-                    "salary_growth": round(salary_growth * 100, 1),
-                    "trend_score": round((growth_rate * 0.5 + (demand_score / 100) * 0.3 + 
-                                      salary_growth * 0.2) * 100, 1)
+                # Add job and score
+                if score > 0:
+                    scored_jobs.append((job, score))
+            
+            # Sort by score
+            scored_jobs.sort(key=lambda x: x[1], reverse=True)
+            
+            # Get top jobs
+            recommendations = []
+            for job, score in scored_jobs[:limit]:
+                recommendations.append({
+                    "job": job,
+                    "score": score / max(len(user_skills), 1),
+                    "match_reason": self._get_match_reason(job, user_skills, user_job_titles)
                 })
+            
+            # Add some randomness if needed
+            if len(recommendations) < limit:
+                remaining = limit - len(recommendations)
+                random_jobs = [j for j in jobs if j not in [r["job"] for r in recommendations]]
                 
-                trending_jobs.append(job_with_trends)
-            
-            # If skill set provided, calculate skill match
-            if skill_set:
-                for job in trending_jobs:
-                    required_skills = job.get("required_skills", [])
-                    matching_skills = [s for s in skill_set if s in required_skills]
-                    job["skill_match"] = round(len(matching_skills) / max(1, len(required_skills)) * 100, 1)
-            
-            # Sort by trend score (descending)
-            trending_jobs.sort(key=lambda x: x.get("trend_score", 0), reverse=True)
-            
-            # Take top results
-            top_trending = trending_jobs[:limit]
-            
-            # Generate insights
-            insights = self._generate_trend_insights(top_trending, industry, location)
-            
-            # Group by industry
-            industry_trends = defaultdict(list)
-            for job in top_trending:
-                job_industry = job.get("industry", "Other")
-                industry_trends[job_industry].append(job)
-            
-            result = {
-                "generated_at": datetime.now().isoformat(),
-                "industry_filter": industry,
-                "location_filter": location,
-                "trending_jobs": top_trending,
-                "industry_breakdown": [
-                    {"industry": ind, "job_count": len(jobs), "avg_growth": 
-                     round(sum(j.get("growth_rate", 0) for j in jobs) / len(jobs), 1)} 
-                    for ind, jobs in industry_trends.items()
-                ],
-                "insights": insights
-            }
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error getting trending jobs: {str(e)}")
-            return {
-                "generated_at": datetime.now().isoformat(),
-                "industry_filter": industry,
-                "location_filter": location,
-                "error": str(e),
-                "trending_jobs": []
-            }
-    
-    # Private helper methods
-    
-    def _load_job_data(self) -> None:
-        """Load job data from configured sources"""
-        self.jobs = []
-        self.job_sources = []
-        
-        try:
-            # Load jobs from each configured source
-            for source_name in self.job_data_sources:
-                source_file = os.path.join(self.data_dir, f"{source_name}_jobs.json")
-                
-                if os.path.exists(source_file):
-                    with open(source_file, 'r') as f:
-                        source_data = json.load(f)
-                        
-                        # Extract source information
-                        source_info = source_data.get("source_info", {})
-                        self.job_sources.append({
-                            "name": source_name,
-                            "last_updated": source_info.get("last_updated"),
-                            "job_count": len(source_data.get("jobs", []))
+                if random_jobs:
+                    random.shuffle(random_jobs)
+                    for job in random_jobs[:remaining]:
+                        recommendations.append({
+                            "job": job,
+                            "score": 0.1,
+                            "match_reason": "You might find this interesting"
                         })
-                        
-                        # Add jobs to the main list
-                        self.jobs.extend(source_data.get("jobs", []))
-                else:
-                    self.logger.warning(f"Job data source file not found: {source_file}")
             
-            self.logger.info(f"Loaded {len(self.jobs)} jobs from {len(self.job_sources)} sources")
-            
-            # Create ID lookup index
-            self.job_id_index = {job.get("job_id"): job for job in self.jobs if "job_id" in job}
-            
-            # Create skill index
-            self.skill_job_index = defaultdict(list)
-            for job in self.jobs:
-                for skill in job.get("required_skills", []):
-                    self.skill_job_index[skill.lower()].append(job)
-            
-            # Record last refresh time
-            self.last_market_refresh = time.time()
-            
+            return recommendations
+        
         except Exception as e:
-            self.logger.error(f"Error loading job data: {str(e)}")
-            # Initialize empty data structures
-            self.jobs = []
-            self.job_sources = []
-            self.job_id_index = {}
-            self.skill_job_index = defaultdict(list)
-    
-    def _refresh_job_data_if_needed(self) -> None:
-        """Refresh job data if it's stale"""
-        if time.time() - self.last_market_refresh > self.market_data_refresh:
-            self._load_job_data()
-    
-    def _get_job_by_id(self, job_id: str) -> Optional[Dict[str, Any]]:
-        """Get job by ID"""
-        return self.job_id_index.get(job_id)
-    
-    def _extract_user_skills(self, 
-                           resume_data: Optional[Dict[str, Any]], 
-                           skill_data: Optional[Dict[str, Any]]) -> List[str]:
-        """Extract user skills from available data"""
-        skills = []
-        
-        # Extract from skill data if available
-        if skill_data and "current_skills" in skill_data:
-            skills.extend(skill_data["current_skills"])
-        
-        # Extract from resume if available
-        if resume_data:
-            if "skills" in resume_data:
-                skills.extend(resume_data["skills"])
-            elif "extracted_data" in resume_data and "skills" in resume_data["extracted_data"]:
-                skills.extend(resume_data["extracted_data"]["skills"])
-        
-        # Remove duplicates and normalize
-        normalized_skills = [s.lower() for s in skills]
-        return list(set(normalized_skills))
-    
-    def _extract_user_experience(self, resume_data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Extract user experience from resume data"""
-        experience = {
-            "years": 0,
-            "roles": [],
-            "industries": [],
-            "companies": []
-        }
-        
-        if not resume_data:
-            return experience
-        
-        # Try to find experience information
-        if "extracted_data" in resume_data and "experience" in resume_data["extracted_data"]:
-            exp_data = resume_data["extracted_data"]["experience"]
-            
-            # Calculate total years
-            if isinstance(exp_data, list):
-                for job in exp_data:
-                    if "duration" in job:
-                        # Parse duration string (e.g. "2 years 3 months")
-                        duration = job["duration"]
-                        if isinstance(duration, str):
-                            years_match = re.search(r'(\d+)\s*year', duration)
-                            months_match = re.search(r'(\d+)\s*month', duration)
-                            
-                            years = int(years_match.group(1)) if years_match else 0
-                            months = int(months_match.group(1)) if months_match else 0
-                            
-                            experience["years"] += years + (months / 12)
-                        elif isinstance(duration, (int, float)):
-                            experience["years"] += duration
-                    
-                    # Collect roles, industries, companies
-                    if "title" in job:
-                        experience["roles"].append(job["title"])
-                    if "industry" in job:
-                        experience["industries"].append(job["industry"])
-                    if "company" in job:
-                        experience["companies"].append(job["company"])
-        
-        # Round years to 1 decimal
-        experience["years"] = round(experience["years"], 1)
-        
-        # Remove duplicates
-        experience["roles"] = list(set(experience["roles"]))
-        experience["industries"] = list(set(experience["industries"]))
-        experience["companies"] = list(set(experience["companies"]))
-        
-        return experience
-    
-    def _extract_user_education(self, resume_data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Extract user education from resume data"""
-        education = {
-            "highest_degree": None,
-            "degrees": [],
-            "institutions": [],
-            "fields": []
-        }
-        
-        if not resume_data:
-            return education
-        
-        # Degree hierarchy for determining highest degree
-        degree_levels = {
-            "phd": 5,
-            "doctorate": 5,
-            "master": 4,
-            "mba": 4,
-            "bachelor": 3,
-            "associate": 2,
-            "diploma": 1,
-            "certificate": 1,
-            "high school": 0
-        }
-        
-        highest_level = -1
-        
-        # Try to find education information
-        if "extracted_data" in resume_data and "education" in resume_data["extracted_data"]:
-            edu_data = resume_data["extracted_data"]["education"]
-            
-            if isinstance(edu_data, list):
-                for edu in edu_data:
-                    if "degree" in edu:
-                        degree = edu["degree"]
-                        education["degrees"].append(degree)
-                        
-                        # Check if this is the highest degree
-                        for level_name, level_value in degree_levels.items():
-                            if level_name in degree.lower() and level_value > highest_level:
-                                highest_level = level_value
-                                education["highest_degree"] = degree
-                    
-                    if "institution" in edu:
-                        education["institutions"].append(edu["institution"])
-                    
-                    if "field" in edu:
-                        education["fields"].append(edu["field"])
-        
-        # If no highest degree was found but we have degrees
-        if not education["highest_degree"] and education["degrees"]:
-            education["highest_degree"] = education["degrees"][0]
-        
-        # Remove duplicates
-        education["degrees"] = list(set(education["degrees"]))
-        education["institutions"] = list(set(education["institutions"]))
-        education["fields"] = list(set(education["fields"]))
-        
-        return education
-    
-    def _extract_user_location(self, 
-                             resume_data: Optional[Dict[str, Any]],
-                             user_preferences: Optional[Dict[str, Any]]) -> Optional[str]:
-        """Extract user location from available data"""
-        # First check preferences
-        if user_preferences and "location" in user_preferences:
-            return user_preferences["location"]
-        
-        # Then check resume
-        if resume_data:
-            if "location" in resume_data:
-                return resume_data["location"]
-            elif "extracted_data" in resume_data:
-                extracted = resume_data["extracted_data"]
-                if "location" in extracted:
-                    return extracted["location"]
-                elif "contact_info" in extracted and "location" in extracted["contact_info"]:
-                    return extracted["contact_info"]["location"]
-        
-        return None
-    
-    def _determine_career_level(self, 
-                              resume_data: Optional[Dict[str, Any]],
-                              job_history: Optional[List[Dict[str, Any]]]) -> str:
-        """Determine user's career level"""
-        # Default to entry level
-        level = "entry"
-        
-        # Check experience
-        experience = self._extract_user_experience(resume_data)
-        years = experience.get("years", 0)
-        
-        if years >= 15:
-            level = "executive"
-        elif years >= 10:
-            level = "senior"
-        elif years >= 5:
-            level = "mid"
-        elif years >= 2:
-            level = "junior"
-        
-        # Check job titles if available
-        senior_keywords = ["senior", "lead", "principal", "head", "chief", "director", "manager"]
-        
-        roles = experience.get("roles", [])
-        for role in roles:
-            role_lower = role.lower()
-            if any(kw in role_lower for kw in senior_keywords):
-                # Upgrade level based on senior keywords in titles
-                if level == "junior" or level == "entry":
-                    level = "mid"
-                elif level == "mid":
-                    level = "senior"
-        
-        # Check application history if available
-        if job_history:
-            # Look at what level of jobs they've been applying to
-            applied_levels = []
-            for job in job_history:
-                job_level = job.get("career_level")
-                if job_level:
-                    applied_levels.append(job_level)
-            
-            # Use mode of applied levels if available
-            if applied_levels:
-                level_counter = Counter(applied_levels)
-                most_common_level = level_counter.most_common(1)[0][0]
-                
-                # Only override if the level from applications is higher
-                level_ranks = {"entry": 0, "junior": 1, "mid": 2, "senior": 3, "executive": 4}
-                if level_ranks.get(most_common_level, 0) > level_ranks.get(level, 0):
-                    level = most_common_level
-        
-        return level
-    
-    def _calculate_skill_match(self, user_skills: List[str], required_skills: List[str]) -> float:
-        """Calculate skill match percentage"""
-        matching_skills = [s for s in user_skills if s in required_skills]
-        return len(matching_skills) / max(1, len(required_skills))
-    
-    def _calculate_experience_match(self, experience: Dict[str, Any], required_experience: float, job_title: str) -> float:
-        """Calculate experience match percentage"""
-        # This is a placeholder implementation. You might want to implement a more robust experience matching logic based on the job title and experience data.
-        return 0.7  # Placeholder return, actual implementation needed
-    
-    def _calculate_education_match(self, education: Dict[str, Any], required_education: str) -> float:
-        """Calculate education match percentage"""
-        # This is a placeholder implementation. You might want to implement a more robust education matching logic based on the required education and education data.
-        return 0.7  # Placeholder return, actual implementation needed
-    
-    def _find_relevant_jobs(self, user_skills: List[str], user_experience: Dict[str, Any], user_education: Dict[str, Any], user_location: Optional[str], career_level: str, preferences: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Find relevant jobs based on user skills, experience, education, location, and career level"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the user's profile and job requirements.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _score_jobs(self, jobs: List[Dict[str, Any]], user_skills: List[str], user_experience: Dict[str, Any], user_education: Dict[str, Any], user_location: Optional[str], career_level: str, preferences: Dict[str, Any], job_history: Optional[List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
-        """Score jobs based on user skills, experience, education, location, and career level"""
-        # This is a placeholder implementation. You might want to implement a more robust job scoring logic based on the job requirements and user's profile.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _categorize_recommendations(self, jobs: List[Dict[str, Any]], user_skills: List[str], career_level: str, preferences: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
-        """Categorize job recommendations based on user skills, career level, and preferences"""
-        # This is a placeholder implementation. You might want to implement a more robust job categorization logic based on the job requirements and user's preferences.
-        return {"excellent_matches": [], "good_matches": [], "partial_matches": []}  # Placeholder return, actual implementation needed
-    
-    def _generate_recommendation_insights(self, jobs: List[Dict[str, Any]], user_skills: List[str], user_experience: Dict[str, Any], preferences: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Generate insights for job recommendations"""
-        # This is a placeholder implementation. You might want to implement a more robust recommendation insight generation logic based on the job requirements and user's profile.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_paths_between_roles(self, current_role: str, target_role: str, timeline_years: int, user_skills: List[str]) -> List[Dict[str, Any]]:
-        """Find career paths between two roles"""
-        # This is a placeholder implementation. You might want to implement a more robust path finding logic based on the job requirements and user's skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_career_growth_paths(self, current_role: str, timeline_years: int, user_skills: List[str]) -> List[Dict[str, Any]]:
-        """Find career growth paths for a user"""
-        # This is a placeholder implementation. You might want to implement a more robust career growth path finding logic based on the user's skills and experience.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _analyze_path_skill_gaps(self, roles: List[str], user_skills: List[str]) -> List[Dict[str, Any]]:
-        """Analyze skill gaps in a career path"""
-        # This is a placeholder implementation. You might want to implement a more robust skill gap analysis logic based on the job roles and user's skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _estimate_path_timeline(self, roles: List[str], skill_gaps: List[Dict[str, Any]], timeline_years: int) -> Dict[str, Any]:
-        """Estimate the timeline for a career path"""
-        # This is a placeholder implementation. You might want to implement a more robust timeline estimation logic based on the job roles and skill gaps.
-        return {}  # Placeholder return, actual implementation needed
-    
-    def _add_example_jobs_to_path(self, path: Dict[str, Any]) -> None:
-        """Add example jobs to a career path"""
-        # This is a placeholder implementation. You might want to implement a more robust example job addition logic based on the job roles and path requirements.
-        pass  # Placeholder, actual implementation needed
-    
-    def _estimate_role_level(self, role: str, experience: Dict[str, Any]) -> str:
-        """Estimate user's career level based on role and experience"""
-        # This is a placeholder implementation. You might want to implement a more robust career level estimation logic based on the role and experience data.
-        return "entry"  # Placeholder return, actual implementation needed
-    
-    def _generate_goal_directed_paths(self, current_role: str, goal_role: str, current_level: str, user_skills: List[str], max_paths: int, steps_per_path: int) -> List[Dict[str, Any]]:
-        """Generate career paths to help users progress toward a specific goal"""
-        # This is a placeholder implementation. You might want to implement a more robust goal-directed path generation logic based on the current role, goal role, current level, user skills, and path requirements.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _generate_exploratory_paths(self, current_role: str, current_level: str, user_skills: List[str], max_paths: int, steps_per_path: int) -> List[Dict[str, Any]]:
-        """Generate exploratory career paths for a user"""
-        # This is a placeholder implementation. You might want to implement a more robust exploratory path generation logic based on the current role, current level, user skills, and path requirements.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _generate_trend_insights(self, jobs: List[Dict[str, Any]], industry: Optional[str], location: Optional[str]) -> List[Dict[str, Any]]:
-        """Generate insights for trending jobs"""
-        # This is a placeholder implementation. You might want to implement a more robust trend insight generation logic based on the job data and industry/location information.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _calculate_job_trends(self, jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Calculate job trends based on job data"""
-        # This is a placeholder implementation. You might want to implement a more robust job trend calculation logic based on the job data.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_example_jobs_for_title(self, job_title: str, industry: Optional[str], location: Optional[str], limit: int = 3) -> List[Dict[str, Any]]:
-        """Get example jobs for a specific job title"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job title and industry/location.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _generate_trend_insights(self, jobs: List[Dict[str, Any]], industry: Optional[str], location: Optional[str]) -> List[Dict[str, Any]]:
-        """Generate insights for trending jobs"""
-        # This is a placeholder implementation. You might want to implement a more robust trend insight generation logic based on the job data and industry/location information.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _generate_trend_insights(self, jobs: List[Dict[str, Any]], industry: Optional[str], location: Optional[str]) -> List[Dict[str, Any]]:
-        """Generate insights for trending jobs"""
-        # This is a placeholder implementation. You might want to implement a more robust trend insight generation logic based on the job data and industry/location information.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _process_user_preferences(self, preferences: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Process user preferences"""
-        # This is a placeholder implementation. You might want to implement a more robust preference processing logic based on the user's preferences.
-        return {}  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _calculate_job_trends(self, jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Calculate job trends based on job data"""
-        # This is a placeholder implementation. You might want to implement a more robust job trend calculation logic based on the job data.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_example_jobs_for_title(self, job_title: str, industry: Optional[str], location: Optional[str], limit: int = 3) -> List[Dict[str, Any]]:
-        """Get example jobs for a specific job title"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job title and industry/location.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job retrieval logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _filter_jobs_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Filter jobs based on given criteria"""
-        # This is a placeholder implementation. You might want to implement a more robust job filtering logic based on the job requirements and criteria.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _get_skills_for_role(self, role: str, level: str) -> List[str]:
-        """Get required skills for a specific job role and level"""
-        # This is a placeholder implementation. You might want to implement a more robust skill retrieval logic based on the job role and level.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_skills(self, skills: List[str], industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Tuple[Dict[str, Any], List[str]]]:
-        """Find jobs matching specific skills"""
-        # This is a placeholder implementation. You might want to implement a more robust job matching logic based on the job requirements and skills.
-        return []  # Placeholder return, actual implementation needed
-    
-    def _find_jobs_by_criteria(self, industry: Optional[str], location: Optional[str], career_level: Optional[str]) -> List[Dict[str, Any]]:
-        """Find jobs matching specific criteria"""
-import os
-import json
-import logging
-import hashlib
-import time
-import uuid
-from typing import Dict, List, Tuple, Any, Optional, Union
-from datetime import datetime, timedelta
-from collections import defaultdict, Counter
-import re
-import math
-import random
-
-# Optional dependencies - allow graceful fallback if not available
-try:
-    import numpy as np
-    NUMPY_AVAILABLE = True
-except ImportError:
-    NUMPY_AVAILABLE = False
-
-try:
-    import pandas as pd
-    PANDAS_AVAILABLE = True
-except ImportError:
-    PANDAS_AVAILABLE = False
-
-try:
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.metrics.pairwise import cosine_similarity
-    SKLEARN_AVAILABLE = True
-except ImportError:
-    SKLEARN_AVAILABLE = False
-
-
-class JobRecommendationEngine:
-    """
-    AI-powered job recommendation engine that suggests personalized job opportunities
-    based on user profiles, skills, and career goals.
-    
-    Key features:
-    - Personalized job matching based on multiple factors
-    - Skill-based job recommendations
-    - Career path progression suggestions
-    - Trending jobs in user's industry
-    - Geographic and remote job filtering
-    - Salary optimization recommendations
-    - Application success probability estimation
-    """
-    
-    def __init__(self,
-                 data_dir: Optional[str] = None,
-                 job_data_sources: Optional[List[str]] = None,
-                 cache_dir: Optional[str] = None,
-                 cache_ttl: int = 3600,
-                 market_data_refresh: int = 86400):
-        """
-        Initialize the job recommendation engine
-        
-        Args:
-            data_dir: Directory for storing job data
-            job_data_sources: List of job data source names or URLs
-            cache_dir: Directory for caching recommendation results
-            cache_ttl: Cache time-to-live in seconds
-            market_data_refresh: Job market data refresh interval in seconds
-        """
-        self.logger = logging.getLogger(__name__)
-        
-        # Set up data directory
-        if data_dir:
-            os.makedirs(data_dir, exist_ok=True)
-            self.data_dir = data_dir
-        else:
-            self.data_dir = os.path.join(os.getcwd(), "job_data")
-            os.makedirs(self.data_dir, exist_ok=True)
-            
-        # Set up cache directory
-        if cache_dir:
-            os.makedirs(cache_dir, exist_ok=True)
-            self.cache_dir = cache_dir
-        else:
-            self.cache_dir = os.path.join(self.data_dir, "cache")
-            os.makedirs(self.cache_dir, exist_ok=True)
-        
-        self.cache_ttl = cache_ttl
-        self.market_data_refresh = market_data_refresh
-        
-        # Initialize job data sources
-        self.job_data_sources = job_data_sources or ["default"]
-        
-        # Initialize caches
-        self.job_cache = {}
-        self.recommendation_cache = {}
-        self.last_market_refresh = 0
-        
-        # Load any existing job data
-        self._load_job_data()
-        
-        self.logger.info(f"Job recommendation engine initialized with {len(self.job_sources)} sources")
-        
-    def get_personalized_recommendations(self,
-                                        user_id: str,
-                                        resume_data: Optional[Dict[str, Any]] = None,
-                                        skill_data: Optional[Dict[str, Any]] = None,
-                                        user_preferences: Optional[Dict[str, Any]] = None,
-                                        job_history: Optional[List[Dict[str, Any]]] = None,
-                                        limit: int = 10) -> Dict[str, Any]:
-        """
-        Get personalized job recommendations for a user
-        
-        Args:
-            user_id: User identifier
-            resume_data: User's resume data
-            skill_data: User's skill assessment data
-            user_preferences: User's job preferences
-            job_history: User's job application history
-            limit: Maximum number of recommendations to return
-            
-        Returns:
-            Dictionary with personalized job recommendations
-        """
-        # Generate cache key
-        cache_key = f"rec_{user_id}_{hashlib.md5(json.dumps({
-            'resume': hashlib.md5(str(resume_data).encode()).hexdigest()[:8] if resume_data else 'none',
-            'skills': hashlib.md5(str(skill_data).encode()).hexdigest()[:8] if skill_data else 'none',
-            'prefs': hashlib.md5(str(user_preferences).encode()).hexdigest()[:8] if user_preferences else 'none',
-            'history': hashlib.md5(str(job_history).encode()).hexdigest()[:8] if job_history else 'none',
-            'limit': limit
-        }).encode()).hexdigest()[:16]}"
-        
-        # Check cache
-        if cache_key in self.recommendation_cache:
-            cache_entry = self.recommendation_cache[cache_key]
-            if time.time() - cache_entry["timestamp"] < self.cache_ttl:
-                return cache_entry["data"]
-        
+            logger.error(f"Error in simple recommendations: {str(e)}")
+            return []
+    
+    def _find_similar_jobs(self, job, other_jobs, limit):
+        """Find similar jobs using content-based filtering"""
         try:
-            # Ensure job data is fresh
-            self._refresh_job_data_if_needed()
+            if not other_jobs:
+                return []
             
-            # Extract user information
-            user_skills = self._extract_user_skills(resume_data, skill_data)
-            user_experience = self._extract_user_experience(resume_data)
-            user_education = self._extract_user_education(resume_data)
-            user_location = self._extract_user_location(resume_data, user_preferences)
-            career_level = self._determine_career_level(resume_data, job_history)
+            # Create job texts for vectorization
+            job_texts = []
+            for other_job in other_jobs:
+                # Combine relevant fields
+                job_text = f"{other_job.get('title', '')} {other_job.get('description', '')} "
+                job_text += f"{' '.join(other_job.get('skills', []))} "
+                job_text += f"{other_job.get('company', '')} {other_job.get('location', '')}"
+                job_texts.append(job_text.lower())
             
-            # Apply user preferences
-            preferences = self._process_user_preferences(user_preferences)
+            # Create target job text
+            target_job_text = f"{job.get('title', '')} {job.get('description', '')} "
+            target_job_text += f"{' '.join(job.get('skills', []))} "
+            target_job_text += f"{job.get('company', '')} {job.get('location', '')}"
             
-            # Get relevant jobs
-            all_relevant_jobs = self._find_relevant_jobs(
-                user_skills=user_skills,
-                user_experience=user_experience,
-                user_education=user_education,
-                user_location=user_location,
-                career_level=career_level,
-                preferences=preferences
-            )
+            # Add target job text to corpus
+            all_texts = job_texts + [target_job_text]
             
-            # Score and rank jobs
-            scored_jobs = self._score_jobs(
-                jobs=all_relevant_jobs,
-                user_skills=user_skills,
-                user_experience=user_experience,
-                user_education=user_education,
-                user_location=user_location,
-                career_level=career_level,
-                preferences=preferences,
-                job_history=job_history
-            )
+            # Transform texts to TF-IDF features
+            tfidf_matrix = self.vectorizer.fit_transform(all_texts)
             
-            # Filter out jobs the user has already applied to
-            if job_history:
-                applied_job_ids = set()
-                for job in job_history:
-                    if "job_id" in job:
-                        applied_job_ids.add(job["job_id"])
-                
-                scored_jobs = [job for job in scored_jobs if job["job_id"] not in applied_job_ids]
+            # Calculate similarity between target job and other jobs
+            target_vector = tfidf_matrix[-1]
+            other_vectors = tfidf_matrix[:-1]
             
-            # Get top recommendations
-            top_recommendations = scored_jobs[:limit]
+            # Calculate cosine similarity
+            cosine_similarities = cosine_similarity(target_vector, other_vectors).flatten()
             
-            # Organize recommendations by type
-            recommendation_types = self._categorize_recommendations(
-                top_recommendations, user_skills, career_level, preferences)
+            # Get top job indices
+            top_indices = cosine_similarities.argsort()[-limit:][::-1]
             
-            # Generate insights
-            insights = self._generate_recommendation_insights(
-                top_recommendations, user_skills, user_experience, preferences)
-            
-            # Create result with metadata
-            result = {
-                "user_id": user_id,
-                "generated_at": datetime.now().isoformat(),
-                "total_matches": len(scored_jobs),
-                "recommended_jobs": top_recommendations,
-                "recommendation_types": recommendation_types,
-                "insights": insights
-            }
-            
-            # Cache result
-            self.recommendation_cache[cache_key] = {
-                "timestamp": time.time(),
-                "data": result
-            }
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error generating job recommendations: {str(e)}")
-            return {
-                "user_id": user_id,
-                "generated_at": datetime.now().isoformat(),
-                "error": str(e),
-                "recommended_jobs": []
-            }
-    
-    def get_career_path_recommendations(self,
-                                       user_id: str,
-                                       current_role: str,
-                                       target_role: Optional[str] = None,
-                                       timeline_years: int = 5,
-                                       resume_data: Optional[Dict[str, Any]] = None,
-                                       skill_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Get career path recommendations showing progression from current to target role
-        
-        Args:
-            user_id: User identifier
-            current_role: User's current role or job title
-            target_role: User's target role (if known)
-            timeline_years: Timeline for career progression in years
-            resume_data: User's resume data
-            skill_data: User's skill assessment data
-            
-        Returns:
-            Dictionary with career path recommendations
-        """
-        # Generate cache key
-        cache_key = f"path_{user_id}_{hashlib.md5(json.dumps({
-            'current': current_role,
-            'target': target_role,
-            'years': timeline_years,
-            'resume': hashlib.md5(str(resume_data).encode()).hexdigest()[:8] if resume_data else 'none',
-            'skills': hashlib.md5(str(skill_data).encode()).hexdigest()[:8] if skill_data else 'none'
-        }).encode()).hexdigest()[:16]}"
-        
-        # Check cache
-        if cache_key in self.recommendation_cache:
-            cache_entry = self.recommendation_cache[cache_key]
-            if time.time() - cache_entry["timestamp"] < self.cache_ttl:
-                return cache_entry["data"]
-        
-        try:
-            # Extract user information
-            user_skills = self._extract_user_skills(resume_data, skill_data)
-            user_experience = self._extract_user_experience(resume_data)
-            current_level = self._estimate_role_level(current_role, user_experience)
-            
-            # Determine potential career paths
-            if target_role:
-                # Directed career path
-                career_paths = self._find_paths_between_roles(
-                    current_role, target_role, timeline_years, user_skills)
-            else:
-                # Exploratory career paths
-                career_paths = self._find_career_growth_paths(
-                    current_role, timeline_years, user_skills)
-            
-            # Analyze skill gaps for each path
-            for path in career_paths:
-                path["skill_gaps"] = self._analyze_path_skill_gaps(
-                    path["roles"], user_skills)
-                
-                # Add time estimates based on skill gaps
-                path["timeline"] = self._estimate_path_timeline(
-                    path["roles"], path["skill_gaps"], timeline_years)
-            
-            # Add example job listings for each role in the paths
-            for path in career_paths:
-                self._add_example_jobs_to_path(path)
-            
-            # Create result with metadata
-            result = {
-                "user_id": user_id,
-                "current_role": current_role,
-                "target_role": target_role,
-                "career_paths": career_paths,
-                "generated_at": datetime.now().isoformat()
-            }
-            
-            # Cache result
-            self.recommendation_cache[cache_key] = {
-                "timestamp": time.time(),
-                "data": result
-            }
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error generating career path recommendations: {str(e)}")
-            return {
-                "user_id": user_id,
-                "current_role": current_role,
-                "target_role": target_role,
-                "error": str(e),
-                "career_paths": []
-            }
-    
-    def get_trending_jobs(self,
-                        industry: Optional[str] = None,
-                        location: Optional[str] = None,
-                        career_level: Optional[str] = None,
-                        limit: int = 10) -> Dict[str, Any]:
-        """
-        Get trending jobs based on market analysis
-        
-        Args:
-            industry: Target industry
-            location: Target location
-            career_level: Career level
-            limit: Maximum number of jobs to return
-            
-        Returns:
-            Dictionary with trending job recommendations
-        """
-        # Generate cache key
-        cache_key = f"trend_{hashlib.md5(json.dumps({
-            'industry': industry,
-            'location': location,
-            'level': career_level,
-            'limit': limit
-        }).encode()).hexdigest()[:16]}"
-        
-        # Check cache
-        if cache_key in self.recommendation_cache:
-            cache_entry = self.recommendation_cache[cache_key]
-            if time.time() - cache_entry["timestamp"] < self.cache_ttl:
-                return cache_entry["data"]
-        
-        try:
-            # Ensure job data is fresh
-            self._refresh_job_data_if_needed()
-            
-            # Get all jobs matching the criteria
-            matching_jobs = self._find_jobs_by_criteria(
-                industry=industry,
-                location=location,
-                career_level=career_level
-            )
-            
-            # Calculate trend metrics
-            job_trends = self._calculate_job_trends(matching_jobs)
-            
-            # Get top trending jobs
-            trending_jobs = sorted(
-                job_trends, 
-                key=lambda x: x["trend_score"], 
-                reverse=True
-            )[:limit]
-            
-            # Add example job listings
-            for trend in trending_jobs:
-                trend["example_jobs"] = self._get_example_jobs_for_title(
-                    trend["job_title"], 
-                    industry, 
-                    location, 
-                    limit=3
-                )
-            
-            # Create result with metadata
-            result = {
-                "generated_at": datetime.now().isoformat(),
-                "industry": industry,
-                "location": location,
-                "career_level": career_level,
-                "trending_jobs": trending_jobs
-            }
-            
-            # Cache result
-            self.recommendation_cache[cache_key] = {
-                "timestamp": time.time(),
-                "data": result
-            }
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error finding trending jobs: {str(e)}")
-            return {
-                "generated_at": datetime.now().isoformat(),
-                "industry": industry,
-                "location": location,
-                "career_level": career_level,
-                "error": str(e),
-                "trending_jobs": []
-            }
-    
-    def get_skill_based_recommendations(self,
-                                      skills: List[str],
-                                      industry: Optional[str] = None,
-                                      location: Optional[str] = None,
-                                      career_level: Optional[str] = None,
-                                      limit: int = 10) -> Dict[str, Any]:
-        """
-        Get job recommendations based on specific skills
-        
-        Args:
-            skills: List of skills to match
-            industry: Target industry
-            location: Target location
-            career_level: Career level
-            limit: Maximum number of jobs to return
-            
-        Returns:
-            Dictionary with skill-based job recommendations
-        """
-        # Generate cache key
-        cache_key = f"skill_rec_{hashlib.md5(json.dumps({
-            'skills': sorted(skills),
-            'industry': industry,
-            'location': location,
-            'level': career_level,
-            'limit': limit
-        }).encode()).hexdigest()[:16]}"
-        
-        # Check cache
-        if cache_key in self.recommendation_cache:
-            cache_entry = self.recommendation_cache[cache_key]
-            if time.time() - cache_entry["timestamp"] < self.cache_ttl:
-                return cache_entry["data"]
-        
-        try:
-            # Ensure job data is fresh
-            self._refresh_job_data_if_needed()
-            
-            # Find jobs matching the skills
-            skill_job_matches = self._find_jobs_by_skills(
-                skills, industry, location, career_level)
-            
-            # Score matches based on skill relevance
-            scored_matches = []
-            for job, skill_matches in skill_job_matches:
-                match_score = len(skill_matches) / max(1, len(job.get("required_skills", [])))
-                skill_match_pct = len(skill_matches) / max(1, len(skills))
-                
-                scored_matches.append({
-                    "job": job,
-                    "match_score": match_score,
-                    "skill_match_pct": skill_match_pct,
-                    "matched_skills": skill_matches
-                })
-            
-            # Sort by match score
-            scored_matches.sort(key=lambda x: x["match_score"], reverse=True)
-            
-            # Format results
-            recommended_jobs = []
-            for match in scored_matches[:limit]:
-                job = match["job"]
-                recommended_jobs.append({
-                    "job_id": job.get("job_id", ""),
-                    "title": job.get("title", ""),
-                    "company": job.get("company", ""),
-                    "location": job.get("location", ""),
-                    "salary_range": job.get("salary_range", ""),
-                    "job_type": job.get("job_type", ""),
-                    "remote": job.get("remote", False),
-                    "url": job.get("url", ""),
-                    "posted_date": job.get("posted_date", ""),
-                    "match_score": round(match["match_score"] * 100, 1),
-                    "skill_match_pct": round(match["skill_match_pct"] * 100, 1),
-                    "matched_skills": match["matched_skills"],
-                    "missing_skills": list(set(job.get("required_skills", [])) - set(match["matched_skills"]))
-                })
-            
-            # Group recommendations by match quality
-            recommendation_groups = {
-                "excellent_matches": [],
-                "good_matches": [],
-                "partial_matches": []
-            }
-            
-            for job in recommended_jobs:
-                if job["match_score"] >= 80:
-                    recommendation_groups["excellent_matches"].append(job)
-                elif job["match_score"] >= 60:
-                    recommendation_groups["good_matches"].append(job)
-                else:
-                    recommendation_groups["partial_matches"].append(job)
-            
-            # Create result with metadata
-            result = {
-                "generated_at": datetime.now().isoformat(),
-                "skills": skills,
-                "industry": industry,
-                "location": location,
-                "career_level": career_level,
-                "recommended_jobs": recommended_jobs,
-                "recommendation_groups": recommendation_groups
-            }
-            
-            # Cache result
-            self.recommendation_cache[cache_key] = {
-                "timestamp": time.time(),
-                "data": result
-            }
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error generating skill-based recommendations: {str(e)}")
-            return {
-                "generated_at": datetime.now().isoformat(),
-                "skills": skills,
-                "industry": industry,
-                "location": location,
-                "career_level": career_level,
-                "error": str(e),
-                "recommended_jobs": []
-            }
-    
-    def estimate_application_success(self,
-                                    user_id: str,
-                                    job_id: str,
-                                    resume_data: Optional[Dict[str, Any]] = None,
-                                    skill_data: Optional[Dict[str, Any]] = None,
-                                    interview_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Estimate probability of success for a specific job application
-        
-        Args:
-            user_id: User identifier
-            job_id: Job identifier
-            resume_data: User's resume data
-            skill_data: User's skill assessment data
-            interview_data: User's interview performance data
-            
-        Returns:
-            Dictionary with application success probability and insights
-        """
-        try:
-            # Get job details
-            job = self._get_job_by_id(job_id)
-            if not job:
-                return {
-                    "user_id": user_id,
-                    "job_id": job_id,
-                    "error": "job_not_found",
-                    "success_probability": 0
-                }
-            
-            # Extract user information
-            user_skills = self._extract_user_skills(resume_data, skill_data)
-            user_experience = self._extract_user_experience(resume_data)
-            user_education = self._extract_user_education(resume_data)
-            
-            # Calculate match scores for different dimensions
-            skill_match = self._calculate_skill_match(user_skills, job.get("required_skills", []))
-            experience_match = self._calculate_experience_match(
-                user_experience, job.get("experience_required", 0), job.get("title", ""))
-            education_match = self._calculate_education_match(
-                user_education, job.get("education_required", ""))
-            
-            # Calculate resume quality factor
-            resume_quality = 0.7  # Default
-            if resume_data and "scores" in resume_data:
-                resume_quality = resume_data["scores"].get("overall", 70) / 100
-            
-            # Calculate interview readiness
-            interview_readiness = 0.7  # Default
-            if interview_data:
-                interview_readiness = interview_data.get("overall_score", 70) / 100
-            
-            # Calculate competition factor (simplified)
-            competition_factor = job.get("competition_level", 0.5)  # 0-1 scale
-            
-            # Calculate overall success probability
-            weights = {
-                "skill_match": 0.35,
-                "experience_match": 0.25,
-                "education_match": 0.15,
-                "resume_quality": 0.15,
-                "interview_readiness": 0.10
-            }
-            
-            raw_probability = (
-                skill_match * weights["skill_match"] +
-                experience_match * weights["experience_match"] +
-                education_match * weights["education_match"] +
-                resume_quality * weights["resume_quality"] +
-                interview_readiness * weights["interview_readiness"]
-            )
-            
-            # Adjust for competition
-            adjusted_probability = raw_probability * (1 - (competition_factor * 0.5))
-            
-            # Cap between 0.05 and 0.95
-            final_probability = max(0.05, min(0.95, adjusted_probability))
-            
-            # Generate insights
-            insights = []
-            
-            # Skill insights
-            if skill_match < 0.6:
-                missing_skills = set(job.get("required_skills", [])) - set(user_skills)
-                if missing_skills:
-                    insights.append({
-                        "type": "skill_gap",
-                        "impact": "high" if skill_match < 0.4 else "medium",
-                        "message": f"You're missing {len(missing_skills)} required skills for this position.",
-                        "missing_skills": list(missing_skills)[:5]  # Top 5 missing
+            # Create similar jobs results
+            similar_jobs = []
+            for idx in top_indices:
+                if cosine_similarities[idx] > 0:
+                    similar_job = other_jobs[idx]
+                    similar_jobs.append({
+                        "job": similar_job,
+                        "similarity_score": float(cosine_similarities[idx]),
+                        "common_skills": self._get_common_skills(job.get('skills', []), similar_job.get('skills', []))
                     })
             
-            # Experience insights
-            if experience_match < 0.7:
-                insights.append({
-                    "type": "experience_gap",
-                    "impact": "high" if experience_match < 0.5 else "medium",
-                    "message": f"Your experience level is below what's typically expected for this role."
-                })
-            
-            # Education insights
-            if education_match < 0.7:
-                insights.append({
-                    "type": "education_gap",
-                    "impact": "medium",
-                    "message": f"Your education background may not fully meet the requirements for this position."
-                })
-            
-            # Resume insights
-            if resume_quality < 0.7:
-                insights.append({
-                    "type": "resume_quality",
-                    "impact": "medium",
-                    "message": "Improving your resume quality could increase your chances of success."
-                })
-            
-            # Competition insights
-            if competition_factor > 0.7:
-                insights.append({
-                    "type": "high_competition",
-                    "impact": "medium",
-                    "message": "This position has high competition. Consider applying early and following up."
-                })
-            
-            return {
-                "user_id": user_id,
-                "job_id": job_id,
-                "job_title": job.get("title", ""),
-                "company": job.get("company", ""),
-                "success_probability": round(final_probability * 100, 1),
-                "match_scores": {
-                    "skill_match": round(skill_match * 100, 1),
-                    "experience_match": round(experience_match * 100, 1),
-                    "education_match": round(education_match * 100, 1),
-                    "resume_quality": round(resume_quality * 100, 1),
-                    "interview_readiness": round(interview_readiness * 100, 1)
-                },
-                "competition_level": round(competition_factor * 100, 1),
-                "insights": insights
-            }
-            
+            return similar_jobs
+        
         except Exception as e:
-            self.logger.error(f"Error estimating application success: {str(e)}")
-            return {
-                "user_id": user_id,
-                "job_id": job_id,
-                "error": str(e),
-                "success_probability": 0
-            } 
+            logger.error(f"Error finding similar jobs: {str(e)}")
+            return self._simple_similar_jobs(job, other_jobs, limit)
+    
+    def _simple_similar_jobs(self, job, other_jobs, limit):
+        """Find similar jobs using simple matching"""
+        try:
+            if not other_jobs:
+                return []
+            
+            scored_jobs = []
+            job_skills = job.get('skills', [])
+            job_title = job.get('title', '')
+            
+            for other_job in other_jobs:
+                score = 0
+                other_skills = other_job.get('skills', [])
+                other_title = other_job.get('title', '')
+                
+                # Score based on skill match
+                common_skills = self._get_common_skills(job_skills, other_skills)
+                score += len(common_skills)
+                
+                # Score based on title similarity
+                if job_title.lower() in other_title.lower() or other_title.lower() in job_title.lower():
+                    score += 2
+                
+                # Add job and score
+                if score > 0:
+                    scored_jobs.append((other_job, score, common_skills))
+            
+            # Sort by score
+            scored_jobs.sort(key=lambda x: x[1], reverse=True)
+            
+            # Get top jobs
+            similar_jobs = []
+            for other_job, score, common_skills in scored_jobs[:limit]:
+                similar_jobs.append({
+                    "job": other_job,
+                    "similarity_score": score / max(len(job_skills), 1),
+                    "common_skills": common_skills
+                })
+            
+            return similar_jobs
+        
+        except Exception as e:
+            logger.error(f"Error in simple similar jobs: {str(e)}")
+            return []
+    
+    def _get_match_reason(self, job, user_skills, user_job_titles):
+        """Generate a personalized match reason"""
+        # Check for skill match
+        job_skills = job.get('skills', [])
+        matching_skills = self._get_common_skills(user_skills, job_skills)
+        
+        if matching_skills:
+            if len(matching_skills) > 1:
+                return f"Matches your skills: {', '.join(matching_skills[:2])}"
+            else:
+                return f"Matches your skill: {matching_skills[0]}"
+        
+        # Check for title match
+        job_title = job.get('title', '')
+        for title in user_job_titles:
+            if title.lower() in job_title.lower():
+                return f"Related to your experience as {title}"
+        
+        # Default reason
+        return "Recommended based on your profile"
+    
+    def _get_common_skills(self, skills1, skills2):
+        """Get common skills between two skill lists"""
+        skills1_lower = [s.lower() for s in skills1]
+        skills2_lower = [s.lower() for s in skills2]
+        
+        common_indices = [i for i, s in enumerate(skills1_lower) if s in skills2_lower]
+        common_skills = [skills1[i] for i in common_indices]
+        
+        return common_skills
+    
+    def _generate_career_path(self, current_job, years_experience):
+        """Generate a career path recommendation"""
+        # This would use more sophisticated techniques in a real system
+        # Here we use a simplified approach for demonstration
+        
+        # Map job titles to career paths
+        career_paths = {
+            "software engineer": [
+                {"title": "Junior Software Engineer", "level": "entry", "years": "0-2", "skills_needed": ["Programming", "Data Structures"]},
+                {"title": "Software Engineer", "level": "mid", "years": "2-5", "skills_needed": ["System Design", "Testing"]},
+                {"title": "Senior Software Engineer", "level": "senior", "years": "5-8", "skills_needed": ["Architecture", "Mentoring"]},
+                {"title": "Lead Software Engineer", "level": "lead", "years": "8-12", "skills_needed": ["Project Management", "Team Leadership"]},
+                {"title": "Software Architect", "level": "architect", "years": "12+", "skills_needed": ["Enterprise Architecture", "Technical Strategy"]}
+            ],
+            "data scientist": [
+                {"title": "Junior Data Scientist", "level": "entry", "years": "0-2", "skills_needed": ["Statistics", "Python"]},
+                {"title": "Data Scientist", "level": "mid", "years": "2-5", "skills_needed": ["Machine Learning", "Data Visualization"]},
+                {"title": "Senior Data Scientist", "level": "senior", "years": "5-8", "skills_needed": ["Advanced ML", "Research"]},
+                {"title": "Lead Data Scientist", "level": "lead", "years": "8-12", "skills_needed": ["Team Leadership", "Strategic Analysis"]},
+                {"title": "Chief Data Scientist", "level": "executive", "years": "12+", "skills_needed": ["Executive Communication", "Business Strategy"]}
+            ],
+            "marketing": [
+                {"title": "Marketing Assistant", "level": "entry", "years": "0-2", "skills_needed": ["Communication", "Social Media"]},
+                {"title": "Marketing Specialist", "level": "mid", "years": "2-5", "skills_needed": ["Campaign Management", "Analytics"]},
+                {"title": "Marketing Manager", "level": "senior", "years": "5-8", "skills_needed": ["Strategy", "Team Management"]},
+                {"title": "Marketing Director", "level": "director", "years": "8-12", "skills_needed": ["Budget Management", "Cross-functional Leadership"]},
+                {"title": "CMO", "level": "executive", "years": "12+", "skills_needed": ["Executive Leadership", "Business Strategy"]}
+            ]
+        }
+        
+        # Find matching career path
+        normalized_job = normalize_job_title(current_job).lower()
+        matched_path = None
+        
+        for key, path in career_paths.items():
+            if key in normalized_job or normalized_job in key:
+                matched_path = path
+                break
+        
+        # Use default path if no match
+        if not matched_path:
+            matched_path = career_paths["software engineer"]
+        
+        # Determine current level based on experience
+        experience_level = self._map_experience_to_level(years_experience)
+        
+        # Find starting point in path
+        start_index = 0
+        for i, step in enumerate(matched_path):
+            if step["level"] == experience_level:
+                start_index = i
+                break
+        
+        # Return path from current position forward
+        return matched_path[start_index:]
+    
+    def _map_experience_to_level(self, years_experience):
+        """Map years of experience to career level"""
+        if years_experience < 2:
+            return "entry"
+        elif years_experience < 5:
+            return "mid"
+        elif years_experience < 8:
+            return "senior"
+        elif years_experience < 12:
+            return "lead"
+        else:
+            return "executive"
+    
+    def _get_skills_for_roles(self, job_titles):
+        """Get recommended skills for job roles"""
+        # This would use more sophisticated techniques in a real system
+        
+        # Define skills by role
+        role_skills = {
+            "software engineer": [
+                {"name": "JavaScript", "importance": "high", "demand": "high"},
+                {"name": "Python", "importance": "high", "demand": "high"},
+                {"name": "Docker", "importance": "medium", "demand": "high"},
+                {"name": "Kubernetes", "importance": "medium", "demand": "high"},
+                {"name": "CI/CD", "importance": "medium", "demand": "high"}
+            ],
+            "data scientist": [
+                {"name": "Python", "importance": "high", "demand": "high"},
+                {"name": "Machine Learning", "importance": "high", "demand": "high"},
+                {"name": "SQL", "importance": "high", "demand": "high"},
+                {"name": "Data Visualization", "importance": "medium", "demand": "high"},
+                {"name": "Big Data", "importance": "medium", "demand": "high"}
+            ],
+            "product manager": [
+                {"name": "Agile", "importance": "high", "demand": "high"},
+                {"name": "Product Strategy", "importance": "high", "demand": "high"},
+                {"name": "User Research", "importance": "high", "demand": "medium"},
+                {"name": "Analytics", "importance": "medium", "demand": "high"},
+                {"name": "Roadmapping", "importance": "medium", "demand": "medium"}
+            ]
+        }
+        
+        # Find matching skills
+        recommended_skills = []
+        
+        for title in job_titles:
+            normalized_title = normalize_job_title(title).lower()
+            
+            for role, skills in role_skills.items():
+                if role in normalized_title or normalized_title in role:
+                    for skill in skills:
+                        if skill not in recommended_skills:
+                            recommended_skills.append(skill)
+        
+        return recommended_skills
+    
+    def _get_career_progression_skills(self, job_titles, current_skills):
+        """Get skills needed for career progression"""
+        # This would use more sophisticated techniques in a real system
+        
+        # Define progression skills by role and level
+        progression_skills = {
+            "software engineer": {
+                "entry_to_mid": [
+                    {"name": "System Design", "importance": "high", "demand": "high"},
+                    {"name": "Testing", "importance": "high", "demand": "medium"},
+                    {"name": "CI/CD", "importance": "medium", "demand": "high"}
+                ],
+                "mid_to_senior": [
+                    {"name": "Architecture", "importance": "high", "demand": "high"},
+                    {"name": "Mentoring", "importance": "high", "demand": "medium"},
+                    {"name": "Performance Optimization", "importance": "medium", "demand": "medium"}
+                ],
+                "senior_to_lead": [
+                    {"name": "Project Management", "importance": "high", "demand": "high"},
+                    {"name": "Team Leadership", "importance": "high", "demand": "high"},
+                    {"name": "Technical Strategy", "importance": "high", "demand": "medium"}
+                ]
+            },
+            "data scientist": {
+                "entry_to_mid": [
+                    {"name": "Machine Learning", "importance": "high", "demand": "high"},
+                    {"name": "Data Visualization", "importance": "high", "demand": "high"},
+                    {"name": "Feature Engineering", "importance": "medium", "demand": "high"}
+                ],
+                "mid_to_senior": [
+                    {"name": "Advanced ML", "importance": "high", "demand": "high"},
+                    {"name": "Research", "importance": "high", "demand": "medium"},
+                    {"name": "MLOps", "importance": "medium", "demand": "high"}
+                ],
+                "senior_to_lead": [
+                    {"name": "Team Leadership", "importance": "high", "demand": "high"},
+                    {"name": "Strategic Analysis", "importance": "high", "demand": "medium"},
+                    {"name": "Business Acumen", "importance": "high", "demand": "high"}
+                ]
+            }
+        }
+        
+        # Find matching progression skills
+        recommended_skills = []
+        
+        for title in job_titles:
+            normalized_title = normalize_job_title(title).lower()
+            
+            for role, levels in progression_skills.items():
+                if role in normalized_title or normalized_title in role:
+                    # Choose level based on current skills
+                    level_key = "entry_to_mid"  # Default
+                    
+                    if len(current_skills) >= 10:
+                        level_key = "senior_to_lead"
+                    elif len(current_skills) >= 5:
+                        level_key = "mid_to_senior"
+                    
+                    # Add skills for this level
+                    if level_key in levels:
+                        for skill in levels[level_key]:
+                            if skill not in recommended_skills:
+                                recommended_skills.append(skill)
+        
+        return recommended_skills
+
+
+# Exported functions
+
+@cache_result(expires=3600)  # Cache for 1 hour
+def recommend_jobs(user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+    """
+    Recommend jobs for a user
+    
+    Args:
+        user_id: User ID
+        limit: Maximum number of recommendations
+        
+    Returns:
+        list: Recommended jobs
+    """
+    recommender = JobRecommender()
+    return recommender.recommend_jobs_for_user(user_id, limit)
+
+
+@cache_result(expires=3600)  # Cache for 1 hour
+def recommend_similar_jobs(job_id: str, limit: int = 5) -> List[Dict[str, Any]]:
+    """
+    Recommend similar jobs
+    
+    Args:
+        job_id: Job ID
+        limit: Maximum number of recommendations
+        
+    Returns:
+        list: Similar jobs
+    """
+    recommender = JobRecommender()
+    return recommender.recommend_similar_jobs(job_id, limit)
+
+
+def recommend_job_search_strategy(user_id: str) -> Dict[str, Any]:
+    """
+    Recommend job search strategy for a user
+    
+    Args:
+        user_id: User ID
+        
+    Returns:
+        dict: Strategy recommendations
+    """
+    try:
+        # Import models here to avoid circular imports
+        from backend.database.models import User, UserActivity
+        
+        # Get user
+        users = User.find_by_id(user_id)
+        
+        if not users:
+            logger.error(f"User not found: {user_id}")
+            return {}
+        
+        user = users[0]
+        profile = user.profile
+        
+        # Get user activities
+        activities = UserActivity.find_by_user_id(user_id)
+        
+        # Calculate application metrics
+        application_count = 0
+        response_rate = 0
+        
+        for activity in activities:
+            if activity.activity_type == "job_application":
+                application_count += 1
+            elif activity.activity_type == "application_response":
+                response_rate += 1
+        
+        if application_count > 0:
+            response_rate = (response_rate / application_count) * 100
+        
+        # Generate strategy recommendations
+        strategy = {
+            "application_analysis": {
+                "applications_submitted": application_count,
+                "response_rate": response_rate,
+                "target_rate": 10 if application_count < 10 else application_count + 5
+            },
+            "recommendations": [
+                "Tailor your resume for each application",
+                "Follow up after 1-2 weeks",
+                "Expand your network on professional platforms"
+            ],
+            "resources": [
+                {
+                    "title": "Resume Optimization Guide",
+                    "description": "Learn how to optimize your resume for ATS systems",
+                    "url": "/resources/resume-optimization"
+                },
+                {
+                    "title": "Interview Preparation",
+                    "description": "Prepare for common interview questions",
+                    "url": "/resources/interview-prep"
+                }
+            ]
+        }
+        
+        # Personalize recommendations
+        if application_count < 5:
+            strategy["recommendations"].append("Increase your application volume")
+        elif response_rate < 10:
+            strategy["recommendations"].append("Focus on quality over quantity")
+        
+        if profile and "skills" in profile and len(profile["skills"]) < 5:
+            strategy["recommendations"].append("Add more skills to your profile")
+        
+        # Record activity
+        UserActivity.record_activity(
+            user_id=user_id,
+            activity_type="strategy_recommendation",
+            activity_data={}
+        )
+        
+        return strategy
+    
+    except Exception as e:
+        logger.error(f"Error recommending job search strategy: {str(e)}")
+        return {
+            "recommendations": [
+                "Tailor your resume for each application",
+                "Follow up after 1-2 weeks",
+                "Expand your network on professional platforms"
+            ]
+        }
+
+
+def upskill_recommendations(user_id: str) -> List[Dict[str, Any]]:
+    """
+    Get upskilling recommendations for a user
+    
+    Args:
+        user_id: User ID
+        
+    Returns:
+        list: Upskilling recommendations
+    """
+    try:
+        recommender = JobRecommender()
+        
+        # Import models here to avoid circular imports
+        from backend.database.models import User, UserActivity
+        
+        # Get user
+        users = User.find_by_id(user_id)
+        
+        if not users:
+            logger.error(f"User not found: {user_id}")
+            return []
+        
+        user = users[0]
+        profile = user.profile
+        
+        # Get user skills
+        if profile and "skills" in profile:
+            user_skills = profile["skills"]
+        else:
+            user_skills = []
+        
+        # Get user job titles
+        user_job_titles = []
+        if profile and "experience" in profile:
+            for exp in profile["experience"]:
+                if "title" in exp:
+                    user_job_titles.append(normalize_job_title(exp["title"]))
+        
+        # Get skill recommendations
+        skill_recommendations = recommender.get_personalized_skill_recommendations(user_id)
+        
+        # Create upskill recommendations
+        upskill_recommendations = []
+        
+        for skill in skill_recommendations:
+            # Generate course recommendations for this skill
+            courses = _generate_courses_for_skill(skill["name"])
+            
+            # Add to recommendations
+            upskill_recommendations.append({
+                "skill": skill["name"],
+                "reason": skill["reason"],
+                "courses": courses
+            })
+        
+        # Record activity
+        UserActivity.record_activity(
+            user_id=user_id,
+            activity_type="upskill_recommendation",
+            activity_data={"count": len(upskill_recommendations)}
+        )
+        
+        return upskill_recommendations
+    
+    except Exception as e:
+        logger.error(f"Error getting upskill recommendations: {str(e)}")
+        return []
+
+
+def _generate_courses_for_skill(skill_name: str) -> List[Dict[str, Any]]:
+    """
+    Generate course recommendations for a skill
+    
+    Args:
+        skill_name: Skill name
+        
+    Returns:
+        list: Course recommendations
+    """
+    # This would use an external API or database in a real system
+    # Here we use a simplified approach for demonstration
+    
+    # Define sample courses by skill
+    skill_courses = {
+        "Python": [
+            {
+                "title": "Complete Python Developer",
+                "provider": "Udemy",
+                "level": "Beginner",
+                "url": "https://www.udemy.com/course/complete-python-developer",
+                "duration": "40 hours"
+            },
+            {
+                "title": "Python for Data Science",
+                "provider": "Coursera",
+                "level": "Intermediate",
+                "url": "https://www.coursera.org/learn/python-for-data-science",
+                "duration": "30 hours"
+            }
+        ],
+        "Machine Learning": [
+            {
+                "title": "Machine Learning Specialization",
+                "provider": "Coursera",
+                "level": "Intermediate",
+                "url": "https://www.coursera.org/specializations/machine-learning",
+                "duration": "80 hours"
+            },
+            {
+                "title": "Deep Learning Specialization",
+                "provider": "Coursera",
+                "level": "Advanced",
+                "url": "https://www.coursera.org/specializations/deep-learning",
+                "duration": "120 hours"
+            }
+        ],
+        "JavaScript": [
+            {
+                "title": "Modern JavaScript",
+                "provider": "Udemy",
+                "level": "Beginner",
+                "url": "https://www.udemy.com/course/modern-javascript",
+                "duration": "35 hours"
+            },
+            {
+                "title": "Advanced JavaScript Concepts",
+                "provider": "Udemy",
+                "level": "Advanced",
+                "url": "https://www.udemy.com/course/advanced-javascript-concepts",
+                "duration": "25 hours"
+            }
+        ]
+    }
+    
+    # Generic courses for any skill
+    generic_courses = [
+        {
+            "title": f"Introduction to {skill_name}",
+            "provider": "Udemy",
+            "level": "Beginner",
+            "url": f"https://www.udemy.com/course/introduction-to-{skill_name.lower().replace(' ', '-')}",
+            "duration": "20 hours"
+        },
+        {
+            "title": f"Advanced {skill_name} Techniques",
+            "provider": "Coursera",
+            "level": "Advanced",
+            "url": f"https://www.coursera.org/learn/{skill_name.lower().replace(' ', '-')}-techniques",
+            "duration": "40 hours"
+        }
+    ]
+    
+    # Return courses for this skill or generic courses
+    return skill_courses.get(skill_name, generic_courses)

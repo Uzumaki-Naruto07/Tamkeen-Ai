@@ -1,7 +1,8 @@
 """
 Authentication Utility Module
 
-This module provides utilities for user authentication, authorization, and security.
+This module provides utilities for user authentication, authorization,
+password handling, and security.
 """
 
 import os
@@ -15,6 +16,9 @@ import secrets
 import string
 from typing import Dict, List, Any, Optional, Tuple, Union
 from datetime import datetime, timedelta
+import hmac
+import base64
+import jwt
 
 # Try to import optional dependencies
 try:
@@ -24,10 +28,19 @@ except ImportError:
     BCRYPT_AVAILABLE = False
     logging.warning("bcrypt not installed. Install with: pip install bcrypt")
 
+try:
+    import jwt
+    JWT_AVAILABLE = True
+except ImportError:
+    JWT_AVAILABLE = False
+    logging.warning("PyJWT not installed. Some token functions will be unavailable. Install with: pip install PyJWT")
+
 # Import settings
 from backend.config.settings import (
-    SECRET_KEY, JWT_SECRET_KEY, PASSWORD_MIN_LENGTH, PASSWORD_REQUIRE_UPPERCASE,
-    PASSWORD_REQUIRE_LOWERCASE, PASSWORD_REQUIRE_DIGITS, PASSWORD_REQUIRE_SPECIAL
+    SECRET_KEY, JWT_SECRET_KEY, JWT_ACCESS_TOKEN_EXPIRES, 
+    JWT_REFRESH_TOKEN_EXPIRES, PASSWORD_MIN_LENGTH,
+    PASSWORD_REQUIRE_UPPERCASE, PASSWORD_REQUIRE_LOWERCASE,
+    PASSWORD_REQUIRE_DIGITS, PASSWORD_REQUIRE_SPECIAL
 )
 
 # Import database models
@@ -39,7 +52,7 @@ logger = logging.getLogger(__name__)
 
 def hash_password(password: str) -> str:
     """
-    Hash password using bcrypt or fallback to PBKDF2
+    Hash a password for secure storage
     
     Args:
         password: Plain text password
@@ -47,63 +60,45 @@ def hash_password(password: str) -> str:
     Returns:
         str: Hashed password
     """
-    if BCRYPT_AVAILABLE:
-        # Generate salt and hash with bcrypt
-        salt = bcrypt.gensalt()
-        hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
-        return hashed.decode('utf-8')
-    else:
-        # Fallback to PBKDF2
-        salt = secrets.token_hex(16)
-        iterations = 100000  # High iteration count for security
-        
-        hash_obj = hashlib.pbkdf2_hmac(
-            'sha256',
-            password.encode('utf-8'),
-            salt.encode('utf-8'),
-            iterations
-        )
-        
-        # Format: algorithm$iterations$salt$hash
-        return f"pbkdf2_sha256${iterations}${salt}${hash_obj.hex()}"
+    # In a real application, use a proper password hashing library like bcrypt
+    # For simplicity, we're using hashlib here
+    salt = hashlib.sha256(os.urandom(60)).hexdigest().encode('ascii')
+    pwd_hash = hashlib.pbkdf2_hmac('sha512', password.encode('utf-8'), 
+                                  salt, 100000)
+    pwd_hash = hashlib.sha256(pwd_hash).hexdigest()
+    
+    return (salt + pwd_hash.encode('ascii')).decode('ascii')
 
 
-def verify_password(password: str, hashed_password: str) -> bool:
+def verify_password(stored_password: str, provided_password: str) -> bool:
     """
-    Verify password against hash
+    Verify a password against a stored hash
     
     Args:
-        password: Plain text password
-        hashed_password: Hashed password
+        stored_password: Stored hashed password
+        provided_password: Plain text password to verify
         
     Returns:
-        bool: True if password matches
+        bool: True if password matches, False otherwise
     """
-    if BCRYPT_AVAILABLE and not hashed_password.startswith('pbkdf2_sha256$'):
-        # Verify with bcrypt
-        return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
-    else:
-        # Verify with PBKDF2
-        try:
-            # Parse hash components
-            algorithm, iterations, salt, hash_value = hashed_password.split('$', 3)
-            iterations = int(iterations)
-            
-            # Calculate hash with same parameters
-            hash_obj = hashlib.pbkdf2_hmac(
-                'sha256',
-                password.encode('utf-8'),
-                salt.encode('utf-8'),
-                iterations
-            )
-            
-            return hash_obj.hex() == hash_value
-        except Exception as e:
-            logger.error(f"Password verification error: {str(e)}")
-            return False
+    # In a real application, use a proper password hashing library like bcrypt
+    # For simplicity, we're using hashlib here
+    try:
+        salt = stored_password[:64]
+        stored_hash = stored_password[64:]
+        pwd_hash = hashlib.pbkdf2_hmac('sha512', 
+                                      provided_password.encode('utf-8'), 
+                                      salt.encode('ascii'), 
+                                      100000)
+        pwd_hash = hashlib.sha256(pwd_hash).hexdigest()
+        
+        return pwd_hash == stored_hash
+    except Exception as e:
+        logger.error(f"Error verifying password: {str(e)}")
+        return False
 
 
-def validate_password(password: str) -> Tuple[bool, Optional[str]]:
+def validate_password_strength(password: str) -> Tuple[bool, str]:
     """
     Validate password strength
     
@@ -113,9 +108,6 @@ def validate_password(password: str) -> Tuple[bool, Optional[str]]:
     Returns:
         tuple: (is_valid, error_message)
     """
-    if not password:
-        return False, "Password cannot be empty"
-    
     if len(password) < PASSWORD_MIN_LENGTH:
         return False, f"Password must be at least {PASSWORD_MIN_LENGTH} characters long"
     
@@ -128,12 +120,10 @@ def validate_password(password: str) -> Tuple[bool, Optional[str]]:
     if PASSWORD_REQUIRE_DIGITS and not any(c.isdigit() for c in password):
         return False, "Password must contain at least one digit"
     
-    if PASSWORD_REQUIRE_SPECIAL:
-        special_chars = set(string.punctuation)
-        if not any(c in special_chars for c in password):
-            return False, "Password must contain at least one special character"
+    if PASSWORD_REQUIRE_SPECIAL and not any(c in "!@#$%^&*()-_=+[]{}|;:,.<>?/" for c in password):
+        return False, "Password must contain at least one special character"
     
-    return True, None
+    return True, ""
 
 
 def validate_email(email: str) -> Tuple[bool, Optional[str]]:
@@ -232,7 +222,7 @@ def authenticate_user(email: str, password: str) -> Tuple[bool, Optional[Dict[st
             return False, None
         
         # Verify password
-        if not verify_password(password, user.password):
+        if not verify_password(user.password, password):
             return False, None
         
         # Return user data
@@ -291,4 +281,292 @@ def verify_api_key(api_key: str) -> bool:
         return checksum == expected_checksum
     
     except Exception:
-        return False 
+        return False
+
+
+def generate_token(user_id: str, token_type: str = "access") -> str:
+    """
+    Generate JWT token
+    
+    Args:
+        user_id: User ID
+        token_type: Token type ('access' or 'refresh')
+        
+    Returns:
+        str: JWT token
+    """
+    try:
+        # Set expiration based on token type
+        if token_type == "refresh":
+            expires_delta = JWT_REFRESH_TOKEN_EXPIRES
+        else:
+            expires_delta = JWT_ACCESS_TOKEN_EXPIRES
+        
+        # Create payload
+        payload = {
+            'sub': user_id,
+            'iat': datetime.utcnow(),
+            'exp': datetime.utcnow() + expires_delta,
+            'type': token_type
+        }
+        
+        # Generate token
+        token = jwt.encode(payload, JWT_SECRET_KEY, algorithm='HS256')
+        
+        return token
+        
+    except Exception as e:
+        logger.error(f"Error generating token: {str(e)}")
+        return ""
+
+
+def decode_token(token: str) -> Optional[Dict[str, Any]]:
+    """
+    Decode JWT token
+    
+    Args:
+        token: JWT token
+        
+    Returns:
+        dict: Token payload, or None if invalid
+    """
+    try:
+        # Decode token
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
+        
+        return payload
+        
+    except jwt.ExpiredSignatureError:
+        logger.warning("Token expired")
+        return None
+    except jwt.InvalidTokenError as e:
+        logger.warning(f"Invalid token: {str(e)}")
+        return None
+    except Exception as e:
+        logger.error(f"Error decoding token: {str(e)}")
+        return None
+
+
+def generate_csrf_token() -> str:
+    """
+    Generate CSRF token
+    
+    Returns:
+        str: CSRF token
+    """
+    return secrets.token_urlsafe(32)
+
+
+def validate_csrf_token(session_token: str, request_token: str) -> bool:
+    """
+    Validate CSRF token
+    
+    Args:
+        session_token: Token from session
+        request_token: Token from request
+        
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    return session_token == request_token
+
+
+def get_permissions_for_role(role: str) -> List[str]:
+    """
+    Get permissions for a role
+    
+    Args:
+        role: User role
+        
+    Returns:
+        list: Permissions for the role
+    """
+    # Role-based permissions
+    permissions = {
+        "admin": [
+            "user:read", "user:write", "user:delete",
+            "job:read", "job:write", "job:delete",
+            "resume:read", "resume:write", "resume:delete",
+            "analytics:read", "analytics:write",
+            "settings:read", "settings:write"
+        ],
+        "recruiter": [
+            "user:read", 
+            "job:read", "job:write",
+            "resume:read",
+            "analytics:read"
+        ],
+        "user": [
+            "user:read:self", "user:write:self",
+            "job:read",
+            "resume:read:self", "resume:write:self",
+            "analytics:read:self"
+        ],
+        "guest": [
+            "job:read"
+        ]
+    }
+    
+    return permissions.get(role.lower(), permissions["guest"])
+
+
+def has_permission(user_role: str, required_permission: str) -> bool:
+    """
+    Check if user has a specific permission
+    
+    Args:
+        user_role: User role
+        required_permission: Required permission
+        
+    Returns:
+        bool: True if user has permission, False otherwise
+    """
+    user_permissions = get_permissions_for_role(user_role)
+    
+    # Check for exact permission match
+    if required_permission in user_permissions:
+        return True
+    
+    # Check for wildcard permissions
+    if "*" in user_permissions:
+        return True
+    
+    # Check for resource-level wildcard
+    resource = required_permission.split(":")[0]
+    if f"{resource}:*" in user_permissions:
+        return True
+    
+    return False
+
+
+def generate_reset_token(user_id: str, expires_in_hours: int = 24) -> str:
+    """
+    Generate a password reset token
+    
+    Args:
+        user_id: User ID
+        expires_in_hours: Token expiration in hours
+        
+    Returns:
+        str: Reset token
+    """
+    if JWT_AVAILABLE:
+        # Use JWT for token
+        expiration = datetime.now() + timedelta(hours=expires_in_hours)
+        
+        payload = {
+            "user_id": user_id,
+            "purpose": "password_reset",
+            "exp": expiration.timestamp()
+        }
+        
+        token = jwt.encode(payload, JWT_SECRET_KEY, algorithm="HS256")
+        
+        return token if isinstance(token, str) else token.decode('utf-8')
+    else:
+        # Fallback to simple token with HMAC
+        token_data = f"{user_id}|password_reset|{int((datetime.now() + timedelta(hours=expires_in_hours)).timestamp())}"
+        h = hmac.new(SECRET_KEY.encode('utf-8'), token_data.encode('utf-8'), hashlib.sha256)
+        signature = h.hexdigest()
+        
+        token = base64.urlsafe_b64encode(f"{token_data}|{signature}".encode('utf-8')).decode('utf-8')
+        
+        return token
+
+
+def verify_reset_token(token: str) -> Optional[str]:
+    """
+    Verify a password reset token
+    
+    Args:
+        token: Reset token
+        
+    Returns:
+        Optional[str]: User ID if token is valid, None otherwise
+    """
+    try:
+        if JWT_AVAILABLE:
+            # Decode JWT token
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+            
+            # Verify purpose
+            if payload.get("purpose") != "password_reset":
+                return None
+            
+            # Return user ID
+            return payload.get("user_id")
+        else:
+            # Decode fallback token
+            token_data = base64.urlsafe_b64decode(token.encode('utf-8')).decode('utf-8')
+            parts = token_data.split('|')
+            
+            if len(parts) != 4:
+                return None
+            
+            user_id, purpose, expiry_str, signature = parts
+            
+            # Verify purpose
+            if purpose != "password_reset":
+                return None
+            
+            # Verify expiration
+            expiry = datetime.fromtimestamp(float(expiry_str))
+            if expiry < datetime.now():
+                return None
+            
+            # Verify signature
+            token_content = f"{user_id}|{purpose}|{expiry_str}"
+            h = hmac.new(SECRET_KEY.encode('utf-8'), token_content.encode('utf-8'), hashlib.sha256)
+            expected_signature = h.hexdigest()
+            
+            if signature != expected_signature:
+                return None
+            
+            # Return user ID
+            return user_id
+    
+    except Exception as e:
+        logger.error(f"Error verifying reset token: {str(e)}")
+        return None
+
+
+def generate_verification_token(user_id: str) -> str:
+    """
+    Generate an email verification token
+    
+    Args:
+        user_id: User ID
+        
+    Returns:
+        str: Verification token
+    """
+    # Implementation similar to reset token
+    return generate_reset_token(user_id, expires_in_hours=72)
+
+
+def verify_verification_token(token: str) -> Optional[str]:
+    """
+    Verify an email verification token
+    
+    Args:
+        token: Verification token
+        
+    Returns:
+        Optional[str]: User ID if token is valid, None otherwise
+    """
+    # Implementation similar to reset token verification
+    return verify_reset_token(token)
+
+
+def generate_secure_random_string(length: int = 32) -> str:
+    """
+    Generate a secure random string
+    
+    Args:
+        length: String length
+        
+    Returns:
+        str: Random string
+    """
+    chars = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(chars) for _ in range(length)) 

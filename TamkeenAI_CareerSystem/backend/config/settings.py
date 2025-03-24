@@ -1,337 +1,216 @@
 """
 Settings Module
 
-This module defines the configuration settings for the Tamkeen AI Career Intelligence System.
-Configurations can be overridden by environment variables or environment-specific settings files.
+This module provides configuration settings for the Tamkeen AI Career Intelligence System.
 """
 
 import os
+import json
 import logging
+from typing import Dict, List, Any, Optional, Tuple, Union
+from pathlib import Path
 from datetime import timedelta
 
-# ------------------------------------------------------------------------------
-# Environment and Basic Application Settings
-# ------------------------------------------------------------------------------
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-# Determine environment (development, testing, production)
+# Base directories
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+DATA_DIR = os.path.join(BASE_DIR, "data")
+MODEL_DIR = os.path.join(BASE_DIR, "models")
+TEMP_DIR = os.path.join(BASE_DIR, "temp")
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+
+# Create directories if they don't exist
+for directory in [DATA_DIR, MODEL_DIR, TEMP_DIR, UPLOAD_DIR]:
+    os.makedirs(directory, exist_ok=True)
+
+# Environment
 ENV = os.environ.get("TAMKEEN_ENV", "development")
+DEBUG = ENV == "development"
 
-# Basic application information
+# Application
 APP_NAME = "Tamkeen AI Career Intelligence System"
 APP_VERSION = "1.0.0"
-DEBUG = ENV == "development"
-TESTING = ENV == "testing"
+API_VERSION = "v1"
+API_PREFIX = f"/api/{API_VERSION}"
 
-# API settings
-API_PREFIX = "/api/v1"
-API_RATE_LIMIT = os.environ.get("API_RATE_LIMIT", "200 per minute")
+# Server
+HOST = os.environ.get("TAMKEEN_HOST", "0.0.0.0")
+PORT = int(os.environ.get("TAMKEEN_PORT", 5000))
 
-# Host and port settings
-HOST = os.environ.get("HOST", "0.0.0.0")
-PORT = int(os.environ.get("PORT", 5000))
-
-# ------------------------------------------------------------------------------
-# Security Settings
-# ------------------------------------------------------------------------------
-
-# Secret keys (should be overridden in production by environment variables)
-SECRET_KEY = os.environ.get("SECRET_KEY", "tamkeen-dev-secret-key-change-in-production")
-JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "tamkeen-jwt-dev-key-change-in-production")
-
-# JWT settings
+# Security
+SECRET_KEY = os.environ.get("TAMKEEN_SECRET_KEY", "tamkeen-dev-secret-key")
+JWT_SECRET_KEY = os.environ.get("TAMKEEN_JWT_SECRET_KEY", SECRET_KEY)
 JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
 JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
-JWT_TOKEN_LOCATION = ["headers"]
-JWT_HEADER_NAME = "Authorization"
-JWT_HEADER_TYPE = "Bearer"
-
-# CORS settings
-CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*").split(",")
-CORS_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-CORS_ALLOW_HEADERS = ["Content-Type", "Authorization"]
-
-# Password policy
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_REQUIRE_UPPERCASE = True
 PASSWORD_REQUIRE_LOWERCASE = True
 PASSWORD_REQUIRE_DIGITS = True
 PASSWORD_REQUIRE_SPECIAL = True
 
-# ------------------------------------------------------------------------------
-# Database Settings
-# ------------------------------------------------------------------------------
-
-# Database type: sqlite, mysql, postgresql, mongodb
-DB_TYPE = os.environ.get("DB_TYPE", "sqlite")
-
-# Database configurations for different types
+# Database
+DB_TYPE = os.environ.get("TAMKEEN_DB_TYPE", "sqlite")
 DB_CONFIG = {
     "sqlite": {
-        "path": os.environ.get("SQLITE_PATH", "data/tamkeen.db")
+        "db_file": os.environ.get("TAMKEEN_SQLITE_FILE", os.path.join(DATA_DIR, "tamkeen.db"))
     },
     "mysql": {
-        "host": os.environ.get("MYSQL_HOST", "localhost"),
-        "port": int(os.environ.get("MYSQL_PORT", 3306)),
-        "user": os.environ.get("MYSQL_USER", "tamkeen"),
-        "password": os.environ.get("MYSQL_PASSWORD", "tamkeen"),
-        "database": os.environ.get("MYSQL_DATABASE", "tamkeen"),
-        "charset": os.environ.get("MYSQL_CHARSET", "utf8mb4")
+        "host": os.environ.get("TAMKEEN_MYSQL_HOST", "localhost"),
+        "port": int(os.environ.get("TAMKEEN_MYSQL_PORT", 3306)),
+        "user": os.environ.get("TAMKEEN_MYSQL_USER", "tamkeen"),
+        "password": os.environ.get("TAMKEEN_MYSQL_PASSWORD", "tamkeen"),
+        "database": os.environ.get("TAMKEEN_MYSQL_DATABASE", "tamkeen")
     },
     "postgresql": {
-        "host": os.environ.get("POSTGRES_HOST", "localhost"),
-        "port": int(os.environ.get("POSTGRES_PORT", 5432)),
-        "user": os.environ.get("POSTGRES_USER", "tamkeen"),
-        "password": os.environ.get("POSTGRES_PASSWORD", "tamkeen"),
-        "database": os.environ.get("POSTGRES_DATABASE", "tamkeen"),
-        "sslmode": os.environ.get("POSTGRES_SSL_MODE", "prefer")
+        "host": os.environ.get("TAMKEEN_PG_HOST", "localhost"),
+        "port": int(os.environ.get("TAMKEEN_PG_PORT", 5432)),
+        "user": os.environ.get("TAMKEEN_PG_USER", "tamkeen"),
+        "password": os.environ.get("TAMKEEN_PG_PASSWORD", "tamkeen"),
+        "database": os.environ.get("TAMKEEN_PG_DATABASE", "tamkeen")
     },
     "mongodb": {
-        "uri": os.environ.get("MONGO_URI", "mongodb://localhost:27017/tamkeen"),
-        "db_name": os.environ.get("MONGO_DB_NAME", "tamkeen"),
-        "auth_source": os.environ.get("MONGO_AUTH_SOURCE", "admin"),
-        "connect_timeout_ms": int(os.environ.get("MONGO_CONNECT_TIMEOUT_MS", 30000))
+        "uri": os.environ.get("TAMKEEN_MONGO_URI", "mongodb://localhost:27017"),
+        "database": os.environ.get("TAMKEEN_MONGO_DATABASE", "tamkeen")
     }
 }
 
-# Connection pool settings
-DB_POOL_SIZE = int(os.environ.get("DB_POOL_SIZE", 5))
-DB_MAX_OVERFLOW = int(os.environ.get("DB_MAX_OVERFLOW", 10))
-DB_POOL_TIMEOUT = int(os.environ.get("DB_POOL_TIMEOUT", 30))
-DB_POOL_RECYCLE = int(os.environ.get("DB_POOL_RECYCLE", 3600))
-
-# ------------------------------------------------------------------------------
-# File Upload Settings
-# ------------------------------------------------------------------------------
-
-# Upload paths and limits
-UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", os.path.join(os.getcwd(), "uploads"))
-MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", 16 * 1024 * 1024))  # 16 MB default
-
-# Allowed file extensions by type
-ALLOWED_EXTENSIONS = {
-    "resume": {"pdf", "doc", "docx", "txt", "rtf", "odt"},
-    "image": {"png", "jpg", "jpeg", "gif", "webp"},
-    "document": {"pdf", "doc", "docx", "txt", "rtf", "odt", "xlsx", "xls", "pptx", "ppt"}
-}
-
-# File storage configuration
-STORAGE_TYPE = os.environ.get("STORAGE_TYPE", "local")  # local, s3, azure
-STORAGE_CONFIG = {
-    "s3": {
-        "bucket": os.environ.get("S3_BUCKET", "tamkeen-uploads"),
-        "region": os.environ.get("S3_REGION", "us-east-1"),
-        "access_key": os.environ.get("S3_ACCESS_KEY", ""),
-        "secret_key": os.environ.get("S3_SECRET_KEY", ""),
-        "endpoint_url": os.environ.get("S3_ENDPOINT_URL", None)
-    },
-    "azure": {
-        "connection_string": os.environ.get("AZURE_STORAGE_CONNECTION_STRING", ""),
-        "container": os.environ.get("AZURE_STORAGE_CONTAINER", "tamkeen-uploads")
-    }
-}
-
-# ------------------------------------------------------------------------------
-# AI Model Settings
-# ------------------------------------------------------------------------------
-
-# AI models configuration
-AI_CONFIG = {
-    "use_nlp": os.environ.get("USE_NLP", "True").lower() in ["true", "1", "yes", "t"],
-    "use_ml": os.environ.get("USE_ML", "True").lower() in ["true", "1", "yes", "t"],
-    "models_path": os.environ.get("MODELS_PATH", os.path.join(os.getcwd(), "models")),
-    "language_models": ["en", "ar", "fr"],
-    "similarity_threshold": float(os.environ.get("SIMILARITY_THRESHOLD", 0.75)),
-    "max_tokens": int(os.environ.get("MAX_TOKENS", 2048)),
-    "skill_extraction_confidence": float(os.environ.get("SKILL_EXTRACTION_CONFIDENCE", 0.7)),
-    "skill_embedding_dimension": int(os.environ.get("SKILL_EMBEDDING_DIMENSION", 100))
-}
-
-# NLP libraries availability
-try:
-    import spacy
-    SPACY_AVAILABLE = True
-except ImportError:
-    SPACY_AVAILABLE = False
-
-try:
-    import nltk
-    NLTK_AVAILABLE = True
-except ImportError:
-    NLTK_AVAILABLE = False
-
-# ------------------------------------------------------------------------------
-# Logging Configuration
-# ------------------------------------------------------------------------------
-
-# Log levels and directories
-LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
-LOG_DIR = os.environ.get("LOG_DIR", "logs")
-os.makedirs(LOG_DIR, exist_ok=True)
-
-# Log file paths
-LOG_FILE = os.path.join(LOG_DIR, "tamkeen.log")
-ERROR_LOG_FILE = os.path.join(LOG_DIR, "error.log")
-ACCESS_LOG_FILE = os.path.join(LOG_DIR, "access.log")
-
-# Logging configuration dictionary
-LOG_CONFIG = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "default": {
-            "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
-        },
-        "detailed": {
-            "format": "%(asctime)s | %(levelname)s | %(name)s | %(module)s | %(funcName)s:%(lineno)d | %(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-        },
-        "access": {
-            "format": "%(asctime)s | %(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-        }
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "level": "INFO",
-            "formatter": "default",
-            "stream": "ext://sys.stdout",
-        },
-        "file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "level": LOG_LEVEL,
-            "formatter": "detailed",
-            "filename": LOG_FILE,
-            "maxBytes": 10485760,  # 10 MB
-            "backupCount": 5,
-            "encoding": "utf8",
-        },
-        "error_file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "level": "ERROR",
-            "formatter": "detailed",
-            "filename": ERROR_LOG_FILE,
-            "maxBytes": 10485760,  # 10 MB
-            "backupCount": 5,
-            "encoding": "utf8",
-        },
-        "access_file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "level": "INFO",
-            "formatter": "access",
-            "filename": ACCESS_LOG_FILE,
-            "maxBytes": 10485760,  # 10 MB
-            "backupCount": 5,
-            "encoding": "utf8",
-        }
-    },
-    "loggers": {
-        "": {  # Root logger
-            "level": LOG_LEVEL,
-            "handlers": ["console", "file", "error_file"],
-            "propagate": True,
-        },
-        "tamkeen": {
-            "level": LOG_LEVEL,
-            "handlers": ["console", "file", "error_file"],
-            "propagate": False,
-        },
-        "tamkeen.api": {
-            "level": LOG_LEVEL,
-            "handlers": ["console", "file", "error_file"],
-            "propagate": False,
-        },
-        "tamkeen.database": {
-            "level": LOG_LEVEL,
-            "handlers": ["file", "error_file"],
-            "propagate": False,
-        },
-        "tamkeen.access": {
-            "level": "INFO",
-            "handlers": ["access_file"],
-            "propagate": False,
-        }
-    }
-}
-
-# ------------------------------------------------------------------------------
-# Feature Flags
-# ------------------------------------------------------------------------------
-
-# Feature toggles
-FEATURES = {
-    "job_recommendations": os.environ.get("FEATURE_JOB_RECOMMENDATIONS", "True").lower() in ["true", "1", "yes", "t"],
-    "career_assessments": os.environ.get("FEATURE_CAREER_ASSESSMENTS", "True").lower() in ["true", "1", "yes", "t"],
-    "resume_parsing": os.environ.get("FEATURE_RESUME_PARSING", "True").lower() in ["true", "1", "yes", "t"],
-    "skills_gap_analysis": os.environ.get("FEATURE_SKILLS_GAP_ANALYSIS", "True").lower() in ["true", "1", "yes", "t"],
-    "multilingual_support": os.environ.get("FEATURE_MULTILINGUAL", "True").lower() in ["true", "1", "yes", "t"],
-    "job_market_insights": os.environ.get("FEATURE_JOB_MARKET_INSIGHTS", "True").lower() in ["true", "1", "yes", "t"],
-    "ai_interview_prep": os.environ.get("FEATURE_AI_INTERVIEW_PREP", "False").lower() in ["true", "1", "yes", "t"],
-    "resume_builder": os.environ.get("FEATURE_RESUME_BUILDER", "False").lower() in ["true", "1", "yes", "t"],
-    "mentor_matching": os.environ.get("FEATURE_MENTOR_MATCHING", "False").lower() in ["true", "1", "yes", "t"]
-}
-
-# ------------------------------------------------------------------------------
 # External APIs
-# ------------------------------------------------------------------------------
-
-# Job market API settings
-JOB_MARKET_API = {
-    "enabled": os.environ.get("JOB_MARKET_API_ENABLED", "False").lower() in ["true", "1", "yes", "t"],
-    "url": os.environ.get("JOB_MARKET_API_URL", ""),
-    "api_key": os.environ.get("JOB_MARKET_API_KEY", ""),
-    "timeout": int(os.environ.get("JOB_MARKET_API_TIMEOUT", 30)),
-    "cache_ttl": int(os.environ.get("JOB_MARKET_API_CACHE_TTL", 3600))  # Cache for 1 hour
+EXTERNAL_APIS = {
+    "job_market": {
+        "enabled": os.environ.get("TAMKEEN_JOB_MARKET_API_ENABLED", "0") == "1",
+        "url": os.environ.get("TAMKEEN_JOB_MARKET_API_URL", ""),
+        "key": os.environ.get("TAMKEEN_JOB_MARKET_API_KEY", "")
+    },
+    "skills": {
+        "enabled": os.environ.get("TAMKEEN_SKILLS_API_ENABLED", "0") == "1",
+        "url": os.environ.get("TAMKEEN_SKILLS_API_URL", ""),
+        "key": os.environ.get("TAMKEEN_SKILLS_API_KEY", "")
+    },
+    "learning": {
+        "enabled": os.environ.get("TAMKEEN_LEARNING_API_ENABLED", "0") == "1",
+        "url": os.environ.get("TAMKEEN_LEARNING_API_URL", ""),
+        "key": os.environ.get("TAMKEEN_LEARNING_API_KEY", "")
+    }
 }
 
-# Skills API settings
-SKILLS_API = {
-    "enabled": os.environ.get("SKILLS_API_ENABLED", "False").lower() in ["true", "1", "yes", "t"],
-    "url": os.environ.get("SKILLS_API_URL", ""),
-    "api_key": os.environ.get("SKILLS_API_KEY", ""),
-    "timeout": int(os.environ.get("SKILLS_API_TIMEOUT", 30)),
-    "cache_ttl": int(os.environ.get("SKILLS_API_CACHE_TTL", 86400))  # Cache for 1 day
+# Feature flags
+FEATURES = {
+    "job_market_insights": os.environ.get("TAMKEEN_FEATURE_JOB_MARKET", "1") == "1",
+    "resume_parsing": os.environ.get("TAMKEEN_FEATURE_RESUME_PARSING", "1") == "1",
+    "job_matching": os.environ.get("TAMKEEN_FEATURE_JOB_MATCHING", "1") == "1",
+    "career_planning": os.environ.get("TAMKEEN_FEATURE_CAREER_PLANNING", "1") == "1",
+    "learning_recommendations": os.environ.get("TAMKEEN_FEATURE_LEARNING", "1") == "1",
+    "email_notifications": os.environ.get("TAMKEEN_FEATURE_EMAIL", "1") == "1"
 }
 
-# ------------------------------------------------------------------------------
-# Email Settings
-# ------------------------------------------------------------------------------
-
-# Email configuration
+# Email settings
 EMAIL_CONFIG = {
-    "enabled": os.environ.get("EMAIL_ENABLED", "False").lower() in ["true", "1", "yes", "t"],
-    "smtp_server": os.environ.get("SMTP_SERVER", "smtp.example.com"),
-    "smtp_port": int(os.environ.get("SMTP_PORT", 587)),
-    "smtp_user": os.environ.get("SMTP_USER", ""),
-    "smtp_password": os.environ.get("SMTP_PASSWORD", ""),
-    "from_email": os.environ.get("FROM_EMAIL", "noreply@tamkeen.ai"),
-    "from_name": os.environ.get("FROM_NAME", "Tamkeen AI"),
-    "use_tls": os.environ.get("SMTP_USE_TLS", "True").lower() in ["true", "1", "yes", "t"],
-    "use_ssl": os.environ.get("SMTP_USE_SSL", "False").lower() in ["true", "1", "yes", "t"],
-    "template_dir": os.environ.get("EMAIL_TEMPLATE_DIR", os.path.join(os.getcwd(), "templates/email"))
+    "enabled": FEATURES.get("email_notifications", False),
+    "server": os.environ.get("TAMKEEN_EMAIL_SERVER", ""),
+    "port": int(os.environ.get("TAMKEEN_EMAIL_PORT", 587)),
+    "username": os.environ.get("TAMKEEN_EMAIL_USERNAME", ""),
+    "password": os.environ.get("TAMKEEN_EMAIL_PASSWORD", ""),
+    "use_tls": os.environ.get("TAMKEEN_EMAIL_TLS", "1") == "1",
+    "from_email": os.environ.get("TAMKEEN_EMAIL_FROM", "noreply@tamkeen.ai"),
+    "from_name": os.environ.get("TAMKEEN_EMAIL_FROM_NAME", "Tamkeen AI")
 }
 
-# ------------------------------------------------------------------------------
-# Caching Settings
-# ------------------------------------------------------------------------------
+# Model paths
+MODEL_PATHS = {
+    "nlp": os.path.join(MODEL_DIR, "nlp"),
+    "skills": os.path.join(MODEL_DIR, "skills"),
+    "matching": os.path.join(MODEL_DIR, "matching"),
+    "data": os.path.join(DATA_DIR, "reference")
+}
 
-# Cache configuration
-CACHE_TYPE = os.environ.get("CACHE_TYPE", "simple")  # simple, redis, memcached
-CACHE_DEFAULT_TIMEOUT = int(os.environ.get("CACHE_DEFAULT_TIMEOUT", 300))  # 5 minutes
+# Resume parser configuration
+PARSER_CONFIG = {
+    "use_spacy": True,
+    "min_skill_confidence": 0.7,
+    "supported_file_types": ["pdf", "docx", "txt", "rtf", "odt"],
+    "max_file_size_mb": 10,
+    "extract_contact_info": True,
+    "extract_education": True,
+    "extract_experience": True,
+    "extract_skills": True,
+    "extract_projects": True,
+    "extract_certifications": True,
+    "extract_languages": True
+}
 
-# Redis cache configuration
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
-REDIS_DB = int(os.environ.get("REDIS_DB", 0))
-REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
+# Job matching configuration
+MATCHING_CONFIG = {
+    "skill_weight": 0.5,
+    "education_weight": 0.15,
+    "experience_weight": 0.25,
+    "location_weight": 0.1,
+    "min_match_score": 0.6,
+    "use_semantic_matching": True,
+    "consider_skill_level": True,
+    "consider_recency": True
+}
 
-# ------------------------------------------------------------------------------
+# Job recommender configuration
+RECOMMENDER_CONFIG = {
+    "weights": {
+        "skill_match": 0.4,
+        "experience_match": 0.15,
+        "education_match": 0.1,
+        "location_match": 0.15,
+        "industry_match": 0.1,
+        "user_behavior": 0.1
+    },
+    "similarity_threshold": 0.6,
+    "max_collaborative_jobs": 1000,
+    "career_paths_file": os.path.join(DATA_DIR, "reference", "career_paths.json"),
+    "default_career_paths": [
+        {
+            "name": "Software Development",
+            "jobs": [
+                {"title": "Junior Developer", "level": "entry", "years": "0-2"},
+                {"title": "Software Developer", "level": "mid", "years": "2-5"},
+                {"title": "Senior Developer", "level": "senior", "years": "5-8"},
+                {"title": "Tech Lead", "level": "senior", "years": "8-12"},
+                {"title": "Software Architect", "level": "lead", "years": "10+"},
+                {"title": "CTO", "level": "executive", "years": "15+"}
+            ]
+        },
+        {
+            "name": "Data Science",
+            "jobs": [
+                {"title": "Data Analyst", "level": "entry", "years": "0-2"},
+                {"title": "Junior Data Scientist", "level": "junior", "years": "1-3"},
+                {"title": "Data Scientist", "level": "mid", "years": "3-6"},
+                {"title": "Senior Data Scientist", "level": "senior", "years": "6-10"},
+                {"title": "Lead Data Scientist", "level": "lead", "years": "8+"},
+                {"title": "Chief Data Officer", "level": "executive", "years": "15+"}
+            ]
+        }
+    ]
+}
+
 # Load environment-specific settings
-# ------------------------------------------------------------------------------
-
-# Load settings based on environment
-env_settings_file = os.path.join(os.path.dirname(__file__), f"{ENV}_settings.py")
-if os.path.exists(env_settings_file):
-    with open(env_settings_file) as f:
-        exec(f.read())
+ENV_SETTINGS_FILE = os.path.join(BASE_DIR, "backend", "config", f"{ENV}.json")
+if os.path.exists(ENV_SETTINGS_FILE):
+    try:
+        with open(ENV_SETTINGS_FILE, "r") as f:
+            env_settings = json.load(f)
+            
+            # Update settings from environment file
+            for key, value in env_settings.items():
+                if isinstance(value, dict) and key in globals() and isinstance(globals()[key], dict):
+                    # Merge dictionaries
+                    globals()[key].update(value)
+                else:
+                    # Set value
+                    globals()[key] = value
+                    
+        logger.info(f"Loaded environment settings from {ENV_SETTINGS_FILE}")
+    except Exception as e:
+        logger.error(f"Error loading environment settings: {str(e)}")

@@ -1,8 +1,8 @@
 """
 Database Connector Module
 
-This module provides a unified interface for connecting to different database systems
-and performing database operations.
+This module provides database connection and interaction functionality
+for the Tamkeen AI Career System.
 """
 
 import os
@@ -13,32 +13,13 @@ from typing import Dict, List, Any, Optional, Tuple, Union
 from datetime import datetime
 
 # Import settings
-from backend.config.settings import DB_TYPE, DB_CONFIG
+from backend.config.settings import DB_CONFIG, DB_TYPE
 
 # Setup logger
 logger = logging.getLogger(__name__)
 
-# Try to import optional dependencies
-try:
-    import mysql.connector
-    MYSQL_AVAILABLE = True
-except ImportError:
-    MYSQL_AVAILABLE = False
-    logger.warning("MySQL Connector not installed. Install with: pip install mysql-connector-python")
-
-try:
-    import psycopg2
-    POSTGRESQL_AVAILABLE = True
-except ImportError:
-    POSTGRESQL_AVAILABLE = False
-    logger.warning("psycopg2 not installed. Install with: pip install psycopg2-binary")
-
-try:
-    import pymongo
-    MONGODB_AVAILABLE = True
-except ImportError:
-    MONGODB_AVAILABLE = False
-    logger.warning("pymongo not installed. Install with: pip install pymongo")
+# Database connection
+_db_connection = None
 
 
 class DatabaseError(Exception):
@@ -46,294 +27,257 @@ class DatabaseError(Exception):
     pass
 
 
-class Database:
-    """Database interface class"""
+def get_db():
+    """
+    Get database connection
     
-    def __init__(self, db_type: str, config: Dict[str, Any]):
-        """
-        Initialize database connection
-        
-        Args:
-            db_type: Database type (sqlite, mysql, postgresql, mongodb)
-            config: Database configuration
-        """
-        self.db_type = db_type.lower()
-        self.config = config
+    Returns:
+        Database: Database connection
+    """
+    global _db_connection
+    
+    if _db_connection is None:
+        _db_connection = Database()
+    
+    return _db_connection
+
+
+class Database:
+    """Database interface"""
+    
+    def __init__(self):
+        """Initialize database connection"""
         self.connection = None
-        self.is_connected = False
-        
-        # Attempt to connect
         self.connect()
     
-    def connect(self) -> bool:
-        """
-        Connect to database
-        
-        Returns:
-            bool: Connection success
-        """
+    def connect(self):
+        """Connect to database"""
         try:
-            if self.db_type == 'sqlite':
-                db_path = self.config.get('path', 'tamkeen.db')
-                
-                # Ensure directory exists
-                os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
-                
-                self.connection = sqlite3.connect(db_path, check_same_thread=False)
+            if DB_TYPE == 'sqlite':
+                db_file = DB_CONFIG.get('db_file', 'database.db')
+                self.connection = sqlite3.connect(db_file, check_same_thread=False)
                 self.connection.row_factory = sqlite3.Row
                 
                 # Enable foreign keys
-                self.connection.execute("PRAGMA foreign_keys = ON")
-                
-                self.is_connected = True
-                logger.info(f"Connected to SQLite database: {db_path}")
-            
-            elif self.db_type == 'mysql':
-                if not MYSQL_AVAILABLE:
-                    raise DatabaseError("MySQL connector not installed")
-                
-                self.connection = mysql.connector.connect(
-                    host=self.config.get('host', 'localhost'),
-                    port=self.config.get('port', 3306),
-                    user=self.config.get('user', 'root'),
-                    password=self.config.get('password', ''),
-                    database=self.config.get('database', 'tamkeen')
-                )
-                
-                self.is_connected = True
-                logger.info(f"Connected to MySQL database: {self.config.get('host')}/{self.config.get('database')}")
-            
-            elif self.db_type == 'postgresql':
-                if not POSTGRESQL_AVAILABLE:
-                    raise DatabaseError("PostgreSQL connector not installed")
-                
-                self.connection = psycopg2.connect(
-                    host=self.config.get('host', 'localhost'),
-                    port=self.config.get('port', 5432),
-                    user=self.config.get('user', 'postgres'),
-                    password=self.config.get('password', ''),
-                    dbname=self.config.get('database', 'tamkeen')
-                )
-                
-                self.is_connected = True
-                logger.info(f"Connected to PostgreSQL database: {self.config.get('host')}/{self.config.get('database')}")
-            
-            elif self.db_type == 'mongodb':
-                if not MONGODB_AVAILABLE:
-                    raise DatabaseError("MongoDB connector not installed")
-                
-                client = pymongo.MongoClient(
-                    host=self.config.get('host', 'localhost'),
-                    port=self.config.get('port', 27017),
-                    username=self.config.get('user', None),
-                    password=self.config.get('password', None)
-                )
-                
-                self.connection = client[self.config.get('database', 'tamkeen')]
-                
-                self.is_connected = True
-                logger.info(f"Connected to MongoDB database: {self.config.get('host')}/{self.config.get('database')}")
-            
+                self.connection.execute('PRAGMA foreign_keys = ON')
             else:
-                raise DatabaseError(f"Unsupported database type: {self.db_type}")
+                raise DatabaseError(f"Unsupported database type: {DB_TYPE}")
+            
+            # Create tables if they don't exist
+            self._create_tables()
             
             return True
-        
         except Exception as e:
-            logger.error(f"Database connection error: {str(e)}")
-            self.is_connected = False
+            logger.error(f"Error connecting to database: {str(e)}")
+            raise DatabaseError(f"Error connecting to database: {str(e)}")
+    
+    def close(self):
+        """Close database connection"""
+        if self.connection:
+            self.connection.close()
             self.connection = None
-            return False
     
-    def disconnect(self) -> bool:
-        """
-        Disconnect from database
-        
-        Returns:
-            bool: Success status
-        """
-        if not self.is_connected or self.connection is None:
-            return True
-        
+    def _create_tables(self):
+        """Create database tables if they don't exist"""
         try:
-            if self.db_type in ['sqlite', 'mysql', 'postgresql']:
-                self.connection.close()
-            elif self.db_type == 'mongodb':
-                self.connection.client.close()
+            # Define tables
+            tables = [
+                # Users table
+                """
+                CREATE TABLE IF NOT EXISTS users (
+                    id TEXT PRIMARY KEY,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    role TEXT DEFAULT 'user',
+                    status TEXT DEFAULT 'active',
+                    profile TEXT,
+                    settings TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """,
+                
+                # User activity table
+                """
+                CREATE TABLE IF NOT EXISTS user_activity (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    activity_type TEXT NOT NULL,
+                    activity_data TEXT,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+                """,
+                
+                # Resumes table
+                """
+                CREATE TABLE IF NOT EXISTS resumes (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    filename TEXT NOT NULL,
+                    content TEXT,
+                    parsed_data TEXT,
+                    status TEXT DEFAULT 'pending',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+                """,
+                
+                # Jobs table
+                """
+                CREATE TABLE IF NOT EXISTS jobs (
+                    id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    company TEXT NOT NULL,
+                    location TEXT,
+                    description TEXT,
+                    requirements TEXT,
+                    responsibilities TEXT,
+                    skills TEXT,
+                    salary_range TEXT,
+                    job_type TEXT,
+                    status TEXT DEFAULT 'active',
+                    external_id TEXT,
+                    external_url TEXT,
+                    source TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """,
+                
+                # Job applications table
+                """
+                CREATE TABLE IF NOT EXISTS job_applications (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    job_id TEXT NOT NULL,
+                    resume_id TEXT,
+                    status TEXT DEFAULT 'applied',
+                    application_data TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users (id),
+                    FOREIGN KEY (job_id) REFERENCES jobs (id),
+                    FOREIGN KEY (resume_id) REFERENCES resumes (id)
+                )
+                """,
+                
+                # Job bookmarks table
+                """
+                CREATE TABLE IF NOT EXISTS job_bookmarks (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    job_id TEXT NOT NULL,
+                    notes TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users (id),
+                    FOREIGN KEY (job_id) REFERENCES jobs (id)
+                )
+                """,
+                
+                # Career paths table
+                """
+                CREATE TABLE IF NOT EXISTS career_paths (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    path_data TEXT NOT NULL,
+                    status TEXT DEFAULT 'active',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+                """,
+                
+                # Skills table
+                """
+                CREATE TABLE IF NOT EXISTS skills (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    category TEXT,
+                    type TEXT,
+                    description TEXT,
+                    related_skills TEXT,
+                    status TEXT DEFAULT 'active',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """,
+                
+                # User skills table
+                """
+                CREATE TABLE IF NOT EXISTS user_skills (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    skill_id TEXT NOT NULL,
+                    proficiency_level TEXT,
+                    experience_years REAL,
+                    last_used TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users (id),
+                    FOREIGN KEY (skill_id) REFERENCES skills (id)
+                )
+                """,
+                
+                # Job market data table
+                """
+                CREATE TABLE IF NOT EXISTS job_market_data (
+                    id TEXT PRIMARY KEY,
+                    data_type TEXT NOT NULL,
+                    location TEXT,
+                    industry TEXT,
+                    data_value TEXT,
+                    source TEXT,
+                    timestamp TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """,
+                
+                # Job market queries table
+                """
+                CREATE TABLE IF NOT EXISTS job_market_queries (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT,
+                    query_type TEXT NOT NULL,
+                    query_params TEXT,
+                    results_summary TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+                """,
+                
+                # Cache table
+                """
+                CREATE TABLE IF NOT EXISTS cache (
+                    cache_key TEXT PRIMARY KEY,
+                    data_value TEXT,
+                    expiry TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            ]
             
-            self.is_connected = False
-            self.connection = None
+            # Create each table
+            cursor = self.connection.cursor()
+            for table in tables:
+                cursor.execute(table)
             
-            logger.info(f"Disconnected from {self.db_type} database")
-            return True
-        
+            self.connection.commit()
+            cursor.close()
+            
         except Exception as e:
-            logger.error(f"Database disconnection error: {str(e)}")
-            return False
+            logger.error(f"Error creating tables: {str(e)}")
+            raise DatabaseError(f"Error creating tables: {str(e)}")
     
-    def reconnect(self) -> bool:
+    def execute(self, query, params=None):
         """
-        Reconnect to database
-        
-        Returns:
-            bool: Success status
-        """
-        self.disconnect()
-        return self.connect()
-    
-    def execute(self, query: str, params: Optional[Tuple] = None) -> bool:
-        """
-        Execute a query
-        
-        Args:
-            query: SQL query
-            params: Query parameters
-            
-        Returns:
-            bool: Success status
-        """
-        if not self.is_connected:
-            if not self.reconnect():
-                raise DatabaseError("Database not connected")
-        
-        try:
-            if self.db_type == 'sqlite':
-                cursor = self.connection.cursor()
-                if params:
-                    cursor.execute(query, params)
-                else:
-                    cursor.execute(query)
-                self.connection.commit()
-                cursor.close()
-                return True
-            
-            elif self.db_type == 'mysql':
-                cursor = self.connection.cursor()
-                if params:
-                    cursor.execute(query, params)
-                else:
-                    cursor.execute(query)
-                self.connection.commit()
-                cursor.close()
-                return True
-            
-            elif self.db_type == 'postgresql':
-                cursor = self.connection.cursor()
-                if params:
-                    cursor.execute(query, params)
-                else:
-                    cursor.execute(query)
-                self.connection.commit()
-                cursor.close()
-                return True
-            
-            elif self.db_type == 'mongodb':
-                # MongoDB queries are handled differently
-                raise DatabaseError("Use appropriate MongoDB methods for queries")
-            
-            return False
-        
-        except Exception as e:
-            logger.error(f"Query execution error: {str(e)}")
-            logger.error(f"Query: {query}")
-            logger.error(f"Params: {params}")
-            
-            # Try to reconnect on connection errors
-            if "not connected" in str(e).lower() or "connection" in str(e).lower():
-                self.reconnect()
-            
-            raise DatabaseError(f"Query error: {str(e)}")
-    
-    def fetch_one(self, query: str, params: Optional[Tuple] = None) -> Dict[str, Any]:
-        """
-        Fetch a single row
-        
-        Args:
-            query: SQL query
-            params: Query parameters
-            
-        Returns:
-            dict: Query result
-        """
-        if not self.is_connected:
-            if not self.reconnect():
-                raise DatabaseError("Database not connected")
-        
-        try:
-            if self.db_type == 'sqlite':
-                cursor = self.connection.cursor()
-                if params:
-                    cursor.execute(query, params)
-                else:
-                    cursor.execute(query)
-                
-                row = cursor.fetchone()
-                cursor.close()
-                
-                if row:
-                    return dict(row)
-                return {}
-            
-            elif self.db_type == 'mysql':
-                cursor = self.connection.cursor(dictionary=True)
-                if params:
-                    cursor.execute(query, params)
-                else:
-                    cursor.execute(query)
-                
-                row = cursor.fetchone()
-                cursor.close()
-                
-                if row:
-                    return dict(row)
-                return {}
-            
-            elif self.db_type == 'postgresql':
-                cursor = self.connection.cursor()
-                if params:
-                    cursor.execute(query, params)
-                else:
-                    cursor.execute(query)
-                
-                columns = [desc[0] for desc in cursor.description]
-                row = cursor.fetchone()
-                cursor.close()
-                
-                if row:
-                    return dict(zip(columns, row))
-                return {}
-            
-            elif self.db_type == 'mongodb':
-                # Parse collection and filter from query
-                # This is a simplified approach for demonstration
-                parts = query.split('.')
-                if len(parts) >= 2:
-                    collection = parts[0].strip()
-                    method = parts[1].strip()
-                    
-                    if method == 'find_one':
-                        result = self.connection[collection].find_one(params or {})
-                        if result:
-                            return dict(result)
-                
-                return {}
-            
-            return {}
-        
-        except Exception as e:
-            logger.error(f"Query execution error: {str(e)}")
-            logger.error(f"Query: {query}")
-            logger.error(f"Params: {params}")
-            
-            # Try to reconnect on connection errors
-            if "not connected" in str(e).lower() or "connection" in str(e).lower():
-                self.reconnect()
-            
-            raise DatabaseError(f"Query error: {str(e)}")
-    
-    def fetch_all(self, query: str, params: Optional[Tuple] = None) -> List[Dict[str, Any]]:
-        """
-        Fetch all rows
+        Execute SQL query
         
         Args:
             query: SQL query
@@ -342,332 +286,170 @@ class Database:
         Returns:
             list: Query results
         """
-        if not self.is_connected:
-            if not self.reconnect():
-                raise DatabaseError("Database not connected")
-        
         try:
-            if self.db_type == 'sqlite':
-                cursor = self.connection.cursor()
-                if params:
-                    cursor.execute(query, params)
-                else:
-                    cursor.execute(query)
-                
-                rows = cursor.fetchall()
+            if not self.connection:
+                self.connect()
+            
+            cursor = self.connection.cursor()
+            
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            
+            if query.strip().upper().startswith(('SELECT', 'PRAGMA')):
+                # Fetch results for SELECT queries
+                results = [dict(row) for row in cursor.fetchall()]
                 cursor.close()
-                
-                return [dict(row) for row in rows]
-            
-            elif self.db_type == 'mysql':
-                cursor = self.connection.cursor(dictionary=True)
-                if params:
-                    cursor.execute(query, params)
-                else:
-                    cursor.execute(query)
-                
-                rows = cursor.fetchall()
+                return results
+            else:
+                # Commit for non-SELECT queries
+                self.connection.commit()
+                last_id = cursor.lastrowid
                 cursor.close()
-                
-                return [dict(row) for row in rows]
+                return last_id
             
-            elif self.db_type == 'postgresql':
-                cursor = self.connection.cursor()
-                if params:
-                    cursor.execute(query, params)
-                else:
-                    cursor.execute(query)
-                
-                columns = [desc[0] for desc in cursor.description]
-                rows = cursor.fetchall()
-                cursor.close()
-                
-                return [dict(zip(columns, row)) for row in rows]
-            
-            elif self.db_type == 'mongodb':
-                # Parse collection and filter from query
-                # This is a simplified approach for demonstration
-                parts = query.split('.')
-                if len(parts) >= 2:
-                    collection = parts[0].strip()
-                    method = parts[1].strip()
-                    
-                    if method == 'find':
-                        results = self.connection[collection].find(params or {})
-                        return [dict(result) for result in results]
-                
-                return []
-            
-            return []
-        
         except Exception as e:
-            logger.error(f"Query execution error: {str(e)}")
-            logger.error(f"Query: {query}")
-            logger.error(f"Params: {params}")
-            
-            # Try to reconnect on connection errors
-            if "not connected" in str(e).lower() or "connection" in str(e).lower():
-                self.reconnect()
-            
-            raise DatabaseError(f"Query error: {str(e)}")
+            logger.error(f"Error executing query: {str(e)}")
+            raise DatabaseError(f"Error executing query: {str(e)}")
     
-    def insert(self, table: str, data: Dict[str, Any]) -> bool:
+    def find(self, table, conditions=None, limit=None, order_by=None):
         """
-        Insert data into table
+        Find records in table
         
         Args:
             table: Table name
-            data: Data to insert
+            conditions: Optional conditions dict
+            limit: Optional result limit
+            order_by: Optional sort field and direction
             
         Returns:
-            bool: Success status
+            list: Query results
         """
-        if not self.is_connected:
-            if not self.reconnect():
-                raise DatabaseError("Database not connected")
-        
         try:
-            if self.db_type in ['sqlite', 'mysql', 'postgresql']:
-                columns = list(data.keys())
-                values = list(data.values())
-                
-                placeholders = ', '.join(['?' for _ in columns])
-                
-                if self.db_type == 'postgresql':
-                    placeholders = ', '.join(['%s' for _ in columns])
-                
-                columns_str = ', '.join(columns)
-                
-                query = f"INSERT INTO {table} ({columns_str}) VALUES ({placeholders})"
-                
-                return self.execute(query, tuple(values))
+            query = f"SELECT * FROM {table}"
+            params = []
             
-            elif self.db_type == 'mongodb':
-                result = self.connection[table].insert_one(data)
-                return result.acknowledged
+            # Add conditions
+            if conditions:
+                where_clauses = []
+                for key, value in conditions.items():
+                    where_clauses.append(f"{key} = ?")
+                    params.append(value)
+                
+                if where_clauses:
+                    query += " WHERE " + " AND ".join(where_clauses)
             
-            return False
-        
+            # Add order by
+            if order_by:
+                query += f" ORDER BY {order_by}"
+            
+            # Add limit
+            if limit:
+                query += f" LIMIT {int(limit)}"
+            
+            # Execute query
+            return self.execute(query, params)
+            
         except Exception as e:
-            logger.error(f"Insert error: {str(e)}")
-            logger.error(f"Table: {table}")
-            logger.error(f"Data: {data}")
-            
-            # Try to reconnect on connection errors
-            if "not connected" in str(e).lower() or "connection" in str(e).lower():
-                self.reconnect()
-            
-            raise DatabaseError(f"Insert error: {str(e)}")
+            logger.error(f"Error finding records: {str(e)}")
+            raise DatabaseError(f"Error finding records: {str(e)}")
     
-    def update(self, table: str, data: Dict[str, Any], 
-               condition: str, condition_params: Tuple) -> bool:
+    def find_by_id(self, table, id_value, id_field='id'):
         """
-        Update data in table
+        Find record by ID
         
         Args:
             table: Table name
-            data: Data to update
-            condition: WHERE condition
-            condition_params: Condition parameters
+            id_value: ID value
+            id_field: ID field name
             
         Returns:
-            bool: Success status
+            dict: Record or None
         """
-        if not self.is_connected:
-            if not self.reconnect():
-                raise DatabaseError("Database not connected")
-        
         try:
-            if self.db_type in ['sqlite', 'mysql', 'postgresql']:
-                set_clause = ', '.join([f"{key} = ?" for key in data.keys()])
-                
-                if self.db_type == 'postgresql':
-                    set_clause = ', '.join([f"{key} = %s" for key in data.keys()])
-                
-                query = f"UPDATE {table} SET {set_clause} WHERE {condition}"
-                
-                params = tuple(list(data.values()) + list(condition_params))
-                
-                return self.execute(query, params)
+            results = self.find(table, {id_field: id_value}, 1)
+            if results:
+                return results[0]
+            return None
             
-            elif self.db_type == 'mongodb':
-                # Parse condition to MongoDB filter
-                # This is a simplified approach
-                filter_dict = {}
-                for i, param in enumerate(condition_params):
-                    filter_dict[f"param{i}"] = param
-                
-                result = self.connection[table].update_one(filter_dict, {"$set": data})
-                return result.acknowledged
-            
-            return False
-        
         except Exception as e:
-            logger.error(f"Update error: {str(e)}")
-            logger.error(f"Table: {table}")
-            logger.error(f"Data: {data}")
-            logger.error(f"Condition: {condition}")
-            logger.error(f"Params: {condition_params}")
-            
-            # Try to reconnect on connection errors
-            if "not connected" in str(e).lower() or "connection" in str(e).lower():
-                self.reconnect()
-            
-            raise DatabaseError(f"Update error: {str(e)}")
+            logger.error(f"Error finding record by ID: {str(e)}")
+            raise DatabaseError(f"Error finding record by ID: {str(e)}")
     
-    def delete(self, table: str, condition: str, condition_params: Tuple) -> bool:
+    def insert(self, table, data):
         """
-        Delete data from table
+        Insert record
         
         Args:
             table: Table name
-            condition: WHERE condition
-            condition_params: Condition parameters
+            data: Record data
+            
+        Returns:
+            int: Last row ID
+        """
+        try:
+            # Build query
+            fields = ', '.join(data.keys())
+            placeholders = ', '.join(['?'] * len(data))
+            query = f"INSERT INTO {table} ({fields}) VALUES ({placeholders})"
+            
+            # Execute query
+            return self.execute(query, list(data.values()))
+            
+        except Exception as e:
+            logger.error(f"Error inserting record: {str(e)}")
+            raise DatabaseError(f"Error inserting record: {str(e)}")
+    
+    def update(self, table, id_value, data, id_field='id'):
+        """
+        Update record
+        
+        Args:
+            table: Table name
+            id_value: ID value
+            data: Record data
+            id_field: ID field name
             
         Returns:
             bool: Success status
         """
-        if not self.is_connected:
-            if not self.reconnect():
-                raise DatabaseError("Database not connected")
-        
         try:
-            if self.db_type in ['sqlite', 'mysql', 'postgresql']:
-                query = f"DELETE FROM {table} WHERE {condition}"
-                
-                return self.execute(query, condition_params)
+            # Build query
+            set_clause = ', '.join([f"{key} = ?" for key in data.keys()])
+            query = f"UPDATE {table} SET {set_clause} WHERE {id_field} = ?"
             
-            elif self.db_type == 'mongodb':
-                # Parse condition to MongoDB filter
-                # This is a simplified approach
-                filter_dict = {}
-                for i, param in enumerate(condition_params):
-                    filter_dict[f"param{i}"] = param
-                
-                result = self.connection[table].delete_one(filter_dict)
-                return result.acknowledged
+            # Execute query
+            params = list(data.values()) + [id_value]
+            self.execute(query, params)
             
-            return False
-        
+            return True
+            
         except Exception as e:
-            logger.error(f"Delete error: {str(e)}")
-            logger.error(f"Table: {table}")
-            logger.error(f"Condition: {condition}")
-            logger.error(f"Params: {condition_params}")
-            
-            # Try to reconnect on connection errors
-            if "not connected" in str(e).lower() or "connection" in str(e).lower():
-                self.reconnect()
-            
-            raise DatabaseError(f"Delete error: {str(e)}")
+            logger.error(f"Error updating record: {str(e)}")
+            raise DatabaseError(f"Error updating record: {str(e)}")
     
-    def create_tables(self) -> bool:
+    def delete(self, table, id_value, id_field='id'):
         """
-        Create database tables
+        Delete record
         
+        Args:
+            table: Table name
+            id_value: ID value
+            id_field: ID field name
+            
         Returns:
             bool: Success status
         """
-        if not self.is_connected:
-            if not self.reconnect():
-                raise DatabaseError("Database not connected")
-        
         try:
-            if self.db_type == 'sqlite':
-                with open(os.path.join(os.path.dirname(__file__), 'schema_sqlite.sql'), 'r') as f:
-                    schema = f.read()
-                    
-                    # Split schema into individual statements
-                    statements = schema.split(';')
-                    
-                    for statement in statements:
-                        statement = statement.strip()
-                        if statement:
-                            self.execute(statement)
-                
-                return True
+            # Build query
+            query = f"DELETE FROM {table} WHERE {id_field} = ?"
             
-            elif self.db_type == 'mysql':
-                with open(os.path.join(os.path.dirname(__file__), 'schema_mysql.sql'), 'r') as f:
-                    schema = f.read()
-                    
-                    # Split schema into individual statements
-                    statements = schema.split(';')
-                    
-                    for statement in statements:
-                        statement = statement.strip()
-                        if statement:
-                            self.execute(statement)
-                
-                return True
+            # Execute query
+            self.execute(query, [id_value])
             
-            elif self.db_type == 'postgresql':
-                with open(os.path.join(os.path.dirname(__file__), 'schema_postgresql.sql'), 'r') as f:
-                    schema = f.read()
-                    
-                    # Split schema into individual statements
-                    statements = schema.split(';')
-                    
-                    for statement in statements:
-                        statement = statement.strip()
-                        if statement:
-                            self.execute(statement)
-                
-                return True
+            return True
             
-            elif self.db_type == 'mongodb':
-                # MongoDB doesn't require schema creation in the same way
-                # But we can create indexes or validate collections
-                return True
-            
-            return False
-        
         except Exception as e:
-            logger.error(f"Create tables error: {str(e)}")
-            return False
-
-
-# Database instance
-_db = None
-
-def get_db() -> Database:
-    """
-    Get database instance
-    
-    Returns:
-        Database: Database instance
-    """
-    global _db
-    
-    if _db is None:
-        _db = Database(DB_TYPE, DB_CONFIG[DB_TYPE])
-    
-    return _db
-
-
-def close_db() -> bool:
-    """
-    Close database connection
-    
-    Returns:
-        bool: Success status
-    """
-    global _db
-    
-    if _db is not None:
-        success = _db.disconnect()
-        _db = None
-        return success
-    
-    return True
-
-
-def initialize_db() -> bool:
-    """
-    Initialize database (create tables)
-    
-    Returns:
-        bool: Success status
-    """
-    db = get_db()
-    return db.create_tables() 
+            logger.error(f"Error deleting record: {str(e)}")
+            raise DatabaseError(f"Error deleting record: {str(e)}") 
