@@ -83,3 +83,16 @@ requests==2.31.0
 
 # Utility packages
 python-dateutil==2.8.2
+
+# Speech-related dependencies
+gTTS==2.3.1
+PyAudio==0.2.13  # Required for microphone input with SpeechRecognition
+
+# For emotion detection
+tensorflow>=2.10.0
+opencv-python>=4.7.0
+pillow>=9.4.0
+kagglehub>=0.1.0
+matplotlib>=3.7.0
+pandas>=1.5.3
+numpy>=1.22.0
