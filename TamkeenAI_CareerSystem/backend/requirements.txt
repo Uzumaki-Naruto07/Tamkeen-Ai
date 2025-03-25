@@ -10,5 +10,5 @@ spacy
 nltk
 pydantic
 fastapi
-sqlalchemy
 jsonschema==4.21.1
+sqlalchemy==2.0.28
