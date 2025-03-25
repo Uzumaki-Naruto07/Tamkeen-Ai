@@ -24,15 +24,10 @@ except ImportError:
     SOUNDFILE_AVAILABLE = False
 
 try:
-    from speechrecognition import AudioData
-    from speechrecognition import Recognizer
+    import speech_recognition as sr
     SPEECHRECOGNITION_AVAILABLE = True
 except ImportError:
-    try:
-        import speech_recognition as sr
-        SPEECHRECOGNITION_AVAILABLE = True
-    except ImportError:
-        SPEECHRECOGNITION_AVAILABLE = False
+    SPEECHRECOGNITION_AVAILABLE = False
 
 try:
     import tensorflow as tf
@@ -95,7 +90,7 @@ class VoiceEmotionAnalyzer:
                 if 'sr' in locals():
                     self.recognizer = sr.Recognizer()
                 else:
-                    self.recognizer = Recognizer()
+                    self.recognizer = sr.Recognizer()
             except Exception as e:
                 print(f"WARNING: Failed to initialize speech recognition: {str(e)}")
                 self.recognizer = None

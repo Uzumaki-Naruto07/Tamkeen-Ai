@@ -18,13 +18,13 @@ except ImportError:
 try:
     import pdfkit
     PDFKIT_AVAILABLE = True
-except ImportError:
+except (ImportError, ModuleNotFoundError):
     PDFKIT_AVAILABLE = False
 
 try:
     import weasyprint
     WEASYPRINT_AVAILABLE = True
-except ImportError:
+except (ImportError, ModuleNotFoundError):
     WEASYPRINT_AVAILABLE = False
 
 try:
@@ -352,7 +352,7 @@ class ResumeBuilder:
             elif output_format == "pdf":
                 # Generate PDF from HTML
                 html_content = self._generate_html_resume(processed_data, template_id)
-                pdf_created = self._generate_pdf(html_content, filename)
+                pdf_created = self._generate_pdf_from_html(html_content, filename)
                 
                 if pdf_created:
                     result["success"] = True
@@ -588,50 +588,43 @@ class ResumeBuilder:
         
         return "\n".join(html)
     
-    def _generate_pdf(self, html_content: str, output_file: str) -> bool:
-        """Generate PDF from HTML content"""
-        if not html_content:
-            return False
-            
-        # Determine which PDF engine to use
-        if self.pdf_engine == "weasyprint" or (self.pdf_engine == "auto" and WEASYPRINT_AVAILABLE):
-            try:
-                if WEASYPRINT_AVAILABLE:
-                    import weasyprint
-                    weasyprint.HTML(string=html_content).write_pdf(output_file)
-                    return True
-                else:
-                    self.logger.error("WeasyPrint not available")
-                    return False
-            except Exception as e:
-                self.logger.error(f"Error generating PDF with WeasyPrint: {str(e)}")
-                return False
-                
-        elif self.pdf_engine == "pdfkit" or (self.pdf_engine == "auto" and PDFKIT_AVAILABLE):
-            try:
-                if PDFKIT_AVAILABLE:
-                    import pdfkit
-                    # Use wkhtmltopdf options for better rendering
-                    options = {
-                        'page-size': 'Letter',
-                        'margin-top': '0.75in',
-                        'margin-right': '0.75in',
-                        'margin-bottom': '0.75in',
-                        'margin-left': '0.75in',
-                        'encoding': 'UTF-8',
-                        'no-outline': None,
-                        'enable-local-file-access': None
-                    }
-                    pdfkit.from_string(html_content, output_file, options=options)
-                    return True
-                else:
-                    self.logger.error("PDFKit not available")
-                    return False
-            except Exception as e:
-                self.logger.error(f"Error generating PDF with PDFKit: {str(e)}")
-                return False
+    def _generate_pdf_from_html(self, html_content: str, output_file: str) -> bool:
+        """Generate PDF from HTML content using available libraries"""
         
-        self.logger.error("No PDF generation engine available")
+        # Try WeasyPrint first (usually better rendering)
+        if WEASYPRINT_AVAILABLE:
+            try:
+                from weasyprint import HTML
+                HTML(string=html_content).write_pdf(output_file)
+                self.logger.info(f"PDF generated with WeasyPrint: {output_file}")
+                return True
+            except Exception as e:
+                self.logger.warning(f"WeasyPrint PDF generation failed: {str(e)}")
+                # Fall through to pdfkit
+        
+        # Try pdfkit as fallback
+        if PDFKIT_AVAILABLE:
+            try:
+                import pdfkit
+                # Use wkhtmltopdf options for better rendering
+                options = {
+                    'page-size': 'Letter',
+                    'margin-top': '0.75in',
+                    'margin-right': '0.75in',
+                    'margin-bottom': '0.75in',
+                    'margin-left': '0.75in',
+                    'encoding': 'UTF-8',
+                    'no-outline': None,
+                    'enable-local-file-access': None
+                }
+                pdfkit.from_string(html_content, output_file, options=options)
+                self.logger.info(f"PDF generated with pdfkit: {output_file}")
+                return True
+            except Exception as e:
+                self.logger.error(f"pdfkit PDF generation failed: {str(e)}")
+        
+        # If we got here, both methods failed
+        self.logger.error("PDF generation failed: Neither WeasyPrint nor pdfkit were able to generate the PDF")
         return False
     
     def _generate_docx_resume(self, resume_data: Dict[str, Any], template_id: str, output_file: str) -> bool:
