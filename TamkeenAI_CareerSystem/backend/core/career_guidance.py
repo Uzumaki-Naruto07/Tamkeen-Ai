@@ -18,6 +18,9 @@ from .keyword_recommender import KeywordRecommender
 # Import settings
 from config.settings import BASE_DIR
 
+# Import utils
+from ..utils.preprocess import extract_keywords
+
 # Define paths for career data
 CAREER_DATA_DIR = os.path.join(BASE_DIR, 'data', 'careers')
 SALARY_DATA_DIR = os.path.join(CAREER_DATA_DIR, 'salary')

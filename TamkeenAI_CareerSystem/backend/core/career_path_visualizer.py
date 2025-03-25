@@ -18,6 +18,9 @@ from .career_guidance import CareerGuidance
 # Import settings
 from config.settings import BASE_DIR, DEFAULT_CHART_COLORS
 
+# Add NumPy import to fix the "np is not defined" errors
+import numpy as np
+
 # Try importing visualization libraries
 try:
     import networkx as nx

@@ -998,3 +998,45 @@ def extract_entities(text: str) -> Dict[str, List[str]]:
             "dates": [],
             "education": []
         }
+
+
+def extract_keywords(text: str, max_keywords: int = 10, min_word_length: int = 3) -> List[str]:
+    """
+    Extract important keywords from text by removing stopwords and sorting by frequency
+    
+    Args:
+        text: Input text to extract keywords from
+        max_keywords: Maximum number of keywords to return
+        min_word_length: Minimum length of words to consider
+        
+    Returns:
+        List of extracted keywords
+    """
+    if not text:
+        return []
+        
+    # Convert to lowercase and tokenize
+    tokens = word_tokenize(text.lower())
+    
+    # Remove stopwords, punctuation, and short words
+    stop_words = set(stopwords.words('english'))
+    filtered_tokens = [
+        token for token in tokens 
+        if token not in stop_words 
+        and token.isalnum() 
+        and len(token) >= min_word_length
+    ]
+    
+    # Count word frequencies
+    word_freq = {}
+    for token in filtered_tokens:
+        if token in word_freq:
+            word_freq[token] += 1
+        else:
+            word_freq[token] = 1
+    
+    # Sort by frequency
+    sorted_keywords = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)
+    
+    # Return top keywords
+    return [keyword for keyword, _ in sorted_keywords[:max_keywords]]
