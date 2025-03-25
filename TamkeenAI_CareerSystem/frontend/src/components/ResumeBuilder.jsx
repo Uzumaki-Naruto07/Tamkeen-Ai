@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -27,7 +27,24 @@ import {
   Alert,
   Tooltip,
   Tab,
-  Tabs
+  Tabs,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  CardMedia,
+  Menu,
+  FormControl,
+  InputLabel,
+  Select,
+  FormHelperText,
+  FormGroup,
+  FormControlLabel,
+  Switch,
+  InputAdornment,
+  Slider,
+  Rating,
+  Autocomplete
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -51,35 +68,58 @@ import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import DateRangeIcon from '@mui/icons-material/DateRange';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import PublishIcon from '@mui/icons-material/Publish';
+import SettingsIcon from '@mui/icons-material/Settings';
+import TuneIcon from '@mui/icons-material/Tune';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import FormatBoldIcon from '@mui/icons-material/FormatBold';
+import FormatItalicIcon from '@mui/icons-material/FormatItalic';
+import FormatUnderlinedIcon from '@mui/icons-material/FormatUnderlined';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import ColorLensIcon from '@mui/icons-material/ColorLens';
 
-const ResumeBuilder = ({ 
-  initialData = null, 
-  onSave, 
-  onPreview, 
-  onGenerate, 
+const ResumeBuilder = ({
+  initialData = null,
+  templates = [],
+  onSave,
   onExport,
-  loading = false 
+  onAnalyze,
+  loading = false
 }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [formData, setFormData] = useState({
     personal: {
-      name: '',
+      firstName: '',
+      lastName: '',
       title: '',
       email: '',
       phone: '',
       location: '',
-      summary: '',
+      website: '',
       linkedin: '',
       github: '',
-      website: ''
+      summary: ''
     },
     experience: [],
     education: [],
-    skills: [],
+    skills: {
+      technical: [],
+      soft: []
+    },
     projects: [],
     certifications: [],
     languages: [],
-    achievements: []
+    interests: []
   });
   const [currentExperience, setCurrentExperience] = useState({
     company: '',
@@ -120,12 +160,42 @@ const ResumeBuilder = ({
   const [errors, setErrors] = useState({});
   const [suggestions, setSuggestions] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState(templates[0]?.id || 'modern');
+  const [showPreview, setShowPreview] = useState(false);
+  const [editMode, setEditMode] = useState({
+    section: null,
+    itemIndex: null
+  });
+  const [previewScale, setPreviewScale] = useState(0.6);
+  const [viewMode, setViewMode] = useState('edit'); // 'edit', 'preview', 'analyze'
+  const [showAISuggestions, setShowAISuggestions] = useState(false);
+  const [analyzeResults, setAnalyzeResults] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState({
+    template: false,
+    export: false,
+    settings: false,
+    confirmation: false
+  });
+  const [exportFormat, setExportFormat] = useState('pdf');
+  const [showSkillLevel, setShowSkillLevel] = useState(true);
+  const [colorScheme, setColorScheme] = useState('default');
+  const [fontFamily, setFontFamily] = useState('Roboto');
+  const [customSections, setCustomSections] = useState([]);
+  const [customSectionName, setCustomSectionName] = useState('');
+  
+  const previewContainerRef = useRef(null);
 
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
     }
   }, [initialData]);
+
+  useEffect(() => {
+    if (templates.length > 0 && !selectedTemplate) {
+      setSelectedTemplate(templates[0].id);
+    }
+  }, [templates, selectedTemplate]);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -146,7 +216,10 @@ const ResumeBuilder = ({
     if (skillInput.trim()) {
       setFormData(prev => ({
         ...prev,
-        skills: [...prev.skills, skillInput.trim()]
+        skills: {
+          ...prev.skills,
+          technical: [...prev.skills.technical, skillInput.trim()]
+        }
       }));
       setSkillInput('');
     }
@@ -155,7 +228,10 @@ const ResumeBuilder = ({
   const removeSkill = (index) => {
     setFormData(prev => ({
       ...prev,
-      skills: prev.skills.filter((_, i) => i !== index)
+      skills: {
+        ...prev.skills,
+        technical: prev.skills.technical.filter((_, i) => i !== index)
+      }
     }));
   };
 
@@ -235,7 +311,6 @@ const ResumeBuilder = ({
   };
 
   const saveExperience = () => {
-    // Basic validation
     const newErrors = {};
     if (!currentExperience.company) newErrors.company = 'Company is required';
     if (!currentExperience.position) newErrors.position = 'Position is required';
@@ -285,7 +360,6 @@ const ResumeBuilder = ({
   };
 
   const saveEducation = () => {
-    // Basic validation
     const newErrors = {};
     if (!currentEducation.institution) newErrors.institution = 'Institution is required';
     if (!currentEducation.degree) newErrors.degree = 'Degree is required';
@@ -332,7 +406,6 @@ const ResumeBuilder = ({
   };
 
   const saveProject = () => {
-    // Basic validation
     const newErrors = {};
     if (!currentProject.name) newErrors.name = 'Project name is required';
     if (!currentProject.description) newErrors.description = 'Description is required';
@@ -378,10 +451,10 @@ const ResumeBuilder = ({
   };
 
   const handleSave = () => {
-    // Validate required fields
     const newErrors = {};
-    if (!formData.personal.name) newErrors.name = 'Name is required';
-    if (!formData.personal.email) newErrors.email = 'Email is required';
+    if (!formData.personal.firstName || !formData.personal.lastName || !formData.personal.email || !formData.personal.phone || !formData.personal.location) {
+      newErrors.requiredFields = 'All fields are required';
+    }
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -396,21 +469,97 @@ const ResumeBuilder = ({
   };
 
   const handleGenerate = () => {
-    if (onGenerate) {
-      onGenerate(formData);
+    if (onAnalyze) {
+      onAnalyze(formData);
     }
   };
 
   const handlePreview = () => {
-    if (onPreview) {
-      onPreview(formData);
+    if (onSave) {
+      onSave(formData);
     }
   };
 
   const handleExport = () => {
     if (onExport) {
-      onExport(formData);
+      onExport(formData, selectedTemplate, exportFormat);
     }
+  };
+
+  const openDialog = (dialogName) => {
+    setDialogOpen({
+      ...dialogOpen,
+      [dialogName]: true
+    });
+  };
+
+  const closeDialog = (dialogName) => {
+    setDialogOpen({
+      ...dialogOpen,
+      [dialogName]: false
+    });
+  };
+
+  const handleInputChange = (section, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleAddItem = (section, newItem) => {
+    setFormData(prev => ({
+      ...prev,
+      [section]: [...prev[section], newItem]
+    }));
+    setEditMode({ section: null, itemIndex: null });
+  };
+
+  const handleUpdateItem = (section, index, updatedItem) => {
+    const newArray = [...formData[section]];
+    newArray[index] = updatedItem;
+    setFormData(prev => ({
+      ...prev,
+      [section]: newArray
+    }));
+    setEditMode({ section: null, itemIndex: null });
+  };
+
+  const handleDeleteItem = (section, index) => {
+    const newArray = [...formData[section]];
+    newArray.splice(index, 1);
+    setFormData(prev => ({
+      ...prev,
+      [section]: newArray
+    }));
+  };
+
+  const handleAddSkill = (category, skill) => {
+    if (!skill.trim()) return;
+    
+    setFormData(prev => ({
+      ...prev,
+      skills: {
+        ...prev.skills,
+        [category]: [...prev.skills[category], { name: skill, level: 3 }]
+      }
+    }));
+  };
+
+  const handleSkillLevelChange = (category, index, level) => {
+    const newSkills = [...formData.skills[category]];
+    newSkills[index] = { ...newSkills[index], level };
+    
+    setFormData(prev => ({
+      ...prev,
+      skills: {
+        ...prev.skills,
+        [category]: newSkills
+      }
+    }));
   };
 
   return (
@@ -479,804 +628,209 @@ const ResumeBuilder = ({
         )}
 
         <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
-          <Tab label="Personal" icon={<AlternateEmailIcon />} iconPosition="start" />
-          <Tab label="Experience" icon={<WorkIcon />} iconPosition="start" />
-          <Tab label="Education" icon={<SchoolIcon />} iconPosition="start" />
-          <Tab label="Skills" icon={<CodeIcon />} iconPosition="start" />
-          <Tab label="Projects" icon={<AttachFileIcon />} iconPosition="start" />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <PersonIcon sx={{ mr: 1 }} />
+                <Typography>Personal Info</Typography>
+              </Box>
+            }
+          />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <WorkIcon sx={{ mr: 1 }} />
+                <Typography>Experience</Typography>
+              </Box>
+            }
+          />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <SchoolIcon sx={{ mr: 1 }} />
+                <Typography>Education</Typography>
+              </Box>
+            }
+          />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <CodeIcon sx={{ mr: 1 }} />
+                <Typography>Skills</Typography>
+              </Box>
+            }
+          />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <AttachFileIcon sx={{ mr: 1 }} />
+                <Typography>Projects</Typography>
+              </Box>
+            }
+          />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <CheckCircleIcon sx={{ mr: 1 }} />
+                <Typography>Additional Info</Typography>
+              </Box>
+            }
+          />
         </Tabs>
 
-        {/* Personal Information Tab */}
-        {activeTab === 0 && (
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Full Name"
-                name="name"
-                value={formData.personal.name}
-                onChange={handlePersonalChange}
-                error={!!errors.name}
-                helperText={errors.name}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Professional Title"
-                name="title"
-                value={formData.personal.title}
-                onChange={handlePersonalChange}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Email"
-                name="email"
-                value={formData.personal.email}
-                onChange={handlePersonalChange}
-                error={!!errors.email}
-                helperText={errors.email}
-                margin="normal"
-                InputProps={{
-                  startAdornment: <AlternateEmailIcon color="action" sx={{ mr: 1 }} />
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Phone"
-                name="phone"
-                value={formData.personal.phone}
-                onChange={handlePersonalChange}
-                margin="normal"
-                InputProps={{
-                  startAdornment: <PhoneIcon color="action" sx={{ mr: 1 }} />
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Location"
-                name="location"
-                value={formData.personal.location}
-                onChange={handlePersonalChange}
-                margin="normal"
-                InputProps={{
-                  startAdornment: <LocationOnIcon color="action" sx={{ mr: 1 }} />
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="LinkedIn Profile"
-                name="linkedin"
-                value={formData.personal.linkedin}
-                onChange={handlePersonalChange}
-                margin="normal"
-                InputProps={{
-                  startAdornment: <LinkedInIcon color="action" sx={{ mr: 1 }} />
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="GitHub Profile"
-                name="github"
-                value={formData.personal.github}
-                onChange={handlePersonalChange}
-                margin="normal"
-                InputProps={{
-                  startAdornment: <GitHubIcon color="action" sx={{ mr: 1 }} />
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Professional Summary"
-                name="summary"
-                value={formData.personal.summary}
-                onChange={handlePersonalChange}
-                margin="normal"
-                multiline
-                rows={4}
-              />
-            </Grid>
-          </Grid>
-        )}
-
-        {/* Work Experience Tab */}
-        {activeTab === 1 && (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Work Experience</Typography>
-              <Button 
-                startIcon={<AddIcon />} 
-                onClick={() => openExperienceDialog()}
-                variant="outlined"
-              >
-                Add Experience
-              </Button>
-            </Box>
-            
-            {formData.experience.length === 0 ? (
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                No work experience added yet. Click the button above to add your work history.
-              </Typography>
-            ) : (
-              formData.experience.map((exp, index) => (
-                <Card key={index} variant="outlined" sx={{ mb: 2 }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <Box>
-                        <Typography variant="h6">{exp.position}</Typography>
-                        <Typography variant="subtitle1">{exp.company}</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {exp.location} • {exp.startDate} - {exp.current ? 'Present' : exp.endDate}
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <IconButton size="small" onClick={() => openExperienceDialog(index)}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => removeExperience(index)}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    </Box>
-                    
-                    {exp.description && (
-                      <Typography variant="body2" sx={{ mt: 2 }}>
-                        {exp.description}
-                      </Typography>
-                    )}
-                    
-                    {exp.highlights.length > 0 && (
-                      <Box sx={{ mt: 1 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          Key Achievements:
-                        </Typography>
-                        <Box component="ul" sx={{ pl: 2, mb: 0 }}>
-                          {exp.highlights.map((highlight, idx) => (
-                            <Box component="li" key={idx} sx={{ mb: 0.5 }}>
-                              <Typography variant="body2">{highlight}</Typography>
-                            </Box>
-                          ))}
-                        </Box>
-                      </Box>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </Box>
-        )}
-
-        {/* Education Tab */}
-        {activeTab === 2 && (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Education</Typography>
-              <Button 
-                startIcon={<AddIcon />} 
-                onClick={() => openEducationDialog()}
-                variant="outlined"
-              >
-                Add Education
-              </Button>
-            </Box>
-            
-            {formData.education.length === 0 ? (
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                No education history added yet. Click the button above to add your educational background.
-              </Typography>
-            ) : (
-              formData.education.map((edu, index) => (
-                <Card key={index} variant="outlined" sx={{ mb: 2 }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <Box>
-                        <Typography variant="h6">{edu.institution}</Typography>
-                        <Typography variant="subtitle1">
-                          {edu.degree} {edu.field && `in ${edu.field}`}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {edu.location && `${edu.location} • `}{edu.startDate} - {edu.endDate}
-                          {edu.gpa && ` • GPA: ${edu.gpa}`}
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <IconButton size="small" onClick={() => openEducationDialog(index)}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => removeEducation(index)}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    </Box>
-                    
-                    {edu.courses.length > 0 && (
-                      <Box sx={{ mt: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          Relevant Courses:
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                          {edu.courses.map((course, idx) => (
-                            <Chip key={idx} label={course} size="small" />
-                          ))}
-                        </Box>
-                      </Box>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </Box>
-        )}
-
-        {/* Skills Tab */}
-        {activeTab === 3 && (
-          <Box>
-            <Typography variant="h6" gutterBottom>Skills</Typography>
-            
-            <Box sx={{ mb: 3, display: 'flex', alignItems: 'flex-start' }}>
-              <TextField
-                fullWidth
-                label="Add a skill"
-                value={skillInput}
-                onChange={(e) => setSkillInput(e.target.value)}
-                margin="normal"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    addSkill();
-                    e.preventDefault();
-                  }
-                }}
-              />
-              <Button 
-                onClick={addSkill} 
-                variant="contained" 
-                sx={{ mt: 2, ml: 1, height: 56 }}
-              >
-                Add
-              </Button>
-            </Box>
-            
-            {formData.skills.length === 0 ? (
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                No skills added yet. Add your professional skills above.
-              </Typography>
-            ) : (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {formData.skills.map((skill, index) => (
-                  <Chip
-                    key={index}
-                    label={skill}
-                    onDelete={() => removeSkill(index)}
-                    color="primary"
-                    variant="outlined"
-                  />
-                ))}
-              </Box>
-            )}
-          </Box>
-        )}
-
-        {/* Projects Tab */}
-        {activeTab === 4 && (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Projects</Typography>
-              <Button 
-                startIcon={<AddIcon />} 
-                onClick={() => openProjectDialog()}
-                variant="outlined"
-              >
-                Add Project
-              </Button>
-            </Box>
-            
-            {formData.projects.length === 0 ? (
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                No projects added yet. Click the button above to add your projects.
-              </Typography>
-            ) : (
-              formData.projects.map((project, index) => (
-                <Card key={index} variant="outlined" sx={{ mb: 2 }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <Box>
-                        <Typography variant="h6">{project.name}</Typography>
-                        {project.startDate && (
-                          <Typography variant="body2" color="text.secondary">
-                            {project.startDate} - {project.endDate || 'Present'}
-                          </Typography>
-                        )}
-                      </Box>
-                      <Box>
-                        <IconButton size="small" onClick={() => openProjectDialog(index)}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => removeProject(index)}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    </Box>
-                    
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      {project.description}
-                    </Typography>
-                    
-                    {project.technologies.length > 0 && (
-                      <Box sx={{ mt: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          Technologies:
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                          {project.technologies.map((tech, idx) => (
-                            <Chip key={idx} label={tech} size="small" />
-                          ))}
-                        </Box>
-                      </Box>
-                    )}
-                    
-                    {project.link && (
-                      <Button 
-                        size="small" 
-                        href={project.link}
-                        target="_blank"
-                        sx={{ mt: 2 }}
-                      >
-                        View Project
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </Box>
-        )}
-      </Box>
-
-      {/* Experience Dialog */}
-      <Dialog open={showExperienceDialog} onClose={closeExperienceDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {editingIndex >= 0 ? 'Edit Work Experience' : 'Add Work Experience'}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Company"
-                value={currentExperience.company}
-                onChange={(e) => setCurrentExperience({...currentExperience, company: e.target.value})}
-                error={!!errors.company}
-                helperText={errors.company}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Position"
-                value={currentExperience.position}
-                onChange={(e) => setCurrentExperience({...currentExperience, position: e.target.value})}
-                error={!!errors.position}
-                helperText={errors.position}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Location"
-                value={currentExperience.location}
-                onChange={(e) => setCurrentExperience({...currentExperience, location: e.target.value})}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField
-                fullWidth
-                label="Start Date"
-                value={currentExperience.startDate}
-                onChange={(e) => setCurrentExperience({...currentExperience, startDate: e.target.value})}
-                margin="normal"
-                error={!!errors.startDate}
-                helperText={errors.startDate}
-                placeholder="MM/YYYY"
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField
-                fullWidth
-                label="End Date"
-                value={currentExperience.endDate}
-                onChange={(e) => setCurrentExperience({...currentExperience, endDate: e.target.value})}
-                margin="normal"
-                placeholder="MM/YYYY"
-                disabled={currentExperience.current}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                value={currentExperience.description}
-                onChange={(e) => setCurrentExperience({...currentExperience, description: e.target.value})}
-                multiline
-                rows={4}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>
-                Key Achievements / Responsibilities
-              </Typography>
-              <Box sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
-                <TextField
-                  fullWidth
-                  label="Add an achievement"
-                  value={highlightInput}
-                  onChange={(e) => setHighlightInput(e.target.value)}
-                  margin="normal"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      addHighlight();
-                      e.preventDefault();
-                    }
-                  }}
-                />
-                <Button 
-                  onClick={addHighlight} 
-                  variant="contained" 
-                  sx={{ mt: 2, ml: 1, height: 56 }}
-                >
-                  Add
-                </Button>
-              </Box>
-              {currentExperience.highlights.length > 0 ? (
-                <Box>
-                  {currentExperience.highlights.map((highlight, index) => (
-                    <Chip
-                      key={index}
-                      label={highlight}
-                      onDelete={() => removeHighlight(index)}
-                      sx={{ m: 0.5 }}
-                    />
-                  ))}
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No achievements added yet.
-                </Typography>
-              )}
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeExperienceDialog}>Cancel</Button>
-          <Button onClick={saveExperience} variant="contained">
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Education Dialog */}
-      <Dialog open={showEducationDialog} onClose={closeEducationDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {editingIndex >= 0 ? 'Edit Education' : 'Add Education'}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Institution"
-                value={currentEducation.institution}
-                onChange={(e) => setCurrentEducation({...currentEducation, institution: e.target.value})}
-                error={!!errors.institution}
-                helperText={errors.institution}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Degree"
-                value={currentEducation.degree}
-                onChange={(e) => setCurrentEducation({...currentEducation, degree: e.target.value})}
-                error={!!errors.degree}
-                helperText={errors.degree}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Field of Study"
-                value={currentEducation.field}
-                onChange={(e) => setCurrentEducation({...currentEducation, field: e.target.value})}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Location"
-                value={currentEducation.location}
-                onChange={(e) => setCurrentEducation({...currentEducation, location: e.target.value})}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Start Date"
-                value={currentEducation.startDate}
-                onChange={(e) => setCurrentEducation({...currentEducation, startDate: e.target.value})}
-                margin="normal"
-                placeholder="MM/YYYY"
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="End Date"
-                value={currentEducation.endDate}
-                onChange={(e) => setCurrentEducation({...currentEducation, endDate: e.target.value})}
-                margin="normal"
-                placeholder="MM/YYYY"
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="GPA"
-                value={currentEducation.gpa}
-                onChange={(e) => setCurrentEducation({...currentEducation, gpa: e.target.value})}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>
-                Relevant Courses
-              </Typography>
-              <Box sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
-                <TextField
-                  fullWidth
-                  label="Add a course"
-                  value={courseInput}
-                  onChange={(e) => setCourseInput(e.target.value)}
-                  margin="normal"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      addCourse();
-                      e.preventDefault();
-                    }
-                  }}
-                />
-                <Button 
-                  onClick={addCourse} 
-                  variant="contained" 
-                  sx={{ mt: 2, ml: 1, height: 56 }}
-                >
-                  Add
-                </Button>
-              </Box>
-              {currentEducation.courses.length > 0 ? (
-                <Box>
-                  {currentEducation.courses.map((course, index) => (
-                    <Chip
-                      key={index}
-                      label={course}
-                      onDelete={() => removeCourse(index)}
-                      sx={{ m: 0.5 }}
-                    />
-                  ))}
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No courses added yet.
-                </Typography>
-              )}
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeEducationDialog}>Cancel</Button>
-          <Button onClick={saveEducation} variant="contained">
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Project Dialog */}
-      <Dialog open={showProjectDialog} onClose={closeProjectDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {editingIndex >= 0 ? 'Edit Project' : 'Add Project'}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Project Name"
-                value={currentProject.name}
-                onChange={(e) => setCurrentProject({...currentProject, name: e.target.value})}
-                error={!!errors.name}
-                helperText={errors.name}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Start Date"
-                value={currentProject.startDate}
-                onChange={(e) => setCurrentProject({...currentProject, startDate: e.target.value})}
-                margin="normal"
-                placeholder="MM/YYYY"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="End Date"
-                value={currentProject.endDate}
-                onChange={(e) => setCurrentProject({...currentProject, endDate: e.target.value})}
-                margin="normal"
-                placeholder="MM/YYYY"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Project Link/URL"
-                value={currentProject.link}
-                onChange={(e) => setCurrentProject({...currentProject, link: e.target.value})}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                value={currentProject.description}
-                onChange={(e) => setCurrentProject({...currentProject, description: e.target.value})}
-                multiline
-                rows={4}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>
-                Technologies Used
-              </Typography>
-              <Box sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
-                <TextField
-                  fullWidth
-                  label="Add a technology"
-                  value={techInput}
-                  onChange={(e) => setTechInput(e.target.value)}
-                  margin="normal"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      addTechnology();
-                      e.preventDefault();
-                    }
-                  }}
-                />
-                <Button 
-                  onClick={addTechnology} 
-                  variant="contained" 
-                  sx={{ mt: 2, ml: 1, height: 56 }}
-                >
-                  Add
-                </Button>
-              </Box>
-              {currentProject.technologies.length > 0 ? (
-                <Box>
-                  {currentProject.technologies.map((tech, index) => (
-                    <Chip
-                      key={index}
-                      label={tech}
-                      onDelete={() => removeTechnology(index)}
-                      sx={{ m: 0.5 }}
-                    />
-                  ))}
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No technologies added yet.
-                </Typography>
-              )}
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeProjectDialog}>Cancel</Button>
-          <Button onClick={saveProject} variant="contained">
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-      
-      {/* Action buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-        <Box>
-          <Button 
-            variant="outlined" 
-            startIcon={<VisibilityIcon />} 
-            onClick={() => onPreview && onPreview(formData)}
-            sx={{ mr: 1 }}
-          >
-            Preview
-          </Button>
-          <Button 
-            variant="outlined" 
-            startIcon={<DownloadIcon />} 
-            onClick={() => onExport && onExport(formData)}
-            sx={{ mr: 1 }}
-          >
-            Export PDF
-          </Button>
+        <Box sx={{ p: 3 }}>
+          {activeTab === 0 && renderPersonalInfoSection()}
+          {activeTab === 1 && renderExperienceSection()}
+          {activeTab === 2 && renderEducationSection()}
+          {activeTab === 3 && renderSkillsSection()}
+          {activeTab === 4 && renderProjectsSection()}
+          {activeTab === 5 && renderAdditionalInfoSection()}
         </Box>
-        <Box>
+        
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 2 }}>
           <Button
-            variant="outlined"
-            startIcon={<TipsAndUpdatesIcon />}
-            onClick={() => onGenerate && onGenerate(formData)}
-            sx={{ mr: 1 }}
+            disabled={activeTab === 0}
+            onClick={() => setActiveTab(activeTab - 1)}
+            startIcon={<ArrowBackIcon />}
           >
-            AI Suggestions
+            Back
           </Button>
+          <Box>
+            <Button
+              variant="outlined"
+              onClick={() => setViewMode('preview')}
+              startIcon={<VisibilityIcon />}
+              sx={{ mr: 1 }}
+            >
+              Preview
+            </Button>
+            <Button
+              variant="contained"
+              onClick={activeTab === 5 ? handleSave : () => setActiveTab(activeTab + 1)}
+              endIcon={activeTab === 5 ? <SaveIcon /> : <ArrowForwardIcon />}
+              color={activeTab === 5 ? "success" : "primary"}
+            >
+              {activeTab === 5 ? 'Save Resume' : 'Next'}
+            </Button>
+          </Box>
+        </Box>
+      </Box>
+      
+      {/* Template Selection Dialog */}
+      <Dialog
+        open={dialogOpen.template}
+        onClose={() => closeDialog('template')}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Choose a Template</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={3}>
+            {templates.map((template) => (
+              <Grid item xs={12} sm={6} md={4} key={template.id}>
+                <Card 
+                  sx={{ 
+                    cursor: 'pointer',
+                    border: selectedTemplate === template.id ? '2px solid #3f51b5' : 'none',
+                    transform: selectedTemplate === template.id ? 'scale(1.02)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                  onClick={() => setSelectedTemplate(template.id)}
+                >
+                  <CardMedia
+                    component="img"
+                    height="160"
+                    image={template.thumbnail}
+                    alt={template.name}
+                  />
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="subtitle1">{template.name}</Typography>
+                      {selectedTemplate === template.id && (
+                        <CheckCircleIcon color="primary" />
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => closeDialog('template')}>Cancel</Button>
           <Button 
             variant="contained" 
-            startIcon={<SaveIcon />} 
-            onClick={handleSave}
-            disabled={loading}
+            onClick={() => {
+              closeDialog('template');
+            }}
           >
-            {loading ? <CircularProgress size={24} /> : "Save Resume"}
+            Apply Template
           </Button>
-        </Box>
-      </Box>
+        </DialogActions>
+      </Dialog>
       
-      {/* Suggestions panel */}
-      {suggestions.length > 0 && (
-        <Paper elevation={0} variant="outlined" sx={{ p: 2, mt: 3 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            <TipsAndUpdatesIcon sx={{ mr: 1, verticalAlign: 'middle', color: 'primary.main' }} />
-            AI-Powered Improvement Suggestions
-          </Typography>
-          {suggestions.map((suggestion, index) => (
-            <Alert 
-              key={index} 
-              severity="info" 
-              sx={{ mb: 1 }}
-              icon={<RocketLaunchIcon />}
-            >
-              {suggestion}
+      {/* Export Dialog */}
+      <Dialog
+        open={dialogOpen.export}
+        onClose={() => closeDialog('export')}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Export Resume</DialogTitle>
+        <DialogContent>
+          <Box sx={{ py: 2 }}>
+            <FormControl fullWidth sx={{ mb: 3 }}>
+              <InputLabel>Export Format</InputLabel>
+              <Select
+                value={exportFormat}
+                onChange={(e) => setExportFormat(e.target.value)}
+                label="Export Format"
+              >
+                <MenuItem value="pdf">PDF</MenuItem>
+                <MenuItem value="docx">Word Document (DOCX)</MenuItem>
+                <MenuItem value="json">JSON (for future edits)</MenuItem>
+              </Select>
+              <FormHelperText>
+                Choose the format that works best for your needs
+              </FormHelperText>
+            </FormControl>
+            
+            <Alert severity="info" sx={{ mb: 2 }}>
+              {exportFormat === 'pdf' 
+                ? 'PDF is the recommended format for job applications. It preserves formatting across all devices.'
+                : exportFormat === 'docx'
+                ? 'DOCX format allows you to make further edits in Microsoft Word or other compatible software.'
+                : 'JSON format stores your resume data for future edits in this application.'}
             </Alert>
-          ))}
-        </Paper>
-      )}
-      
-      {/* Success message */}
-      {successMessage && (
-        <Alert severity="success" sx={{ mt: 3 }}>
-          {successMessage}
-        </Alert>
-      )}
+            
+            <FormGroup sx={{ mb: 2 }}>
+              <FormControlLabel
+                control={<Switch checked={true} />}
+                label="Include contact information"
+              />
+              <FormControlLabel
+                control={<Switch checked={true} />}
+                label="Include profile picture"
+              />
+            </FormGroup>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => closeDialog('export')}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            startIcon={<DownloadIcon />}
+            onClick={() => {
+              if (onExport) {
+                onExport(formData, selectedTemplate, exportFormat);
+              }
+              closeDialog('export');
+            }}
+          >
+            Export
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };
