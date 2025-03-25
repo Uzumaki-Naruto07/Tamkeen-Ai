@@ -36,6 +36,10 @@ from backend.utils.career_utils import (
 from backend.services.auth_service import get_current_user
 from backend.db.database import get_db
 from sqlalchemy.orm import Session
+from backend.services.career_service import (
+    create_or_update_career_profile, save_career_matches,
+    save_chat_history, get_career_profile, get_chat_history
+)
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -62,14 +66,14 @@ async def create_profile(
         # Convert Pydantic model to dict for processing
         user_data = profile.dict()
         
-        # Add user_id to the data
-        user_data["user_id"] = current_user.id
-        
-        # In a real implementation, you would save this to the database
-        # For now, we'll just perform the career matching
+        # Save profile to database
+        saved_profile = create_or_update_career_profile(db, user_data, current_user.id)
         
         # Perform career matching
         career_matches = perform_career_matching(user_data)
+        
+        # Save career matches
+        save_career_matches(db, saved_profile.id, career_matches)
         
         return {"matches": career_matches}
     
@@ -82,17 +86,110 @@ async def create_profile(
 @router.post("/chatbot", response_model=ChatbotResponse)
 async def chat_with_ai(
     request: ChatbotRequest,
-    current_user: Optional[User] = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """Get response from the career guidance AI assistant"""
     try:
         response = get_chatbot_response(request.query, request.language)
+        
+        # Save chat history
+        save_chat_history(db, current_user.id, request.query, response, request.language)
+        
         return {"response": response}
     
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get chatbot response: {str(e)}"
+        )
+
+@router.get("/chat-history", response_model=List[Dict[str, Any]])
+async def get_user_chat_history(
+    limit: int = 20,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get the user's chat history"""
+    try:
+        history = get_chat_history(db, current_user.id, limit)
+        
+        return [
+            {
+                "id": entry.id,
+                "query": entry.query,
+                "response": entry.response,
+                "language": entry.language,
+                "timestamp": entry.timestamp
+            }
+            for entry in history
+        ]
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get chat history: {str(e)}"
+        )
+
+@router.get("/profile", response_model=Dict[str, Any])
+async def get_user_profile(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get the user's career profile"""
+    try:
+        profile = get_career_profile(db, current_user.id)
+        
+        if not profile:
+            return {"message": "No profile found", "profile": None}
+        
+        # Convert SQLAlchemy model to dict
+        profile_data = {
+            "id": profile.id,
+            "name": profile.name,
+            "email": profile.email,
+            "education_status": profile.education_status,
+            "linkedin_url": profile.linkedin_url,
+            "skills": profile.skills,
+            "career_goals": profile.career_goals,
+            "experience_level": profile.experience_level,
+            "industry_preference": profile.industry_preference,
+            "work_environment": profile.work_environment,
+            "personality_assessment": profile.personality_assessment,
+            "completion_percentage": profile.completion_percentage,
+            "language": profile.language,
+            "created_at": profile.created_at,
+            "updated_at": profile.updated_at,
+            "certifications": [
+                {
+                    "id": cert.id,
+                    "name": cert.name,
+                    "issuer": cert.issuer,
+                    "date": cert.date
+                }
+                for cert in profile.certifications
+            ],
+            "career_matches": [
+                {
+                    "id": match.id,
+                    "career_id": match.career_id,
+                    "title": match.title,
+                    "title_ar": match.title_ar,
+                    "match_percentage": match.match_percentage,
+                    "skills_match": match.skills_match,
+                    "education_match": match.education_match,
+                    "trait_match": match.trait_match
+                }
+                for match in profile.career_matches
+            ]
+        }
+        
+        return {"profile": profile_data}
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get user profile: {str(e)}"
         )
 
 @router.post("/timeline", response_model=CareerTimeline)
