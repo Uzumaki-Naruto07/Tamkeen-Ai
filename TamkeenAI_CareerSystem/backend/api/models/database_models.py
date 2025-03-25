@@ -69,4 +69,22 @@ class ChatHistory(Base):
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
+    user = relationship("User")
+
+class ATSAnalysis(Base):
+    __tablename__ = "ats_analyses"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    job_title = Column(String(255))
+    score = Column(Float)
+    assessment = Column(Text)
+    matching_keywords = Column(JSON)
+    missing_keywords = Column(JSON)
+    llm_analysis = Column(Text, nullable=True)
+    improvement_roadmap = Column(Text, nullable=True)
+    resume_filename = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
     user = relationship("User") 
