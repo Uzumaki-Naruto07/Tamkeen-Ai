@@ -1,0 +1,14 @@
+# Python version requirement
+python_version<3.12
+Flask
+flask-jwt-extended
+flask-cors
+scikit-learn
+pandas
+numpy
+spacy
+nltk
+pydantic
+fastapi
+sqlalchemy
+jsonschema==4.21.1
