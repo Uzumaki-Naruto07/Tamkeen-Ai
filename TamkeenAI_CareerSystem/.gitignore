@@ -1,0 +1,31 @@
+# Python virtual environments
+venv/
+.venv/
+.venv_clean/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# VS Code
+.vscode/
+
+# Large files and binaries
+*.pkl
+*.h5
+*.dylib
+*.so
+*.dll
+*.bin
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log 
