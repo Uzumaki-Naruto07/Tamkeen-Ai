@@ -1,5 +1,14 @@
+"""
+Emotion Detection Service
+
+This module provides functionality for detecting emotions in text and speech,
+which can be used for sentiment analysis during interviews.
+"""
+
 import os
+import json
 import numpy as np
+import pandas as pd
 import cv2
 import logging
 import base64

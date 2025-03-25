@@ -585,6 +585,53 @@ def process_dataset_for_ml(data):
 
     return None
 
+def map_to_category(skill_name):
+    """
+    Maps a skill name to its appropriate category.
+    
+    Args:
+        skill_name (str): The name of the skill to categorize
+        
+    Returns:
+        str: The category name for the skill
+    """
+    # Define common skill categories
+    technical_skills = [
+        "python", "java", "javascript", "c++", "sql", "nosql", "r", "matlab",
+        "machine learning", "deep learning", "data analysis", "data science",
+        "ai", "artificial intelligence", "cloud computing", "aws", "azure",
+        "gcp", "docker", "kubernetes", "devops", "database", "big data",
+        "hadoop", "spark", "tableau", "power bi", "excel", "git", "tensorflow",
+        "pytorch", "scikit-learn", "nlp", "computer vision", "statistics"
+    ]
+    
+    soft_skills = [
+        "communication", "teamwork", "leadership", "problem solving",
+        "critical thinking", "time management", "adaptability", "creativity",
+        "emotional intelligence", "conflict resolution", "negotiation",
+        "presentation", "public speaking", "writing", "project management"
+    ]
+    
+    business_skills = [
+        "marketing", "sales", "finance", "accounting", "strategy",
+        "business analysis", "product management", "operations",
+        "business intelligence", "customer service", "entrepreneurship",
+        "consulting", "risk management", "compliance", "market research"
+    ]
+    
+    # Convert to lowercase for case-insensitive matching
+    skill_lower = skill_name.lower()
+    
+    # Check which category the skill belongs to
+    if any(tech_skill in skill_lower for tech_skill in technical_skills):
+        return "Technical Skills"
+    elif any(soft_skill in skill_lower for soft_skill in soft_skills):
+        return "Soft Skills"
+    elif any(business_skill in skill_lower for business_skill in business_skills):
+        return "Business Skills"
+    else:
+        return "Other Skills"  # Default category for unrecognized skills
+
 if __name__ == "__main__":
     # Generate hybrid dataset with answer evaluations by default
     get_interview_dataset(num_samples=100000, use_huggingface=True, evaluation_method='hybrid') 

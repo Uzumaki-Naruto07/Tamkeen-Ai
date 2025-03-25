@@ -5,6 +5,14 @@ from api.routes import (
     assessment_routes, job_application_routes, language_model_routes,
     speech_routes, emotion_detection_routes, dataset_routes
 )
+from api.controllers import (
+    user_controller, 
+    resume_controller, 
+    job_controller, 
+    gamification_controller,
+    interview_controller,
+    dashboard_controller  # Add dashboard controller
+)
 import uvicorn
 from api.config.env import CORS_ORIGINS
 from api.init.huggingface_init import initialize_huggingface
@@ -50,6 +58,7 @@ app.include_router(language_model_routes.router)
 app.include_router(speech_routes.router)
 app.include_router(emotion_detection_routes.router)
 app.include_router(dataset_routes.router)
+app.include_router(dashboard_controller.router)
 
 # Initialization
 @app.on_event("startup")

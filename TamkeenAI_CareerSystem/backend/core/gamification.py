@@ -120,7 +120,7 @@ class GamificationEngine:
                     "description": "Added 10 or more skills to your profile",
                     "icon": "skill_master_icon.png",
                     "xp_reward": 80,
-                    "category": "skills",
+                    "category": "skill",
                     "tier": "silver"
                 },
                 "interview_ace": {
@@ -157,6 +157,43 @@ class GamificationEngine:
                     "icon": "career_explorer_icon.png",
                     "xp_reward": 90,
                     "category": "exploration",
+                    "tier": "silver"
+                },
+                # Add dashboard-specific badges for system integration
+                "dashboard_explorer": {
+                    "id": "dashboard_explorer",
+                    "name": "Dashboard Explorer",
+                    "description": "Used all main features of the career dashboard",
+                    "icon": "dashboard_explorer_icon.png",
+                    "xp_reward": 50,
+                    "category": "engagement",
+                    "tier": "bronze"
+                },
+                "insight_seeker": {
+                    "id": "insight_seeker",
+                    "name": "Insight Seeker",
+                    "description": "Viewed advanced analytics and career insights",
+                    "icon": "insight_seeker_icon.png",
+                    "xp_reward": 40,
+                    "category": "engagement",
+                    "tier": "bronze"
+                },
+                "progress_tracker": {
+                    "id": "progress_tracker",
+                    "name": "Progress Tracker",
+                    "description": "Tracked skill development over 30 days",
+                    "icon": "progress_tracker_icon.png",
+                    "xp_reward": 60,
+                    "category": "engagement",
+                    "tier": "silver"
+                },
+                "data_driven": {
+                    "id": "data_driven", 
+                    "name": "Data Driven",
+                    "description": "Made career decisions based on dashboard analytics",
+                    "icon": "data_driven_icon.png",
+                    "xp_reward": 75,
+                    "category": "engagement",
                     "tier": "silver"
                 }
             }
@@ -537,6 +574,107 @@ class GamificationEngine:
         
         # Return limited number of top users
         return leaderboard[:count]
+
+    def get_dashboard_badges(self, user_id):
+        """Get all dashboard-related badges for display in career dashboard"""
+        try:
+            all_badges = self.badges
+            dashboard_badges = []
+            
+            # Get user's earned badges
+            earned_badges = [badge for badge in all_badges.values() if badge.get("earned", False)]
+            earned_badge_ids = {badge["id"] for badge in earned_badges}
+            
+            # Format all badges for dashboard display
+            for badge_id, badge_data in all_badges.items():
+                earned = badge_id in earned_badge_ids
+                
+                # Find the earned date if badge is earned
+                earned_date = None
+                if earned:
+                    for eb in earned_badges:
+                        if eb["id"] == badge_id:
+                            earned_date = eb.get("earned_date")
+                            break
+                
+                # Map backend tier to dashboard rarity
+                rarity_map = {
+                    "bronze": "common",
+                    "silver": "uncommon", 
+                    "gold": "rare",
+                    "platinum": "epic",
+                    "diamond": "legendary"
+                }
+                
+                dashboard_badge = {
+                    "name": badge_data["name"],
+                    "description": badge_data["description"],
+                    "earned": earned,
+                    "date": earned_date,
+                    "rarity": rarity_map.get(badge_data["tier"], "common"),
+                    "xp": badge_data["xp_reward"],
+                    "category": badge_data["category"],
+                    "icon": badge_data["icon"]
+                }
+                
+                dashboard_badges.append(dashboard_badge)
+                
+            return dashboard_badges
+            
+        except Exception as e:
+            print(f"Error getting dashboard badges: {e}")
+            return []
+            
+    def check_dashboard_achievements(self, user_id, dashboard_data):
+        """Check if user has earned any dashboard-related badges"""
+        try:
+            # Check for Dashboard Explorer badge
+            if dashboard_data.get("features_used", 0) >= 5:
+                self.award_badge(user_id, "dashboard_explorer")
+                
+            # Check for Insight Seeker badge  
+            if dashboard_data.get("insights_viewed", False):
+                self.award_badge(user_id, "insight_seeker")
+                
+            # Check for Progress Tracker badge
+            if dashboard_data.get("skill_tracking_days", 0) >= 30:
+                self.award_badge(user_id, "progress_tracker")
+                
+            # Check for Data Driven badge
+            if dashboard_data.get("analytics_based_decisions", 0) >= 3:
+                self.award_badge(user_id, "data_driven")
+                
+        except Exception as e:
+            print(f"Error checking dashboard achievements: {e}")
+            
+    def update_dashboard_activity(self, user_id, activity_data):
+        """Record dashboard activity for gamification purposes"""
+        try:
+            # Update user XP based on dashboard activity
+            activity_type = activity_data.get("activity_type", "")
+            xp_values = {
+                "view_dashboard": 5,
+                "use_feature": 10,
+                "complete_assessment": 25,
+                "update_profile": 15,
+                "share_insights": 20
+            }
+            
+            # Award XP if activity type has a defined XP value
+            if activity_type in xp_values:
+                self.add_xp(user_id, xp_values[activity_type], 
+                          f"Dashboard: {activity_data.get('description', activity_type)}")
+                
+            # Check for dashboard achievements
+            dashboard_stats = activity_data.get("dashboard_stats", {})
+            if dashboard_stats:
+                self.check_dashboard_achievements(user_id, dashboard_stats)
+                
+            return True
+            
+        except Exception as e:
+            print(f"Error updating dashboard activity: {e}")
+            return False
 
 
 # Standalone functions that use GamificationEngine
