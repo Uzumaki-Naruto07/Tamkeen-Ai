@@ -24,6 +24,7 @@ import { useUser, useResume } from '../components/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format, formatDistance } from 'date-fns';
+import { useAppContext } from '../context/AppContext';
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -69,6 +70,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { profile, updateProfile } = useUser();
   const { resumes } = useResume();
+  const { user, logout, toggleTheme, theme } = useAppContext();
   
   // Fetch dashboard data
   useEffect(() => {
@@ -947,342 +949,162 @@ const Dashboard = () => {
   };
   
   return (
-    <Box sx={{ py: 3 }}>
-      {loading ? (
-        <LoadingSpinner message="Loading dashboard..." />
-      ) : error ? (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      ) : (
-        <>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5">
-              Dashboard
-            </Typography>
-            
-            <Box>
-              <Tooltip title="Notifications">
-                <IconButton onClick={(e) => setNotificationMenuAnchor(e.currentTarget)}>
-                  <Badge badgeContent={unreadNotificationCount} color="error">
-                    <Notifications />
-                  </Badge>
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
-          
-          <Tabs
-            value={dashboardTabs}
-            onChange={(e, newValue) => setDashboardTabs(newValue)}
-            sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
-          >
-            <Tab label="Overview" />
-            <Tab label="Applications" />
-            <Tab label="Career Development" />
-          </Tabs>
-          
-          {dashboardTabs === 0 && (
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={8}>
-                <Grid container spacing={3}>
-                  <Grid item xs={12}>
-                    {renderProfileSummary()}
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={6}>
-                    {renderApplicationStats()}
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={6}>
-                    {renderUpcomingInterviews()}
-                  </Grid>
-                  
-                  <Grid item xs={12}>
-                    {renderJobRecommendations()}
-                  </Grid>
-                </Grid>
-              </Grid>
-              
-              <Grid item xs={12} md={4}>
-                <Grid container spacing={3}>
-                  <Grid item xs={12}>
-                    {renderTodaysSchedule()}
-                  </Grid>
-                  
-                  <Grid item xs={12}>
-                    {renderWeeklyGoals()}
-                  </Grid>
-                  
-                  <Grid item xs={12}>
-                    {renderCareerProgress()}
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Grid>
-          )}
-          
-          {dashboardTabs === 1 && (
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={7}>
-                {renderApplicationStats()}
-              </Grid>
-              
-              <Grid item xs={12} md={5}>
-                {renderUpcomingInterviews()}
-              </Grid>
-              
-              <Grid item xs={12}>
-                {renderJobRecommendations()}
-              </Grid>
-            </Grid>
-          )}
-          
-          {dashboardTabs === 2 && (
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                {renderCareerProgress()}
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                {renderSkillsSummary()}
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                {renderCareerInsights()}
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                {renderRecentActivities()}
-              </Grid>
-            </Grid>
-          )}
-          
-          {/* Notification menu */}
-          <Menu
-            anchorEl={notificationMenuAnchor}
-            open={Boolean(notificationMenuAnchor)}
-            onClose={() => setNotificationMenuAnchor(null)}
-            PaperProps={{
-              sx: { width: 320, maxHeight: 500, overflow: 'auto' }
-            }}
-          >
-            <Box sx={{ px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="subtitle1">
-                Notifications
-              </Typography>
-              
-              <Button 
-                size="small"
-                onClick={markAllNotificationsAsRead}
-                disabled={unreadNotificationCount === 0}
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      <nav className="bg-white dark:bg-gray-800 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex">
+              <div className="flex-shrink-0 flex items-center">
+                <h1 className="text-xl font-bold text-primary-600">Tamkeen AI</h1>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
               >
-                Mark all read
-              </Button>
-            </Box>
+                {theme === 'dark' ? '🌙' : '☀️'}
+              </button>
+              <div className="ml-3 relative">
+                <div>
+                  <span className="inline-flex items-center px-3 py-1 text-sm rounded-full bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
+                    {user?.name || 'User'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={logout}
+                className="ml-4 px-3 py-1 text-sm text-white bg-red-600 hover:bg-red-700 rounded-md"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="py-10">
+        <header>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          </div>
+        </header>
+        <main>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+                <div className="p-5">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 bg-primary-500 rounded-md p-3">
+                      <svg className="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                        Resume Analysis
+                      </dt>
+                      <dd className="flex items-baseline">
+                        <div className="text-2xl font-semibold text-gray-900 dark:text-white">
+                          92%
+                        </div>
+                        <div className="ml-2 flex items-baseline text-sm font-semibold text-green-600">
+                          ATS Score
+                        </div>
+                      </dd>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-700 px-5 py-3">
+                  <div className="text-sm">
+                    <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+                      View details
+                    </a>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+                <div className="p-5">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 bg-secondary-500 rounded-md p-3">
+                      <svg className="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                        Job Applications
+                      </dt>
+                      <dd className="flex items-baseline">
+                        <div className="text-2xl font-semibold text-gray-900 dark:text-white">
+                          12
+                        </div>
+                        <div className="ml-2 flex items-baseline text-sm font-semibold text-green-600">
+                          3 in progress
+                        </div>
+                      </dd>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-700 px-5 py-3">
+                  <div className="text-sm">
+                    <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+                      View details
+                    </a>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+                <div className="p-5">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 bg-green-500 rounded-md p-3">
+                      <svg className="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                        Interview Practice
+                      </dt>
+                      <dd className="flex items-baseline">
+                        <div className="text-2xl font-semibold text-gray-900 dark:text-white">
+                          5
+                        </div>
+                        <div className="ml-2 flex items-baseline text-sm font-semibold text-green-600">
+                          Sessions
+                        </div>
+                      </dd>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-700 px-5 py-3">
+                  <div className="text-sm">
+                    <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+                      View details
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
             
-            <Divider />
-            
-            {notifications.length === 0 ? (
-              <MenuItem disabled>
-                <Typography variant="body2" color="text.secondary">
-                  No notifications
-                </Typography>
-              </MenuItem>
-            ) : (
-              notifications.slice(0, 10).map((notification) => (
-                <MenuItem
-                  key={notification.id}
-                  onClick={() => handleNotificationClick(notification)}
-                  sx={{
-                    py: 1,
-                    borderLeft: notification.read ? 'none' : '3px solid',
-                    borderLeftColor: 'primary.main',
-                    bgcolor: notification.read ? 'inherit' : 'action.hover'
-                  }}
-                >
-                  <ListItemIcon>
-                    {getNotificationIcon(notification.type)}
-                  </ListItemIcon>
-                  
-                  <ListItemText
-                    primary={notification.title}
-                    secondary={
-                      <>
-                        <Typography variant="body2" noWrap>
-                          {notification.message}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {formatDistance(new Date(notification.timestamp), new Date(), { addSuffix: true })}
-                        </Typography>
-                      </>
-                    }
-                    secondaryTypographyProps={{
-                      component: 'div'
-                    }}
-                  />
-                </MenuItem>
-              ))
-            )}
-            
-            {notifications.length > 10 && (
-              <Box sx={{ textAlign: 'center', p: 1 }}>
-                <Button
-                  size="small"
-                  component={RouterLink}
-                  to="/notifications"
-                  onClick={() => setNotificationMenuAnchor(null)}
-                >
-                  View All
-                </Button>
-              </Box>
-            )}
-          </Menu>
-          
-          {/* Quick actions menu */}
-          <Menu
-            anchorEl={actionsMenuAnchor}
-            open={Boolean(actionsMenuAnchor)}
-            onClose={() => setActionsMenuAnchor(null)}
-          >
-            <MenuItem onClick={() => handleQuickAction('newApplication')}>
-              <ListItemIcon>
-                <Description />
-              </ListItemIcon>
-              <ListItemText primary="New Application" />
-            </MenuItem>
-            
-            <MenuItem onClick={() => handleQuickAction('createResume')}>
-              <ListItemIcon>
-                <Assignment />
-              </ListItemIcon>
-              <ListItemText primary="Create Resume" />
-            </MenuItem>
-            
-            <MenuItem onClick={() => handleQuickAction('mockInterview')}>
-              <ListItemIcon>
-                <QuestionAnswer />
-              </ListItemIcon>
-              <ListItemText primary="Mock Interview" />
-            </MenuItem>
-            
-            <MenuItem onClick={() => handleQuickAction('personalityTest')}>
-              <ListItemIcon>
-                <Psychology />
-              </ListItemIcon>
-              <ListItemText primary="Personality Test" />
-            </MenuItem>
-            
-            <MenuItem onClick={() => handleQuickAction('networkingEvent')}>
-              <ListItemIcon>
-                <Group />
-              </ListItemIcon>
-              <ListItemText primary="Add Networking Event" />
-            </MenuItem>
-          </Menu>
-          
-          {/* Quick Stats menu */}
-          <Menu
-            anchorEl={quickStatsMenuAnchor}
-            open={Boolean(quickStatsMenuAnchor)}
-            onClose={() => setQuickStatsMenuAnchor(null)}
-          >
-            <MenuItem onClick={() => navigate('/applications')}>
-              <ListItemIcon>
-                <Assignment />
-              </ListItemIcon>
-              <ListItemText primary="All Applications" />
-            </MenuItem>
-            
-            <MenuItem onClick={() => navigate('/interviews')}>
-              <ListItemIcon>
-                <QuestionAnswer />
-              </ListItemIcon>
-              <ListItemText primary="Interviews" />
-            </MenuItem>
-            
-            <MenuItem onClick={() => navigate('/career-progress')}>
-              <ListItemIcon>
-                <Timeline />
-              </ListItemIcon>
-              <ListItemText primary="Career Progress" />
-            </MenuItem>
-          </Menu>
-          
-          {/* Notification detail dialog */}
-          <Dialog
-            open={notificationDialogOpen}
-            onClose={() => setNotificationDialogOpen(false)}
-            maxWidth="sm"
-            fullWidth
-          >
-            {selectedNotification && (
-              <>
-                <DialogTitle>
-                  {selectedNotification.title}
-                </DialogTitle>
-                
-                <DialogContent dividers>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body1">
-                      {selectedNotification.message}
-                    </Typography>
-                  </Box>
-                  
-                  {selectedNotification.details && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Details:
-                      </Typography>
-                      <Typography variant="body2">
-                        {selectedNotification.details}
-                      </Typography>
-                    </Box>
-                  )}
-                  
-                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="caption" color="text.secondary">
-                      {new Date(selectedNotification.timestamp).toLocaleString()}
-                    </Typography>
-                    
-                    <Chip 
-                      size="small"
-                      label={selectedNotification.type}
-                      color={getNotificationColor(selectedNotification.type)}
-                    />
-                  </Box>
-                </DialogContent>
-                
-                <DialogActions>
-                  {selectedNotification.actionUrl && (
-                    <Button 
-                      onClick={() => {
-                        navigate(selectedNotification.actionUrl);
-                        setNotificationDialogOpen(false);
-                      }}
-                    >
-                      {selectedNotification.actionText || 'View'}
-                    </Button>
-                  )}
-                  
-                  <Button onClick={() => setNotificationDialogOpen(false)}>
-                    Close
-                  </Button>
-                </DialogActions>
-              </>
-            )}
-          </Dialog>
-          
-          {/* Snackbar for notifications */}
-          <Snackbar
-            open={snackbarOpen}
-            autoHideDuration={6000}
-            onClose={() => setSnackbarOpen(false)}
-            message={snackbarMessage}
-          />
-        </>
-      )}
-    </Box>
+            <div className="mt-8 bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                  Welcome to Tamkeen AI Career System
+                </h3>
+                <div className="mt-2 max-w-xl text-sm text-gray-500 dark:text-gray-300">
+                  <p>
+                    This demo dashboard showcases the Tamkeen AI Career Intelligence System. 
+                    The full version includes resume analysis, interview practice, job tracking, 
+                    and personalized career recommendations.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
   );
 };
 

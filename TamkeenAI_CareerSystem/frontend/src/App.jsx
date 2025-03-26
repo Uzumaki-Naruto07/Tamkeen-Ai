@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
@@ -8,9 +8,11 @@ import NavigationBar from './components/layout/NavigationBar';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { AnimatePresence, motion } from 'framer-motion';
 import { RTL } from './components/RTL';
+import Dashboard from './pages/Dashboard';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
 // Lazy-loaded page components for code splitting
-const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ResumeAnalysis = lazy(() => import('./pages/ResumeAnalysis'));
 const CareerAssessment = lazy(() => import('./pages/CareerAssessment'));
 const CareerExplorer = lazy(() => import('./pages/CareerExplorer'));
@@ -27,8 +29,6 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 const Settings = lazy(() => import('./pages/Settings'));
-const Login = lazy(() => import('./pages/Login'));
-const Register = lazy(() => import('./pages/Register'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Page transition variants
@@ -88,8 +88,9 @@ const SuspenseFallback = () => (
 
 // App content with theming and routing
 const AppContent = () => {
-  const { theme, language, isAuthenticated, loading, userRoles } = useAppContext();
+  const { theme, language, isAuthenticated, loading, userRoles, user } = useAppContext();
   const location = useLocation();
+  const [initializing, setInitializing] = useState(true);
   
   // Create MUI theme based on app context settings
   const appTheme = createTheme({
@@ -117,9 +118,18 @@ const AppContent = () => {
     return requiredRoles.some(role => userRoles.includes(role));
   };
   
-  // Display loading spinner while checking authentication
-  if (loading) {
-    return <LoadingSpinner message="Initializing application..." />;
+  useEffect(() => {
+    if (!loading) {
+      setInitializing(false);
+    }
+  }, [loading]);
+  
+  if (initializing) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+      </div>
+    );
   }
   
   return (
@@ -136,112 +146,154 @@ const AppContent = () => {
                   <Routes location={location} key={location.pathname}>
                     {/* Public routes */}
                     <Route path="/login" element={
-                      isAuthenticated 
-                        ? <Navigate to="/dashboard" /> 
-                        : <AnimatedPage><Login /></AnimatedPage>
+                      user ? (
+                        <Navigate to="/" />
+                      ) : (
+                        <AnimatedPage><Login /></AnimatedPage>
+                      )
                     } />
                     <Route path="/register" element={
-                      isAuthenticated 
-                        ? <Navigate to="/dashboard" /> 
-                        : <AnimatedPage><Register /></AnimatedPage>
+                      user ? (
+                        <Navigate to="/" />
+                      ) : (
+                        <AnimatedPage><Register /></AnimatedPage>
+                      )
                     } />
                     
                     {/* Protected routes */}
                     <Route path="/" element={
-                      isAuthenticated 
-                        ? <Navigate to="/dashboard" /> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <Dashboard />
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     
                     {/* Main application routes - all require authentication */}
                     <Route path="/dashboard" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><Dashboard /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><Dashboard /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/resume-analysis" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><ResumeAnalysis /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><ResumeAnalysis /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/career-assessment" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><CareerAssessment /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><CareerAssessment /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/career-explorer" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><CareerExplorer /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><CareerExplorer /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/interview-results" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><InterviewResults /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><InterviewResults /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/ai-job-journey" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><AIJobJourney /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><AIJobJourney /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/gamified-progress" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><GamifiedProgress /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><GamifiedProgress /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/resume-builder" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><ResumeBuilder /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><ResumeBuilder /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/cover-letter" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><CoverLetter /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><CoverLetter /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/job-search" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><JobSearch /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><JobSearch /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/networking" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><Networking /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><Networking /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/mock-interview" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><MockInterview /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><MockInterview /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/profile" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><Profile /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><Profile /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/analytics" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><Analytics /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><Analytics /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/notifications" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><Notifications /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><Notifications /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     <Route path="/settings" element={
-                      isAuthenticated 
-                        ? <AnimatedPage><Settings /></AnimatedPage> 
-                        : <Navigate to="/login" />
+                      user ? (
+                        <AnimatedPage><Settings /></AnimatedPage>
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     
                     {/* Admin route with role-based protection */}
                     <Route path="/admin" element={
-                      isAuthenticated 
-                        ? hasRequiredRole(['admin', 'superadmin']) 
-                          ? <AnimatedPage><Admin /></AnimatedPage>
-                          : <AnimatedPage><NotFound statusCode={403} message="Access Denied" /></AnimatedPage>
-                        : <Navigate to="/login" />
+                      user ? (
+                        hasRequiredRole(['admin', 'superadmin']) ? (
+                          <AnimatedPage><Admin /></AnimatedPage>
+                        ) : (
+                          <AnimatedPage><NotFound statusCode={403} message="Access Denied" /></AnimatedPage>
+                        )
+                      ) : (
+                        <Navigate to="/login" />
+                      )
                     } />
                     
                     {/* 404 fallback route */}

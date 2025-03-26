@@ -16,6 +16,7 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useUser } from '../components/AppContext';
 import apiEndpoints from '../utils/api';
 import logoImage from '../assets/logo.png';
+import { useAppContext } from '../context/AppContext';
 
 const Register = () => {
   const [loading, setLoading] = useState(false);
@@ -41,6 +42,7 @@ const Register = () => {
   
   const navigate = useNavigate();
   const { login, isAuthenticated } = useUser();
+  const { toggleTheme, theme } = useAppContext();
   
   // Redirect if already logged in
   useEffect(() => {

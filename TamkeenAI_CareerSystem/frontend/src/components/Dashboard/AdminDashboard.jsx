@@ -381,4 +381,117 @@ const AdminDashboard = () => {
                 <div>
                   <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">System Preferences</h4>
                   <div className="mt-2 space-y-4">
-                    <div className="flex items-center"></div>
+                    <div className="flex items-center">
+                      <input
+                        id="enable-user-registration"
+                        name="enable-user-registration"
+                        type="checkbox"
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                        defaultChecked
+                      />
+                      <label htmlFor="enable-user-registration" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                        Enable user registration
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        id="enable-analytics"
+                        name="enable-analytics"
+                        type="checkbox"
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                        defaultChecked
+                      />
+                      <label htmlFor="enable-analytics" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                        Enable analytics tracking
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        id="maintenance-mode"
+                        name="maintenance-mode"
+                        type="checkbox"
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="maintenance-mode" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                        Enable maintenance mode
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        id="debug-mode"
+                        name="debug-mode"
+                        type="checkbox"
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="debug-mode" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                        Enable debug logging
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">AI Model Settings</h4>
+                  <div className="mt-2 space-y-4">
+                    <div>
+                      <label htmlFor="ai-model" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Default AI Model
+                      </label>
+                      <select
+                        id="ai-model"
+                        name="ai-model"
+                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                      >
+                        <option>GPT-4</option>
+                        <option>GPT-3.5 Turbo</option>
+                        <option>Claude 3 Opus</option>
+                        <option>Claude 3 Sonnet</option>
+                        <option>Llama 3</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="ai-temperature" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        AI Temperature (0-1)
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        id="ai-temperature"
+                        name="ai-temperature"
+                        defaultValue="0.7"
+                        className="mt-1 w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
+                        <span>Precise</span>
+                        <span>Creative</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end space-x-3 pt-5">
+                  <button
+                    type="button"
+                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  >
+                    Reset to Defaults
+                  </button>
+                  <button
+                    type="submit"
+                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default AdminDashboard;
