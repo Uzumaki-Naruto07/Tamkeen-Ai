@@ -1,149 +1,114 @@
-"""
-Main Application Module
-
-This module initializes and configures the Tamkeen AI Career System backend application.
-"""
-
-import os
-import json
-import logging
-import traceback
-from datetime import datetime
-from functools import wraps
-from typing import Dict, List, Any, Optional, Tuple, Union, Callable
-
-# Import Flask and extensions
-from flask import Flask, request, jsonify, g
+from flask import Flask, jsonify
 from flask_cors import CORS
-from werkzeug.exceptions import HTTPException
+import os
+from dotenv import load_dotenv
+import logging
 
-# Import settings
-from backend.config.settings import (
-    API_PREFIX, DEBUG, ENV, CORS_ORIGINS,
-    SECRET_KEY, LOG_LEVEL, LOG_FORMAT
+# Import route modules
+from api.routes.auth_routes import auth_bp
+from api.routes.resume_routes import resume_bp
+from api.routes.career_routes import career_bp
+from api.routes.interview_routes import interview_bp
+from api.routes.job_routes import job_bp
+from api.routes.analytics_routes import analytics_bp
+from api.routes.admin_routes import admin_bp
+from api.routes.user_routes import user_bp
+from api.routes.assessment_routes import assessment_bp
+from api.routes.feedback_routes import feedback_bp
+from api.routes.gamification_routes import gamification_bp
+from api.routes.ai_journey_routes import ai_journey_bp
+from api.routes.learning_routes import learning_bp
+from api.routes.skill_routes import skill_bp
+from api.routes.notification_routes import notification_bp
+from api.routes.settings_routes import settings_bp
+from api.routes.emotion_routes import emotion_bp
+from api.routes.pdf_routes import pdf_bp
+from api.routes.search_routes import search_bp
+from api.routes.chat_routes import chat_bp
+
+# Load environment variables
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG if os.getenv('FLASK_DEBUG') == '1' else logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('app.log')
+    ]
 )
 
-# Import utilities
-from backend.utils.auth import decode_token
-from backend.utils.date_utils import now, format_date
-
-# Setup logger
 logger = logging.getLogger(__name__)
 
-# Create Flask app
-app = Flask(__name__)
-app.config['SECRET_KEY'] = SECRET_KEY
-app.config['DEBUG'] = DEBUG
-app.config['ENV'] = ENV
-
-# Configure CORS
-CORS(app, resources={r"/api/*": {"origins": CORS_ORIGINS}})
-
-# Import API routes
-from backend.api.routes.auth import auth_blueprint
-from backend.api.routes.user import user_blueprint
-from backend.api.routes.job import job_blueprint
-from backend.api.routes.resume import resume_blueprint
-from backend.api.routes.career import career_blueprint
-from backend.api.routes.analytics import analytics_blueprint
-
-# Register blueprints
-app.register_blueprint(auth_blueprint, url_prefix=f"{API_PREFIX}/auth")
-app.register_blueprint(user_blueprint, url_prefix=f"{API_PREFIX}/users")
-app.register_blueprint(job_blueprint, url_prefix=f"{API_PREFIX}/jobs")
-app.register_blueprint(resume_blueprint, url_prefix=f"{API_PREFIX}/resumes")
-app.register_blueprint(career_blueprint, url_prefix=f"{API_PREFIX}/careers")
-app.register_blueprint(analytics_blueprint, url_prefix=f"{API_PREFIX}/analytics")
-
-
-# Authentication middleware
-@app.before_request
-def authenticate():
-    """
-    Authenticate user from token before request
-    """
-    # Skip authentication for auth routes
-    if request.path.startswith(f"{API_PREFIX}/auth"):
-        return
+def create_app():
+    """Create and configure the Flask application"""
+    app = Flask(__name__)
     
-    # Get token from header
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        g.user = None
-        return
+    # Configure app
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///tamkeen.db')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key')
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload size
     
-    # Get token
-    token = auth_header.split(' ')[1]
+    # Enable CORS
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
     
-    # Decode token
-    payload = decode_token(token)
-    if not payload:
-        g.user = None
-        return
-    
-    # Set user ID in request context
-    g.user = payload.get('sub')
-
-
-# Error handlers
-@app.errorhandler(Exception)
-def handle_exception(e):
-    """
-    Handle exceptions
-    """
-    # Log the error
-    logger.error(f"Unhandled exception: {str(e)}")
-    logger.error(traceback.format_exc())
-    
-    # HTTP exceptions
-    if isinstance(e, HTTPException):
+    # Health check endpoint
+    @app.route('/api/health-check')
+    def health_check():
         return jsonify({
-            'success': False,
-            'error': e.description,
-            'code': e.code
-        }), e.code
+            "status": "ok",
+            "version": "1.0.0",
+            "environment": os.getenv('FLASK_ENV', 'development')
+        })
     
-    # Generic exceptions
-    return jsonify({
-        'success': False,
-        'error': 'Internal server error',
-        'code': 500
-    }), 500
+    # Register all blueprints with the /api prefix
+    blueprints = [
+        auth_bp, resume_bp, career_bp, interview_bp, job_bp, 
+        analytics_bp, admin_bp, user_bp, assessment_bp, feedback_bp,
+        gamification_bp, ai_journey_bp, learning_bp, skill_bp,
+        notification_bp, settings_bp, emotion_bp, pdf_bp, search_bp, chat_bp
+    ]
+    
+    for bp in blueprints:
+        app.register_blueprint(bp, url_prefix='/api')
+        
+    logger.info(f"Registered {len(blueprints)} API blueprints")
+    
+    # Error handlers
+    @app.errorhandler(404)
+    def not_found(error):
+        return jsonify({"error": "Resource not found"}), 404
+    
+    @app.errorhandler(500)
+    def server_error(error):
+        logger.error(f"Server error: {error}")
+        return jsonify({"error": "Internal server error"}), 500
+    
+    @app.errorhandler(400)
+    def bad_request(error):
+        return jsonify({"error": "Bad request"}), 400
+    
+    @app.errorhandler(401)
+    def unauthorized(error):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    @app.errorhandler(403)
+    def forbidden(error):
+        return jsonify({"error": "Forbidden"}), 403
+        
+    return app
 
-
-# Create authentication decorator
-def require_auth(f):
-    """
-    Decorator to require authentication
-    """
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not g.user:
-            return jsonify({
-                'success': False,
-                'error': 'Authentication required',
-                'code': 401
-            }), 401
-        return f(*args, **kwargs)
-    return decorated
-
-
-# Health check endpoint
-@app.route(f"{API_PREFIX}/health", methods=['GET'])
-def health_check():
-    """
-    Health check endpoint
-    """
-    return jsonify({
-        'success': True,
-        'message': 'Tamkeen AI Career System is running',
-        'time': format_date(now()),
-        'version': '1.0.0',
-        'environment': ENV
-    })
-
+# Create app instance
+app = create_app()
 
 if __name__ == '__main__':
-    # Run the app
-    from backend.config.settings import API_HOST, API_PORT
-    app.run(host=API_HOST, port=API_PORT, debug=DEBUG)
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_DEBUG') == '1'
+    
+    logger.info(f"Starting Tamkeen AI backend server on port {port}")
+    logger.info(f"Debug mode: {'enabled' if debug else 'disabled'}")
+    
+    app.run(host='0.0.0.0', port=port, debug=debug)

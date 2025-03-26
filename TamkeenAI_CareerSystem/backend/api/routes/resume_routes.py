@@ -27,6 +27,12 @@ from backend.app import require_auth, require_role
 # Import settings
 from backend.config.settings import UPLOAD_FOLDER, ALLOWED_EXTENSIONS
 
+# Import services
+from api.services.resume_service import analyze_resume, improve_resume, extract_skills_from_resume
+
+# Import middleware
+from api.middleware.auth_middleware import token_required
+
 # Setup logger
 logger = logging.getLogger(__name__)
 
@@ -35,6 +41,9 @@ resume_blueprint = Blueprint('resume', __name__)
 
 # Create profile extractor
 profile_extractor = ProfileExtractor()
+
+# Allowed file extensions
+ALLOWED_EXTENSIONS = {'pdf', 'docx', 'doc', 'txt'}
 
 
 def allowed_file(filename):
@@ -409,4 +418,103 @@ def get_resume_skills(resume_id):
         return jsonify({
             'success': False,
             'error': 'Internal server error'
-        }), 500 
+        }), 500
+
+
+@resume_blueprint.route('/resume/analyze', methods=['POST'])
+@token_required
+def analyze_resume_endpoint(current_user):
+    """Analyze a resume and provide feedback"""
+    try:
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            return jsonify({"error": "No file part"}), 400
+            
+        file = request.files['file']
+        
+        # Check if filename is empty
+        if file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+            
+        # Check if file is allowed
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join('/tmp', filename)
+            file.save(filepath)
+            
+            # Get job title if provided
+            job_title = request.form.get('job_title', '')
+            
+            # Analyze resume
+            result = analyze_resume(filepath, job_title)
+            
+            # Clean up
+            os.remove(filepath)
+            
+            return jsonify(result), 200
+        else:
+            return jsonify({"error": "File type not allowed"}), 400
+            
+    except Exception as e:
+        logger.error(f"Error analyzing resume: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@resume_blueprint.route('/resume/improve', methods=['POST'])
+@token_required
+def improve_resume_endpoint(current_user):
+    """Generate suggestions to improve a resume"""
+    try:
+        data = request.json
+        
+        # Validate input
+        if not data or 'resume_text' not in data:
+            return jsonify({"error": "Resume text is required"}), 400
+            
+        # Get job title if provided
+        job_title = data.get('job_title', '')
+        
+        # Generate improvements
+        result = improve_resume(data['resume_text'], job_title)
+        
+        return jsonify(result), 200
+            
+    except Exception as e:
+        logger.error(f"Error improving resume: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@resume_blueprint.route('/resume/extract-skills', methods=['POST'])
+@token_required
+def extract_skills_endpoint(current_user):
+    """Extract skills from a resume"""
+    try:
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            return jsonify({"error": "No file part"}), 400
+            
+        file = request.files['file']
+        
+        # Check if filename is empty
+        if file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+            
+        # Check if file is allowed
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join('/tmp', filename)
+            file.save(filepath)
+            
+            # Extract skills
+            skills = extract_skills_from_resume(filepath)
+            
+            # Clean up
+            os.remove(filepath)
+            
+            return jsonify({"skills": skills}), 200
+        else:
+            return jsonify({"error": "File type not allowed"}), 400
+            
+    except Exception as e:
+        logger.error(f"Error extracting skills: {str(e)}")
+        return jsonify({"error": str(e)}), 500 
