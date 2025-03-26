@@ -11,6 +11,7 @@ import {
   useTheme
 } from '@mui/material';
 import { keyframes } from '@mui/system';
+import Lottie from 'lottie-react';
 
 // Pulse animation for the dot loading indicator
 const pulsate = keyframes`
