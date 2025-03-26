@@ -75,633 +75,672 @@ import NotificationsIcon from '@mui/icons-material/Notifications';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { format, parseISO } from 'date-fns';
+import { useUser } from './AppContext';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
 
-const NetworkingTracker = ({
-  contacts = [],
-  onAddContact,
-  onUpdateContact,
-  onDeleteContact,
-  onImportContacts,
-  onExportContacts,
-  loading = false,
-  error = null
-}) => {
-  // State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('name');
-  const [sortDirection, setSortDirection] = useState('asc');
+const NetworkingTracker = () => {
+  const [contacts, setContacts] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [currentContact, setCurrentContact] = useState({
-    id: null,
+  const [editContact, setEditContact] = useState(null);
+  const [formData, setFormData] = useState({
     name: '',
-    company: '',
     title: '',
+    company: '',
     email: '',
     phone: '',
-    location: '',
-    category: 'professional',
-    linkedInUrl: '',
-    twitterUrl: '',
+    linkedin: '',
     website: '',
     notes: '',
-    lastContact: null,
-    nextFollowUp: null,
-    priority: 'medium',
+    lastContactDate: new Date(),
+    nextFollowupDate: null,
     tags: []
   });
-  const [contactsData, setContactsData] = useState(contacts);
-  const [selectedContact, setSelectedContact] = useState(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
-  const [newNote, setNewNote] = useState('');
-  const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [menuAnchor, setMenuAnchor] = useState(null);
   const [selectedContactId, setSelectedContactId] = useState(null);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [tagInput, setTagInput] = useState('');
-  const [tabIndex, setTabIndex] = useState(0);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const { profile } = useUser();
   
-  // Update contacts data when props change
+  // Fetch contacts from backend
   useEffect(() => {
-    setContactsData(contacts);
-  }, [contacts]);
-  
-  // Open action menu
-  const handleOpenActionMenu = (event, contactId) => {
-    setActionMenuAnchor(event.currentTarget);
-    setSelectedContactId(contactId);
-  };
-  
-  // Close action menu
-  const handleCloseActionMenu = () => {
-    setActionMenuAnchor(null);
-    setSelectedContactId(null);
-  };
-  
-  // Handle add/edit dialog
-  const handleOpenDialog = (edit = false, contact = null) => {
-    setIsEditMode(edit);
-    if (edit && contact) {
-      setCurrentContact({ ...contact });
-    } else {
-      setCurrentContact({
-        id: null,
-        name: '',
-        company: '',
-        title: '',
-        email: '',
-        phone: '',
-        location: '',
-        category: 'professional',
-        linkedInUrl: '',
-        twitterUrl: '',
-        website: '',
-        notes: '',
-        lastContact: null,
-        nextFollowUp: null,
-        priority: 'medium',
-        tags: []
-      });
-    }
-    setDialogOpen(true);
-    handleCloseActionMenu();
-  };
-  
-  // Handle dialog close
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-  };
-  
-  // Handle contact submission
-  const handleSubmitContact = () => {
-    if (isEditMode) {
-      if (onUpdateContact) {
-        onUpdateContact(currentContact);
-      } else {
-        // Local update for demo
-        setContactsData(prevContacts => 
-          prevContacts.map(c => c.id === currentContact.id ? currentContact : c)
-        );
+    const fetchContacts = async () => {
+      if (!profile?.id) {
+        setLoading(false);
+        return;
       }
-      showSnackbar('Contact updated successfully', 'success');
-    } else {
-      const newContact = {
-        ...currentContact,
-        id: Date.now(), // Temporary ID generation
-      };
       
-      if (onAddContact) {
-        onAddContact(newContact);
-      } else {
-        // Local add for demo
-        setContactsData(prevContacts => [...prevContacts, newContact]);
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // This would connect to a MongoDB backend if implemented
+        // Currently using mock data
+        const response = await mockFetchContacts();
+        setContacts(response.data);
+      } catch (err) {
+        setError('Failed to fetch contacts');
+        console.error('Error fetching contacts:', err);
+      } finally {
+        setLoading(false);
       }
-      showSnackbar('New contact added', 'success');
-    }
-    handleCloseDialog();
-  };
-  
-  // Handle contact deletion
-  const handleDeleteContact = (contactId) => {
-    if (onDeleteContact) {
-      onDeleteContact(contactId);
-    } else {
-      // Local delete for demo
-      setContactsData(prevContacts => prevContacts.filter(c => c.id !== contactId));
-    }
-    handleCloseActionMenu();
-    showSnackbar('Contact deleted', 'success');
-  };
-  
-  // Handle view contact details
-  const handleViewContactDetails = (contact) => {
-    setSelectedContact(contact);
-    setDetailsOpen(true);
-  };
-  
-  // Close details dialog
-  const handleCloseDetails = () => {
-    setDetailsOpen(false);
-  };
-  
-  // Show snackbar message
-  const showSnackbar = (message, severity = 'success') => {
-    setSnackbarMessage(message);
-    setSnackbarSeverity(severity);
-    setSnackbarOpen(true);
-  };
-  
-  // Close snackbar
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
-  };
-  
-  // Handle adding a new note
-  const handleAddNote = () => {
-    if (newNote.trim() === '') return;
-    
-    const updatedContact = {
-      ...selectedContact,
-      notes: selectedContact.notes ? `${selectedContact.notes}\n\n${new Date().toLocaleDateString()}: ${newNote}` : `${new Date().toLocaleDateString()}: ${newNote}`,
-      lastContact: new Date()
     };
     
-    if (onUpdateContact) {
-      onUpdateContact(updatedContact);
-    } else {
-      // Local update for demo
-      setContactsData(prevContacts => 
-        prevContacts.map(c => c.id === updatedContact.id ? updatedContact : c)
-      );
-      setSelectedContact(updatedContact);
-    }
-    
-    setNoteDialogOpen(false);
-    setNewNote('');
-    showSnackbar('Note added successfully', 'success');
+    fetchContacts();
+  }, [profile]);
+  
+  // Reset form data
+  const resetFormData = () => {
+    setFormData({
+      name: '',
+      title: '',
+      company: '',
+      email: '',
+      phone: '',
+      linkedin: '',
+      website: '',
+      notes: '',
+      lastContactDate: new Date(),
+      nextFollowupDate: null,
+      tags: []
+    });
   };
   
-  // Handle adding a new tag
+  // Open dialog for adding a new contact
+  const handleAddContact = () => {
+    resetFormData();
+    setEditContact(null);
+    setDialogOpen(true);
+  };
+  
+  // Open dialog for editing an existing contact
+  const handleEditContact = (contact) => {
+    setFormData({
+      ...contact,
+      lastContactDate: contact.lastContactDate ? parseISO(contact.lastContactDate) : new Date(),
+      nextFollowupDate: contact.nextFollowupDate ? parseISO(contact.nextFollowupDate) : null
+    });
+    setEditContact(contact);
+    setDialogOpen(true);
+    handleCloseMenu();
+  };
+  
+  // Handle input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  // Handle date changes
+  const handleDateChange = (name, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  // Add a tag
   const handleAddTag = () => {
-    if (tagInput.trim() === '' || currentContact.tags.includes(tagInput.trim())) {
+    if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, tagInput.trim()]
+      }));
+      setTagInput('');
+    }
+  };
+  
+  // Remove a tag
+  const handleRemoveTag = (tagToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }));
+  };
+  
+  // Save contact
+  const handleSaveContact = async () => {
+    if (!formData.name.trim()) {
+      setError('Contact name is required');
       return;
     }
     
-    setCurrentContact({
-      ...currentContact,
-      tags: [...currentContact.tags, tagInput.trim()]
-    });
+    setLoading(true);
+    setError(null);
     
-    setTagInput('');
+    try {
+      // This would connect to a MongoDB backend if implemented
+      // Currently using mock data
+      let response;
+      
+      if (editContact) {
+        // Update existing contact
+        response = await mockUpdateContact(editContact.id, formData);
+        
+        // Update contacts list
+        setContacts(prev => 
+          prev.map(contact => 
+            contact.id === editContact.id ? response.data : contact
+          )
+        );
+      } else {
+        // Create new contact
+        response = await mockCreateContact(formData);
+        
+        // Add to contacts list
+        setContacts(prev => [...prev, response.data]);
+      }
+      
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+      setDialogOpen(false);
+    } catch (err) {
+      setError('Failed to save contact');
+      console.error('Error saving contact:', err);
+    } finally {
+      setLoading(false);
+    }
   };
   
-  // Handle removing a tag
-  const handleRemoveTag = (tagToRemove) => {
-    setCurrentContact({
-      ...currentContact,
-      tags: currentContact.tags.filter(tag => tag !== tagToRemove)
+  // Delete contact
+  const handleDeleteContact = async (contactId) => {
+    if (!contactId) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // This would connect to a MongoDB backend if implemented
+      // Currently using mock data
+      await mockDeleteContact(contactId);
+      
+      // Remove from contacts list
+      setContacts(prev => prev.filter(contact => contact.id !== contactId));
+      
+      handleCloseMenu();
+    } catch (err) {
+      setError('Failed to delete contact');
+      console.error('Error deleting contact:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Menu handlers
+  const handleOpenMenu = (event, contactId) => {
+    setMenuAnchor(event.currentTarget);
+    setSelectedContactId(contactId);
+  };
+  
+  const handleCloseMenu = () => {
+    setMenuAnchor(null);
+    setSelectedContactId(null);
+  };
+  
+  // Render contact list
+  const renderContactList = () => {
+    if (contacts.length === 0) {
+      return (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography variant="body1" color="text.secondary">
+            No contacts found. Add your first networking contact to get started.
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleAddContact}
+            sx={{ mt: 2 }}
+          >
+            Add Contact
+          </Button>
+        </Box>
+      );
+    }
+    
+    return (
+      <List>
+        {contacts.map((contact) => (
+          <ListItem
+            key={contact.id}
+            alignItems="flex-start"
+            sx={{
+              mb: 2,
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'divider'
+            }}
+          >
+            <ListItemAvatar>
+              <Avatar sx={{ bgcolor: stringToColor(contact.name) }}>
+                {getInitials(contact.name)}
+              </Avatar>
+            </ListItemAvatar>
+            
+            <ListItemText
+              primary={
+                <Typography variant="subtitle1" fontWeight="bold">
+                  {contact.name}
+                </Typography>
+              }
+              secondary={
+                <>
+                  {contact.title && contact.company && (
+                    <Typography variant="body2" color="text.primary">
+                      {contact.title} at {contact.company}
+                    </Typography>
+                  )}
+                  
+                  {contact.email && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                      <EmailIcon fontSize="small" color="action" sx={{ mr: 1 }} />
+                      <Typography variant="body2">
+                        {contact.email}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {contact.phone && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                      <PhoneIcon fontSize="small" color="action" sx={{ mr: 1 }} />
+                      <Typography variant="body2">
+                        {contact.phone}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {contact.lastContactDate && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                      <EventIcon fontSize="small" color="action" sx={{ mr: 1 }} />
+                      <Typography variant="body2">
+                        Last contact: {format(new Date(contact.lastContactDate), 'MMM d, yyyy')}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {contact.tags && contact.tags.length > 0 && (
+                    <Box sx={{ mt: 1 }}>
+                      {contact.tags.map((tag) => (
+                        <Chip
+                          key={tag}
+                          label={tag}
+                          size="small"
+                          variant="outlined"
+                          sx={{ mr: 0.5, mb: 0.5 }}
+                        />
+                      ))}
+                    </Box>
+                  )}
+                </>
+              }
+            />
+            
+            <ListItemSecondaryAction>
+              <IconButton 
+                edge="end" 
+                onClick={(e) => handleOpenMenu(e, contact.id)}
+              >
+                <MoreVertIcon />
+              </IconButton>
+            </ListItemSecondaryAction>
+          </ListItem>
+        ))}
+      </List>
+    );
+  };
+  
+  // Mock API functions (would be replaced with actual API calls)
+  const mockFetchContacts = () => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          data: [
+            {
+              id: '1',
+              name: 'Jane Smith',
+              title: 'HR Manager',
+              company: 'Tech Innovations Inc.',
+              email: 'jane.smith@techinnovations.com',
+              phone: '+1 (555) 123-4567',
+              linkedin: 'https://linkedin.com/in/janesmith',
+              website: 'https://techinnovations.com',
+              notes: 'Met at the Tech Conference in June.',
+              lastContactDate: '2023-06-15',
+              nextFollowupDate: '2023-07-15',
+              tags: ['HR', 'Tech', 'Conference']
+            },
+            {
+              id: '2',
+              name: 'Robert Johnson',
+              title: 'CTO',
+              company: 'DataSphere Solutions',
+              email: 'robert.j@datasphere.io',
+              phone: '+1 (555) 987-6543',
+              linkedin: 'https://linkedin.com/in/robertjohnson',
+              website: 'https://datasphere.io',
+              notes: 'Introduced by mutual connection Alex.',
+              lastContactDate: '2023-05-22',
+              nextFollowupDate: '2023-08-01',
+              tags: ['Technical', 'Executive', 'Referral']
+            }
+          ]
+        });
+      }, 800);
     });
   };
-
+  
+  const mockCreateContact = (contactData) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          data: {
+            id: Date.now().toString(),
+            ...contactData,
+            lastContactDate: contactData.lastContactDate?.toISOString(),
+            nextFollowupDate: contactData.nextFollowupDate?.toISOString()
+          }
+        });
+      }, 800);
+    });
+  };
+  
+  const mockUpdateContact = (id, contactData) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          data: {
+            id,
+            ...contactData,
+            lastContactDate: contactData.lastContactDate?.toISOString(),
+            nextFollowupDate: contactData.nextFollowupDate?.toISOString()
+          }
+        });
+      }, 800);
+    });
+  };
+  
+  const mockDeleteContact = (id) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({ success: true });
+      }, 800);
+    });
+  };
+  
+  // Helper functions
+  const getInitials = (name) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+  
+  const stringToColor = (string) => {
+    let hash = 0;
+    for (let i = 0; i < string.length; i++) {
+      hash = string.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+      const value = (hash >> (i * 8)) & 0xFF;
+      color += ('00' + value.toString(16)).substr(-2);
+    }
+    return color;
+  };
+  
   return (
-    <Box>
-      {/* Add Contact Dialog */}
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Paper sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h5">
+            Networking Contacts
+          </Typography>
+          
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleAddContact}
+          >
+            Add Contact
+          </Button>
+        </Box>
+        
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+        
+        {saveSuccess && (
+          <Alert severity="success" sx={{ mb: 3 }}>
+            Contact saved successfully!
+          </Alert>
+        )}
+        
+        {loading && contacts.length === 0 ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <LoadingSpinner />
+          </Box>
+        ) : (
+          renderContactList()
+        )}
+        
+        {/* Contact Form Dialog */}
+        <Dialog 
+          open={dialogOpen} 
+          onClose={() => setDialogOpen(false)}
+          maxWidth="md"
+          fullWidth
+        >
           <DialogTitle>
-            {isEditMode ? 'Update Contact' : 'Add Contact'}
+            {editContact ? 'Edit Contact' : 'Add Contact'}
           </DialogTitle>
-          <DialogContent>
+          
+          <DialogContent dividers>
             <Grid container spacing={2}>
-              <Grid item xs={12}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Name"
-                  value={currentContact.name}
-                  onChange={(e) => setCurrentContact({...currentContact, name: e.target.value})}
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
+                  margin="normal"
                 />
               </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Company"
-                  value={currentContact.company}
-                  onChange={(e) => setCurrentContact({...currentContact, company: e.target.value})}
-                />
-              </Grid>
-              <Grid item xs={12}>
+              
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Title"
-                  value={currentContact.title}
-                  onChange={(e) => setCurrentContact({...currentContact, title: e.target.value})}
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  margin="normal"
                 />
               </Grid>
-              <Grid item xs={12}>
+              
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Company"
+                  name="company"
+                  value={formData.company}
+                  onChange={handleInputChange}
+                  margin="normal"
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Email"
-                  value={currentContact.email}
-                  onChange={(e) => setCurrentContact({...currentContact, email: e.target.value})}
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  margin="normal"
                 />
               </Grid>
-              <Grid item xs={12}>
+              
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Phone"
-                  value={currentContact.phone}
-                  onChange={(e) => setCurrentContact({...currentContact, phone: e.target.value})}
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  margin="normal"
                 />
               </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Location"
-                  value={currentContact.location}
-                  onChange={(e) => setCurrentContact({...currentContact, location: e.target.value})}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Category"
-                  value={currentContact.category}
-                  onChange={(e) => setCurrentContact({...currentContact, category: e.target.value})}
-                />
-              </Grid>
-              <Grid item xs={12}>
+              
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="LinkedIn URL"
-                  value={currentContact.linkedInUrl}
-                  onChange={(e) => setCurrentContact({...currentContact, linkedInUrl: e.target.value})}
+                  name="linkedin"
+                  value={formData.linkedin}
+                  onChange={handleInputChange}
+                  margin="normal"
                 />
               </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Twitter URL"
-                  value={currentContact.twitterUrl}
-                  onChange={(e) => setCurrentContact({...currentContact, twitterUrl: e.target.value})}
-                />
-              </Grid>
-              <Grid item xs={12}>
+              
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Website"
-                  value={currentContact.website}
-                  onChange={(e) => setCurrentContact({...currentContact, website: e.target.value})}
+                  name="website"
+                  value={formData.website}
+                  onChange={handleInputChange}
+                  margin="normal"
                 />
               </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <DatePicker
+                  label="Last Contact Date"
+                  value={formData.lastContactDate}
+                  onChange={(newValue) => handleDateChange('lastContactDate', newValue)}
+                  renderInput={(params) => (
+                    <TextField {...params} fullWidth margin="normal" />
+                  )}
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <DatePicker
+                  label="Next Follow-up Date"
+                  value={formData.nextFollowupDate}
+                  onChange={(newValue) => handleDateChange('nextFollowupDate', newValue)}
+                  renderInput={(params) => (
+                    <TextField {...params} fullWidth margin="normal" />
+                  )}
+                />
+              </Grid>
+              
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  minRows={3}
-                  placeholder="Enter notes about this contact..."
-                  value={currentContact.notes}
-                  onChange={(e) => setCurrentContact({...currentContact, notes: e.target.value})}
+                  label="Notes"
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleInputChange}
+                  multiline
+                  rows={4}
+                  margin="normal"
                 />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Tags
+                </Typography>
+                
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <TextField
+                    label="Add Tag"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    size="small"
+                    sx={{ mr: 1 }}
+                  />
+                  
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={handleAddTag}
+                  >
+                    Add
+                  </Button>
+                </Box>
+                
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {formData.tags.map((tag) => (
+                    <Chip
+                      key={tag}
+                      label={tag}
+                      onDelete={() => handleRemoveTag(tag)}
+                      size="small"
+                    />
+                  ))}
+                </Box>
               </Grid>
             </Grid>
           </DialogContent>
+          
           <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button 
-              variant="contained" 
-              onClick={handleSubmitContact}
-              disabled={!currentContact.name.trim()}
-            >
-              {isEditMode ? 'Update Contact' : 'Add Contact'}
+            <Button onClick={() => setDialogOpen(false)}>
+              Cancel
             </Button>
-          </DialogActions>
-        </Dialog>
-      </LocalizationProvider>
-      
-      {/* Contact Details Dialog */}
-      <Dialog open={detailsOpen} onClose={handleCloseDetails} maxWidth="sm" fullWidth>
-        {selectedContact && (
-          <>
-            <DialogTitle>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="h6">Contact Details</Typography>
-                <Box>
-                  <IconButton onClick={() => handleOpenDialog(true, selectedContact)}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton onClick={handleCloseDetails}>
-                    <CloseIcon />
-                  </IconButton>
-                </Box>
-              </Box>
-            </DialogTitle>
-            <DialogContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ width: 80, height: 80, mr: 2, bgcolor: getAvatarColor(selectedContact.name) }}>
-                  {getInitials(selectedContact.name)}
-                </Avatar>
-                <Box>
-                  <Typography variant="h6">{selectedContact.name}</Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    {selectedContact.title}{selectedContact.title && selectedContact.company ? ' at ' : ''}
-                    {selectedContact.company}
-                  </Typography>
-                  <Chip 
-                    size="small" 
-                    label={selectedContact.category} 
-                    sx={{ mt: 1 }}
-                    color={getCategoryColor(selectedContact.category)}
-                  />
-                </Box>
-              </Box>
-              
-              <Divider sx={{ my: 2 }} />
-              
-              <Grid container spacing={2}>
-                {selectedContact.email && (
-                  <Grid item xs={12} sm={6}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <EmailIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                      <Typography variant="body2">{selectedContact.email}</Typography>
-                    </Box>
-                  </Grid>
-                )}
-                
-                {selectedContact.phone && (
-                  <Grid item xs={12} sm={6}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <PhoneIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                      <Typography variant="body2">{selectedContact.phone}</Typography>
-                    </Box>
-                  </Grid>
-                )}
-                
-                {selectedContact.location && (
-                  <Grid item xs={12} sm={6}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <LocationOnIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                      <Typography variant="body2">{selectedContact.location}</Typography>
-                    </Box>
-                  </Grid>
-                )}
-                
-                {selectedContact.linkedInUrl && (
-                  <Grid item xs={12} sm={6}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <LinkedInIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                      <Typography variant="body2">
-                        <a href={selectedContact.linkedInUrl} target="_blank" rel="noopener noreferrer">
-                          LinkedIn Profile
-                        </a>
-                      </Typography>
-                    </Box>
-                  </Grid>
-                )}
-              </Grid>
-              
-              <Divider sx={{ my: 2 }} />
-              
-              <Typography variant="subtitle1" gutterBottom>
-                Follow-up Schedule
-              </Typography>
-              
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <EventIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                    <Typography variant="body2">
-                      Last Contact: {selectedContact.lastContact ? new Date(selectedContact.lastContact).toLocaleDateString() : 'Never'}
-                    </Typography>
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <CalendarMonthIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                    <Typography variant="body2">
-                      Next Follow-up: {selectedContact.nextFollowUp ? new Date(selectedContact.nextFollowUp).toLocaleDateString() : 'Not scheduled'}
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-              
-              <Divider sx={{ my: 2 }} />
-              
-              <Typography variant="subtitle1" gutterBottom>
-                Notes
-              </Typography>
-              
-              <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'background.paper', minHeight: '100px' }}>
-                {selectedContact.notes ? (
-                  <Typography variant="body2" whiteSpace="pre-wrap">
-                    {selectedContact.notes}
-                  </Typography>
-                ) : (
-                  <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                    No notes yet. Add some using the button below.
-                  </Typography>
-                )}
-              </Paper>
-              
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                {selectedContact.tags && selectedContact.tags.map((tag, index) => (
-                  <Chip key={index} label={tag} size="small" />
-                ))}
-              </Box>
-            </DialogContent>
-            <DialogActions>
-              <Button 
-                startIcon={<EventIcon />}
-                onClick={() => setFollowUpDialogOpen(true)}
-              >
-                Schedule Follow-up
-              </Button>
-              <Button 
-                startIcon={<NoteIcon />}
-                variant="contained"
-                onClick={() => setNoteDialogOpen(true)}
-              >
-                Add Note
-              </Button>
-            </DialogActions>
-          </>
-        )}
-      </Dialog>
-      
-      {/* Add Note Dialog */}
-      <Dialog open={noteDialogOpen} onClose={() => setNoteDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Note</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            margin="normal"
-            label="Note"
-            placeholder="Enter your note here..."
-            value={newNote}
-            onChange={(e) => setNewNote(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNoteDialogOpen(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
-            onClick={handleAddNote}
-            disabled={!newNote.trim()}
-          >
-            Add Note
-          </Button>
-        </DialogActions>
-      </Dialog>
-      
-      {/* Import Contacts Dialog */}
-      <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Import Contacts</DialogTitle>
-        <DialogContent>
-          <Box sx={{ textAlign: 'center', py: 3 }}>
-            <input
-              accept=".csv,.xlsx"
-              style={{ display: 'none' }}
-              id="upload-file-button"
-              type="file"
-              onChange={(e) => {
-                // Handle file upload logic
-                // In a real app, you would process the file here
-                if (e.target.files.length > 0) {
-                  showSnackbar(`File "${e.target.files[0].name}" ready to import`, 'info');
-                }
-              }}
-            />
-            <label htmlFor="upload-file-button">
-              <Button
-                variant="outlined"
-                component="span"
-                startIcon={<CloudUploadIcon />}
-                sx={{ mb: 2 }}
-              >
-                Upload CSV or Excel File
-              </Button>
-            </label>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Upload a CSV or Excel file with your contacts. The file should include columns for name, email, phone, etc.
-            </Typography>
-            <Alert severity="info" sx={{ mt: 2, textAlign: 'left' }}>
-              For example format, you can <Button size="small">download a template</Button>.
-            </Alert>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setImportDialogOpen(false)}>Cancel</Button>
-          <Button 
-            variant="contained"
-            onClick={() => {
-              setImportDialogOpen(false);
-              showSnackbar('Contacts imported successfully', 'success');
-            }}
-          >
-            Import
-          </Button>
-        </DialogActions>
-      </Dialog>
-      
-      {/* Follow-up Dialog */}
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <Dialog open={followUpDialogOpen} onClose={() => setFollowUpDialogOpen(false)} maxWidth="xs" fullWidth>
-          <DialogTitle>Schedule Follow-Up</DialogTitle>
-          <DialogContent>
-            <Box sx={{ pt: 1 }}>
-              <DatePicker
-                label="Follow-up Date"
-                value={selectedContact?.nextFollowUp ? new Date(selectedContact.nextFollowUp) : null}
-                onChange={(newDate) => {
-                  if (selectedContact) {
-                    setSelectedContact({
-                      ...selectedContact,
-                      nextFollowUp: newDate
-                    });
-                  }
-                }}
-                renderInput={(params) => <TextField {...params} fullWidth margin="normal" />}
-              />
-              <TextField
-                fullWidth
-                margin="normal"
-                label="Follow-up Note"
-                placeholder="What would you like to discuss?"
-                multiline
-                rows={3}
-              />
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setFollowUpDialogOpen(false)}>Cancel</Button>
+            
             <Button 
               variant="contained"
-              onClick={() => {
-                if (selectedContact) {
-                  const updatedContact = {
-                    ...selectedContact,
-                    // In a real app, you would also save follow-up notes
-                  };
-                  
-                  if (onUpdateContact) {
-                    onUpdateContact(updatedContact);
-                  } else {
-                    // Local update for demo
-                    setContactsData(prevContacts => 
-                      prevContacts.map(c => c.id === updatedContact.id ? updatedContact : c)
-                    );
-                  }
-                }
-                setFollowUpDialogOpen(false);
-                showSnackbar('Follow-up scheduled', 'success');
-              }}
+              onClick={handleSaveContact}
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} /> : null}
             >
-              Schedule
+              {loading ? 'Saving...' : 'Save Contact'}
             </Button>
           </DialogActions>
         </Dialog>
-      </LocalizationProvider>
-      
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      >
-        <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-    </Box>
+        
+        {/* Contact Actions Menu */}
+        <Menu
+          anchorEl={menuAnchor}
+          open={Boolean(menuAnchor)}
+          onClose={handleCloseMenu}
+        >
+          <MenuItem 
+            onClick={() => {
+              const contact = contacts.find(c => c.id === selectedContactId);
+              if (contact) {
+                handleEditContact(contact);
+              }
+            }}
+          >
+            <EditIcon fontSize="small" sx={{ mr: 1 }} /> Edit
+          </MenuItem>
+          
+          <MenuItem 
+            onClick={() => {
+              if (selectedContactId) {
+                handleDeleteContact(selectedContactId);
+              }
+            }}
+          >
+            <DeleteIcon fontSize="small" sx={{ mr: 1 }} /> Delete
+          </MenuItem>
+        </Menu>
+      </Paper>
+    </LocalizationProvider>
   );
 };
 

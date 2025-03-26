@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -73,6 +73,10 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import { Chart } from 'react-chartjs-2';
+import { useUser } from './AppContext';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
+import SpeechControl from './Speech/SpeechControl';
 
 const SkillAssessment = ({
   userData = {},
@@ -106,126 +110,52 @@ const SkillAssessment = ({
   const [comparisonMode, setComparisonMode] = useState(false);
   const [benchmarkData, setBenchmarkData] = useState(null);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
+  const [assessments, setAssessments] = useState([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [selectedAnswer, setSelectedAnswer] = useState('');
+  const [freeTextAnswer, setFreeTextAnswer] = useState('');
+  const [codeAnswer, setCodeAnswer] = useState('');
+  const [assessmentInProgress, setAssessmentInProgress] = useState(false);
+  const [assessmentComplete, setAssessmentComplete] = useState(false);
+  const [results, setResults] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [error, setError] = useState(null);
+  const [skillInsights, setSkillInsights] = useState(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const timerRef = useRef(null);
+  const { profile } = useUser();
   
-  // Sample industry benchmarks by role (would come from backend in real implementation)
-  const industryBenchmarks = {
-    'Software Engineer': {
-      technical: {
-        'JavaScript': 4,
-        'React': 3.5,
-        'Node.js': 3,
-        'SQL': 3,
-        'Git': 4,
-        'Data Structures': 3.5,
-        'Algorithms': 3.5
-      },
-      soft: {
-        'Problem Solving': 4,
-        'Communication': 3,
-        'Teamwork': 3.5,
-        'Time Management': 3
+  // Fetch available assessments
+  useEffect(() => {
+    const fetchAssessments = async () => {
+      if (!profile?.id) {
+        setLoading(false);
+        return;
       }
-    },
-    'Data Scientist': {
-      technical: {
-        'Python': 4,
-        'Machine Learning': 4,
-        'SQL': 3.5,
-        'Statistics': 4,
-        'Data Visualization': 3.5
-      },
-      soft: {
-        'Analytical Thinking': 4.5,
-        'Research': 4,
-        'Communication': 3.5,
-        'Attention to Detail': 4
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // This connects to either skill_assessment.py or an external LMS API
+        const response = await apiEndpoints.skills.getAssessments({
+          userId: profile.id,
+          category: selectedCategory,
+          skill: selectedSkill
+        });
+        
+        setAssessments(response.data);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to fetch skill assessments');
+        console.error('Error fetching assessments:', err);
+      } finally {
+        setLoading(false);
       }
-    }
-  };
-  
-  // Sample skill categories
-  const sampleSkillCategories = [
-    { id: 'technical', name: 'Technical Skills', icon: <CodeIcon /> },
-    { id: 'soft', name: 'Soft Skills', icon: <PsychologyIcon /> },
-    { id: 'language', name: 'Languages', icon: <TranslateIcon /> },
-    { id: 'tools', name: 'Tools & Software', icon: <BuildIcon /> },
-    { id: 'domain', name: 'Domain Knowledge', icon: <WorkIcon /> }
-  ];
-  
-  // Sample recommended skills by job role
-  const recommendedSkillsByRole = {
-    'Software Engineer': [
-      { name: 'React.js', category: 'technical', trending: true },
-      { name: 'Cloud Computing', category: 'technical', trending: true },
-      { name: 'DevOps', category: 'technical', trending: true },
-      { name: 'Agile Development', category: 'domain', trending: false },
-      { name: 'Problem Solving', category: 'soft', trending: false }
-    ],
-    'Data Scientist': [
-      { name: 'Machine Learning', category: 'technical', trending: true },
-      { name: 'Big Data Technologies', category: 'technical', trending: true },
-      { name: 'Python', category: 'technical', trending: false },
-      { name: 'Data Visualization', category: 'technical', trending: true },
-      { name: 'Statistical Analysis', category: 'technical', trending: false }
-    ]
-  };
-  
-  // Sample assessments
-  const sampleAssessments = [
-    {
-      id: 'js-assessment',
-      title: 'JavaScript Proficiency',
-      description: 'Test your knowledge of JavaScript fundamentals and advanced concepts.',
-      skillCategory: 'technical',
-      skillName: 'JavaScript',
-      duration: 20, // in minutes
-      questions: [
-        {
-          id: 'js-q1',
-          text: 'What is the output of: console.log(typeof NaN)',
-          options: [
-            { id: 'a', text: '"number"' },
-            { id: 'b', text: '"NaN"' },
-            { id: 'c', text: '"undefined"' },
-            { id: 'd', text: '"object"' }
-          ],
-          correctAnswer: 'a'
-        },
-        {
-          id: 'js-q2',
-          text: 'Which method is used to remove the last element from an array?',
-          options: [
-            { id: 'a', text: 'shift()' },
-            { id: 'b', text: 'pop()' },
-            { id: 'c', text: 'splice()' },
-            { id: 'd', text: 'unshift()' }
-          ],
-          correctAnswer: 'b'
-        }
-      ]
-    },
-    {
-      id: 'problem-solving',
-      title: 'Problem Solving Assessment',
-      description: 'Evaluate your problem-solving and critical thinking skills.',
-      skillCategory: 'soft',
-      skillName: 'Problem Solving',
-      duration: 25,
-      questions: [
-        {
-          id: 'ps-q1',
-          text: 'A team needs to complete a project in 10 days. If 5 people can complete the project in 10 days, how many people would be needed to complete it in 5 days?',
-          options: [
-            { id: 'a', text: '5 people' },
-            { id: 'b', text: '10 people' },
-            { id: 'c', text: '15 people' },
-            { id: 'd', text: '20 people' }
-          ],
-          correctAnswer: 'b'
-        }
-      ]
-    }
-  ];
+    };
+    
+    fetchAssessments();
+  }, [profile, selectedCategory, selectedSkill]);
   
   // Functions
   const handleAddSkill = () => {
@@ -368,6 +298,164 @@ const SkillAssessment = ({
     return roleRecommendations.filter(
       rec => !userSkillNames.includes(rec.name.toLowerCase())
     );
+  };
+  
+  // Start assessment
+  const startAssessment = async (assessmentId) => {
+    setLoading(true);
+    setError(null);
+    setAnswers({});
+    setCurrentQuestionIndex(0);
+    setAssessmentComplete(false);
+    setResults(null);
+    
+    try {
+      // This connects to the backend to start a new assessment session
+      const response = await apiEndpoints.skills.startAssessment(assessmentId);
+      
+      setCurrentAssessment(response.data);
+      setTimeLeft(response.data.timeLimit * 60); // Convert minutes to seconds
+      setAssessmentInProgress(true);
+      
+      // Start timer
+      if (response.data.timeLimit > 0) {
+        timerRef.current = setInterval(() => {
+          setTimeLeft(prev => {
+            if (prev <= 1) {
+              submitAssessment();
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to start assessment');
+      console.error('Error starting assessment:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle answer selection for multiple choice
+  const handleAnswerSelect = (event) => {
+    setSelectedAnswer(event.target.value);
+  };
+  
+  // Save answer and move to next question
+  const saveAnswer = () => {
+    if (!currentAssessment) return;
+    
+    const currentQuestion = currentAssessment.questions[currentQuestionIndex];
+    let answerValue;
+    
+    switch (currentQuestion.type) {
+      case 'multiple_choice':
+        answerValue = selectedAnswer;
+        break;
+      case 'free_text':
+        answerValue = freeTextAnswer;
+        break;
+      case 'coding':
+        answerValue = codeAnswer;
+        break;
+      default:
+        answerValue = selectedAnswer;
+    }
+    
+    // Save the answer
+    setAnswers(prev => ({
+      ...prev,
+      [currentQuestion.id]: {
+        questionId: currentQuestion.id,
+        answer: answerValue,
+        questionType: currentQuestion.type
+      }
+    }));
+    
+    // Clear current answer
+    setSelectedAnswer('');
+    setFreeTextAnswer('');
+    setCodeAnswer('');
+    
+    // Move to next question or submit if last question
+    if (currentQuestionIndex < currentAssessment.questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      submitAssessment();
+    }
+  };
+  
+  // Submit assessment for grading
+  const submitAssessment = async () => {
+    if (!currentAssessment) return;
+    
+    setSubmitting(true);
+    setError(null);
+    
+    try {
+      // This connects to the backend quiz engine
+      const response = await apiEndpoints.skills.submitAssessment({
+        assessmentId: currentAssessment.id,
+        userId: profile.id,
+        answers: answers,
+        completedAt: new Date().toISOString()
+      });
+      
+      setResults(response.data);
+      setAssessmentComplete(true);
+      setAssessmentInProgress(false);
+      
+      // Get skill insights based on results
+      if (response.data.score !== undefined) {
+        try {
+          const insightsResponse = await apiEndpoints.skills.getSkillInsights({
+            userId: profile.id,
+            assessmentId: currentAssessment.id,
+            score: response.data.score,
+            skillCategory: currentAssessment.skillCategory
+          });
+          
+          setSkillInsights(insightsResponse.data);
+        } catch (err) {
+          console.error('Error fetching skill insights:', err);
+        }
+      }
+      
+      // Update user profile with completed assessment
+      try {
+        await apiEndpoints.user.updateProfile(profile.id, {
+          completedAssessments: [
+            ...(profile.completedAssessments || []),
+            {
+              assessmentId: currentAssessment.id,
+              score: results.score,
+              maxScore: results.maxScore,
+              completedAt: new Date().toISOString()
+            }
+          ]
+        });
+      } catch (err) {
+        console.error('Error updating profile with assessment:', err);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to submit assessment');
+      console.error('Error submitting assessment:', err);
+    } finally {
+      setSubmitting(false);
+      // Clear any timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  };
+  
+  // Format time from seconds to MM:SS
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
   
   // Render functions
@@ -565,7 +653,7 @@ const SkillAssessment = ({
         </Typography>
         
         <Grid container spacing={2}>
-          {sampleAssessments.map(assessment => (
+          {assessments.map(assessment => (
             <Grid item xs={12} md={6} key={assessment.id}>
               <Card variant="outlined">
                 <CardContent>
@@ -726,34 +814,34 @@ const SkillAssessment = ({
   };
   
   const renderAssessmentResults = () => {
-    if (!assessmentResults) return null;
+    if (!results) return null;
     
     return (
       <Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
           <CircularProgress 
             variant="determinate" 
-            value={assessmentResults.score} 
+            value={results.score} 
             size={80}
             thickness={5}
             sx={{ mb: 2 }}
           />
           
           <Typography variant="h4" color="primary">
-            {assessmentResults.score}%
+            {results.score}/{results.maxScore}
           </Typography>
           
           <Typography variant="subtitle1" gutterBottom>
-            {assessmentResults.correctAnswers} of {assessmentResults.totalQuestions} questions correct
+            {results.correctAnswers} of {results.totalQuestions} questions correct
           </Typography>
           
           <Chip 
             icon={<StarIcon />}
-            label={`Skill Level: ${assessmentResults.skillLevel}`}
+            label={`Skill Level: ${results.skillLevel}`}
             color={
-              assessmentResults.skillLevel >= 4 ? 'success' :
-              assessmentResults.skillLevel >= 3 ? 'primary' :
-              assessmentResults.skillLevel >= 2 ? 'warning' : 'default'
+              results.skillLevel >= 4 ? 'success' :
+              results.skillLevel >= 3 ? 'primary' :
+              results.skillLevel >= 2 ? 'warning' : 'default'
             }
             sx={{ mt: 1 }}
           />

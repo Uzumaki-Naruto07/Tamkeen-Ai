@@ -35,7 +35,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Autocomplete
+  Autocomplete,
+  ToggleButtonGroup,
+  ToggleButton
 } from '@mui/material';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -59,6 +61,10 @@ import SaveIcon from '@mui/icons-material/Save';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { useUser } from './AppContext';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
 
 const SalaryCalculator = ({
   onCalculate,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -26,54 +26,164 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Rating
+  Rating,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
-import BookmarkIcon from '@mui/icons-material/Bookmark';
-import SchoolIcon from '@mui/icons-material/School';
-import WorkIcon from '@mui/icons-material/Work';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import StarIcon from '@mui/icons-material/Star';
-import StarBorderIcon from '@mui/icons-material/StarBorder';
-import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import PersonIcon from '@mui/icons-material/Person';
-import CodeIcon from '@mui/icons-material/Code';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import BookIcon from '@mui/icons-material/Book';
-import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
-import CastForEducationIcon from '@mui/icons-material/CastForEducation';
-import ArticleIcon from '@mui/icons-material/Article';
-import InfoIcon from '@mui/icons-material/Info';
-import PaidIcon from '@mui/icons-material/Paid';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import DownloadIcon from '@mui/icons-material/Download';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PublicIcon from '@mui/icons-material/Public';
+import {
+  Bookmark,
+  School,
+  Work,
+  ExpandMore,
+  Star,
+  StarBorder,
+  TipsAndUpdates,
+  CalendarMonth,
+  Person,
+  Code,
+  CheckCircle,
+  Refresh,
+  Book,
+  VideoLibrary,
+  CastForEducation,
+  Article,
+  Info,
+  Paid,
+  AccessTime,
+  Download,
+  PlayArrow,
+  Public,
+  BookmarkBorder,
+  OpenInNew
+} from '@mui/icons-material';
+import { useUser, useDoc } from './AppContext';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
 
 const LearningPathGenerator = ({
-  currentSkills = [],
+  targetJobTitle = '',
   targetSkills = [],
-  targetRole = '',
-  timeframe = 'medium', // short, medium, long
-  preferences = {
-    learningStyle: 'balanced', // visual, practical, theoretical, balanced
-    resourceType: 'all', // video, course, book, article, all
-    difficulty: 'intermediate', // beginner, intermediate, advanced
-    budget: 'medium' // free, low, medium, high
-  },
-  onRefresh,
-  onSave,
-  loading = false
+  resumeId = null,
+  timeframe = 'medium' // short, medium, long
 }) => {
   const [activeStep, setActiveStep] = useState(0);
+  const [formData, setFormData] = useState({
+    currentRole: '',
+    targetRole: targetJobTitle || '',
+    timeframe: timeframe,
+    focusAreas: targetSkills || [],
+    currentSkills: [],
+    learningStyle: 'balanced', // visual, practical, theoretical, balanced
+    budget: 'medium', // free, low, medium, high
+    hoursPerWeek: 10,
+    includeCredentials: true
+  });
+  const [skills, setSkills] = useState([]);
+  const [path, setPath] = useState(null); // Renamed learningPath to path to avoid redeclaration
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const [savedPaths, setSavedPaths] = useState([]);
+  const [newSkillInput, setNewSkillInput] = useState('');
+  const { profile } = useUser();
+  const { currentResume } = useDoc();
   const [expandedResourceSection, setExpandedResourceSection] = useState(null);
   const [savedResources, setSavedResources] = useState(new Set());
 
+  // Effect to load user's current role and skills from profile
+  useEffect(() => {
+    if (profile) {
+      setFormData(prev => ({
+        ...prev,
+        currentRole: profile.currentRole || '',
+        currentSkills: profile.skills || []
+      }));
+    }
+  }, [profile]);
+  
+  // Effect to load user's saved learning paths
+  useEffect(() => {
+    const fetchSavedPaths = async () => {
+      if (!profile?.id) return;
+      
+      try {
+        const response = await apiEndpoints.user.getSavedLearningPaths(profile.id);
+        setSavedPaths(response.data.map(path => path.id));
+      } catch (err) {
+        console.error('Error fetching saved learning paths:', err);
+      }
+    };
+    
+    fetchSavedPaths();
+  }, [profile]);
+  
+  // Effect to extract skills from resume if provided
+  useEffect(() => {
+    const fetchResumeSkills = async () => {
+      const effectiveResumeId = resumeId || currentResume?.id;
+      if (!effectiveResumeId) return;
+      
+      try {
+        const response = await apiEndpoints.documents.getResume(effectiveResumeId);
+        if (response.data.skills && response.data.skills.length > 0) {
+          setFormData(prev => ({
+            ...prev,
+            currentSkills: [...prev.currentSkills, ...response.data.skills]
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching resume skills:', err);
+      }
+    };
+    
+    fetchResumeSkills();
+  }, [resumeId, currentResume]);
+  
+  // Handle input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  // Add new skill to current skills
+  const handleAddSkill = () => {
+    if (newSkillInput.trim() && !formData.currentSkills.includes(newSkillInput.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        currentSkills: [...prev.currentSkills, newSkillInput.trim()]
+      }));
+      setNewSkillInput('');
+    }
+  };
+  
+  // Remove skill from current skills
+  const handleRemoveSkill = (skill) => {
+    setFormData(prev => ({
+      ...prev,
+      currentSkills: prev.currentSkills.filter(s => s !== skill)
+    }));
+  };
+  
+  // Add focus area
+  const handleAddFocusArea = () => {
+    if (newSkillInput.trim() && !formData.focusAreas.includes(newSkillInput.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        focusAreas: [...prev.focusAreas, newSkillInput.trim()]
+      }));
+      setNewSkillInput('');
+    }
+  };
+
   // Example learning path structure (in real app, this would come from props or API)
   const learningPath = {
-    title: `Learning path for ${targetRole || 'your target role'}`,
-    description: `A customized learning journey to help you acquire the skills needed for ${targetRole || 'your target role'}.`,
+    title: `Learning path for ${targetJobTitle || 'your target role'}`,
+    description: `A customized learning journey to help you acquire the skills needed for ${targetJobTitle || 'your target role'}.`,
     estimatedTimeWeeks: timeframe === 'short' ? 8 : timeframe === 'medium' ? 16 : 24,
     milestones: [
       {
@@ -96,7 +206,7 @@ const LearningPathGenerator = ({
             url: "https://www.udemy.com/course/example",
             rating: 4.7,
             reviews: 1245,
-            icon: <CastForEducationIcon color="primary" />
+            icon: <CastForEducation color="primary" />
           },
           {
             id: 102,
@@ -109,7 +219,7 @@ const LearningPathGenerator = ({
             url: "https://www.youtube.com/watch?v=example",
             rating: 4.5,
             reviews: 987,
-            icon: <VideoLibraryIcon color="error" />
+            icon: <VideoLibrary color="error" />
           },
           {
             id: 103,
@@ -122,7 +232,7 @@ const LearningPathGenerator = ({
             url: "https://www.oreilly.com/example",
             rating: 4.2,
             reviews: 325,
-            icon: <BookIcon color="secondary" />
+            icon: <Book color="secondary" />
           }
         ]
       },
@@ -146,7 +256,7 @@ const LearningPathGenerator = ({
             url: "https://www.coursera.org/example",
             rating: 4.8,
             reviews: 2145,
-            icon: <CastForEducationIcon color="primary" />
+            icon: <CastForEducation color="primary" />
           },
           {
             id: 202,
@@ -159,7 +269,7 @@ const LearningPathGenerator = ({
             url: "https://frontendmasters.com/example",
             rating: 4.9,
             reviews: 1256,
-            icon: <VideoLibraryIcon color="error" />
+            icon: <VideoLibrary color="error" />
           }
         ]
       },
@@ -183,7 +293,7 @@ const LearningPathGenerator = ({
             url: "https://www.pluralsight.com/example",
             rating: 4.6,
             reviews: 892,
-            icon: <CastForEducationIcon color="primary" />
+            icon: <CastForEducation color="primary" />
           },
           {
             id: 302,
@@ -196,7 +306,7 @@ const LearningPathGenerator = ({
             url: "https://www.manning.com/example",
             rating: 4.4,
             reviews: 563,
-            icon: <BookIcon color="secondary" />
+            icon: <Book color="secondary" />
           }
         ]
       }
@@ -247,15 +357,15 @@ const LearningPathGenerator = ({
           {learningPath.description}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <CalendarMonthIcon color="primary" sx={{ mr: 1 }} />
+          <CalendarMonth color="primary" sx={{ mr: 1 }} />
           <Typography variant="subtitle2">
             Estimated time to complete: <strong>{learningPath.estimatedTimeWeeks} weeks</strong>
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <PersonIcon color="primary" sx={{ mr: 1 }} />
+          <Person color="primary" sx={{ mr: 1 }} />
           <Typography variant="subtitle2">
-            Learning style: <strong>{preferences.learningStyle}</strong>
+            Learning style: <strong>{formData.learningStyle}</strong>
           </Typography>
         </Box>
       </Box>
@@ -273,7 +383,7 @@ const LearningPathGenerator = ({
               </Typography>
               
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <AccessTimeIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                <AccessTime fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
                 <Typography variant="body2" color="text.secondary">
                   {milestone.duration}
                 </Typography>
@@ -290,7 +400,7 @@ const LearningPathGenerator = ({
                         key={idx}
                         label={skill}
                         size="small"
-                        icon={<CodeIcon />}
+                        icon={<Code />}
                         sx={{ m: 0.5 }}
                       />
                     ))}
@@ -312,32 +422,28 @@ const LearningPathGenerator = ({
                     onChange={() => handleToggleResourceAccordion(resource.id)}
                     sx={{ mb: 1 }}
                   >
-                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <AccordionSummary expandIcon={<ExpandMore />}>
                       <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                         {savedResources.has(resource.id) && (
-                          <BookmarkIcon 
-                            color="primary" 
-                            fontSize="small" 
-                            sx={{ mr: 1 }} 
-                          />
+                          <Bookmark color="primary" fontSize="small" sx={{ mr: 1 }} />
                         )}
                         <Typography>{resource.title}</Typography>
                       </Box>
                     </AccordionSummary>
                     <AccordionDetails>
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        {resource.icon || <ArticleIcon color="primary" />}
+                        {resource.icon || <Article color="primary" />}
                         <Typography variant="body2" sx={{ ml: 1 }}>
                           {resource.type.charAt(0).toUpperCase() + resource.type.slice(1)}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
-                          <PaidIcon fontSize="small" sx={{ color: 'text.secondary', mr: 0.5 }} />
+                          <Paid fontSize="small" sx={{ color: 'text.secondary', mr: 0.5 }} />
                           <Typography variant="body2" color="text.secondary">
                             {resource.cost}
                           </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
-                          <AccessTimeIcon fontSize="small" sx={{ color: 'text.secondary', mr: 0.5 }} />
+                          <AccessTime fontSize="small" sx={{ color: 'text.secondary', mr: 0.5 }} />
                           <Typography variant="body2" color="text.secondary">
                             {resource.duration}
                           </Typography>
@@ -372,7 +478,7 @@ const LearningPathGenerator = ({
                                   label={skill} 
                                   size="small" 
                                   variant="outlined"
-                                  icon={<CodeIcon />} 
+                                  icon={<Code />} 
                                   sx={{ mr: 0.5, mb: 0.5 }}
                                 />
                               ))}
@@ -383,7 +489,7 @@ const LearningPathGenerator = ({
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
                           <Button
                             size="small"
-                            startIcon={savedResources.has(resource.id) ? <CheckCircleIcon /> : <BookmarkIcon />}
+                            startIcon={savedResources.has(resource.id) ? <CheckCircle /> : <BookmarkBorder />}
                             onClick={() => handleSaveResource(resource.id)}
                             color={savedResources.has(resource.id) ? "success" : "primary"}
                           >
@@ -392,7 +498,7 @@ const LearningPathGenerator = ({
                           <Button
                             size="small"
                             variant="contained"
-                            endIcon={<PlayArrowIcon />}
+                            endIcon={<PlayArrow />}
                             href={resource.url}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -434,8 +540,10 @@ const LearningPathGenerator = ({
       {/* Action buttons */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
         <Button 
-          startIcon={<RefreshIcon />}
-          onClick={onRefresh}
+          startIcon={<Refresh />}
+          onClick={() => {
+            // Implement the logic to regenerate the learning path
+          }}
           sx={{ mr: 1 }}
           disabled={loading}
         >
@@ -443,15 +551,17 @@ const LearningPathGenerator = ({
         </Button>
         <Button 
           variant="outlined"
-          startIcon={<DownloadIcon />}
+          startIcon={<Download />}
           sx={{ mr: 1 }}
         >
           Download PDF
         </Button>
         <Button 
           variant="contained"
-          startIcon={<BookmarkIcon />}
-          onClick={() => onSave && onSave(learningPath)}
+          startIcon={<Bookmark />}
+          onClick={() => {
+            // Implement the logic to save the learning path
+          }}
         >
           Save Learning Path
         </Button>

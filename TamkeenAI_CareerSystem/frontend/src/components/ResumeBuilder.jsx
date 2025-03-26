@@ -87,6 +87,9 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import ColorLensIcon from '@mui/icons-material/ColorLens';
+import { useUser } from './AppContext';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
 
 const ResumeBuilder = ({
   initialData = null,
@@ -182,14 +185,31 @@ const ResumeBuilder = ({
   const [fontFamily, setFontFamily] = useState('Roboto');
   const [customSections, setCustomSections] = useState([]);
   const [customSectionName, setCustomSectionName] = useState('');
+  const [resumeId, setResumeId] = useState(null);
+  const { profile } = useUser();
   
   const previewContainerRef = useRef(null);
 
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
+      if (initialData.id) {
+        setResumeId(initialData.id);
+      }
+    } else if (profile) {
+      // Pre-fill personal info from user profile
+      setFormData(prev => ({
+        ...prev,
+        personal: {
+          ...prev.personal,
+          name: `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
+          email: profile.email || '',
+          phone: profile.phone || '',
+          location: profile.location || ''
+        }
+      }));
     }
-  }, [initialData]);
+  }, [initialData, profile]);
 
   useEffect(() => {
     if (templates.length > 0 && !selectedTemplate) {
@@ -450,21 +470,38 @@ const ResumeBuilder = ({
     }));
   };
 
-  const handleSave = () => {
-    const newErrors = {};
-    if (!formData.personal.firstName || !formData.personal.lastName || !formData.personal.email || !formData.personal.phone || !formData.personal.location) {
-      newErrors.requiredFields = 'All fields are required';
-    }
+  const handleSave = async () => {
+    setLoading(true);
+    setError(null);
     
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-    
-    if (onSave) {
-      onSave(formData);
+    try {
+      const payload = {
+        ...formData,
+        userId: profile?.id
+      };
+      
+      let response;
+      
+      if (resumeId) {
+        // Update existing resume
+        response = await apiEndpoints.documents.updateResume(resumeId, payload);
+      } else {
+        // Create new resume
+        response = await apiEndpoints.documents.createResume(payload);
+        setResumeId(response.data.id);
+      }
+      
       setSuccessMessage('Resume saved successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
+      
+      if (onSave) {
+        onSave(response.data);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save resume');
+      console.error('Resume save error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -562,6 +599,72 @@ const ResumeBuilder = ({
     }));
   };
 
+  const handleGeneratePDF = async () => {
+    if (!resumeId) {
+      // Save resume first if it doesn't exist
+      await handleSave();
+      if (!resumeId) return; // Exit if save failed
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // This connects to report_generator.py
+      const response = await apiEndpoints.reports.generate({
+        reportType: 'resume',
+        data: formData,
+        format: 'pdf'
+      });
+      
+      // Download PDF
+      const link = document.createElement('a');
+      link.href = response.data.reportUrl;
+      link.download = 'Resume.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      setError('Failed to generate PDF. Please try again.');
+      console.error('PDF generation error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handlePreviewPDF = async () => {
+    if (!resumeId) {
+      // Save resume first if it doesn't exist
+      await handleSave();
+      if (!resumeId) return; // Exit if save failed
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // This also connects to report_generator.py backend
+      const response = await apiEndpoints.reports.generate({
+        documentId: resumeId,
+        reportType: 'resume',
+        format: 'pdf',
+        options: {
+          template: 'professional',
+          includePhoto: false,
+          color: 'blue'
+        }
+      });
+      
+      // Open in new tab
+      window.open(response.data.reportUrl, '_blank');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to preview PDF');
+      console.error('PDF preview error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Paper elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
       <Box sx={{ p: 3 }}>
@@ -584,11 +687,11 @@ const ResumeBuilder = ({
             </Button>
             <Button 
               startIcon={<DownloadIcon />} 
-              onClick={handleExport}
+              onClick={handleGeneratePDF}
               disabled={loading}
               variant="outlined"
             >
-              Export
+              Download PDF
             </Button>
             <Button 
               startIcon={<RocketLaunchIcon />} 
@@ -614,17 +717,10 @@ const ResumeBuilder = ({
           </Alert>
         )}
 
-        {suggestions.length > 0 && (
-          <Box sx={{ mb: 3 }}>
-            <Alert severity="info" icon={<TipsAndUpdatesIcon />}>
-              <Typography variant="subtitle2">AI Resume Suggestions</Typography>
-              <Box component="ul" sx={{ mt: 1, pl: 2 }}>
-                {suggestions.map((suggestion, index) => (
-                  <li key={index}>{suggestion}</li>
-                ))}
-              </Box>
-            </Alert>
-          </Box>
+        {errors && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {errors.requiredFields || errors.message}
+          </Alert>
         )}
 
         <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>

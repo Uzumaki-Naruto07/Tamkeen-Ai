@@ -20,6 +20,7 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import CheckIcon from '@mui/icons-material/Check';
 import { useUI } from './AppContext';
+import apiEndpoints from '../utils/api';
 
 const LanguageToggle = ({
   showLabels = false,
@@ -41,13 +42,29 @@ const LanguageToggle = ({
     setAnchorEl(null);
   };
 
-  const handleLanguageChange = (newLanguage) => {
+  const handleLanguageChange = async (newLanguage) => {
+    // Set language locally first for immediate UI update
     setLanguage(newLanguage);
     handleClose();
+    
+    // Then save to backend
+    try {
+      await apiEndpoints.user.updateSettings({ language: newLanguage });
+    } catch (err) {
+      console.error('Failed to save language preference:', err);
+    }
   };
 
-  const handleThemeToggle = () => {
-    toggleTheme();
+  const handleThemeToggle = async () => {
+    // Toggle theme locally first
+    const newTheme = toggleTheme();
+    
+    // Then save to backend
+    try {
+      await apiEndpoints.user.updateSettings({ theme: newTheme });
+    } catch (err) {
+      console.error('Failed to save theme preference:', err);
+    }
   };
 
   // Apply RTL direction when language is Arabic

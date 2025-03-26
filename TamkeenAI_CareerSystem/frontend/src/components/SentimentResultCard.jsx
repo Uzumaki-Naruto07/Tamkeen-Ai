@@ -26,7 +26,8 @@ import {
   Grow,
   useTheme,
   useMediaQuery,
-  alpha
+  alpha,
+  Alert
 } from '@mui/material';
 import {
   Sentiment,
@@ -71,6 +72,9 @@ import { scaleOrdinal } from 'd3-scale';
 import { schemeCategory10 } from 'd3-scale-chromatic';
 import Lottie from 'react-lottie';
 import * as animationData from '../assets/animations/sentiment-analysis.json';
+import apiEndpoints from '../utils/api';
+import { useDoc } from './AppContext';
+import LoadingSpinner from './LoadingSpinner';
 
 // Register ChartJS components
 ChartJS.register(
@@ -132,11 +136,8 @@ const industryBenchmarks = {
 };
 
 const SentimentResultCard = ({
-  textContent = '',
-  analysisData = null,
-  loading = false,
-  industry = 'technology',
-  documentType = 'cover letter',
+  documentId,
+  documentType = 'cover_letter',
   onImprove = () => {},
   onSave = () => {},
   onShare = () => {},
@@ -162,9 +163,59 @@ const SentimentResultCard = ({
   const [savedToBookmarks, setSavedToBookmarks] = useState(false);
   const [interactionCount, setInteractionCount] = useState(0);
   const [hoverWordIndex, setHoverWordIndex] = useState(-1);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState(null);
+  const [sentimentData, setSentimentData] = useState(null);
+  const { currentCoverLetter } = useDoc();
   
-  // Sample data if none provided
-  const defaultData = {
+  // Use documentId from props or context
+  const effectiveDocId = documentId || (documentType === 'cover_letter' ? currentCoverLetter?.id : null);
+  
+  useEffect(() => {
+    const fetchSentimentAnalysis = async () => {
+      if (!effectiveDocId) {
+        setAnalysisError(`No ${documentType} provided for analysis`);
+        setAnalysisLoading(false);
+        return;
+      }
+      
+      setAnalysisLoading(true);
+      setAnalysisError(null);
+      
+      try {
+        // This connects to sentiment_analysis.py backend
+        const response = await apiEndpoints.analytics.sentiment({
+          documentId: effectiveDocId,
+          documentType
+        });
+        
+        // Also get emotional analysis
+        const emotionsResponse = await apiEndpoints.analytics.emotions({
+          documentId: effectiveDocId,
+          documentType
+        });
+        
+        // Combine both analyses
+        setSentimentData({
+          sentiment: response.data,
+          emotions: emotionsResponse.data
+        });
+      } catch (err) {
+        setAnalysisError(err.response?.data?.message || 'Failed to analyze sentiment');
+        console.error('Sentiment analysis error:', err);
+      } finally {
+        setAnalysisLoading(false);
+      }
+    };
+    
+    fetchSentimentAnalysis();
+  }, [effectiveDocId, documentType]);
+  
+  // Use loading prop or local loading state
+  const isLoading = analysisLoading;
+  
+  // Use provided data or fetched data
+  const data = sentimentData || {
     overallSentiment: 78,
     documentTone: 'Confident & Professional',
     emotionScores: {
@@ -225,13 +276,10 @@ const SentimentResultCard = ({
     highlightedText: null
   };
   
-  // Use provided data or default
-  const data = analysisData || defaultData;
-  
   // If no highlighted text is provided, create it from the text content
   useEffect(() => {
-    if (!data.highlightedText && textContent && showTextHighlighting) {
-      const words = textContent.split(/\s+/);
+    if (!data.highlightedText && data.sentiment && showTextHighlighting) {
+      const words = data.sentiment.split(/\s+/);
       const highlightedWords = words.map(word => {
         const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
         if (data.wordSentiment.positive.includes(cleanWord)) {
@@ -244,7 +292,7 @@ const SentimentResultCard = ({
       });
       data.highlightedText = highlightedWords;
     }
-  }, [textContent, data, showTextHighlighting]);
+  }, [data.sentiment, data.wordSentiment, showTextHighlighting]);
   
   useEffect(() => {
     // Trigger animation after component mounts
@@ -379,12 +427,12 @@ const SentimentResultCard = ({
         pointRadius: 4
       },
       {
-        label: `${industry.charAt(0).toUpperCase() + industry.slice(1)} Benchmark`,
+        label: `${documentType.charAt(0).toUpperCase() + documentType.slice(1)} Benchmark`,
         data: Object.keys(data.emotionScores).map(emotion => {
           // Map emotion to benchmark category if exists, otherwise use random value
-          if (emotion === 'confidence') return industryBenchmarks[industry].confidence;
-          if (emotion === 'analytical') return industryBenchmarks[industry].analytical;
-          if (emotion === 'joy') return industryBenchmarks[industry].passion;
+          if (emotion === 'confidence') return industryBenchmarks[documentType].confidence;
+          if (emotion === 'analytical') return industryBenchmarks[documentType].analytical;
+          if (emotion === 'joy') return industryBenchmarks[documentType].passion;
           return Math.floor(Math.random() * 30) + 50; // Random benchmark between 50-80
         }),
         backgroundColor: alpha(theme.palette.secondary.main, 0.2),
@@ -427,10 +475,10 @@ const SentimentResultCard = ({
         borderWidth: 1
       },
       {
-        label: `${industry.charAt(0).toUpperCase() + industry.slice(1)} Benchmark`,
-        data: [industryBenchmarks[industry].positivity],
-        backgroundColor: getSentimentColor(industryBenchmarks[industry].positivity),
-        borderColor: getSentimentColor(industryBenchmarks[industry].positivity),
+        label: `${documentType.charAt(0).toUpperCase() + documentType.slice(1)} Benchmark`,
+        data: [industryBenchmarks[documentType].positivity],
+        backgroundColor: getSentimentColor(industryBenchmarks[documentType].positivity),
+        borderColor: getSentimentColor(industryBenchmarks[documentType].positivity),
         borderWidth: 1
       }
     ]
@@ -741,7 +789,7 @@ const SentimentResultCard = ({
                 <Paper variant="outlined" sx={{ p: 2 }}>
                   <Typography>
                     Your {documentType} has a predominantly <strong>{data.documentTone}</strong> tone, 
-                    which is {emotionInterpretation[industry] || 'well-suited for most professional contexts'}. 
+                    which is {emotionInterpretation[documentType] || 'well-suited for most professional contexts'}. 
                     The high confidence signals authority, while maintaining analytical tone demonstrates 
                     critical thinking abilities.
                   </Typography>
@@ -865,7 +913,7 @@ const SentimentResultCard = ({
           {/* Industry Comparison Tab */}
           <TabPanel value={tabValue} index={3}>
             <Typography variant="subtitle1" gutterBottom>
-              Industry Benchmarks: {industry.charAt(0).toUpperCase() + industry.slice(1)} Sector
+              Industry Benchmarks: {documentType.charAt(0).toUpperCase() + documentType.slice(1)} Sector
             </Typography>
             <Grid container spacing={3}>
               <Grid item xs={12}>
@@ -882,8 +930,8 @@ const SentimentResultCard = ({
                     Industry Insights
                   </Typography>
                   <Typography variant="body2">
-                    {industryInsights[industry] || 
-                      `Your ${documentType} sentiment analysis shows that you're generally aligned with the ${industry} industry expectations. To stand out further, focus on enhancing your confidence markers and analytical tone while maintaining authenticity.`
+                    {industryInsights[documentType] || 
+                      `Your ${documentType} sentiment analysis shows that you're generally aligned with the ${documentType} industry expectations. To stand out further, focus on enhancing your confidence markers and analytical tone while maintaining authenticity.`
                     }
                   </Typography>
                 </Paper>

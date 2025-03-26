@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -12,7 +12,9 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Button,
+  Alert
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -23,8 +25,50 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import WarningIcon from '@mui/icons-material/Warning';
 import InfoIcon from '@mui/icons-material/Info';
+import { useUser } from './AppContext';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
 
-const CareerAssessmentScore = ({ assessmentData, showDetails = true, compact = false }) => {
+const CareerAssessmentScore = ({ userId, resumeId }) => {
+  const [assessmentData, setAssessmentData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { profile } = useUser();
+  
+  // Use userId from props or context
+  const effectiveUserId = userId || profile?.id;
+  
+  useEffect(() => {
+    const fetchAssessmentData = async () => {
+      if (!effectiveUserId) {
+        setError('User information is required for career assessment');
+        setLoading(false);
+        return;
+      }
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // This connects to career_assessment.py backend
+        const response = await apiEndpoints.career.assessSkills({
+          userId: effectiveUserId,
+          resumeId: resumeId // Optional
+        });
+        
+        // Response includes career readiness score from career_assessment.py
+        setAssessmentData(response.data);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to load career assessment');
+        console.error('Career assessment error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAssessmentData();
+  }, [effectiveUserId, resumeId]);
+
   if (!assessmentData) {
     return (
       <Paper elevation={0} variant="outlined" sx={{ p: 3, borderRadius: 2, textAlign: 'center' }}>
@@ -96,49 +140,6 @@ const CareerAssessmentScore = ({ assessmentData, showDetails = true, compact = f
       </Box>
     );
   };
-
-  if (compact) {
-    return (
-      <Paper elevation={0} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box>
-            <Typography variant="h4" component="div" sx={{ fontWeight: 'bold', color: getScoreColor(formattedScore) }}>
-              {formattedScore}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Career Readiness
-            </Typography>
-          </Box>
-          
-          <Box sx={{ position: 'relative', width: 60, height: 60 }}>
-            <CircularProgress
-              variant="determinate"
-              value={100}
-              size={60}
-              thickness={4}
-              sx={{ color: 'grey.200', position: 'absolute' }}
-            />
-            <CircularProgress
-              variant="determinate"
-              value={formattedScore}
-              size={60}
-              thickness={4}
-              sx={{ color: getScoreColor(formattedScore), position: 'absolute' }}
-            />
-          </Box>
-        </Box>
-        
-        {trend !== 0 && (
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-            {getTrendIcon()}
-            <Typography variant="caption" sx={{ ml: 0.5 }}>
-              {trend > 0 ? '+' : ''}{trend} pts
-            </Typography>
-          </Box>
-        )}
-      </Paper>
-    );
-  }
 
   return (
     <Paper elevation={0} variant="outlined" sx={{ p: 3, borderRadius: 2 }}>

@@ -39,6 +39,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import { useJob, useResume } from './AppContext';
+import apiEndpoints from '../utils/api';
 
 const KeywordMatchDisplay = ({ 
   matchData = null, 
@@ -54,6 +56,11 @@ const KeywordMatchDisplay = ({
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState({});
   const [sortOption, setSortOption] = useState('relevance'); // 'relevance', 'alphabetical'
+  const { currentResume } = useResume();
+  const { currentJobDescription } = useJob();
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState(null);
+  const [analysisData, setAnalysisData] = useState(matchData);
   
   // Demo data if none provided
   const defaultData = {
@@ -106,7 +113,39 @@ const KeywordMatchDisplay = ({
     ]
   };
   
-  const data = matchData || defaultData;
+  // Fetch analysis data if resume and job are available but no data provided
+  useEffect(() => {
+    if (!matchData && currentResume && currentJobDescription && !analysisLoading) {
+      const fetchAnalysis = async () => {
+        setAnalysisLoading(true);
+        setAnalysisError(null);
+        
+        try {
+          // This connects to keyword_extraction.py backend
+          const response = await apiEndpoints.jobs.match(
+            currentResume.id, 
+            { jobDescription: currentJobDescription }
+          );
+          
+          // Response includes keyword extraction using spaCy or KeyBERT
+          setAnalysisData(response.data);
+        } catch (err) {
+          setAnalysisError(err.response?.data?.message || 'Failed to analyze keywords');
+          console.error('Keyword analysis error:', err);
+        } finally {
+          setAnalysisLoading(false);
+        }
+      };
+      
+      fetchAnalysis();
+    }
+  }, [matchData, currentResume, currentJobDescription]);
+  
+  // Use loading prop or local loading state
+  const isLoading = loading || analysisLoading;
+  
+  // Use provided data or fetched data
+  const data = matchData || analysisData || defaultData;
   
   // Effect to initialize expanded categories
   useEffect(() => {
@@ -400,7 +439,7 @@ const KeywordMatchDisplay = ({
     );
   };
   
-  if (loading) {
+  if (isLoading) {
     return (
       <Paper sx={{ p: 3, textAlign: 'center' }}>
         <CircularProgress />

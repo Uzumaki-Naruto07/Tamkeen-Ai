@@ -82,6 +82,8 @@ import { styled } from '@mui/material/styles';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
 
 // Styled components for enhanced timeline appearance
 const StyledTimelineDot = styled(TimelineDot)(({ theme, color }) => ({
@@ -102,9 +104,8 @@ const StyledTimelineConnector = styled(TimelineConnector)(({ theme }) => ({
 }));
 
 const CareerPathTimeline = ({
-  userCareer = {},
-  careerPaths = [],
-  recommendations = [],
+  userData,
+  initialPath = null,
   onAddMilestone,
   onEditMilestone,
   onDeleteMilestone,
@@ -115,8 +116,8 @@ const CareerPathTimeline = ({
   // State
   const [activeTimeline, setActiveTimeline] = useState('past');
   const [careerData, setCareerData] = useState({
-    past: userCareer.history || [],
-    future: userCareer.projectedPath || []
+    past: userData?.history || [],
+    future: userData?.projectedPath || []
   });
   const [selectedPathIndex, setSelectedPathIndex] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -128,6 +129,9 @@ const CareerPathTimeline = ({
   const [skillsDialogOpen, setSkillsDialogOpen] = useState(false);
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [requirementsOpen, setRequirementsOpen] = useState({});
+  const [loading, setLoading] = useState(!initialPath);
+  const [error, setError] = useState(null);
+  const [careerPaths, setCareerPaths] = useState([]);
   
   // Icons map for different milestone types
   const milestoneIcons = {
@@ -153,20 +157,50 @@ const CareerPathTimeline = ({
   
   // Effects
   useEffect(() => {
-    if (userCareer.history) {
+    if (userData.history) {
       setCareerData(prev => ({
         ...prev,
-        past: userCareer.history
+        past: userData.history
       }));
     }
     
-    if (userCareer.projectedPath) {
+    if (userData.projectedPath) {
       setCareerData(prev => ({
         ...prev,
-        future: userCareer.projectedPath
+        future: userData.projectedPath
       }));
     }
-  }, [userCareer]);
+  }, [userData]);
+  
+  useEffect(() => {
+    if (!initialPath) {
+      const fetchCareerPaths = async () => {
+        setLoading(true);
+        setError(null);
+        
+        try {
+          // This connects to career_path_mapper.py backend
+          const response = await apiEndpoints.career.getPathOptions({
+            currentRole: userData?.currentRole,
+            experience: userData?.yearsExperience,
+            skills: userData?.skills,
+            interests: userData?.interests,
+            education: userData?.education
+          });
+          
+          // Response includes visual career flow from career_path_mapper.py
+          setCareerPaths(response.data.paths || []);
+        } catch (err) {
+          setError(err.response?.data?.message || 'Failed to load career paths');
+          console.error('Career path loading error:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchCareerPaths();
+    }
+  }, [initialPath, userData]);
   
   // Handlers
   const handleOpenDialog = (type, milestone = null) => {
@@ -653,6 +687,14 @@ const CareerPathTimeline = ({
   };
   
   // Main render
+  if (loading) {
+    return <LoadingSpinner message="Loading career path options..." />;
+  }
+  
+  if (error) {
+    return <Alert severity="error">{error}</Alert>;
+  }
+  
   return (
     <Paper elevation={0} variant="outlined" sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>

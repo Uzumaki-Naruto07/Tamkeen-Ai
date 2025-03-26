@@ -34,7 +34,8 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  Alert
 } from '@mui/material';
 import { styled, alpha } from '@mui/material/styles';
 import LockIcon from '@mui/icons-material/Lock';
@@ -67,6 +68,9 @@ import TwitterIcon from '@mui/icons-material/Twitter';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import { useUser } from './AppContext';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
 
 // Define color scheme for achievement rarities
 const rarityColors = {
@@ -126,7 +130,7 @@ const TabPanel = (props) => {
   );
 };
 
-const GamificationBoard = () => {
+const GamificationBoard = ({ userId }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { showConfetti } = useConfetti();
@@ -146,255 +150,43 @@ const GamificationBoard = () => {
   const [selectedChallenge, setSelectedChallenge] = useState(null);
   const [loadingData, setLoadingData] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { profile, updateProfile } = useUser();
 
   useEffect(() => {
     // Fetch gamification data from API
-    const fetchData = async () => {
-      setLoadingData(true);
+    const fetchGamificationData = async () => {
+      setLoading(true);
+      setError(null);
+      
       try {
-        // Mock data for demonstration
-        // In production, replace with actual API calls
-        await mockFetchData();
-      } catch (error) {
-        console.error("Error fetching gamification data:", error);
+        // Get gamification progress
+        const progressResponse = await apiEndpoints.gamification.getProgress();
+        
+        // Get badges
+        const badgesResponse = await apiEndpoints.gamification.getBadges();
+        
+        // Set state with fetched data
+        setUserLevel(progressResponse.data.level);
+        setExperience(progressResponse.data.totalXp);
+        setNextLevelXp(progressResponse.data.xpForNextLevel);
+        setSkillProgress(progressResponse.data.skillProgress);
+        setActivityLog(progressResponse.data.activityLog);
+        setCareerPaths(progressResponse.data.careerPaths);
+        setLeaderboard(progressResponse.data.leaderboard);
+        setBadges(badgesResponse.data.badges);
+        setChallenges(badgesResponse.data.challenges);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to load gamification data');
+        console.error('Gamification data error:', err);
       } finally {
-        setLoadingData(false);
+        setLoading(false);
       }
     };
-
-    fetchData();
-  }, []);
-
-  const mockFetchData = async () => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Set badges
-    setBadges([
-      {
-        id: 1,
-        name: "Profile Pioneer",
-        description: "Created your career profile",
-        earnedDate: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
-        earned: true,
-        rarity: "common",
-        xp: 50,
-        icon: "PersonIcon"
-      },
-      {
-        id: 2,
-        name: "Resume Rookie",
-        description: "Uploaded your first resume",
-        earnedDate: new Date(Date.now() - 115 * 24 * 60 * 60 * 1000).toISOString(),
-        earned: true,
-        rarity: "common",
-        xp: 50,
-        icon: "SchoolIcon"
-      },
-      {
-        id: 3,
-        name: "Keyword Conqueror",
-        description: "Added 20+ industry keywords to your resume",
-        earnedDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-        earned: true,
-        rarity: "uncommon",
-        xp: 100,
-        icon: "InsightsIcon"
-      },
-      {
-        id: 4,
-        name: "Application Apprentice",
-        description: "Applied to your first job",
-        earnedDate: new Date(Date.now() - 85 * 24 * 60 * 60 * 1000).toISOString(),
-        earned: true,
-        rarity: "common",
-        xp: 50,
-        icon: "WorkspacePremiumIcon"
-      },
-      {
-        id: 5,
-        name: "ATS Adept",
-        description: "Achieved 70%+ ATS score",
-        earnedDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-        earned: true,
-        rarity: "uncommon",
-        xp: 150,
-        icon: "BarChartIcon"
-      },
-      {
-        id: 6,
-        name: "ATS Ace",
-        description: "Achieved 85%+ ATS score",
-        earned: false,
-        rarity: "rare",
-        xp: 250,
-        icon: "StarIcon"
-      },
-      {
-        id: 7,
-        name: "Offer Obtainer",
-        description: "Received your first job offer",
-        earned: false,
-        rarity: "epic",
-        xp: 1000,
-        icon: "EmojiEventsIcon"
-      },
-      {
-        id: 8,
-        name: "Master Negotiator",
-        description: "Successfully negotiated job offer terms",
-        earned: false,
-        rarity: "legendary",
-        xp: 1500,
-        icon: "WorkspacePremiumIcon"
-      }
-    ]);
-    
-    // Set challenges
-    setChallenges([
-      {
-        id: 1,
-        name: "Resume Makeover",
-        description: "Improve your resume ATS score by 10+ points",
-        status: "completed",
-        reward: 200,
-        completionDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        difficulty: "medium",
-        steps: [
-          { description: "Analyze current resume weaknesses", completed: true },
-          { description: "Add relevant keywords", completed: true },
-          { description: "Restructure resume sections", completed: true },
-          { description: "Submit for ATS scoring", completed: true }
-        ]
-      },
-      {
-        id: 2,
-        name: "Skill Builder",
-        description: "Complete a course on an in-demand skill",
-        status: "completed",
-        reward: 150,
-        completionDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-        difficulty: "easy",
-        steps: [
-          { description: "Select skill to improve", completed: true },
-          { description: "Find appropriate course", completed: true },
-          { description: "Complete all modules", completed: true },
-          { description: "Pass final assessment", completed: true }
-        ]
-      },
-      {
-        id: 3,
-        name: "Network Expander",
-        description: "Connect with 5 new professionals in your field",
-        status: "in_progress",
-        progress: 60,
-        reward: 200,
-        difficulty: "medium",
-        steps: [
-          { description: "Identify target professionals", completed: true },
-          { description: "Craft personalized connection messages", completed: true },
-          { description: "Send connection requests", completed: true },
-          { description: "Engage with 3 of 5 connections", completed: false }
-        ]
-      },
-      {
-        id: 4,
-        name: "Mock Interview Marathon",
-        description: "Complete 3 mock interviews",
-        status: "in_progress",
-        progress: 67,
-        reward: 300,
-        difficulty: "hard",
-        steps: [
-          { description: "Schedule first interview", completed: true },
-          { description: "Complete first interview", completed: true },
-          { description: "Schedule second interview", completed: true },
-          { description: "Complete second interview", completed: true },
-          { description: "Schedule third interview", completed: false },
-          { description: "Complete third interview", completed: false }
-        ]
-      },
-      {
-        id: 5,
-        name: "Knowledge Sharer",
-        description: "Write an article on your area of expertise",
-        status: "not_started",
-        reward: 250,
-        difficulty: "medium",
-        steps: [
-          { description: "Choose relevant topic", completed: false },
-          { description: "Research and outline article", completed: false },
-          { description: "Write first draft", completed: false },
-          { description: "Edit and publish", completed: false }
-        ]
-      }
-    ]);
-    
-    // Set skill progress data
-    setSkillProgress({
-      "Technical Skills": {
-        "Python": { current: 85, history: [65, 70, 75, 85], target: 95 },
-        "Data Analysis": { current: 70, history: [50, 55, 65, 70], target: 90 },
-        "Machine Learning": { current: 60, history: [30, 40, 50, 60], target: 85 },
-        "Web Development": { current: 45, history: [30, 35, 40, 45], target: 65 }
-      },
-      "Soft Skills": {
-        "Communication": { current: 75, history: [65, 70, 73, 75], target: 90 },
-        "Teamwork": { current: 80, history: [70, 75, 78, 80], target: 85 },
-        "Problem Solving": { current: 65, history: [55, 58, 60, 65], target: 85 }
-      },
-      "Industry Knowledge": {
-        "AI Ethics": { current: 55, history: [30, 40, 50, 55], target: 80 },
-        "Data Privacy": { current: 60, history: [40, 45, 55, 60], target: 75 }
-      }
-    });
-    
-    // Set activity log
-    setActivityLog([
-      { id: 1, date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), activity: "Completed second mock interview (score: 81%)", category: "interview", impact: 4, xp: 100 },
-      { id: 2, date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), activity: "Improved resume to v6 (ATS score: 78%)", category: "resume", impact: 3, xp: 75 },
-      { id: 3, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), activity: "Applied to 3 positions at different companies", category: "application", impact: 4, xp: 100 },
-      { id: 4, date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(), activity: "Completed data visualization course", category: "learning", impact: 2, xp: 50 },
-      { id: 5, date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), activity: "Applied to ML Engineer at DataTech", category: "application", impact: 3, xp: 75 }
-    ]);
-    
-    // Set career paths
-    setCareerPaths({
-      "Data Science": {
-        entry_roles: ["Junior Data Analyst", "Data Visualization Specialist", "Research Assistant"],
-        mid_roles: ["Data Scientist", "ML Engineer", "BI Developer"],
-        advanced_roles: ["Lead Data Scientist", "AI Research Scientist", "Chief Data Officer"],
-        connections: {
-          "Junior Data Analyst": ["Data Scientist", "BI Developer"],
-          "Data Scientist": ["Lead Data Scientist", "AI Research Scientist"],
-          "ML Engineer": ["AI Research Scientist", "Lead Data Scientist"]
-        },
-        current_position: "Junior Data Analyst",
-        target_position: "Lead Data Scientist",
-        progress: 25
-      },
-      "Software Engineering": {
-        entry_roles: ["Junior Developer", "QA Tester", "Technical Support"],
-        mid_roles: ["Software Engineer", "DevOps Engineer", "Full Stack Developer"],
-        advanced_roles: ["Senior Software Engineer", "Software Architect", "CTO"],
-        connections: {
-          "Junior Developer": ["Software Engineer", "Full Stack Developer"],
-          "Software Engineer": ["Senior Software Engineer", "Software Architect"]
-        },
-        progress: 15
-      }
-    });
-    
-    // Set leaderboard data
-    setLeaderboard([
-      { id: 1, username: "DataMaster", position: "Data Scientist", level: 12, xp: 5845, badges: 21, rank: 1 },
-      { id: 2, username: "TechGuru", position: "Software Engineer", level: 10, xp: 4950, badges: 18, rank: 2 },
-      { id: 3, username: "CareerNinja", position: "Product Manager", level: 9, xp: 4320, badges: 16, rank: 3 },
-      { id: 4, username: "AIExplorer", position: "ML Engineer", level: 8, xp: 3720, badges: 14, rank: 4 },
-      { id: 5, username: "CloudMaster", position: "DevOps Engineer", level: 7, xp: 3450, badges: 12, rank: 5 },
-      { id: 6, username: "You (Career Navigator)", position: "Junior Data Analyst", level: 5, xp: 2340, badges: 8, rank: 7 }
-    ]);
-  };
+    fetchGamificationData();
+  }, [userId, profile?.id]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -424,22 +216,15 @@ const GamificationBoard = () => {
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  const handleClaimReward = (challengeId) => {
-    // Simulate API call to claim reward
-    const updatedChallenges = challenges.map(challenge => {
-      if (challenge.id === challengeId && challenge.status === "completed") {
-        // Add XP
-        setExperience(prevXp => prevXp + challenge.reward);
-        
-        // Show celebration
-        showConfetti();
-        
-        return { ...challenge, rewardClaimed: true };
-      }
-      return challenge;
-    });
-    
-    setChallenges(updatedChallenges);
+  const handleClaimReward = async (rewardId) => {
+    try {
+      await apiEndpoints.gamification.claimReward(rewardId);
+      // Update local state or refresh data
+      setExperience(prevXp => prevXp + 100); // Assuming a default reward of 100 XP
+      showConfetti();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to claim reward');
+    }
   };
 
   const getIconComponent = (iconName) => {
@@ -955,6 +740,14 @@ const GamificationBoard = () => {
       </Box>
     );
   };
+
+  if (loading) {
+    return <LoadingSpinner message="Loading gamification data..." />;
+  }
+  
+  if (error) {
+    return <Alert severity="error">{error}</Alert>;
+  }
 
   return (
     <Paper sx={{ p: 3, mt: 3, borderRadius: 3 }} elevation={3}>

@@ -17,7 +17,8 @@ import {
   IconButton,
   Chip,
   Tab,
-  Tabs
+  Tabs,
+  LinearProgress
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -28,17 +29,60 @@ import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import ReactWordcloud from 'react-wordcloud';
 import { ResponsiveContainer } from 'recharts';
+import { useResume, useJob } from './AppContext';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
 
 // This component visualizes ATS analysis results including word cloud and score
 const ATSScoreVisualizer = ({ 
-  atsData, 
-  loading = false, 
+  resumeId, 
+  jobId, 
   onRefreshAnalysis, 
   onDownloadReport 
 }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [wordCloudData, setWordCloudData] = useState([]);
   const [jobWordCloudData, setJobWordCloudData] = useState([]);
+  const [atsData, setAtsData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { currentResume } = useResume();
+  const { currentJobDescription } = useJob();
+  
+  // Use IDs from props or context
+  const effectiveResumeId = resumeId || (currentResume?.id);
+  const effectiveJobId = jobId || (currentJobDescription?.id);
+  
+  useEffect(() => {
+    const fetchATSData = async () => {
+      if (!effectiveResumeId || !effectiveJobId) {
+        setError('Both resume and job are required for ATS analysis');
+        setLoading(false);
+        return;
+      }
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // This connects to ats_matcher.py backend
+        const response = await apiEndpoints.jobs.analyzeATS({
+          resumeId: effectiveResumeId,
+          jobId: effectiveJobId
+        });
+        
+        // Response includes ATS analysis data from ats_matcher.py
+        setAtsData(response.data);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to analyze ATS compatibility');
+        console.error('ATS analysis error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchATSData();
+  }, [effectiveResumeId, effectiveJobId]);
 
   useEffect(() => {
     if (atsData) {

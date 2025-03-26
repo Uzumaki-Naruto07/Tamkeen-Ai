@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -17,7 +17,8 @@ import {
   Chip,
   Tooltip,
   Slider,
-  LinearProgress
+  LinearProgress,
+  Alert
 } from '@mui/material';
 import SentimentVerySatisfiedIcon from '@mui/icons-material/SentimentVerySatisfied';
 import SentimentSatisfiedIcon from '@mui/icons-material/SentimentSatisfied';
@@ -34,273 +35,216 @@ import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import InfoIcon from '@mui/icons-material/Info';
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
+import { Sentiment, SentimentSatisfied, SentimentVeryDissatisfied, SentimentNeutral, Videocam, VideocamOff } from '@mui/icons-material';
+import { Doughnut } from 'react-chartjs-2';
+import CameraFeed from './CameraFeed';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
 
-const EmotionScorePanel = ({
-  emotionData,
-  onCapture,
-  onUpload,
-  onDelete,
-  loading = false
-}) => {
-  const [showDetails, setShowDetails] = useState(false);
+const EmotionScorePanel = ({ onEmotionUpdate = () => {} }) => {
+  const [cameraActive, setCameraActive] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [emotionData, setEmotionData] = useState(null);
+  const [error, setError] = useState(null);
+  const [captureInterval, setCaptureInterval] = useState(null);
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 4 }}>
-        <CircularProgress size={50} thickness={4} />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Analyzing facial expressions...
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Please wait while we process your image
-        </Typography>
-      </Box>
-    );
-  }
-
-  // If no data is available, show capture interface
-  if (!emotionData) {
-    return (
-      <Paper elevation={0} variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
-        <Box sx={{ textAlign: 'center', py: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Facial Expression Analysis
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Capture a photo or upload an image to analyze your facial expressions
-          </Typography>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 2 }}>
-            <Button
-              variant="contained"
-              startIcon={<CameraAltIcon />}
-              onClick={onCapture}
-            >
-              Take Photo
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<PhotoLibraryIcon />}
-              onClick={onUpload}
-            >
-              Upload Image
-            </Button>
-          </Box>
-        </Box>
-      </Paper>
-    );
-  }
-
-  const {
-    dominantEmotion,
-    emotionScores,
-    facialFeatures = [],
-    suggestions = [],
-    imageUrl
-  } = emotionData;
-
-  // Get emoji and color for dominant emotion
-  const getEmotionEmoji = (emotion) => {
-    switch (emotion.toLowerCase()) {
-      case 'happy':
-        return { icon: <SentimentVerySatisfiedIcon fontSize="large" />, color: 'success.main' };
-      case 'neutral':
-        return { icon: <SentimentSatisfiedAltIcon fontSize="large" />, color: 'info.main' };
-      case 'surprise':
-        return { icon: <SentimentSatisfiedIcon fontSize="large" />, color: 'warning.main' };
-      case 'sad':
-        return { icon: <SentimentDissatisfiedIcon fontSize="large" />, color: 'text.secondary' };
-      case 'angry':
-        return { icon: <SentimentVeryDissatisfiedIcon fontSize="large" />, color: 'error.main' };
-      case 'fear':
-        return { icon: <SentimentDissatisfiedIcon fontSize="large" />, color: 'error.light' };
-      case 'disgust':
-        return { icon: <SentimentVeryDissatisfiedIcon fontSize="large" />, color: 'error.dark' };
-      default:
-        return { icon: <SentimentSatisfiedAltIcon fontSize="large" />, color: 'text.primary' };
+  // Start/stop camera
+  const toggleCamera = () => {
+    if (cameraActive) {
+      stopAnalysis();
+    } else {
+      setCameraActive(true);
     }
   };
 
-  const emotionDisplay = getEmotionEmoji(dominantEmotion);
+  // Start emotion analysis
+  const startAnalysis = () => {
+    setAnalyzing(true);
+    setError(null);
+    
+    // Set up interval to analyze emotions periodically
+    const interval = setInterval(captureAndAnalyze, 3000); // Every 3 seconds
+    setCaptureInterval(interval);
+  };
+
+  // Stop emotion analysis
+  const stopAnalysis = () => {
+    if (captureInterval) {
+      clearInterval(captureInterval);
+      setCaptureInterval(null);
+    }
+    setAnalyzing(false);
+    if (cameraActive) {
+      setCameraActive(false);
+    }
+  };
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (captureInterval) {
+        clearInterval(captureInterval);
+      }
+    };
+  }, [captureInterval]);
+
+  // Capture image and send for analysis
+  const captureAndAnalyze = async () => {
+    try {
+      // Get canvas from CameraFeed component
+      const canvas = document.getElementById('camera-canvas');
+      if (!canvas) return;
+      
+      // Convert canvas to blob
+      const blob = await new Promise(resolve => {
+        canvas.toBlob(resolve, 'image/jpeg', 0.8);
+      });
+      
+      if (!blob) return;
+      
+      // Prepare form data
+      const formData = new FormData();
+      formData.append('image', blob, 'emotion-capture.jpg');
+      
+      // This connects to emotion_detector.py backend
+      const response = await apiEndpoints.interview.analyzeEmotions(formData);
+      
+      // Response includes facial expression scoring from emotion_detector.py
+      const newEmotionData = response.data;
+      setEmotionData(newEmotionData);
+      onEmotionUpdate(newEmotionData);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to analyze emotions');
+      console.error('Emotion analysis error:', err);
+      stopAnalysis();
+    }
+  };
 
   return (
-    <Paper elevation={0} variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
-      <Grid container>
-        {imageUrl && (
-          <Grid item xs={12} md={4} sx={{ display: { xs: 'none', md: 'block' } }}>
-            <Box
-              sx={{
-                height: '100%',
-                position: 'relative',
-                backgroundImage: `url(${imageUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-              }}
-            >
-              <Box
-                sx={{
-                  position: 'absolute',
-                  bottom: 8,
-                  right: 8,
-                  display: 'flex',
-                  gap: 1
-                }}
-              >
-                <IconButton
-                  size="small"
-                  onClick={onCapture}
-                  sx={{ bgcolor: 'background.paper', boxShadow: 1 }}
-                >
-                  <CameraAltIcon fontSize="small" />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  onClick={onDelete}
-                  sx={{ bgcolor: 'background.paper', boxShadow: 1 }}
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            </Box>
-          </Grid>
-        )}
-
-        <Grid item xs={12} md={imageUrl ? 8 : 12}>
-          <Box sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">
-                Facial Expression Analysis
-              </Typography>
-              {!imageUrl && (
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    size="small"
-                    startIcon={<CameraAltIcon />}
-                    onClick={onCapture}
-                  >
-                    Retake
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<DeleteIcon />}
-                    onClick={onDelete}
-                  >
-                    Clear
-                  </Button>
-                </Box>
-              )}
-            </Box>
-
-            <Box sx={{ 
+    <Paper sx={{ p: 3 }}>
+      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+        <Sentiment sx={{ mr: 1 }} />
+        Facial Expression Analysis
+      </Typography>
+      
+      <Box sx={{ position: 'relative', mb: 2 }}>
+        {cameraActive ? (
+          <CameraFeed 
+            width={400} 
+            height={300} 
+            canvasId="camera-canvas" 
+          />
+        ) : (
+          <Box 
+            sx={{ 
+              width: '100%', 
+              height: 300, 
+              bgcolor: 'grey.200', 
               display: 'flex', 
               alignItems: 'center', 
-              mb: 3,
-              p: 2,
-              bgcolor: 'background.paper',
-              borderRadius: 2,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', color: emotionDisplay.color }}>
-                {emotionDisplay.icon}
-              </Box>
-              <Box sx={{ ml: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
-                  Dominant Expression: {dominantEmotion}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  This is the primary emotion detected in your facial expression
-                </Typography>
-              </Box>
-            </Box>
-
-            <Typography variant="subtitle2" gutterBottom>
-              Emotion Breakdown
+              justifyContent: 'center'
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Camera is disabled
             </Typography>
-
-            {emotionScores && Object.entries(emotionScores).map(([emotion, score]) => (
-              <Box key={emotion} sx={{ mb: 1.5 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                  <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                    {emotion}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {Math.round(score * 100)}%
-                  </Typography>
-                </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={score * 100}
-                  sx={{
-                    height: 6,
-                    borderRadius: 1,
-                    backgroundColor: 'grey.200',
-                    '& .MuiLinearProgress-bar': {
-                      borderRadius: 1,
-                      backgroundColor: emotion === dominantEmotion.toLowerCase() ? emotionDisplay.color : 'primary.main'
-                    }
-                  }}
-                />
-              </Box>
-            ))}
-
-            <Button
-              size="small"
-              sx={{ mt: 1 }}
-              onClick={() => setShowDetails(!showDetails)}
-            >
-              {showDetails ? 'Hide Details' : 'Show Analysis Details'}
-            </Button>
-
-            {showDetails && (
-              <Box sx={{ mt: 2 }}>
-                <Divider sx={{ my: 2 }} />
-
-                {facialFeatures.length > 0 && (
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Facial Features Detected
-                    </Typography>
-                    <Grid container spacing={1}>
-                      {facialFeatures.map((feature, index) => (
-                        <Grid item key={index}>
-                          <Chip
-                            label={feature}
-                            size="small"
-                            variant="outlined"
-                            icon={<CheckCircleIcon />}
-                          />
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </Box>
-                )}
-
-                {suggestions.length > 0 && (
-                  <Box>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Suggestions for Improvement
-                    </Typography>
-                    <List dense disablePadding>
-                      {suggestions.map((suggestion, index) => (
-                        <ListItem key={index} disablePadding sx={{ mb: 0.5 }}>
-                          <ListItemIcon sx={{ minWidth: 32 }}>
-                            <TipsAndUpdatesIcon color="primary" fontSize="small" />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={suggestion}
-                            primaryTypographyProps={{ variant: 'body2' }}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                )}
-              </Box>
-            )}
           </Box>
+        )}
+        
+        {analyzing && (
+          <Box 
+            sx={{ 
+              position: 'absolute', 
+              top: 10, 
+              right: 10, 
+              bgcolor: 'rgba(0,0,0,0.7)',
+              color: 'white',
+              px: 1,
+              py: 0.5,
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            <CircularProgress size={14} sx={{ color: 'white', mr: 1 }} />
+            <Typography variant="caption">Analyzing...</Typography>
+          </Box>
+        )}
+      </Box>
+      
+      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+        <Button
+          variant={cameraActive ? "outlined" : "contained"}
+          startIcon={cameraActive ? <VideocamOff /> : <Videocam />}
+          onClick={toggleCamera}
+        >
+          {cameraActive ? 'Disable Camera' : 'Enable Camera'}
+        </Button>
+        
+        {cameraActive && (
+          <Button
+            variant={analyzing ? "outlined" : "contained"}
+            color={analyzing ? "error" : "primary"}
+            onClick={analyzing ? stopAnalysis : startAnalysis}
+          >
+            {analyzing ? 'Stop Analysis' : 'Start Analysis'}
+          </Button>
+        )}
+      </Box>
+      
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+      
+      {emotionData && (
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" gutterBottom>
+              Emotion Distribution
+            </Typography>
+            <Box sx={{ height: 200 }}>
+              <Doughnut 
+                data={{
+                  labels: Object.keys(emotionData.emotions),
+                  datasets: [{
+                    data: Object.values(emotionData.emotions),
+                    backgroundColor: [
+                      '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'
+                    ]
+                  }]
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'right',
+                    }
+                  }
+                }}
+              />
+            </Box>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" gutterBottom>
+              Interview Performance Insights
+            </Typography>
+            <List>
+              {emotionData.insights.map((insight, index) => (
+                <ListItem key={index} divider={index < emotionData.insights.length - 1}>
+                  <ListItemText
+                    primary={insight.title}
+                    secondary={insight.description}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Grid>
         </Grid>
-      </Grid>
+      )}
     </Paper>
   );
 };

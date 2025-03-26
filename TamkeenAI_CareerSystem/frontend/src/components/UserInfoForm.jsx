@@ -37,6 +37,9 @@ import SaveIcon from '@mui/icons-material/Save';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { useUser } from './AppContext';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
 
 // Sample data - in a real app this would come from an API
 const INDUSTRIES = [
@@ -69,12 +72,15 @@ const PROFICIENCY_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'N
 
 const JOB_TYPES = ['Full-time', 'Part-time', 'Contract', 'Freelance', 'Internship', 'Remote'];
 
-const UserInfoForm = ({ initialData = {}, onSave, onCancel }) => {
+const UserInfoForm = ({ onComplete, initialValues = {} }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
   const [profilePicture, setProfilePicture] = useState(null);
   const [profileComplete, setProfileComplete] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const { profile, updateUserProfile } = useUser();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -127,17 +133,52 @@ const UserInfoForm = ({ initialData = {}, onSave, onCancel }) => {
 
   useEffect(() => {
     // Load initial data if provided
-    if (initialData && Object.keys(initialData).length > 0) {
-      setFormData(prev => ({ ...prev, ...initialData }));
+    if (initialValues && Object.keys(initialValues).length > 0) {
+      setFormData(prev => ({ ...prev, ...initialValues }));
       
-      if (initialData.profilePicture) {
-        setProfilePicture(initialData.profilePicture);
+      if (initialValues.profilePicture) {
+        setProfilePicture(initialValues.profilePicture);
       }
     }
     
     // Calculate profile completeness
     calculateProfileComplete();
-  }, [initialData]);
+  }, [initialValues]);
+
+  useEffect(() => {
+    if (profile && Object.keys(initialValues).length === 0) {
+      setFormData({
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        location: profile.location || '',
+        bio: profile.bio || '',
+        currentTitle: profile.currentTitle || '',
+        company: profile.company || '',
+        industry: profile.industry || '',
+        yearsOfExperience: profile.yearsOfExperience || '',
+        skills: profile.skills || [],
+        education: profile.education || [{ degree: '', institution: '', field: '', startYear: '', endYear: '', current: false }],
+        languages: profile.languages || [{ language: 'English', proficiency: 'Intermediate' }],
+        jobTypes: profile.jobTypes || [],
+        salaryExpectation: profile.salaryExpectation || '',
+        willingToRelocate: profile.willingToRelocate || false,
+        remotePreference: profile.remotePreference || 'Hybrid',
+        shortTermGoals: profile.shortTermGoals || '',
+        longTermGoals: profile.longTermGoals || '',
+        interestedRoles: profile.interestedRoles || [],
+        interestedIndustries: profile.interestedIndustries || []
+      });
+      
+      if (profile.profilePicture) {
+        setProfilePicture(profile.profilePicture);
+      }
+    }
+    
+    // Calculate profile completeness
+    calculateProfileComplete();
+  }, [profile, initialValues]);
 
   const calculateProfileComplete = () => {
     const totalFields = Object.keys(formData).length;
@@ -332,15 +373,15 @@ const UserInfoForm = ({ initialData = {}, onSave, onCancel }) => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateStep()) {
-      return;
-    }
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
     
     try {
-      setSaving(true);
+      if (!validateStep()) {
+        return;
+      }
       
       const dataToSave = {
         ...formData,
@@ -348,11 +389,15 @@ const UserInfoForm = ({ initialData = {}, onSave, onCancel }) => {
         updatedAt: new Date().toISOString()
       };
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Send data to backend
+      const response = await apiEndpoints.user.updateProfile(dataToSave);
       
-      if (onSave) {
-        onSave(dataToSave);
+      // Update local context
+      updateUserProfile(response.data);
+      
+      // Call completion handler
+      if (onComplete) {
+        onComplete(response.data);
       }
       
       setNotification({
@@ -360,18 +405,11 @@ const UserInfoForm = ({ initialData = {}, onSave, onCancel }) => {
         message: 'Profile information saved successfully!',
         severity: 'success'
       });
-      
-      setSaving(false);
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      
-      setNotification({
-        open: true,
-        message: 'Failed to save profile information. Please try again.',
-        severity: 'error'
-      });
-      
-      setSaving(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save profile information');
+      console.error('Profile update error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -965,10 +1003,10 @@ const UserInfoForm = ({ initialData = {}, onSave, onCancel }) => {
               <Button
                 variant="contained"
                 type="submit"
-                startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                disabled={saving}
+                startIcon={loading ? <LoadingSpinner size="small" type="circular" /> : null}
+                disabled={loading}
               >
-                {saving ? 'Saving...' : 'Save Profile'}
+                {loading ? 'Saving...' : 'Save Profile'}
               </Button>
             ) : (
               <Button
@@ -977,16 +1015,6 @@ const UserInfoForm = ({ initialData = {}, onSave, onCancel }) => {
                 endIcon={<ArrowForwardIcon />}
               >
                 Next
-              </Button>
-            )}
-            
-            {onCancel && (
-              <Button
-                sx={{ ml: 2 }}
-                onClick={onCancel}
-                disabled={saving}
-              >
-                Cancel
               </Button>
             )}
           </Box>
@@ -1007,6 +1035,12 @@ const UserInfoForm = ({ initialData = {}, onSave, onCancel }) => {
           {notification.message}
         </Alert>
       </Snackbar>
+      
+      {error && (
+        <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
+          {error}
+        </Alert>
+      )}
     </Paper>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -11,7 +11,19 @@ import {
   Collapse,
   LinearProgress,
   Tooltip,
-  IconButton
+  IconButton,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Radio,
+  RadioGroup,
+  Card,
+  CardContent
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -21,6 +33,13 @@ import AddCircleIcon from '@mui/icons-material/AddCircle';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { 
+  CloudQueue, TextFields, ColorLens, 
+  Save, Refresh, GetApp, FilterList 
+} from '@mui/icons-material';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
+import WordCloudChart from './WordCloudChart';
 
 const KeywordMatchDisplay = ({ 
   matchData, 
@@ -308,4 +327,322 @@ const KeywordMatchDisplay = ({
   );
 };
 
-export default KeywordMatchDisplay;
+const WordCloudVisualizer = ({ 
+  text = null, 
+  documentId = null, 
+  documentType = 'resume',
+  jobId = null,
+  width = 800,
+  height = 600,
+  readOnly = false
+}) => {
+  const [cloudData, setCloudData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [manualText, setManualText] = useState('');
+  const [settings, setSettings] = useState({
+    maxWords: 100,
+    minWordLength: 3,
+    includeCommonWords: false,
+    colorScheme: 'default', // default, blue, multi
+    fontFamily: 'Impact',
+    showFrequency: true,
+    rotation: 'mixed', // none, mixed, random
+    shape: 'circle', // circle, square, rectangle
+    removeStopwords: true
+  });
+  
+  // Generate word cloud when component mounts or inputs change
+  useEffect(() => {
+    if (!readOnly) {
+      if (documentId) {
+        generateFromDocument();
+      } else if (text) {
+        generateFromText(text);
+      }
+    }
+  }, [documentId, documentType, jobId, readOnly]);
+  
+  // Generate word cloud from provided text
+  const generateFromText = async (textToAnalyze) => {
+    if (!textToAnalyze) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // This connects to keyword_extraction.py backend
+      const response = await apiEndpoints.analytics.extractKeywords({
+        text: textToAnalyze,
+        maxWords: settings.maxWords,
+        minWordLength: settings.minWordLength,
+        removeStopwords: settings.removeStopwords,
+        includeCommonWords: settings.includeCommonWords
+      });
+      
+      processWordCloudData(response.data);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to generate word cloud');
+      console.error('Error generating word cloud:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Generate word cloud from document
+  const generateFromDocument = async () => {
+    if (!documentId) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // This connects to keyword_extraction.py backend
+      const response = await apiEndpoints.analytics.extractKeywords({
+        documentId,
+        documentType,
+        jobId,
+        maxWords: settings.maxWords,
+        minWordLength: settings.minWordLength,
+        removeStopwords: settings.removeStopwords,
+        includeCommonWords: settings.includeCommonWords
+      });
+      
+      processWordCloudData(response.data);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to generate word cloud');
+      console.error('Error generating word cloud:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Process API response into word cloud data format
+  const processWordCloudData = (data) => {
+    if (!data || !data.keywords) {
+      setCloudData([]);
+      return;
+    }
+    setCloudData(data.keywords);
+  };
+
+  const handleExportImage = () => {
+    // Implementation of handleExportImage function
+  };
+
+  return (
+    <Paper elevation={0} variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          Word Cloud Visualizer
+        </Typography>
+        
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Enter text or choose a document"
+              value={manualText}
+              onChange={(e) => setManualText(e.target.value)}
+              variant="outlined"
+            />
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Document Type</InputLabel>
+              <Select
+                value={documentType}
+                onChange={(e) => setSettings(prev => ({ ...prev, documentType: e.target.value }))}
+              >
+                <MenuItem value="resume">Resume</MenuItem>
+                <MenuItem value="cover_letter">Cover Letter</MenuItem>
+                <MenuItem value="job_description">Job Description</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Job ID</InputLabel>
+              <Select
+                value={jobId}
+                onChange={(e) => setSettings(prev => ({ ...prev, jobId: e.target.value }))}
+              >
+                {/* Add job ID options here */}
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Max Words</InputLabel>
+              <Select
+                value={settings.maxWords}
+                onChange={(e) => setSettings(prev => ({ ...prev, maxWords: Number(e.target.value) }))}
+              >
+                {/* Add max words options here */}
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Min Word Length</InputLabel>
+              <Select
+                value={settings.minWordLength}
+                onChange={(e) => setSettings(prev => ({ ...prev, minWordLength: Number(e.target.value) }))}
+              >
+                {/* Add min word length options here */}
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Color Scheme</InputLabel>
+              <Select
+                value={settings.colorScheme}
+                onChange={(e) => setSettings(prev => ({ ...prev, colorScheme: e.target.value }))}
+              >
+                <MenuItem value="default">Default</MenuItem>
+                <MenuItem value="blue">Blue</MenuItem>
+                <MenuItem value="multi">Multi</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Font Family</InputLabel>
+              <Select
+                value={settings.fontFamily}
+                onChange={(e) => setSettings(prev => ({ ...prev, fontFamily: e.target.value }))}
+              >
+                {/* Add font family options here */}
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Show Frequency</InputLabel>
+              <Select
+                value={settings.showFrequency}
+                onChange={(e) => setSettings(prev => ({ ...prev, showFrequency: e.target.value === 'true' }))}
+              >
+                <MenuItem value="true">Yes</MenuItem>
+                <MenuItem value="false">No</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Rotation</InputLabel>
+              <Select
+                value={settings.rotation}
+                onChange={(e) => setSettings(prev => ({ ...prev, rotation: e.target.value }))}
+              >
+                <MenuItem value="none">None</MenuItem>
+                <MenuItem value="mixed">Mixed</MenuItem>
+                <MenuItem value="random">Random</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Shape</InputLabel>
+              <Select
+                value={settings.shape}
+                onChange={(e) => setSettings(prev => ({ ...prev, shape: e.target.value }))}
+              >
+                <MenuItem value="circle">Circle</MenuItem>
+                <MenuItem value="square">Square</MenuItem>
+                <MenuItem value="rectangle">Rectangle</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Remove Stopwords</InputLabel>
+              <Select
+                value={settings.removeStopwords}
+                onChange={(e) => setSettings(prev => ({ ...prev, removeStopwords: e.target.value === 'true' }))}
+              >
+                <MenuItem value="true">Yes</MenuItem>
+                <MenuItem value="false">No</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Include Common Words</InputLabel>
+              <Select
+                value={settings.includeCommonWords}
+                onChange={(e) => setSettings(prev => ({ ...prev, includeCommonWords: e.target.value === 'true' }))}
+              >
+                <MenuItem value="true">Yes</MenuItem>
+                <MenuItem value="false">No</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12}>
+            <Box sx={{ mb: 3 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={loading ? <CircularProgress size={20} /> : <Refresh />}
+                onClick={() => manualText ? generateFromText(manualText) : generateFromDocument()}
+                disabled={loading || (!documentId && !manualText && !text)}
+                sx={{ mr: 1 }}
+              >
+                Regenerate
+              </Button>
+              
+              <Button
+                variant="outlined"
+                startIcon={<GetApp />}
+                onClick={handleExportImage}
+                disabled={loading || cloudData.length === 0}
+              >
+                Export as Image
+              </Button>
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>
+      
+      {loading ? (
+        <LoadingSpinner message="Generating word cloud..." />
+      ) : cloudData.length > 0 ? (
+        <Box sx={{ textAlign: 'center' }}>
+          <WordCloudChart
+            data={cloudData}
+            width={width}
+            height={height}
+            fontFamily={settings.fontFamily}
+            colorScheme={settings.colorScheme}
+            rotation={settings.rotation}
+            shape={settings.shape}
+            showFrequency={settings.showFrequency}
+          />
+        </Box>
+      ) : (
+        <Card variant="outlined" sx={{ textAlign: 'center', p: 4 }}>
+          <CloudQueue sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h6">No Word Cloud Generated Yet</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {error || "Enter text or choose a document to generate a word cloud."}
+          </Typography>
+        </Card>
+      )}
+    </Paper>
+  );
+};
+
+export default WordCloudVisualizer;

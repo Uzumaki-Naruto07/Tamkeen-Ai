@@ -1,431 +1,280 @@
-import React, { useState } from 'react';
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  IconButton,
-  Drawer,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-  Box,
-  Avatar,
-  Menu,
-  MenuItem,
-  Badge,
-  useMediaQuery,
-  useTheme,
-  Tooltip
-} from '@mui/material';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import MenuIcon from '@mui/icons-material/Menu';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import DescriptionIcon from '@mui/icons-material/Description';
-import WorkIcon from '@mui/icons-material/Work';
-import AssessmentIcon from '@mui/icons-material/Assessment';
-import VideocamIcon from '@mui/icons-material/Videocam';
-import ExploreIcon from '@mui/icons-material/Explore';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import LogoutIcon from '@mui/icons-material/Logout';
-import SettingsIcon from '@mui/icons-material/Settings';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
-import LanguageIcon from '@mui/icons-material/Language';
-import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { 
+  FiMenu, 
+  FiX, 
+  FiUser, 
+  FiLogOut, 
+  FiSettings, 
+  FiChevronDown,
+  FiBriefcase,
+  FiBarChart2,
+  FiFileText,
+  FiSearch,
+  FiUsers,
+  FiAward,
+  FiTrendingUp,
+  FiBook,
+  FiMessageSquare,
+  FiShield
+} from 'react-icons/fi';
+import { useAppContext } from '../context/AppContext';
+import LanguageToggle from './LanguageToggle';
+import DarkModeToggle from './DarkModeToggle';
+import logoLight from '../assets/logo-light.png';
+import logoDark from '../assets/logo-dark.png';
 
-const NavigationBar = ({ toggleTheme, darkMode, toggleLanguage, language, userInfo }) => {
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [userMenuAnchor, setUserMenuAnchor] = useState(null);
-  const [notifMenuAnchor, setNotifMenuAnchor] = useState(null);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+const NavigationBar = () => {
+  const { user, logout, hasRole, theme, language } = useAppContext();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
+  const profileRef = useRef(null);
+  const menuRef = useRef(null);
   
-  const openUserMenu = (event) => {
-    setUserMenuAnchor(event.currentTarget);
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
   };
   
-  const closeUserMenu = () => {
-    setUserMenuAnchor(null);
+  const toggleProfile = () => {
+    setIsProfileOpen(!isProfileOpen);
   };
   
-  const openNotifMenu = (event) => {
-    setNotifMenuAnchor(event.currentTarget);
+  const handleLogout = async () => {
+    await logout();
+    setIsProfileOpen(false);
   };
   
-  const closeNotifMenu = () => {
-    setNotifMenuAnchor(null);
-  };
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setIsProfileOpen(false);
+      }
+      if (menuRef.current && !menuRef.current.contains(event.target) && isMenuOpen) {
+        setIsMenuOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
   
-  const handleLogout = () => {
-    closeUserMenu();
-    // Implement logout logic
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('userId');
-    navigate('/login');
-  };
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location]);
   
+  // Define navigation items
   const navItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Resume Analysis', icon: <DescriptionIcon />, path: '/resume-analysis' },
-    { text: 'Job Applications', icon: <WorkIcon />, path: '/job-applications' },
-    { text: 'Interview Practice', icon: <VideocamIcon />, path: '/interview-practice' },
-    { text: 'Career Explorer', icon: <ExploreIcon />, path: '/career-explorer' },
-    { text: 'Stats & Reports', icon: <AssessmentIcon />, path: '/reports' },
+    { label: 'Dashboard', path: '/dashboard', icon: <FiBarChart2 /> },
+    { label: 'Resume Analysis', path: '/resume-analysis', icon: <FiFileText /> },
+    { label: 'Career Assessment', path: '/career-assessment', icon: <FiTrendingUp /> },
+    { label: 'Career Explorer', path: '/career-explorer', icon: <FiBriefcase /> },
+    { label: 'Interview Results', path: '/interview-results', icon: <FiMessageSquare /> },
+    { label: 'Resume Builder', path: '/resume-builder', icon: <FiFileText /> },
+    { label: 'Cover Letter', path: '/cover-letter', icon: <FiBook /> },
+    { label: 'Networking', path: '/networking', icon: <FiUsers /> },
+    { label: 'AI Job Journey', path: '/ai-job-journey', icon: <FiTrendingUp /> },
+    { label: 'Gamified Progress', path: '/gamified-progress', icon: <FiAward /> },
+    { label: 'Job Search', path: '/job-search', icon: <FiSearch /> }
   ];
   
-  const isPathActive = (path) => {
-    return location.pathname === path;
-  };
-  
-  const toggleDrawer = (open) => (event) => {
-    if (event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) {
-      return;
-    }
-    setDrawerOpen(open);
-  };
-  
-  // Dummy notifications
-  const notifications = [
-    { id: 1, message: 'Your latest resume update increased your ATS score by 15%', read: false, timestamp: '1 hour ago' },
-    { id: 2, message: 'New job recommendations based on your profile', read: false, timestamp: '3 hours ago' },
-    { id: 3, message: 'You\'ve earned the "Resume Master" badge!', read: true, timestamp: '1 day ago' },
-    { id: 4, message: 'Weekly career progress report is ready', read: true, timestamp: '2 days ago' }
+  // Admin-only nav items
+  const adminNavItems = [
+    { label: 'Admin Panel', path: '/admin', icon: <FiShield /> }
   ];
   
-  const unreadCount = notifications.filter(n => !n.read).length;
-  
-  const drawer = (
-    <Box
-      sx={{ width: 280 }}
-      role="presentation"
-      onClick={toggleDrawer(false)}
-      onKeyDown={toggleDrawer(false)}
-    >
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center',
-        p: 2,
-        bgcolor: 'primary.main',
-        color: 'primary.contrastText'
-      }}>
-        <Avatar 
-          src={userInfo?.avatar || '/avatar-placeholder.png'} 
-          sx={{ width: 64, height: 64, mb: 1, border: '2px solid white' }}
-        />
-        <Typography variant="h6">{userInfo?.name || 'Guest User'}</Typography>
-        <Typography variant="body2">{userInfo?.email || 'guest@example.com'}</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-          <EmojiEventsIcon fontSize="small" sx={{ mr: 0.5 }} />
-          <Typography variant="body2">Level {userInfo?.level || 1}</Typography>
-        </Box>
-      </Box>
-      
-      <Divider />
-      
-      <List>
-        {navItems.map((item) => (
-          <ListItem 
-            button 
-            key={item.text}
-            component={Link}
-            to={item.path}
-            selected={isPathActive(item.path)}
-            sx={{
-              borderLeft: isPathActive(item.path) ? `4px solid ${theme.palette.primary.main}` : 'none',
-              bgcolor: isPathActive(item.path) ? 'rgba(0, 0, 0, 0.04)' : 'transparent',
-              '&:hover': {
-                bgcolor: 'rgba(0, 0, 0, 0.08)'
-              }
-            }}
-          >
-            <ListItemIcon sx={{ 
-              color: isPathActive(item.path) ? 'primary.main' : 'inherit',
-              minWidth: 40
-            }}>
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText 
-              primary={item.text} 
-              primaryTypographyProps={{
-                fontWeight: isPathActive(item.path) ? 'medium' : 'regular'
-              }}
-            />
-          </ListItem>
-        ))}
-      </List>
-      
-      <Divider />
-      
-      <List>
-        <ListItem button onClick={toggleTheme}>
-          <ListItemIcon>
-            {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-          </ListItemIcon>
-          <ListItemText primary={darkMode ? "Light Mode" : "Dark Mode"} />
-        </ListItem>
-        
-        <ListItem button onClick={toggleLanguage}>
-          <ListItemIcon>
-            <LanguageIcon />
-          </ListItemIcon>
-          <ListItemText primary={language === 'en' ? "العربية" : "English"} />
-        </ListItem>
-      </List>
-    </Box>
-  );
-
   return (
-    <>
-      <AppBar position="sticky" color="default" elevation={1}>
-        <Toolbar>
-          {isMobile && (
-            <IconButton
-              edge="start"
-              color="inherit"
-              aria-label="menu"
-              onClick={toggleDrawer(true)}
-              sx={{ mr: 1 }}
-            >
-              <MenuIcon />
-            </IconButton>
-          )}
+    <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-md transition-colors duration-200">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" aria-label="Main navigation">
+        <div className="flex justify-between h-16">
+          {/* Logo and Mobile Menu Button */}
+          <div className="flex items-center">
+            <div className="flex-shrink-0 flex items-center">
+              <Link to="/dashboard" className="block h-8 w-auto">
+                <img
+                  className="h-8 w-auto"
+                  src={theme === 'dark' ? logoDark : logoLight}
+                  alt="Tamkeen AI"
+                />
+              </Link>
+            </div>
+            
+            {/* Mobile menu button */}
+            <div className="md:hidden ml-2">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+                aria-controls="mobile-menu"
+                aria-expanded={isMenuOpen}
+                onClick={toggleMenu}
+              >
+                <span className="sr-only">Open main menu</span>
+                {isMenuOpen ? <FiX className="h-6 w-6" /> : <FiMenu className="h-6 w-6" />}
+              </button>
+            </div>
+          </div>
           
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <img 
-              src="/tamkeen-logo.png" 
-              alt="Tamkeen AI" 
-              height="36" 
-              style={{ marginRight: '10px' }}
-            />
-            <Typography 
-              variant="h6" 
-              component={Link} 
-              to="/"
-              sx={{ 
-                textDecoration: 'none', 
-                color: 'inherit',
-                display: { xs: 'none', sm: 'block' }
-              }}
-            >
-              Tamkeen AI
-            </Typography>
-          </Box>
-          
-          {!isMobile && (
-            <Box sx={{ display: 'flex', ml: 4 }}>
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex md:items-center md:space-x-4">
+            <div className="hidden md:ml-6 md:flex md:space-x-1">
               {navItems.map((item) => (
-                <Button
-                  key={item.text}
-                  component={Link}
+                <NavLink
+                  key={item.path}
                   to={item.path}
-                  color="inherit"
-                  sx={{ 
-                    mx: 0.5,
-                    position: 'relative',
-                    '&::after': isPathActive(item.path) ? {
-                      content: '""',
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 8,
-                      right: 8,
-                      height: 3,
-                      bgcolor: 'primary.main',
-                      borderTopLeftRadius: 3,
-                      borderTopRightRadius: 3
-                    } : {}
-                  }}
-                  startIcon={item.icon}
+                  className={({ isActive }) => 
+                    `px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors duration-150 ease-in-out
+                    ${isActive 
+                      ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200' 
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
+                    }`
+                  }
                 >
-                  {item.text}
-                </Button>
+                  <span className="mr-1.5">{item.icon}</span>
+                  <span>{item.label}</span>
+                </NavLink>
               ))}
-            </Box>
-          )}
+              
+              {/* Admin nav items (conditional rendering) */}
+              {hasRole && hasRole('admin') && adminNavItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) => 
+                    `px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors duration-150 ease-in-out
+                    ${isActive 
+                      ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200' 
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
+                    }`
+                  }
+                >
+                  <span className="mr-1.5">{item.icon}</span>
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </div>
           
-          <Box sx={{ flexGrow: 1 }} />
+          {/* Right side items: language toggle, dark mode, profile */}
+          <div className="flex items-center">
+            <LanguageToggle className="mx-2" />
+            <DarkModeToggle className="mx-2" />
+            
+            {/* Profile dropdown */}
+            <div className="ml-3 relative" ref={profileRef}>
+              <div>
+                <button 
+                  className="flex text-sm border-2 border-transparent rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center"
+                  id="user-menu"
+                  aria-expanded={isProfileOpen}
+                  aria-haspopup="true"
+                  onClick={toggleProfile}
+                >
+                  <span className="sr-only">Open user menu</span>
+                  {user?.profileImage ? (
+                    <img
+                      className="h-8 w-8 rounded-full"
+                      src={user.profileImage}
+                      alt={user.name || "User profile"}
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center text-white">
+                      <FiUser />
+                    </div>
+                  )}
+                  <span className="hidden ml-2 mr-1 text-gray-700 dark:text-gray-300 md:block">
+                    {user?.name || 'User'}
+                  </span>
+                  <FiChevronDown className={`transition-transform duration-200 ${isProfileOpen ? 'transform rotate-180' : ''}`} />
+                </button>
+              </div>
+              
+              {/* Profile dropdown menu */}
+              {isProfileOpen && (
+                <div 
+                  className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none"
+                  role="menu"
+                  aria-orientation="vertical"
+                  aria-labelledby="user-menu"
+                >
+                  <Link
+                    to="/profile"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    role="menuitem"
+                  >
+                    <FiUser className="mr-3 h-4 w-4" />
+                    Your Profile
+                  </Link>
+                  <Link
+                    to="/settings"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    role="menuitem"
+                  >
+                    <FiSettings className="mr-3 h-4 w-4" />
+                    Settings
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    role="menuitem"
+                  >
+                    <FiLogOut className="mr-3 h-4 w-4" />
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
+      
+      {/* Mobile menu, show/hide based on menu state */}
+      <div 
+        className={`md:hidden ${isMenuOpen ? 'block' : 'hidden'}`} 
+        id="mobile-menu"
+        ref={menuRef}
+      >
+        <div className="px-2 pt-2 pb-3 space-y-1">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) => 
+                `block px-3 py-2 rounded-md text-base font-medium flex items-center
+                ${isActive 
+                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200' 
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
+                }`
+              }
+            >
+              <span className="mr-2">{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
           
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Tooltip title="Toggle theme">
-              <IconButton onClick={toggleTheme} color="inherit">
-                {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-              </IconButton>
-            </Tooltip>
-            
-            <Tooltip title="Change language">
-              <IconButton onClick={toggleLanguage} color="inherit">
-                <LanguageIcon />
-              </IconButton>
-            </Tooltip>
-            
-            <Tooltip title="Notifications">
-              <IconButton 
-                color="inherit" 
-                onClick={openNotifMenu}
-                aria-controls={Boolean(notifMenuAnchor) ? 'notification-menu' : undefined}
-                aria-haspopup="true"
-                aria-expanded={Boolean(notifMenuAnchor) ? 'true' : undefined}
-              >
-                <Badge badgeContent={unreadCount} color="error">
-                  <NotificationsIcon />
-                </Badge>
-              </IconButton>
-            </Tooltip>
-            
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                ml: 1,
-                cursor: 'pointer',
-                borderRadius: 1,
-                '&:hover': {
-                  bgcolor: 'rgba(0, 0, 0, 0.04)'
-                },
-                px: 1,
-                py: 0.5
-              }}
-              onClick={openUserMenu}
-              aria-controls={Boolean(userMenuAnchor) ? 'user-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={Boolean(userMenuAnchor) ? 'true' : undefined}
+          {/* Admin nav items (conditional rendering) */}
+          {hasRole && hasRole('admin') && adminNavItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) => 
+                `block px-3 py-2 rounded-md text-base font-medium flex items-center
+                ${isActive 
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200' 
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
+                }`
+              }
             >
-              <Avatar 
-                src={userInfo?.avatar || '/avatar-placeholder.png'} 
-                sx={{ 
-                  width: 32, 
-                  height: 32,
-                  mr: { xs: 0, sm: 1 }
-                }}
-              />
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  display: { xs: 'none', sm: 'block' },
-                  mr: 0.5
-                }}
-              >
-                {userInfo?.name?.split(' ')[0] || 'Guest'}
-              </Typography>
-              <KeyboardArrowDownIcon fontSize="small" sx={{ display: { xs: 'none', sm: 'block' } }} />
-            </Box>
-          </Box>
-        </Toolbar>
-      </AppBar>
-      
-      {/* Mobile Drawer */}
-      <Drawer
-        anchor="left"
-        open={drawerOpen}
-        onClose={toggleDrawer(false)}
-      >
-        {drawer}
-      </Drawer>
-      
-      {/* User Menu */}
-      <Menu
-        id="user-menu"
-        anchorEl={userMenuAnchor}
-        open={Boolean(userMenuAnchor)}
-        onClose={closeUserMenu}
-        MenuListProps={{
-          'aria-labelledby': 'user-button',
-        }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        <MenuItem onClick={() => { closeUserMenu(); navigate('/profile'); }}>
-          <ListItemIcon>
-            <AccountCircleIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="My Profile" />
-        </MenuItem>
-        <MenuItem onClick={() => { closeUserMenu(); navigate('/achievements'); }}>
-          <ListItemIcon>
-            <EmojiEventsIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Achievements" />
-        </MenuItem>
-        <MenuItem onClick={() => { closeUserMenu(); navigate('/settings'); }}>
-          <ListItemIcon>
-            <SettingsIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Settings" />
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
-        </MenuItem>
-      </Menu>
-      
-      {/* Notifications Menu */}
-      <Menu
-        id="notification-menu"
-        anchorEl={notifMenuAnchor}
-        open={Boolean(notifMenuAnchor)}
-        onClose={closeNotifMenu}
-        MenuListProps={{
-          'aria-labelledby': 'notification-button',
-        }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{
-          style: {
-            maxHeight: 400,
-            width: 320,
-          },
-        }}
-      >
-        <Box sx={{ p: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="subtitle1">Notifications</Typography>
-          <Button size="small">Mark all as read</Button>
-        </Box>
-        <Divider />
-        {notifications.length === 0 ? (
-          <Box sx={{ p: 2, textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">No notifications</Typography>
-          </Box>
-        ) : (
-          notifications.map((notification) => (
-            <MenuItem 
-              key={notification.id} 
-              onClick={closeNotifMenu}
-              sx={{ 
-                whiteSpace: 'normal',
-                bgcolor: !notification.read ? 'rgba(0, 0, 0, 0.04)' : 'transparent',
-                borderLeft: !notification.read ? `4px solid ${theme.palette.primary.main}` : 'none',
-                pl: !notification.read ? 1.5 : 2
-              }}
-            >
-              <Box sx={{ width: '100%' }}>
-                <Typography variant="body2">{notification.message}</Typography>
-                <Typography variant="caption" color="text.secondary">{notification.timestamp}</Typography>
-              </Box>
-            </MenuItem>
-          ))
-        )}
-        <Divider />
-        <Box sx={{ p: 1, textAlign: 'center' }}>
-          <Button
-            size="small"
-            onClick={() => { closeNotifMenu(); navigate('/notifications'); }}
-          >
-            View all notifications
-          </Button>
-        </Box>
-      </Menu>
-    </>
+              <span className="mr-2">{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      </div>
+    </header>
   );
 };
 

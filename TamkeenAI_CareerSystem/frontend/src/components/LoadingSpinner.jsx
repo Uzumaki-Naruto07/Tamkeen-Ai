@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Box,
   CircularProgress,
@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 import Lottie from 'lottie-react';
+import { useUI } from './AppContext';
 
 // Pulse animation for the dot loading indicator
 const pulsate = keyframes`
@@ -47,6 +48,15 @@ const LoadingSpinner = ({
   sx = {},                   // additional styles
 }) => {
   const theme = useTheme();
+  const { language } = useUI();
+  
+  // Determine direction based on language
+  const isRTL = language === 'ar';
+  
+  // Add RTL-aware styles if needed
+  const rtlStyles = isRTL ? {
+    transform: 'scaleX(-1)', // Mirror horizontally for certain spinner types
+  } : {};
   
   // Size mapping for circular spinner
   const sizeMap = {

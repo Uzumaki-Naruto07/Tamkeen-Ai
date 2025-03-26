@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Box, 
   Typography, 
@@ -10,7 +10,8 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon
+  ListItemIcon,
+  Alert
 } from '@mui/material';
 import { Radar } from 'react-chartjs-2';
 import { 
@@ -26,6 +27,9 @@ import SchoolIcon from '@mui/icons-material/School';
 import WorkIcon from '@mui/icons-material/Work';
 import ErrorIcon from '@mui/icons-material/Error';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { useResume, useJob } from './AppContext';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
 
 // Register required Chart.js components
 ChartJS.register(
@@ -37,264 +41,154 @@ ChartJS.register(
   Legend
 );
 
-const SkillGapRadar = ({ skillGapData, onAddSkill }) => {
-  if (!skillGapData || !skillGapData.labels || !skillGapData.resumeScores || !skillGapData.jobScores) {
+const SkillGapRadar = ({ resumeId, jobId, width = '100%', height = 400, showLegend = true }) => {
+  const [gapData, setGapData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
+  const { currentResume } = useResume();
+  const { currentJobDescription } = useJob();
+  
+  // Get resume and job IDs from context if not provided
+  const effectiveResumeId = resumeId || (currentResume?.id);
+  const effectiveJobId = jobId || (currentJobDescription?.id);
+  
+  useEffect(() => {
+    const fetchSkillGapData = async () => {
+      if (!effectiveResumeId || !effectiveJobId) {
+        setError('Both resume and job are required for skill gap analysis');
+        setLoading(false);
+        return;
+      }
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // This connects to skill_gap_predictor.py backend
+        const response = await apiEndpoints.career.analyzeSkillGap({
+          resumeId: effectiveResumeId,
+          jobId: effectiveJobId,
+          includeRecommendations: true
+        });
+        
+        // Response includes skill comparison data from skill_gap_predictor.py
+        setGapData(response.data.skillComparison);
+        setRecommendations(response.data.recommendations || []);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to analyze skill gaps');
+        console.error('Skill gap analysis error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchSkillGapData();
+  }, [effectiveResumeId, effectiveJobId]);
+  
+  if (loading) {
     return (
-      <Paper elevation={0} variant="outlined" sx={{ p: 3, borderRadius: 2, textAlign: 'center' }}>
-        <Typography variant="body1" color="text.secondary">
-          No skill gap data available
-        </Typography>
-      </Paper>
+      <Box sx={{ width, height, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <LoadingSpinner message="Analyzing skill gaps..." />
+      </Box>
     );
   }
-
-  const { labels, resumeScores, jobScores, criticalSkills = [], recommendations = [] } = skillGapData;
-
-  // Prepare data for radar chart
+  
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ m: 2 }}>
+        {error}
+      </Alert>
+    );
+  }
+  
+  if (!gapData) {
+    return (
+      <Alert severity="info" sx={{ m: 2 }}>
+        No skill gap data available
+      </Alert>
+    );
+  }
+  
+  // Format data for radar chart
   const chartData = {
-    labels,
+    labels: gapData.map(skill => skill.name),
     datasets: [
       {
-        label: 'Your Resume',
-        data: resumeScores,
+        label: 'Your Skills',
+        data: gapData.map(skill => skill.yourLevel),
         backgroundColor: 'rgba(53, 162, 235, 0.2)',
         borderColor: 'rgba(53, 162, 235, 1)',
         borderWidth: 2,
-        pointBackgroundColor: 'rgba(53, 162, 235, 1)',
-        pointRadius: 4,
       },
       {
-        label: 'Job Requirements',
-        data: jobScores,
+        label: 'Required Skills',
+        data: gapData.map(skill => skill.requiredLevel),
         backgroundColor: 'rgba(255, 99, 132, 0.2)',
         borderColor: 'rgba(255, 99, 132, 1)',
         borderWidth: 2,
-        pointBackgroundColor: 'rgba(255, 99, 132, 1)',
-        pointRadius: 4,
-      },
-    ],
+      }
+    ]
   };
-
-  // Chart options
-  const chartOptions = {
-    scales: {
-      r: {
-        angleLines: {
-          display: true,
-          color: 'rgba(0, 0, 0, 0.1)',
-        },
-        suggestedMin: 0,
-        suggestedMax: 10,
-        ticks: {
-          stepSize: 2,
-          backdropColor: 'rgba(255, 255, 255, 0.8)',
-        },
-      },
-    },
-    plugins: {
-      legend: {
-        position: 'bottom',
-      },
-      tooltip: {
-        callbacks: {
-          title: (tooltipItems) => {
-            return tooltipItems[0].label;
-          },
-          label: (context) => {
-            const datasetLabel = context.dataset.label;
-            const value = context.raw;
-            return `${datasetLabel}: ${value}/10`;
-          },
-        },
-      },
-    },
-    maintainAspectRatio: false,
-  };
-
-  // Calculate skill gaps
-  const skillGaps = labels.map((skill, index) => ({
-    skill,
-    resumeScore: resumeScores[index],
-    jobScore: jobScores[index],
-    gap: jobScores[index] - resumeScores[index],
-    isCritical: criticalSkills.includes(skill),
-  })).sort((a, b) => b.gap - a.gap);
-
-  // Filter significant gaps (gap > 2)
-  const significantGaps = skillGaps.filter(item => item.gap > 2);
-
+  
   return (
-    <Paper elevation={0} variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
+    <Paper sx={{ p: 3, width, height: 'auto' }}>
       <Typography variant="h6" gutterBottom>
         Skill Gap Analysis
       </Typography>
       
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Box sx={{ height: 350, mb: 2 }}>
-            <Radar data={chartData} options={chartOptions} />
-          </Box>
-        </Grid>
-        
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle1" gutterBottom>
-            Significant Skill Gaps
-          </Typography>
-          
-          {significantGaps.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', py: 1 }}>
-              No significant skill gaps found
-            </Typography>
-          ) : (
-            <List dense>
-              {significantGaps.map((gap, index) => (
-                <ListItem key={index} sx={{ 
-                  mb: 1, 
-                  p: 1, 
-                  bgcolor: gap.isCritical ? 'rgba(255,0,0,0.05)' : 'rgba(0,0,0,0.02)',
-                  borderRadius: 1, 
-                  border: gap.isCritical ? '1px solid rgba(255,0,0,0.1)' : 'none'
-                }}>
-                  <ListItemIcon sx={{ minWidth: 36 }}>
-                    {gap.isCritical ? (
-                      <ErrorIcon color="error" fontSize="small" />
-                    ) : (
-                      <SchoolIcon color="primary" fontSize="small" />
-                    )}
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography variant="body2" fontWeight={gap.isCritical ? 'bold' : 'normal'}>
-                          {gap.skill}
-                        </Typography>
-                        {gap.isCritical && (
-                          <Chip 
-                            label="Critical" 
-                            color="error" 
-                            size="small" 
-                            variant="outlined"
-                            sx={{ ml: 1, height: 20 }}
-                          />
-                        )}
-                      </Box>
-                    }
-                    secondary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
-                          Gap:
-                        </Typography>
-                        <Box 
-                          component="span" 
-                          sx={{ 
-                            display: 'inline-block',
-                            width: `${Math.min(gap.gap * 10, 100)}%`, 
-                            height: 4, 
-                            bgcolor: gap.isCritical ? 'error.main' : 'warning.main',
-                            borderRadius: 5,
-                            mr: 1
-                          }} 
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          {gap.gap.toFixed(1)} / 10
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                  {onAddSkill && (
-                    <Button 
-                      size="small" 
-                      variant="outlined" 
-                      color={gap.isCritical ? "error" : "primary"}
-                      onClick={() => onAddSkill(gap.skill)}
-                      sx={{ ml: 1, minWidth: 0, px: 1 }}
-                    >
-                      Add
-                    </Button>
-                  )}
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </Grid>
-      </Grid>
-      
-      <Divider sx={{ my: 3 }} />
-      
-      <Box>
-        <Typography variant="subtitle1" gutterBottom>
-          Skill Development Recommendations
-        </Typography>
-        
-        {recommendations.length === 0 ? (
-          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', py: 1 }}>
-            No recommendations available
-          </Typography>
-        ) : (
-          <List>
-            {recommendations.map((recommendation, index) => (
-              <ListItem key={index} sx={{ px: 0, py: 1 }}>
-                <ListItemIcon>
-                  <WorkIcon color="primary" />
-                </ListItemIcon>
-                <ListItemText
-                  primary={recommendation.title}
-                  secondary={recommendation.description}
-                />
-              </ListItem>
-            ))}
-          </List>
-        )}
-      </Box>
-      
-      {/* Compare feature tag cloud */}
-      <Box sx={{ mt: 3 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Skills Comparison
-        </Typography>
-        
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" gutterBottom>
-              Strong Skills
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {skillGaps
-                .filter(item => item.resumeScore >= item.jobScore || item.resumeScore >= 8)
-                .map((skill, index) => (
-                  <Chip
-                    key={index}
-                    label={skill.skill}
-                    icon={<CheckCircleIcon />}
-                    color="success"
-                    size="small"
-                    variant="outlined"
-                  />
-                ))
+      <Box sx={{ height: 300, mb: 3 }}>
+        <Radar 
+          data={chartData}
+          options={{
+            scales: {
+              r: {
+                min: 0,
+                max: 10,
+                ticks: {
+                  stepSize: 2
+                }
               }
-            </Box>
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" gutterBottom>
-              Skills to Develop
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {significantGaps.map((skill, index) => (
-                <Chip
-                  key={index}
-                  label={skill.skill}
-                  icon={<SchoolIcon />}
-                  color={skill.isCritical ? "error" : "primary"}
-                  size="small"
-                  variant={skill.isCritical ? "default" : "outlined"}
-                  onClick={onAddSkill ? () => onAddSkill(skill.skill) : undefined}
-                />
-              ))}
-            </Box>
-          </Grid>
-        </Grid>
+            },
+            plugins: {
+              legend: {
+                display: showLegend
+              }
+            },
+            responsive: true,
+            maintainAspectRatio: false
+          }}
+        />
       </Box>
+      
+      {recommendations.length > 0 && (
+        <Box>
+          <Typography variant="subtitle1" gutterBottom>
+            Skill Development Recommendations
+          </Typography>
+          <Grid container spacing={2}>
+            {recommendations.map((rec, index) => (
+              <Grid item xs={12} sm={6} key={index}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'flex-start',
+                  mb: 1 
+                }}>
+                  <SchoolIcon sx={{ mr: 1, color: 'primary.main' }} />
+                  <Box>
+                    <Typography variant="body2" fontWeight="bold">
+                      {rec.skill}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {rec.suggestion}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      )}
     </Paper>
   );
 };

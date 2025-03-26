@@ -39,7 +39,8 @@ import {
   Tabs,
   Tab,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Menu
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import WorkIcon from '@mui/icons-material/Work';
@@ -69,6 +70,9 @@ import PublicIcon from '@mui/icons-material/Public';
 import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
+import { useUser, useResume } from './AppContext';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
 
 const JobSearchPanel = ({
   initialJobs = [],

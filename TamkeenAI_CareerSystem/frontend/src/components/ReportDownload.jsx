@@ -24,7 +24,11 @@ import {
   Alert,
   CircularProgress,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -43,6 +47,9 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { Document, Page, pdfjs } from 'react-pdf';
 import LoadingSpinner from './LoadingSpinner';
+import { useUser } from './AppContext';
+import apiEndpoints from '../utils/api';
+import PDFReportViewer from './PDFReportViewer';
 
 // Set up PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -97,7 +104,12 @@ const ReportDownload = ({
   onDownloadStart = () => {},
   onDownloadComplete = () => {},
   onError = () => {},
-  defaultReport = 'standard'
+  defaultReport = 'standard',
+  reportType = 'resume_analysis',
+  documentId,
+  includeMetrics = true,
+  includeSuggestions = true,
+  includeVisuals = true
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -116,6 +128,11 @@ const ReportDownload = ({
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const downloadButtonRef = useRef(null);
+  const { profile } = useUser();
+  
+  // Use context data if not provided directly
+  const name = userName || (profile ? `${profile.firstName} ${profile.lastName}` : "User");
+  const email = userEmail || (profile ? profile.email : "");
   
   // Filter available reports
   const filteredReports = availableReports
@@ -128,6 +145,17 @@ const ReportDownload = ({
     })
     .filter(report => isPremiumUser || !report.premium);
 
+  const [showPreview, setShowPreview] = useState(false);
+  const [reportUrl, setReportUrl] = useState(null);
+  const [emailForm, setEmailForm] = useState({ 
+    visible: false, 
+    email: '', 
+    message: '',
+    sending: false,
+    sent: false,
+    error: null
+  });
+  
   useEffect(() => {
     // Reset states when report changes
     setError(null);
@@ -180,22 +208,37 @@ const ReportDownload = ({
     setEmailSent(false);
   };
 
-  const handleSendEmail = async () => {
-    setEmailSending(true);
+  const handleSendEmail = async (e) => {
+    e.preventDefault();
+    
+    setEmailForm(prev => ({ ...prev, sending: true, error: null }));
     
     try {
-      // Simulate email sending
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setEmailSent(true);
-      setEmailSending(false);
+      // This connects to report_generator.py email functionality
+      await apiEndpoints.reports.sendByEmail({
+        documentId,
+        reportType,
+        email: emailForm.email,
+        message: emailForm.message,
+        options: {
+          includeMetrics,
+          includeSuggestions,
+          includeVisuals
+        }
+      });
       
-      // Close dialog after showing success message
-      setTimeout(() => {
-        handleEmailDialogClose();
-      }, 2000);
+      setEmailForm(prev => ({ 
+        ...prev, 
+        sending: false, 
+        sent: true,
+        visible: false
+      }));
     } catch (err) {
-      setError("Failed to send email. Please try again.");
-      setEmailSending(false);
+      setEmailForm(prev => ({ 
+        ...prev, 
+        sending: false, 
+        error: err.response?.data?.message || 'Failed to send email'
+      }));
     }
   };
 
@@ -218,49 +261,35 @@ const ReportDownload = ({
     try {
       onDownloadStart(selectedReport);
       
-      // Check if we need to generate the report first
-      const reportDetails = getSelectedReportDetails();
-      if (reportDetails.premium && !isPremiumUser) {
-        setError("This report requires a premium account.");
-        setLoading(false);
-        return;
-      }
+      // Start progress simulation
+      const progressInterval = simulateProgress();
       
-      // Simulate report generation for certain reports
-      if (['detailed', 'ats', 'market'].includes(selectedReport)) {
-        setGenerating(true);
-        
-        // Simulate progress updates
-        const intervalId = setInterval(() => {
-          setDownloadProgress(prev => {
-            const newProgress = prev + Math.random() * 15;
-            return newProgress > 90 ? 90 : newProgress;
-          });
-        }, 500);
-        
-        // Simulate generation time
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        clearInterval(intervalId);
-        setGenerating(false);
-        setDownloadProgress(95);
-      }
+      // Generate the report
+      const response = await apiEndpoints.reports.generate(selectedReport, {
+        userId: profile?.id,
+        reportType: selectedReport,
+        includeDetails: true
+      });
       
-      // Simulate actual download
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // Clear progress interval
+      clearInterval(progressInterval);
       setDownloadProgress(100);
+      
+      // Create file download from response
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `TamkeenAI_${selectedReport}_Report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
       setSuccess(true);
       onDownloadComplete(selectedReport);
-      
-      // Reset after showing success
-      setTimeout(() => {
-        setSuccess(false);
-        setDownloadProgress(0);
-      }, 3000);
     } catch (err) {
-      console.error('Download error:', err);
-      setError("Failed to download report. Please try again.");
+      setError(err.response?.data?.message || 'Failed to generate report');
       onError(err);
     } finally {
       setLoading(false);
@@ -364,6 +393,50 @@ const ReportDownload = ({
       : `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, ${opacity})`;
   };
 
+  const handleGenerateReport = async (format = 'pdf', action = 'download') => {
+    if (!documentId) {
+      setError('No document ID provided for report generation');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // This connects to report_generator.py backend
+      const response = await apiEndpoints.reports.generate({
+        documentId,
+        reportType,
+        format,
+        options: {
+          includeMetrics,
+          includeSuggestions,
+          includeVisuals
+        }
+      });
+      
+      const reportData = response.data;
+      
+      if (action === 'download') {
+        // Create a download link
+        const link = document.createElement('a');
+        link.href = reportData.reportUrl;
+        link.download = reportData.fileName || `${reportType}_report.${format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else if (action === 'preview') {
+        setReportUrl(reportData.reportUrl);
+        setShowPreview(true);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to generate report');
+      console.error('Report generation error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ position: 'relative' }}>
       <Paper sx={{ p: 3, mb: 2 }}>
@@ -459,7 +532,7 @@ const ReportDownload = ({
             variant="contained"
             color="primary"
             startIcon={loading || generating ? undefined : <DownloadIcon />}
-            onClick={downloadReport}
+            onClick={() => handleGenerateReport('pdf', 'download')}
             disabled={loading || generating}
             ref={downloadButtonRef}
             fullWidth={isMobile}
@@ -492,7 +565,7 @@ const ReportDownload = ({
             <Button
               variant="outlined"
               startIcon={<PreviewIcon />}
-              onClick={handlePreviewOpen}
+              onClick={() => handleGenerateReport('pdf', 'preview')}
               disabled={loading || generating}
             >
               Preview
@@ -614,7 +687,7 @@ const ReportDownload = ({
           <Button 
             variant="contained" 
             startIcon={<DownloadIcon />}
-            onClick={downloadReport}
+            onClick={() => handleGenerateReport('pdf', 'download')}
           >
             Download Full Report
           </Button>
@@ -632,7 +705,7 @@ const ReportDownload = ({
         <DialogContent>
           {emailSent ? (
             <Alert severity="success" icon={<CheckCircleIcon fontSize="inherit" />}>
-              Report sent successfully to {userEmail}!
+              Report sent successfully to {email}!
             </Alert>
           ) : (
             <>
@@ -640,7 +713,7 @@ const ReportDownload = ({
                 We'll send "{getSelectedReportDetails().title}" to your email address:
               </Typography>
               <Typography variant="subtitle1" fontWeight="medium">
-                {userEmail || "No email available"}
+                {email || "No email available"}
               </Typography>
             </>
           )}
@@ -654,11 +727,36 @@ const ReportDownload = ({
               variant="contained"
               startIcon={emailSending ? <CircularProgress size={20} color="inherit" /> : <MailOutlineIcon />}
               onClick={handleSendEmail}
-              disabled={emailSending || !userEmail}
+              disabled={emailSending || !email}
             >
               {emailSending ? 'Sending...' : 'Send Email'}
             </Button>
           )}
+        </DialogActions>
+      </Dialog>
+      
+      {/* PDF Viewer dialog */}
+      <Dialog
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Report Preview</DialogTitle>
+        <DialogContent>
+          {reportUrl && (
+            <PDFReportViewer url={reportUrl} />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowPreview(false)}>Close</Button>
+          <Button 
+            variant="contained" 
+            startIcon={<DownloadIcon />}
+            onClick={() => handleGenerateReport('pdf', 'download')}
+          >
+            Download
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

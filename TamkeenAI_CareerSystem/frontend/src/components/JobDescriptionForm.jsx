@@ -11,7 +11,8 @@ import {
   IconButton,
   Divider,
   Chip,
-  Tooltip
+  Tooltip,
+  Alert
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
@@ -19,7 +20,9 @@ import FileUploadIcon from '@mui/icons-material/FileUpload';
 import LinkIcon from '@mui/icons-material/Link';
 import ContentPasteIcon from '@mui/icons-material/ContentPaste';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import api from '../api/api';
+import { useJob } from './AppContext';
+import apiEndpoints from '../utils/api';
+import LoadingSpinner from './LoadingSpinner';
 
 const JobDescriptionInput = ({ onSubmit, initialData = null }) => {
   const [inputMethod, setInputMethod] = useState('paste');
@@ -31,6 +34,7 @@ const JobDescriptionInput = ({ onSubmit, initialData = null }) => {
   const [error, setError] = useState('');
   const [characterCount, setCharacterCount] = useState(jobDescription.length || 0);
   const fileInputRef = useRef(null);
+  const { setJobDescription: setJobDescriptionContext } = useJob();
 
   const handleTabChange = (event, newValue) => {
     setInputMethod(newValue);
@@ -86,7 +90,7 @@ const JobDescriptionInput = ({ onSubmit, initialData = null }) => {
     setError('');
     
     try {
-      const response = await api.extractJobFromUrl({ url: jobUrl });
+      const response = await apiEndpoints.jobs.analyze({ type: 'url', data: { url: jobUrl } });
       const extractedData = response.data;
       
       setJobTitle(extractedData.title || '');
@@ -113,10 +117,10 @@ const JobDescriptionInput = ({ onSubmit, initialData = null }) => {
     setError('');
     
     const formData = new FormData();
-    formData.append('job_file', file);
+    formData.append('file', file);
     
     try {
-      const response = await api.extractJobFromFile(formData);
+      const response = await apiEndpoints.jobs.analyze({ type: 'file', data: formData });
       const extractedData = response.data;
       
       setJobTitle(extractedData.title || '');
@@ -133,7 +137,9 @@ const JobDescriptionInput = ({ onSubmit, initialData = null }) => {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    
     if (!jobTitle.trim()) {
       setError('Please enter a job title');
       return;
@@ -153,25 +159,29 @@ const JobDescriptionInput = ({ onSubmit, initialData = null }) => {
     setError('');
     
     try {
-      // First save the job description
-      const saveResponse = await api.saveJobDescription({
-        title: jobTitle,
-        description: jobDescription
-      });
+      let response;
       
-      // Then call the parent callback with the job data
-      if (onSubmit) {
-        onSubmit({
-          jobId: saveResponse.data.id,
-          jobTitle: jobTitle,
-          jobDescription: jobDescription
-        });
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        response = await apiEndpoints.jobs.analyze({ type: 'file', data: formData });
+      } else if (jobUrl) {
+        response = await apiEndpoints.jobs.analyze({ type: 'url', data: { url: jobUrl } });
+      } else {
+        response = await apiEndpoints.jobs.analyze({ type: 'text', data: { text: jobDescription } });
       }
       
-      setLoading(false);
+      // Update job context
+      setJobDescriptionContext(response.data);
+      
+      // Call submission handler
+      if (onSubmit) {
+        onSubmit(response.data);
+      }
     } catch (err) {
-      console.error('Job submission failed:', err);
-      setError(err.response?.data?.message || 'Failed to process job description. Please try again.');
+      setError(err.response?.data?.message || 'Failed to analyze job description');
+      console.error('Job description analysis error:', err);
+    } finally {
       setLoading(false);
     }
   };
@@ -186,7 +196,7 @@ const JobDescriptionInput = ({ onSubmit, initialData = null }) => {
       // Try to automatically extract the job title if not already set
       if (!jobTitle) {
         try {
-          const response = await api.extractJobTitle({ text: pastedText });
+          const response = await apiEndpoints.jobs.analyze({ type: 'text', data: { text: pastedText } });
           if (response.data && response.data.title) {
             setJobTitle(response.data.title);
           }
@@ -422,9 +432,9 @@ const JobDescriptionInput = ({ onSubmit, initialData = null }) => {
             color="primary"
             onClick={handleSubmit}
             disabled={loading || !jobTitle || !jobDescription}
-            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+            startIcon={loading ? <LoadingSpinner size="small" type="circular" /> : <SaveIcon />}
           >
-            {loading ? 'Processing...' : 'Save & Continue'}
+            {loading ? 'Analyzing...' : 'Analyze Job Description'}
           </Button>
         </Box>
       </Paper>
