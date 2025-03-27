@@ -53,6 +53,7 @@ const SkillsAssessment = () => {
   const [addSkillDialogOpen, setAddSkillDialogOpen] = useState(false);
   const [newSkill, setNewSkill] = useState({ name: '', proficiency: 3 });
   const [skillSuggestions, setSkillSuggestions] = useState([]);
+  const [assessments, setAssessments] = useState([]);
   
   const navigate = useNavigate();
   const { profile } = useUser();
@@ -569,4 +570,4 @@ const SkillsAssessment = () => {
   );
 };
 
-export default SkillsAssessment; 
+export default SkillsAssessment;

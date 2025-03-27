@@ -7,26 +7,23 @@ export const useAppContext = () => {
   return useContext(AppContext);
 };
 
-export const AppProvider = ({ children }) => {
+export const AppContextProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [theme, setTheme] = useState('light');
 
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem('token');
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
-      // For demo, we'll just set a mock user
-      setUser({
-        id: 'user-001',
-        name: 'Demo User',
-        email: 'demo@tamkeen.ai',
-        role: 'user'
-      });
+    // Check if user is logged in (from localStorage)
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (err) {
+        console.error('Error parsing stored user:', err);
+        localStorage.removeItem('user');
+      }
     }
-    
     setLoading(false);
   }, []);
 
@@ -56,36 +53,15 @@ export const AppProvider = ({ children }) => {
     }
   }, []);
 
-  // Login function
-  const login = async (email, password) => {
-    try {
-      // For demo purposes we'll just simulate a login
-      setUser({
-        id: 'user-001',
-        name: 'Demo User',
-        email: email,
-        role: 'user'
-      });
-      
-      const token = 'demo-token-12345';
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Login error:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.error || 'Login failed. Please try again.' 
-      };
-    }
+  const login = (userData) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  // Logout function
   const logout = () => {
-    localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
     setUser(null);
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
   };
 
   // Check if user has a specific role
@@ -97,13 +73,14 @@ export const AppProvider = ({ children }) => {
   // Context value
   const value = {
     user,
-    setUser,
     loading,
+    error,
     theme,
     toggleTheme,
     login,
     logout,
-    hasRole
+    hasRole,
+    setError
   };
 
   return (
@@ -111,4 +88,6 @@ export const AppProvider = ({ children }) => {
       {children}
     </AppContext.Provider>
   );
-}; 
+};
+
+export default AppContextProvider; 

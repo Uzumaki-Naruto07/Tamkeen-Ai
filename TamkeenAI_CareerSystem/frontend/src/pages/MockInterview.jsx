@@ -5,14 +5,17 @@ import {
   Grid, Card, CardContent, Alert, IconButton,
   Dialog, DialogTitle, DialogContent, DialogActions,
   FormControl, InputLabel, Select, MenuItem,
-  Switch, FormControlLabel, LinearProgress
+  Switch, FormControlLabel, LinearProgress,
+  Container, TextField, List, ListItem, ListItemText,
+  ListItemIcon, Chip
 } from '@mui/material';
 import {
   Videocam, VideocamOff, Mic, MicOff,
   Settings, Close, PlayArrow, Pause,
   SkipNext, AssignmentTurnedIn, Save,
   Share, StarOutline, Star, Timer,
-  Assessment, Psychology, Lightbulb
+  Assessment, Psychology, Lightbulb,
+  QuestionAnswerIcon, WorkIcon, SchoolIcon, CheckCircleIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../components/AppContext';
@@ -52,6 +55,8 @@ const MockInterview = () => {
     microphone: false
   });
   const [interviewComplete, setInterviewComplete] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedSubcategory, setSelectedSubcategory] = useState('');
   
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -998,52 +1003,276 @@ const MockInterview = () => {
   };
   
   return (
-    <Box sx={{ py: 3 }}>
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h5" gutterBottom>
-          Mock Interview Simulator
-        </Typography>
-        
-        <Typography variant="body1" paragraph>
-          Practice your interview skills in a realistic environment with our AI-powered mock interview simulator.
-          Receive instant feedback on your performance and detailed analysis of your responses.
-        </Typography>
-        
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-        
-        <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-          <Step>
-            <StepLabel>Setup</StepLabel>
-          </Step>
-          <Step>
-            <StepLabel>Preparation</StepLabel>
-          </Step>
-          <Step>
-            <StepLabel>Interview</StepLabel>
-          </Step>
-          <Step>
-            <StepLabel>Results</StepLabel>
-          </Step>
-        </Stepper>
-        
-        <Divider sx={{ mb: 3 }} />
-        
-        {loading && !interviewComplete ? (
-          <LoadingSpinner message="Setting up your interview..." />
-        ) : (
-          <>
-            {activeStep === 0 && renderSetupStep()}
-            {activeStep === 1 && renderPreparationStep()}
-            {activeStep === 2 && renderInterviewStep()}
-            {activeStep === 3 && renderCompletionStep()}
-          </>
-        )}
-      </Paper>
-    </Box>
+    <Container maxWidth="lg">
+      <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mt: 4 }}>
+        Mock Interview Practice
+      </Typography>
+      
+      {!interviewComplete ? (
+        <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Select Interview Type
+          </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel>Category</InputLabel>
+                <Select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  label="Category"
+                >
+                  {interviewCategories.map((category) => (
+                    <MenuItem key={category.id} value={category.name}>
+                      {category.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              {selectedCategory && (
+                <FormControl fullWidth sx={{ mb: 3 }}>
+                  <InputLabel>Subcategory</InputLabel>
+                  <Select
+                    value={selectedSubcategory}
+                    onChange={(e) => setSelectedSubcategory(e.target.value)}
+                    label="Subcategory"
+                  >
+                    {interviewCategories
+                      .find(cat => cat.name === selectedCategory)
+                      ?.subcategories.map((subcat) => (
+                        <MenuItem key={subcat} value={subcat}>
+                          {subcat}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+              )}
+              
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                size="large"
+                onClick={startInterview}
+                disabled={!selectedCategory || loading}
+              >
+                {loading ? 'Preparing Interview...' : 'Start Mock Interview'}
+              </Button>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1" gutterBottom>
+                Available Interview Categories:
+              </Typography>
+              
+              <List>
+                {interviewCategories.map((category) => (
+                  <ListItem key={category.id} alignItems="flex-start">
+                    <ListItemIcon>
+                      {category.icon}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={category.name}
+                      secondary={category.description}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </Grid>
+          </Grid>
+        </Paper>
+      ) : (
+        <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <LoadingSpinner />
+            </Box>
+          ) : (
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h6">
+                  {selectedCategory} {selectedSubcategory && `- ${selectedSubcategory}`} Interview
+                </Typography>
+                <Chip 
+                  label={`Question ${currentQuestionIndex + 1} of ${interviewQuestions.length}`} 
+                  color="primary" 
+                  variant="outlined"
+                />
+              </Box>
+              
+              <Divider sx={{ mb: 3 }} />
+              
+              <Typography variant="h6" gutterBottom>
+                Question:
+              </Typography>
+              
+              <Typography variant="body1" paragraph sx={{ mb: 4, fontWeight: 'medium' }}>
+                {interviewQuestions[currentQuestionIndex]}
+              </Typography>
+              
+              <Typography variant="h6" gutterBottom>
+                Your Answer:
+              </Typography>
+              
+              <TextField
+                fullWidth
+                multiline
+                rows={6}
+                value={answers[currentQuestionIndex]?.answer || ''}
+                onChange={(e) => {
+                  const updatedAnswers = {
+                    ...answers,
+                    [currentQuestionIndex]: {
+                      ...answers[currentQuestionIndex],
+                      answer: e.target.value
+                    }
+                  };
+                  setAnswers(updatedAnswers);
+                }}
+                placeholder="Type your answer here..."
+                variant="outlined"
+                sx={{ mb: 3 }}
+              />
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={() => {
+                    setInterviewComplete(false);
+                    setCurrentQuestionIndex(0);
+                    setAnswers({});
+                  }}
+                >
+                  Cancel Interview
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => {
+                    setInterviewComplete(true);
+                    setCurrentQuestionIndex(interviewQuestions.length - 1);
+                  }}
+                  disabled={answers[currentQuestionIndex]?.answer.trim() === ''}
+                >
+                  {currentQuestionIndex < interviewQuestions.length - 1 ? 'Next Question' : 'Finish Interview'}
+                </Button>
+              </Box>
+            </>
+          )}
+        </Paper>
+      )}
+      
+      {/* Feedback Dialog */}
+      <Dialog
+        open={interviewComplete}
+        onClose={() => {
+          setInterviewComplete(false);
+          setCurrentQuestionIndex(0);
+          setAnswers({});
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Interview Feedback
+        </DialogTitle>
+        <DialogContent>
+          {quickFeedback && (
+            <>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ mr: 2 }}>
+                  Overall Score:
+                </Typography>
+                <Chip 
+                  label={`${quickFeedback.overallScore}%`} 
+                  color={quickFeedback.overallScore >= 80 ? 'success' : 'primary'} 
+                  sx={{ fontWeight: 'bold' }}
+                />
+              </Box>
+              
+              <Typography variant="h6" gutterBottom>
+                Strengths:
+              </Typography>
+              <List dense>
+                {quickFeedback.strengths.map((strength, index) => (
+                  <ListItem key={index}>
+                    <ListItemIcon>
+                      <CheckCircleIcon color="success" />
+                    </ListItemIcon>
+                    <ListItemText primary={strength} />
+                  </ListItem>
+                ))}
+              </List>
+              
+              <Typography variant="h6" gutterBottom>
+                Areas for Improvement:
+              </Typography>
+              <List dense>
+                {quickFeedback.areasForImprovement.map((area, index) => (
+                  <ListItem key={index}>
+                    <ListItemIcon>
+                      <CheckCircleIcon color="primary" />
+                    </ListItemIcon>
+                    <ListItemText primary={area} />
+                  </ListItem>
+                ))}
+              </List>
+              
+              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                Question-by-Question Feedback:
+              </Typography>
+              {quickFeedback.questionFeedback.map((qf, index) => (
+                <Card key={index} sx={{ mb: 2 }}>
+                  <CardContent>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                      Question {index + 1}: {qf.question}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                      Your Answer:
+                    </Typography>
+                    <Typography variant="body1" paragraph>
+                      {qf.answer}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Typography variant="body2" sx={{ mr: 1 }}>
+                        Score:
+                      </Typography>
+                      <Chip 
+                        label={`${qf.score}%`} 
+                        size="small"
+                        color={qf.score >= 80 ? 'success' : 'primary'} 
+                      />
+                    </Box>
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      Feedback: {qf.feedback}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ))}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setInterviewComplete(false);
+            setCurrentQuestionIndex(0);
+            setAnswers({});
+          }} color="primary">
+            Start New Interview
+          </Button>
+          <Button onClick={() => {
+            setInterviewComplete(false);
+            setCurrentQuestionIndex(interviewQuestions.length - 1);
+          }} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 };
 

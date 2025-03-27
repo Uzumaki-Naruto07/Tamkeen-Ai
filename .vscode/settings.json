@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./TamkeenAI_CareerSystem/minimal_"
+    ]
+}

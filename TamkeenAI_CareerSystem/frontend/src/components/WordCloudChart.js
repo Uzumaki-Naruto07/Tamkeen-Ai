@@ -130,4 +130,16 @@ WordCloudChart.propTypes = {
   showFrequency: PropTypes.bool
 };
 
-export default WordCloudChart; 
+// Ensure all opening braces have corresponding closing braces
+const exampleFunction = () => {
+  const data = {
+    key: "value",
+    anotherKey: "anotherValue",
+  }; // <-- Ensure this closing brace exists
+
+  return (
+    <svg ref={svgRef} width={width} height={height}>
+      {/* Your JSX content */}
+    </svg>
+  ); // <-- Ensure this closing brace exists
+}; // <-- Ensure this closing brace exists

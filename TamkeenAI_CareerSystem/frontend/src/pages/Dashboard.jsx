@@ -6,7 +6,7 @@ import {
   CircularProgress, Alert, Chip, Tooltip, IconButton,
   LinearProgress, Badge, Tabs, Tab, Link as MuiLink,
   Menu, MenuItem, Dialog, DialogTitle, DialogContent,
-  DialogActions, Snackbar, Zoom, Grow
+  DialogActions, Snackbar, Zoom, Grow, Container, useTheme, useMediaQuery
 } from '@mui/material';
 import {
   Work, School, Person, Business, Assignment,
@@ -17,7 +17,8 @@ import {
   QuestionAnswer, Email, BarChart, MoreVert, Add,
   SettingsApplications, Celebration, Flag, DonutLarge,
   AccessAlarm, LocalOffer, ViewTimeline, MilitaryTech,
-  Group, MenuBook, BusinessCenter, PeopleAlt, Lightbulb
+  Group, MenuBook, BusinessCenter, PeopleAlt, Lightbulb,
+  Refresh
 } from '@mui/icons-material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useUser, useResume } from '../components/AppContext';
@@ -25,6 +26,26 @@ import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format, formatDistance } from 'date-fns';
 import { useAppContext } from '../context/AppContext';
+import UserProgressCard from '../components/Dashboard/UserProgressCard';
+import SkillProgressSection from '../components/Dashboard/SkillProgressSection';
+import ResumeScoreChart from '../components/Dashboard/ResumeScoreChart';
+import CareerPathsSection from '../components/Dashboard/CareerPathsSection';
+import MarketInsightsSection from '../components/Dashboard/MarketInsightsSection';
+import BadgesSection from '../components/Dashboard/BadgesSection';
+import ActivityLogSection from '../components/Dashboard/ActivityLogSection';
+import CareerPredictionSection from '../components/Dashboard/CareerPredictionSection';
+import LeaderboardWidget from '../components/Dashboard/LeaderboardWidget';
+import { ResponsiveBar } from '@nivo/bar';
+import { ResponsiveLine } from '@nivo/line';
+import { ResponsivePie } from '@nivo/pie';
+import { ResponsiveRadar } from '@nivo/radar';
+import { ResponsiveHeatMap } from '@nivo/heatmap';
+import AIRecommendationCard from '../components/Dashboard/AIRecommendationCard';
+import OpportunityAlertCard from '../components/Dashboard/OpportunityAlertCard';
+import CareerJourneyTimeline from '../components/Dashboard/CareerJourneyTimeline';
+import SkillGapAnalysis from '../components/Dashboard/SkillGapAnalysis';
+import IndustryTrendsWidget from '../components/Dashboard/IndustryTrendsWidget';
+import PersonalizedLearningPaths from '../components/Dashboard/PersonalizedLearningPaths';
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -66,11 +87,13 @@ const Dashboard = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [quickStatsMenuAnchor, setQuickStatsMenuAnchor] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
   
   const navigate = useNavigate();
   const { profile, updateProfile } = useUser();
   const { resumes } = useResume();
   const { user, logout, toggleTheme, theme } = useAppContext();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   // Fetch dashboard data
   useEffect(() => {
@@ -948,163 +971,298 @@ const Dashboard = () => {
     }
   };
   
+  const handleRefresh = async () => {
+    setLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLoading(false);
+  };
+  
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+  
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '80vh' 
+      }}>
+        <CircularProgress size={60} thickness={4} />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Loading your personalized dashboard...
+        </Typography>
+        <Box sx={{ width: '300px', mt: 2 }}>
+          <LinearProgress />
+        </Box>
+      </Box>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 5 }}>
+        <Typography color="error" variant="h6">{error}</Typography>
+        <Button 
+          variant="contained" 
+          sx={{ mt: 2 }}
+          onClick={handleRefresh}
+        >
+          Try Again
+        </Button>
+      </Box>
+    );
+  }
+  
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <nav className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex">
-              <div className="flex-shrink-0 flex items-center">
-                <h1 className="text-xl font-bold text-primary-600">Tamkeen AI</h1>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
-              >
-                {theme === 'dark' ? '🌙' : '☀️'}
-              </button>
-              <div className="ml-3 relative">
-                <div>
-                  <span className="inline-flex items-center px-3 py-1 text-sm rounded-full bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
-                    {user?.name || 'User'}
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={logout}
-                className="ml-4 px-3 py-1 text-sm text-white bg-red-600 hover:bg-red-700 rounded-md"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <div className="py-10">
-        <header>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-          </div>
-        </header>
-        <main>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 bg-primary-500 rounded-md p-3">
-                      <svg className="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                        Resume Analysis
-                      </dt>
-                      <dd className="flex items-baseline">
-                        <div className="text-2xl font-semibold text-gray-900 dark:text-white">
-                          92%
-                        </div>
-                        <div className="ml-2 flex items-baseline text-sm font-semibold text-green-600">
-                          ATS Score
-                        </div>
-                      </dd>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-700 px-5 py-3">
-                  <div className="text-sm">
-                    <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-                      View details
-                    </a>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 bg-secondary-500 rounded-md p-3">
-                      <svg className="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                        Job Applications
-                      </dt>
-                      <dd className="flex items-baseline">
-                        <div className="text-2xl font-semibold text-gray-900 dark:text-white">
-                          12
-                        </div>
-                        <div className="ml-2 flex items-baseline text-sm font-semibold text-green-600">
-                          3 in progress
-                        </div>
-                      </dd>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-700 px-5 py-3">
-                  <div className="text-sm">
-                    <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-                      View details
-                    </a>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 bg-green-500 rounded-md p-3">
-                      <svg className="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                        Interview Practice
-                      </dt>
-                      <dd className="flex items-baseline">
-                        <div className="text-2xl font-semibold text-gray-900 dark:text-white">
-                          5
-                        </div>
-                        <div className="ml-2 flex items-baseline text-sm font-semibold text-green-600">
-                          Sessions
-                        </div>
-                      </dd>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-700 px-5 py-3">
-                  <div className="text-sm">
-                    <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-                      View details
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-8 bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                  Welcome to Tamkeen AI Career System
-                </h3>
-                <div className="mt-2 max-w-xl text-sm text-gray-500 dark:text-gray-300">
-                  <p>
-                    This demo dashboard showcases the Tamkeen AI Career Intelligence System. 
-                    The full version includes resume analysis, interview practice, job tracking, 
-                    and personalized career recommendations.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
+    <Container maxWidth="xl">
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mb: 4,
+        mt: 3
+      }}>
+        <Typography variant="h4" component="h1">
+          Your Career Dashboard
+        </Typography>
+        <Tooltip title="Refresh data">
+          <IconButton onClick={handleRefresh} color="primary">
+            <Refresh />
+          </IconButton>
+        </Tooltip>
+      </Box>
+      
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={handleTabChange}
+          variant={isMobile ? "scrollable" : "standard"}
+          scrollButtons={isMobile ? "auto" : false}
+        >
+          <Tab label="Overview" icon={<TrendingUp />} iconPosition="start" />
+          <Tab label="Career Path" icon={<Work />} iconPosition="start" />
+          <Tab label="Skills" icon={<School />} iconPosition="start" />
+          <Tab label="Resume" icon={<Assignment />} iconPosition="start" />
+          <Tab label="Achievements" icon={<EmojiEvents />} iconPosition="start" />
+        </Tabs>
+      </Box>
+      
+      {activeTab === 0 && (
+        <Grid container spacing={3}>
+          {/* Top row - Summary cards */}
+          <Grid item xs={12} md={8}>
+            <UserProgressCard userProgress={dashboardData.user_progress} />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <OpportunityAlertCard opportunities={dashboardData.opportunity_alerts} />
+          </Grid>
+          
+          {/* Second row - AI recommendations and skill progress */}
+          <Grid item xs={12} md={4}>
+            <AIRecommendationCard recommendations={dashboardData.ai_recommendations} />
+          </Grid>
+          <Grid item xs={12} md={8}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" gutterBottom>
+                Skill Radar - You vs. Industry
+              </Typography>
+              <Box sx={{ height: 400 }}>
+                <ResponsiveRadar
+                  data={skillRadarData}
+                  keys={['you', 'industry average', 'top performers']}
+                  indexBy="skill"
+                  maxValue={100}
+                  margin={{ top: 70, right: 80, bottom: 40, left: 80 }}
+                  borderColor={{ from: 'color' }}
+                  gridLabelOffset={36}
+                  dotSize={10}
+                  dotColor={{ theme: 'background' }}
+                  dotBorderWidth={2}
+                  colors={{ scheme: 'category10' }}
+                  blendMode="multiply"
+                  motionConfig="wobbly"
+                  legends={[
+                    {
+                      anchor: 'top-left',
+                      direction: 'column',
+                      translateX: -50,
+                      translateY: -40,
+                      itemWidth: 80,
+                      itemHeight: 20,
+                      itemTextColor: '#999',
+                      symbolSize: 12,
+                      symbolShape: 'circle',
+                      effects: [
+                        {
+                          on: 'hover',
+                          style: {
+                            itemTextColor: '#000'
+                          }
+                        }
+                      ]
+                    }
+                  ]}
+                />
+              </Box>
+            </Paper>
+          </Grid>
+          
+          {/* Third row - Career journey and market insights */}
+          <Grid item xs={12}>
+            <CareerJourneyTimeline journeyData={careerJourneyData} />
+          </Grid>
+          
+          <Grid item xs={12} md={8}>
+            <MarketInsightsSection marketInsights={dashboardData.market_insights} />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Box sx={{ mb: 3 }}>
+              <LeaderboardWidget position={dashboardData.leaderboard_position} />
+            </Box>
+            <ActivityLogSection activityLog={dashboardData.activity_log} />
+          </Grid>
+        </Grid>
+      )}
+      
+      {activeTab === 1 && (
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <CareerPathsSection careerPaths={dashboardData.career_paths} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <CareerPredictionSection prediction={dashboardData.career_prediction} />
+          </Grid>
+          <Grid item xs={12}>
+            <IndustryTrendsWidget />
+          </Grid>
+        </Grid>
+      )}
+      
+      {activeTab === 2 && (
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={8}>
+            <SkillProgressSection skillProgress={dashboardData.skill_progress} />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <SkillGapAnalysis skillGaps={dashboardData.skill_progress.skill_gaps} />
+          </Grid>
+          <Grid item xs={12}>
+            <PersonalizedLearningPaths />
+          </Grid>
+        </Grid>
+      )}
+      
+      {activeTab === 3 && (
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <ResumeScoreChart resumeScores={dashboardData.resume_scores} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Resume Optimization Suggestions
+              </Typography>
+              <Box sx={{ mt: 2 }}>
+                {/* Resume optimization content */}
+                <Typography variant="body1" paragraph>
+                  Based on AI analysis of your resume and target job descriptions, here are personalized suggestions to improve your resume:
+                </Typography>
+                <ul>
+                  <li>
+                    <Typography variant="body1" paragraph>
+                      <strong>Highlight your React experience more prominently</strong> - This is a key skill for your target roles.
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body1" paragraph>
+                      <strong>Add more quantifiable achievements</strong> - Numbers and metrics make your accomplishments more impactful.
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body1" paragraph>
+                      <strong>Include relevant keywords</strong> - Add "TypeScript" and "Redux" to improve ATS matching.
+                    </Typography>
+                  </li>
+                </ul>
+                <Button 
+                  variant="contained" 
+                  color="primary"
+                  onClick={() => navigate('/resume-builder')}
+                >
+                  Update Resume
+                </Button>
+              </Box>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" gutterBottom>
+                ATS Compatibility Score
+              </Typography>
+              <Box sx={{ height: 300 }}>
+                <ResponsivePie
+                  data={[
+                    {
+                      id: "ATS Score",
+                      label: "ATS Score",
+                      value: 85,
+                      color: "hsl(207, 70%, 50%)"
+                    },
+                    {
+                      id: "Gap",
+                      label: "Gap",
+                      value: 15,
+                      color: "hsl(0, 0%, 90%)"
+                    }
+                  ]}
+                  margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
+                  innerRadius={0.5}
+                  padAngle={0.7}
+                  cornerRadius={3}
+                  activeOuterRadiusOffset={8}
+                  colors={{ scheme: 'blues' }}
+                  borderWidth={1}
+                  borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
+                  enableArcLinkLabels={false}
+                  arcLabelsSkipAngle={10}
+                  arcLabelsTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
+                />
+              </Box>
+              <Typography variant="body1" align="center">
+                Your resume is 85% compatible with ATS systems
+              </Typography>
+            </Paper>
+          </Grid>
+        </Grid>
+      )}
+      
+      {activeTab === 4 && (
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <BadgesSection badges={dashboardData.badges} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Your Achievements
+              </Typography>
+              {/* Achievements content */}
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Upcoming Milestones
+              </Typography>
+              {/* Milestones content */}
+            </Paper>
+          </Grid>
+        </Grid>
+      )}
+    </Container>
   );
 };
 

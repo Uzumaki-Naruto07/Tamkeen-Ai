@@ -358,4 +358,4 @@ const SpeechControl = ({
   );
 };
 
-export default SpeechControl; 
+export default SpeechControl;
