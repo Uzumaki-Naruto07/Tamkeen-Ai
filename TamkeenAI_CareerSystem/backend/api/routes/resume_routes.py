@@ -12,26 +12,15 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 
 # Import utilities
-from backend.utils.date_utils import now
-from backend.utils.cache_utils import cache_result
-
-# Import database models
-from backend.database.models import Resume, User
-
-# Import core modules
-from backend.core.profile_extractor import ProfileExtractor
-
-# Import auth decorators
-from backend.app import require_auth, require_role
-
-# Import settings
-from backend.config.settings import UPLOAD_FOLDER, ALLOWED_EXTENSIONS
-
-# Import services
+from ..utils.date_utils import now
+from ..utils.cache_utils import cache_result
+from ..database.models import Resume, User
+from ..core.profile_extractor import ProfileExtractor
+from ..app import require_auth, require_role
+from ..config.settings import UPLOAD_FOLDER, ALLOWED_EXTENSIONS
 from api.services.resume_service import analyze_resume, improve_resume, extract_skills_from_resume
-
-# Import middleware
 from api.middleware.auth_middleware import token_required
+
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -52,7 +41,7 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-@resume_blueprint.route('', methods=['POST'])
+@resume_blueprint.route('/upload', methods=['POST'])
 @require_auth
 def upload_resume():
     """Upload a new resume"""
@@ -130,7 +119,7 @@ def upload_resume():
         }), 500
 
 
-@resume_blueprint.route('', methods=['GET'])
+@resume_blueprint.route('/all', methods=['GET'])
 @require_auth
 def get_resumes():
     """Get user's resumes"""
@@ -180,7 +169,7 @@ def get_resumes():
         }), 500
 
 
-@resume_blueprint.route('/<resume_id>', methods=['GET'])
+@resume_blueprint.route('/view/<resume_id>', methods=['GET'])
 @require_auth
 def get_resume(resume_id):
     """Get resume by ID"""
@@ -225,7 +214,7 @@ def get_resume(resume_id):
         }), 500
 
 
-@resume_blueprint.route('/<resume_id>', methods=['DELETE'])
+@resume_blueprint.route('/delete/<resume_id>', methods=['DELETE'])
 @require_auth
 def delete_resume(resume_id):
     """Delete resume"""
@@ -273,7 +262,7 @@ def delete_resume(resume_id):
         }), 500
 
 
-@resume_blueprint.route('/<resume_id>/parse', methods=['POST'])
+@resume_blueprint.route('/parse/<resume_id>', methods=['POST'])
 @require_auth
 def parse_resume(resume_id):
     """Re-parse a resume"""
@@ -323,7 +312,7 @@ def parse_resume(resume_id):
         }), 500
 
 
-@resume_blueprint.route('/<resume_id>/download', methods=['GET'])
+@resume_blueprint.route('/download/<resume_id>', methods=['GET'])
 @require_auth
 def download_resume(resume_id):
     """Download resume file"""
@@ -377,7 +366,7 @@ def download_resume(resume_id):
         }), 500
 
 
-@resume_blueprint.route('/<resume_id>/skills', methods=['GET'])
+@resume_blueprint.route('/skills/<resume_id>', methods=['GET'])
 @require_auth
 def get_resume_skills(resume_id):
     """Get skills from resume"""
@@ -421,7 +410,7 @@ def get_resume_skills(resume_id):
         }), 500
 
 
-@resume_blueprint.route('/resume/analyze', methods=['POST'])
+@resume_blueprint.route('/analyze', methods=['POST'])
 @token_required
 def analyze_resume_endpoint(current_user):
     """Analyze a resume and provide feedback"""
@@ -460,7 +449,7 @@ def analyze_resume_endpoint(current_user):
         return jsonify({"error": str(e)}), 500
 
 
-@resume_blueprint.route('/resume/improve', methods=['POST'])
+@resume_blueprint.route('/improve', methods=['POST'])
 @token_required
 def improve_resume_endpoint(current_user):
     """Generate suggestions to improve a resume"""
@@ -484,7 +473,7 @@ def improve_resume_endpoint(current_user):
         return jsonify({"error": str(e)}), 500
 
 
-@resume_blueprint.route('/resume/extract-skills', methods=['POST'])
+@resume_blueprint.route('/extract-skills', methods=['POST'])
 @token_required
 def extract_skills_endpoint(current_user):
     """Extract skills from a resume"""
@@ -517,4 +506,4 @@ def extract_skills_endpoint(current_user):
             
     except Exception as e:
         logger.error(f"Error extracting skills: {str(e)}")
-        return jsonify({"error": str(e)}), 500 
+        return jsonify({"error": str(e)}), 500

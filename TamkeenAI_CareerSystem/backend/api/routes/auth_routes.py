@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 import logging
-from api.middleware.auth_middleware import token_required
+from ..middleware.auth_middleware import token_required
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -103,4 +103,4 @@ def logout(current_user):
             
     except Exception as e:
         logger.error(f"Error in logout: {str(e)}")
-        return jsonify({"error": str(e)}), 500 
+        return jsonify({"error": str(e)}), 500

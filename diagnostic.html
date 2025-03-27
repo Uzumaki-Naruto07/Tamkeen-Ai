@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TamkeenAI Diagnostics</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        button { padding: 8px 16px; background: #4a90e2; color: white; border: none; 
+                border-radius: 4px; cursor: pointer; }
+        input { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }
+        .success { color: green; }
+        .error { color: red; }
+        .pending { color: orange; }
+        .log-container { background: #f4f4f4; padding: 10px; border-radius: 4px;
+                         height: 200px; overflow-y: scroll; }
+    </style>
+</head>
+<body>
+    <h1>TamkeenAI Diagnostic Tool</h1>
+    
+    <div>
+        <h2>System Information</h2>
+        <pre id="system-info">Loading...</pre>
+    </div>
+    
+    <div>
+        <h2>API Connection Test</h2>
+        <div>
+            <input type="text" id="api-url" value="http://localhost:5050/debug">
+            <button id="test-api">Test Connection</button>
+        </div>
+        
+        <div style="margin-top: 15px;">
+            <p><strong>Status:</strong> <span id="api-status" class="pending">Not tested</span></p>
+            <div id="error-details" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <div>
+        <h2>Logs</h2>
+        <div id="logs" class="log-container"></div>
+    </div>
+
+    <script>
+        // Add a log message
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toTimeString().split(' ')[0];
+            const logElement = document.getElementById('logs');
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '5px';
+            logEntry.style.color = type === 'error' ? 'red' : (type === 'success' ? 'green' : 'black');
+            logEntry.innerHTML = `<span style="color: #666; font-size: 0.8em;">${timestamp}</span> ${message}`;
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        // System information
+        function getSystemInfo() {
+            addLog('Getting system information');
+            const info = {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                platform: navigator.platform,
+                screenSize: `${window.screen.width}x${window.screen.height}`,
+                viewport: `${window.innerWidth}x${window.innerHeight}`,
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                localStorage: typeof localStorage !== 'undefined',
+                cookies: navigator.cookieEnabled
+            };
+            
+            document.getElementById('system-info').textContent = JSON.stringify(info, null, 2);
+        }
+
+        // Test API connection
+        async function testApiConnection() {
+            const apiUrl = document.getElementById('api-url').value;
+            const statusElement = document.getElementById('api-status');
+            const errorDetailsElement = document.getElementById('error-details');
+            
+            addLog(`Testing API connection to ${apiUrl}`);
+            statusElement.textContent = 'Testing...';
+            statusElement.className = 'pending';
+            errorDetailsElement.style.display = 'none';
+            
+            try {
+                // Add timestamp to URL to prevent caching
+                const urlWithTimestamp = `${apiUrl}?t=${Date.now()}`;
+                
+                addLog(`Making request to: ${urlWithTimestamp}`, 'info');
+                
+                // Set up timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                // Make request with detailed error handling
+                const response = await fetch(urlWithTimestamp, {
+                    signal: controller.signal,
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                // Clear timeout
+                clearTimeout(timeoutId);
+                
+                addLog(`Received response with status: ${response.status}`, 'info');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                addLog('Successfully parsed JSON response', 'success');
+                
+                statusElement.textContent = 'Connected';
+                statusElement.className = 'success';
+                
+                errorDetailsElement.style.display = 'block';
+                errorDetailsElement.innerHTML = `
+                    <div style="background: #e6ffe6; padding: 10px; border-radius: 4px; margin-top: 10px;">
+                        <h3>Response Data:</h3>
+                        <pre style="white-space: pre-wrap; word-break: break-word;">${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+                
+            } catch (error) {
+                addLog(`API connection error: ${error.message}`, 'error');
+                
+                statusElement.textContent = 'Failed';
+                statusElement.className = 'error';
+                
+                // Detailed error information
+                let detailedError = {
+                    message: error.message,
+                    name: error.name,
+                    stack: error.stack
+                };
+                
+                // Check for network errors
+                if (error.name === 'TypeError' && error.message.includes('Network')) {
+                    detailedError.suggestion = 'This looks like a CORS or network error. Make sure the server is running and has CORS enabled.';
+                }
+                
+                // Check for abort errors
+                if (error.name === 'AbortError') {
+                    detailedError.suggestion = 'Request timed out after 10 seconds. Check if the server is responsive.';
+                }
+                
+                errorDetailsElement.style.display = 'block';
+                errorDetailsElement.innerHTML = `
+                    <div style="background: #ffe6e6; padding: 10px; border-radius: 4px; margin-top: 10px;">
+                        <h3>Error Details:</h3>
+                        <pre style="white-space: pre-wrap; word-break: break-word;">${JSON.stringify(detailedError, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            getSystemInfo();
+            document.getElementById('test-api').addEventListener('click', testApiConnection);
+            addLog('Diagnostic tool initialized', 'info');
+        });
+    </script>
+</body>
+</html>
