@@ -44,7 +44,6 @@ import AIRecommendationCard from '../components/Dashboard/AIRecommendationCard';
 import OpportunityAlertCard from '../components/Dashboard/OpportunityAlertCard';
 import CareerJourneyTimeline from '../components/Dashboard/CareerJourneyTimeline';
 import SkillGapAnalysis from '../components/Dashboard/SkillGapAnalysis';
-import IndustryTrendsWidget from '../components/Dashboard/IndustryTrendsWidget';
 import PersonalizedLearningPaths from '../components/Dashboard/PersonalizedLearningPaths';
 
 const Dashboard = () => {
@@ -1134,9 +1133,6 @@ const Dashboard = () => {
           </Grid>
           <Grid item xs={12} md={6}>
             <CareerPredictionSection prediction={dashboardData.career_prediction} />
-          </Grid>
-          <Grid item xs={12}>
-            <IndustryTrendsWidget />
           </Grid>
         </Grid>
       )}

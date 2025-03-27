@@ -15,9 +15,26 @@ import {
   TableRow,
   Paper,
   Chip,
-  Divider
+  Divider,
+  Avatar,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  Alert,
+  IconButton,
+  Tooltip,
+  LinearProgress
 } from '@mui/material';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
+  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend
+} from 'recharts';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import WarningIcon from '@mui/icons-material/Warning';
+import InfoIcon from '@mui/icons-material/Info';
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 
 const MarketInsightsSection = ({ marketInsights }) => {
   const [currentTab, setCurrentTab] = useState('salary');
@@ -26,7 +43,17 @@ const MarketInsightsSection = ({ marketInsights }) => {
     setCurrentTab(newValue);
   };
   
-  const { salary_data, regional_demand, skill_demand, industry_trends, personalized_insights } = marketInsights;
+  const { 
+    salary_data, 
+    regional_demand, 
+    skill_demand, 
+    industry_trends, 
+    personalized_insights, 
+    // New data we'll expect from the backend
+    skill_trends = [], 
+    hiring_companies = [],
+    declining_skills = []
+  } = marketInsights;
   
   // Format salary data for chart
   const salaryChartData = salary_data.map(item => ({
@@ -51,6 +78,25 @@ const MarketInsightsSection = ({ marketInsights }) => {
   
   // Colors for charts
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+  
+  // Format skill trends data for line chart
+  const skillTrendChartData = [];
+  if (skill_trends.length > 0) {
+    // Transform the data into the format needed for the line chart
+    // Each time period is an entry with values for each skill
+    const timePoints = skill_trends[0].forecast.map(f => f.period);
+    
+    timePoints.forEach((period, i) => {
+      const dataPoint = { period };
+      skill_trends.forEach(skill => {
+        dataPoint[skill.name] = skill.forecast[i].openings;
+      });
+      skillTrendChartData.push(dataPoint);
+    });
+  }
+  
+  // Define colors for different skills in the trend chart
+  const SKILL_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c', '#d0ed57'];
   
   const renderSalaryTab = () => (
     <Box>
@@ -233,6 +279,101 @@ const MarketInsightsSection = ({ marketInsights }) => {
     </Box>
   );
   
+  const renderTrendPredictionTab = () => (
+    <Box>
+      <Typography variant="subtitle2" gutterBottom>Job Openings Forecast by Skill</Typography>
+      <Box sx={{ height: 300, mb: 3 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            data={skillTrendChartData}
+            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="period" />
+            <YAxis />
+            <RechartsTooltip />
+            <Legend />
+            {skill_trends.map((skill, index) => (
+              <Line 
+                key={skill.name}
+                type="monotone" 
+                dataKey={skill.name} 
+                stroke={SKILL_COLORS[index % SKILL_COLORS.length]} 
+                activeDot={{ r: 8 }}
+                strokeWidth={2}
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </Box>
+      
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={7}>
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Skill</TableCell>
+                  <TableCell align="right">Current</TableCell>
+                  <TableCell align="right">3 Months</TableCell>
+                  <TableCell align="right">6 Months</TableCell>
+                  <TableCell align="right">1 Year</TableCell>
+                  <TableCell align="right">Trend</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {skill_trends.map((skill) => (
+                  <TableRow key={skill.name}>
+                    <TableCell component="th" scope="row">{skill.name}</TableCell>
+                    <TableCell align="right">{skill.forecast[0].openings.toLocaleString()}</TableCell>
+                    <TableCell align="right">{skill.forecast[1].openings.toLocaleString()}</TableCell>
+                    <TableCell align="right">{skill.forecast[2].openings.toLocaleString()}</TableCell>
+                    <TableCell align="right">{skill.forecast[3].openings.toLocaleString()}</TableCell>
+                    <TableCell align="right">
+                      {skill.growth_rate > 0 ? (
+                        <Chip 
+                          icon={<TrendingUpIcon />} 
+                          label={`+${skill.growth_rate}%`} 
+                          size="small" 
+                          color="success" 
+                        />
+                      ) : (
+                        <Chip 
+                          icon={<TrendingDownIcon />} 
+                          label={`${skill.growth_rate}%`} 
+                          size="small" 
+                          color="warning" 
+                        />
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Grid>
+        <Grid item xs={12} md={5}>
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>Trend Analysis</Typography>
+            <List dense>
+              {skill_trends.slice(0, 3).map((skill) => (
+                <ListItem key={skill.name}>
+                  <ListItemText 
+                    primary={skill.name} 
+                    secondary={skill.analysis} 
+                  />
+                </ListItem>
+              ))}
+            </List>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: '0.75rem' }}>
+              * Forecasts based on current market data and industry trends
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+  
   const renderYourInsightsTab = () => (
     <Box>
       <Typography variant="subtitle2" gutterBottom>Your Market Position</Typography>
@@ -286,10 +427,156 @@ const MarketInsightsSection = ({ marketInsights }) => {
     </Box>
   );
   
+  // Companies Hiring Now Section
+  const CompaniesHiringSection = () => (
+    <Box sx={{ mb: 3, overflow: 'hidden', mx: -2, px: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Typography variant="subtitle2">Companies Hiring Now</Typography>
+        <Typography variant="caption" color="text.secondary">
+          Updated {new Date().toLocaleDateString()}
+        </Typography>
+      </Box>
+      
+      <Box sx={{ 
+        display: 'flex',
+        gap: 2,
+        pb: 1,
+        overflowX: 'auto',
+        '&::-webkit-scrollbar': {
+          height: 6
+        },
+        '&::-webkit-scrollbar-thumb': {
+          backgroundColor: 'rgba(0,0,0,0.2)',
+          borderRadius: 3
+        }
+      }}>
+        {hiring_companies.map((company, index) => (
+          <Paper
+            key={index}
+            elevation={0}
+            variant="outlined"
+            sx={{ 
+              p: 1.5, 
+              minWidth: 180,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              transition: 'transform 0.2s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: 2
+              }
+            }}
+          >
+            <Avatar 
+              src={company.logo} 
+              alt={company.name}
+              sx={{ width: 56, height: 56, mb: 1 }}
+            >
+              {company.name.charAt(0)}
+            </Avatar>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', textAlign: 'center' }}>
+              {company.name}
+            </Typography>
+            <Chip 
+              label={`${company.openings} Positions`} 
+              size="small" 
+              color="primary" 
+              sx={{ mt: 1 }}
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              {company.top_role}
+            </Typography>
+          </Paper>
+        ))}
+      </Box>
+    </Box>
+  );
+  
+  // Skill Expiry Alert Section
+  const SkillExpiryAlertSection = () => (
+    <Box sx={{ mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Typography variant="subtitle2" color="warning.main" sx={{ display: 'flex', alignItems: 'center' }}>
+          <HourglassEmptyIcon sx={{ mr: 0.5, fontSize: 20 }} />
+          Skills Declining in Demand
+        </Typography>
+        <Tooltip title="These skills are projected to lose relevance in your industry. Consider focusing on growing alternatives.">
+          <IconButton size="small">
+            <InfoIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+      
+      <Alert severity="warning" sx={{ mb: 2 }}>
+        Some skills in your profile are declining in market relevance. Consider upskilling in growing alternatives.
+      </Alert>
+      
+      <Grid container spacing={2}>
+        {declining_skills.map((skill, index) => (
+          <Grid item xs={12} sm={6} md={4} key={index}>
+            <Paper 
+              variant="outlined" 
+              sx={{ 
+                p: 1.5, 
+                borderLeft: '4px solid',
+                borderLeftColor: 'warning.main'
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="body2" fontWeight="medium">{skill.name}</Typography>
+                <Chip 
+                  icon={<TrendingDownIcon />} 
+                  label={`${skill.decline_rate}%`} 
+                  size="small" 
+                  color="warning"
+                />
+              </Box>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Typography variant="caption" sx={{ mr: 1 }}>
+                  Time to Obsolescence:
+                </Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={100 - skill.remaining_relevance}
+                  sx={{ 
+                    flexGrow: 1,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: '#f5f5f5'
+                  }}
+                />
+              </Box>
+              
+              <Typography variant="caption" color="text.secondary">
+                {skill.estimated_expiry}
+              </Typography>
+              
+              <Divider sx={{ my: 1 }} />
+              
+              <Typography variant="caption" sx={{ display: 'block' }}>
+                Suggested Alternatives:
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                {skill.alternatives.map((alt, i) => (
+                  <Chip key={i} label={alt} size="small" color="success" variant="outlined" />
+                ))}
+              </Box>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+  
   return (
     <Card>
       <CardContent>
         <Typography variant="h6" gutterBottom>Market Insights</Typography>
+        
+        {/* Companies Hiring Now ticker - shown above tabs */}
+        {hiring_companies.length > 0 && <CompaniesHiringSection />}
         
         <Tabs
           value={currentTab}
@@ -302,13 +589,36 @@ const MarketInsightsSection = ({ marketInsights }) => {
           <Tab label="Regional Demand" value="regions" />
           <Tab label="Skills Demand" value="skills" />
           <Tab label="Industry Trends" value="trends" />
+          <Tab label="Future Trends" value="future" />
+          <Tab label="Skill Alerts" value="alerts" />
           <Tab label="Your Insights" value="personalized" />
         </Tabs>
+        
+        {/* Skill Expiry Alert - shown on all tabs when there are critical alerts */}
+        {currentTab !== 'alerts' && declining_skills.some(skill => skill.decline_rate > 30) && (
+          <Alert 
+            severity="warning" 
+            sx={{ mb: 2 }}
+            action={
+              <IconButton 
+                color="inherit" 
+                size="small" 
+                onClick={() => setCurrentTab('alerts')}
+              >
+                <WarningIcon fontSize="inherit" />
+              </IconButton>
+            }
+          >
+            You have {declining_skills.filter(s => s.decline_rate > 30).length} skills at high risk of becoming obsolete.
+          </Alert>
+        )}
         
         {currentTab === 'salary' && renderSalaryTab()}
         {currentTab === 'regions' && renderRegionTab()}
         {currentTab === 'skills' && renderSkillTab()}
         {currentTab === 'trends' && renderTrendsTab()}
+        {currentTab === 'future' && renderTrendPredictionTab()}
+        {currentTab === 'alerts' && <SkillExpiryAlertSection />}
         {currentTab === 'personalized' && renderYourInsightsTab()}
       </CardContent>
     </Card>

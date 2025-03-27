@@ -7,6 +7,10 @@
     "recharts": "^2.5.0"
   },
   "devDependencies": {
-    "react-scripts": "^3.0.1"
+    "@tailwindcss/postcss": "^4.0.17",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "react-scripts": "^5.0.1",
+    "tailwindcss": "^4.0.17"
   }
 }

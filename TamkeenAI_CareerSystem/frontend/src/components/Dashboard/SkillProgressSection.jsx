@@ -1,12 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, Typography, Box, Tabs, Tab, LinearProgress, Slider, Button } from '@mui/material';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import DashboardAPI from '../../api/DashboardAPI';
 
 const SkillProgressSection = ({ skillProgress }) => {
   const [currentCategory, setCurrentCategory] = useState(Object.keys(skillProgress)[0] || '');
   const [editingSkill, setEditingSkill] = useState(null);
   const [newSkillValue, setNewSkillValue] = useState(0);
+  const [learningResources, setLearningResources] = useState([]);
+  const [industryBenchmarks, setIndustryBenchmarks] = useState(null);
+  
+  useEffect(() => {
+    // Fetch learning resources and benchmarks
+    const fetchData = async () => {
+      try {
+        const resources = await DashboardAPI.getLearningResources(currentCategory);
+        const benchmarks = await DashboardAPI.getIndustryBenchmarks(currentCategory);
+        setLearningResources(resources);
+        setIndustryBenchmarks(benchmarks);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    fetchData();
+  }, [currentCategory]);
   
   const handleCategoryChange = (event, newValue) => {
     setCurrentCategory(newValue);
@@ -50,6 +67,45 @@ const SkillProgressSection = ({ skillProgress }) => {
   
   const handleCancelEdit = () => {
     setEditingSkill(null);
+  };
+  
+  const renderLearningResources = () => (
+    <Box sx={{ mt: 3 }}>
+      <Typography variant="h6" gutterBottom>Top Learning Resources</Typography>
+      {learningResources.slice(0, 3).map((resource, index) => (
+        <Box key={index} sx={{ mb: 1 }}>
+          <Typography variant="body2" component="a" href={resource.url} target="_blank" sx={{ textDecoration: 'none', color: 'primary.main' }}>
+            {`${index + 1}. ${resource.title}`}
+          </Typography>
+        </Box>
+      ))}
+    </Box>
+  );
+
+  const renderBenchmarkChart = () => {
+    if (!industryBenchmarks) return null;
+    
+    const benchmarkData = Object.entries(currentSkills).map(([skill, data]) => ({
+      skill,
+      userScore: data.current,
+      industryAvg: industryBenchmarks[skill] || 0,
+    }));
+
+    return (
+      <Box sx={{ mt: 4, height: 300 }}>
+        <Typography variant="h6" gutterBottom>Industry Benchmark Comparison</Typography>
+        <ResponsiveContainer width="100%" height="100%">
+          <RadarChart data={benchmarkData}>
+            <PolarGrid />
+            <PolarAngleAxis dataKey="skill" />
+            <PolarRadiusAxis />
+            <Radar name="Your Skills" dataKey="userScore" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+            <Radar name="Industry Average" dataKey="industryAvg" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
+            <Tooltip />
+          </RadarChart>
+        </ResponsiveContainer>
+      </Box>
+    );
   };
   
   if (!currentCategory || !skillProgress[currentCategory]) {
@@ -169,6 +225,40 @@ const SkillProgressSection = ({ skillProgress }) => {
             );
           })}
         </Box>
+
+        {/* Enhanced Skill Growth Chart */}
+        <Box sx={{ mt: 4, height: 300 }}>
+          <Typography variant="h6" gutterBottom>Skill Growth Over Time</Typography>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={Object.entries(currentSkills).flatMap(([skill, data]) => 
+              data.history.map((value, index) => ({
+                name: `Month ${index + 1}`,
+                [skill]: value,
+              }))
+            )}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              {Object.keys(currentSkills).map((skill, index) => (
+                <Line 
+                  key={skill}
+                  type="monotone"
+                  dataKey={skill}
+                  stroke={`hsl(${index * 360 / Object.keys(currentSkills).length}, 70%, 50%)`}
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </Box>
+
+        {/* Learning Resources Section */}
+        {renderLearningResources()}
+
+        {/* Benchmark Radar Chart */}
+        {renderBenchmarkChart()}
       </CardContent>
     </Card>
   );

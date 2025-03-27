@@ -13,4 +13,9 @@ export default defineConfig({
       '@': '/src',
     },
   },
+  css: {
+    postcss: {
+      plugins: [], // Temporarily remove all PostCSS plugins
+    },
+  },
 }) 

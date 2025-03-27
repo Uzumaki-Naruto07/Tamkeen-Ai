@@ -18,7 +18,18 @@ import {
   Card,
   CardContent,
   CardMedia,
-  Badge
+  Badge,
+  Tabs,
+  Tab,
+  Collapse,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent
 } from '@mui/material';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
@@ -31,6 +42,9 @@ import WorkIcon from '@mui/icons-material/Work';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import InfoIcon from '@mui/icons-material/Info';
 import ShareIcon from '@mui/icons-material/Share';
+import LockIcon from '@mui/icons-material/Lock';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { motion } from 'framer-motion';
 
 // Badge icon mapping
@@ -58,6 +72,8 @@ const badgeColors = {
 const BadgesSection = ({ badges }) => {
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('grid');
+  const [expandedCategory, setExpandedCategory] = useState(null);
   
   // Calculate badge stats
   const earnedBadges = badges.filter(badge => badge.date_earned);
@@ -95,6 +111,281 @@ const BadgesSection = ({ badges }) => {
     }
   };
   
+  // Organize badges into categories and trees
+  const categorizedBadges = badges.reduce((acc, badge) => {
+    const category = badge.category || 'General';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(badge);
+    return acc;
+  }, {});
+  
+  // Create badge progression trees
+  const badgeTrees = badges.reduce((acc, badge) => {
+    if (badge.progression_path) {
+      if (!acc[badge.progression_path]) {
+        acc[badge.progression_path] = [];
+      }
+      acc[badge.progression_path].push(badge);
+    }
+    return acc;
+  }, {});
+  
+  // Sort badges in each progression path by level
+  Object.keys(badgeTrees).forEach(path => {
+    badgeTrees[path].sort((a, b) => (a.level || 0) - (b.level || 0));
+  });
+  
+  // Check if a badge is the next one to unlock in its path
+  const isNextToUnlock = (badge) => {
+    if (!badge.progression_path || !badge.level) return false;
+    
+    const pathBadges = badgeTrees[badge.progression_path];
+    const previousLevelBadge = pathBadges.find(b => b.level === badge.level - 1);
+    
+    return previousLevelBadge && previousLevelBadge.date_earned && !badge.date_earned;
+  };
+  
+  // Get progress towards unlocking a badge
+  const getUnlockProgress = (badge) => {
+    if (!badge.unlock_conditions) return null;
+    
+    return {
+      current: badge.unlock_progress || 0,
+      total: badge.unlock_conditions.required_count || 1,
+      percentage: Math.round(((badge.unlock_progress || 0) / 
+                              (badge.unlock_conditions.required_count || 1)) * 100)
+    };
+  };
+  
+  // Toggle category expansion
+  const toggleCategory = (category) => {
+    setExpandedCategory(expandedCategory === category ? null : category);
+  };
+  
+  // Render badge tree view
+  const renderBadgeTree = () => {
+    return (
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          Badge Progression Paths
+        </Typography>
+        
+        {Object.keys(badgeTrees).map(path => (
+          <Card key={path} variant="outlined" sx={{ mb: 3, overflow: 'visible' }}>
+            <CardContent>
+              <Typography variant="subtitle1" gutterBottom>
+                {path}
+              </Typography>
+              
+              <Stepper orientation="vertical">
+                {badgeTrees[path].map((badge, index) => {
+                  const isEarned = !!badge.date_earned;
+                  const isNext = isNextToUnlock(badge);
+                  const progress = getUnlockProgress(badge);
+                  
+                  return (
+                    <Step key={badge.id} active={isEarned || isNext} completed={isEarned}>
+                      <StepLabel
+                        StepIconComponent={() => (
+                          <Avatar
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              bgcolor: isEarned ? 'primary.main' : (isNext ? 'action.selected' : 'grey.300'),
+                              border: isEarned ? `2px solid ${badgeColors[badge.tier || 'gold']}` : 'none',
+                              boxShadow: isEarned ? '0 0 10px rgba(255, 215, 0, 0.5)' : 'none',
+                              opacity: !isEarned && !isNext ? 0.6 : 1
+                            }}
+                          >
+                            {isEarned ? (
+                              badgeIcons[badge.icon] || <StarIcon />
+                            ) : (
+                              <LockIcon />
+                            )}
+                          </Avatar>
+                        )}
+                      >
+                        <Box 
+                          onClick={() => isEarned && handleBadgeClick(badge)}
+                          sx={{ 
+                            cursor: isEarned ? 'pointer' : 'default',
+                            '&:hover': { textDecoration: isEarned ? 'underline' : 'none' }
+                          }}
+                        >
+                          <Typography variant="body2" color={isEarned ? 'text.primary' : 'text.secondary'}>
+                            {badge.name}
+                            {isEarned && (
+                              <CheckCircleIcon 
+                                fontSize="small" 
+                                color="success" 
+                                sx={{ ml: 1, verticalAlign: 'middle' }} 
+                              />
+                            )}
+                          </Typography>
+                        </Box>
+                      </StepLabel>
+                      <StepContent>
+                        <Typography variant="body2" color="text.secondary">
+                          {badge.description}
+                        </Typography>
+                        
+                        {!isEarned && badge.unlock_conditions && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {badge.unlock_conditions.description}
+                            </Typography>
+                            
+                            {progress && (
+                              <Box sx={{ mt: 1 }}>
+                                <Typography variant="caption" display="block">
+                                  Progress: {progress.current}/{progress.total} 
+                                  {progress.percentage >= 50 && progress.percentage < 100 && " - Almost there!"}
+                                  {progress.percentage === 100 && " - Ready to claim!"}
+                                </Typography>
+                                <LinearProgress 
+                                  variant="determinate" 
+                                  value={progress.percentage} 
+                                  sx={{ height: 6, borderRadius: 3, mt: 0.5 }} 
+                                />
+                              </Box>
+                            )}
+                          </Box>
+                        )}
+                        
+                        {isEarned && badge.date_earned && (
+                          <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                            Earned on: {new Date(badge.date_earned).toLocaleDateString()}
+                          </Typography>
+                        )}
+                      </StepContent>
+                    </Step>
+                  );
+                })}
+              </Stepper>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
+    );
+  };
+  
+  // Render gamified progress view
+  const renderGamifiedView = () => {
+    return (
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          Your Badge Challenges
+        </Typography>
+        
+        <List sx={{ width: '100%' }}>
+          {Object.keys(categorizedBadges).map(category => (
+            <React.Fragment key={category}>
+              <ListItem 
+                button 
+                onClick={() => toggleCategory(category)}
+                sx={{ bgcolor: 'background.paper', mb: 1, borderRadius: 1 }}
+              >
+                <ListItemIcon>
+                  {category === 'Career' && <WorkIcon />}
+                  {category === 'Learning' && <SchoolIcon />}
+                  {category === 'Networking' && <PeopleIcon />}
+                  {category === 'Skills' && <AssignmentTurnedInIcon />}
+                  {category === 'General' && <StarIcon />}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={`${category} Badges`} 
+                  secondary={`${categorizedBadges[category].filter(b => b.date_earned).length}/${categorizedBadges[category].length} Earned`} 
+                />
+              </ListItem>
+              
+              <Collapse in={expandedCategory === category} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding sx={{ pl: 4 }}>
+                  {categorizedBadges[category]
+                    .filter(badge => !badge.date_earned)
+                    .map(badge => {
+                      const progress = getUnlockProgress(badge);
+                      const isNext = isNextToUnlock(badge);
+                      
+                      return (
+                        <ListItem key={badge.id} sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 2 }}>
+                          <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', mb: 1 }}>
+                            <Avatar
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                bgcolor: isNext ? 'action.selected' : 'grey.300',
+                                mr: 2,
+                                opacity: 0.7
+                              }}
+                            >
+                              {badgeIcons[badge.icon] || <StarIcon />}
+                            </Avatar>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="body2" fontWeight="medium">
+                                {badge.name}
+                                {isNext && (
+                                  <Chip 
+                                    label="NEXT" 
+                                    size="small" 
+                                    color="primary" 
+                                    sx={{ ml: 1, height: 20 }} 
+                                  />
+                                )}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {badge.description}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          
+                          {badge.unlock_conditions && (
+                            <Box sx={{ width: '100%', pl: 7 }}>
+                              <Typography variant="caption" sx={{ 
+                                display: 'block', 
+                                fontWeight: 'medium',
+                                color: isNext ? 'primary.main' : 'text.secondary'
+                              }}>
+                                ✦ {badge.unlock_conditions.description}
+                              </Typography>
+                              
+                              {progress && (
+                                <Box sx={{ mt: 1, width: '100%' }}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {progress.current}/{progress.total} Completed
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {progress.percentage}%
+                                    </Typography>
+                                  </Box>
+                                  <LinearProgress 
+                                    variant="determinate" 
+                                    value={progress.percentage} 
+                                    sx={{ 
+                                      height: 8, 
+                                      borderRadius: 3, 
+                                      mt: 0.5,
+                                      bgcolor: 'grey.200'
+                                    }} 
+                                  />
+                                </Box>
+                              )}
+                            </Box>
+                          )}
+                        </ListItem>
+                      );
+                    })}
+                </List>
+              </Collapse>
+            </React.Fragment>
+          ))}
+        </List>
+      </Box>
+    );
+  };
+  
   return (
     <Paper sx={{ p: 3, height: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -128,62 +419,80 @@ const BadgesSection = ({ badges }) => {
         </Box>
       </Box>
       
-      <Divider sx={{ my: 2 }} />
+      <Tabs 
+        value={viewMode} 
+        onChange={(e, newValue) => setViewMode(newValue)} 
+        sx={{ mb: 2 }}
+        centered
+      >
+        <Tab value="grid" label="Badges" />
+        <Tab value="tree" label="Progression" icon={<AccountTreeIcon fontSize="small" />} iconPosition="start" />
+        <Tab value="gamified" label="Challenges" />
+      </Tabs>
       
-      <Grid container spacing={2}>
-        {badges.map((badge) => {
-          const isEarned = !!badge.date_earned;
-          return (
-            <Grid item xs={4} sm={3} md={4} key={badge.id}>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Tooltip title={isEarned ? badge.description : `Locked: ${badge.description}`}>
-                  <Box
-                    onClick={() => isEarned && handleBadgeClick(badge)}
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      cursor: isEarned ? 'pointer' : 'default',
-                      opacity: isEarned ? 1 : 0.5,
-                      filter: isEarned ? 'none' : 'grayscale(100%)',
-                      transition: 'all 0.2s ease-in-out',
-                      '&:hover': {
-                        transform: isEarned ? 'scale(1.05)' : 'none',
-                      }
-                    }}
+      {viewMode === 'grid' && (
+        <>
+          <Divider sx={{ my: 2 }} />
+          <Grid container spacing={2}>
+            {badges.map((badge) => {
+              const isEarned = !!badge.date_earned;
+              return (
+                <Grid item xs={4} sm={3} md={4} key={badge.id}>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    <Avatar
-                      sx={{
-                        width: 56,
-                        height: 56,
-                        bgcolor: isEarned ? 'primary.main' : 'grey.300',
-                        mb: 1,
-                        border: isEarned ? `2px solid ${badgeColors[badge.tier || 'gold']}` : 'none',
-                        boxShadow: isEarned ? '0 0 10px rgba(255, 215, 0, 0.5)' : 'none'
-                      }}
-                    >
-                      {badgeIcons[badge.icon] || <StarIcon />}
-                    </Avatar>
-                    <Typography 
-                      variant="caption" 
-                      align="center"
-                      sx={{ 
-                        fontWeight: isEarned ? 'bold' : 'normal',
-                        color: isEarned ? 'text.primary' : 'text.secondary'
-                      }}
-                    >
-                      {badge.name}
-                    </Typography>
-                  </Box>
-                </Tooltip>
-              </motion.div>
-            </Grid>
-          );
-        })}
-      </Grid>
+                    <Tooltip title={isEarned ? badge.description : `Locked: ${badge.description}`}>
+                      <Box
+                        onClick={() => isEarned && handleBadgeClick(badge)}
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          cursor: isEarned ? 'pointer' : 'default',
+                          opacity: isEarned ? 1 : 0.5,
+                          filter: isEarned ? 'none' : 'grayscale(100%)',
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            transform: isEarned ? 'scale(1.05)' : 'none',
+                          }
+                        }}
+                      >
+                        <Avatar
+                          sx={{
+                            width: 56,
+                            height: 56,
+                            bgcolor: isEarned ? 'primary.main' : 'grey.300',
+                            mb: 1,
+                            border: isEarned ? `2px solid ${badgeColors[badge.tier || 'gold']}` : 'none',
+                            boxShadow: isEarned ? '0 0 10px rgba(255, 215, 0, 0.5)' : 'none'
+                          }}
+                        >
+                          {badgeIcons[badge.icon] || <StarIcon />}
+                        </Avatar>
+                        <Typography 
+                          variant="caption" 
+                          align="center"
+                          sx={{ 
+                            fontWeight: isEarned ? 'bold' : 'normal',
+                            color: isEarned ? 'text.primary' : 'text.secondary'
+                          }}
+                        >
+                          {badge.name}
+                        </Typography>
+                      </Box>
+                    </Tooltip>
+                  </motion.div>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </>
+      )}
+      
+      {viewMode === 'tree' && renderBadgeTree()}
+      
+      {viewMode === 'gamified' && renderGamifiedView()}
       
       {/* Badge detail dialog */}
       <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
