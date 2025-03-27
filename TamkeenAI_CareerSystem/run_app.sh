@@ -93,6 +93,8 @@ cd ..
 echo "Starting Tamkeen AI backend server..."
 echo "======================================"
 cd backend || { echo "Failed to change to backend directory"; exit 1; }
+echo "Setting up Python path..."
+python fix_path.py
 python app.py || { echo "Failed to start the application"; exit 1; }
 
 # This will only execute if the application is stopped normally

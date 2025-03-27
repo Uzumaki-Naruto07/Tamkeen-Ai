@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import logging
 
 # Import route modules
-from api.routes.auth_routes import auth_bp
+from .api.routes.auth_routes import auth_bp
 from api.routes.resume_routes import resume_bp
 from api.routes.career_routes import career_bp
 from api.routes.interview_routes import interview_bp
@@ -53,7 +53,7 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload size
     
     # Enable CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
     
     # Health check endpoint
     @app.route('/api/health-check')
