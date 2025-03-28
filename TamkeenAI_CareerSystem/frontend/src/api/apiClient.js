@@ -20,6 +20,7 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('Request error:', error);
     return Promise.reject(error);
   }
 );
@@ -35,9 +36,42 @@ apiClient.interceptors.response.use(
       // Clear token and redirect to login
       localStorage.removeItem('token');
       window.location.href = '/login';
+      return Promise.reject(new Error('Authentication required. Please log in again.'));
     }
+    
+    // Handle server errors (500)
+    if (error.response && error.response.status >= 500) {
+      console.error('Server error:', error.response.data);
+      return Promise.reject(new Error('Server error. Please try again later.'));
+    }
+    
+    // Handle network errors
+    if (error.message === 'Network Error') {
+      console.error('Network error:', error);
+      return Promise.reject(new Error('Network error. Please check your internet connection.'));
+    }
+    
+    // Handle timeout errors
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timeout:', error);
+      return Promise.reject(new Error('Request timeout. Please try again later.'));
+    }
+    
     return Promise.reject(error);
   }
 );
+
+// General API request functions
+export const api = {
+  get: (url, params = {}) => apiClient.get(url, { params }),
+  post: (url, data = {}) => apiClient.post(url, data),
+  put: (url, data = {}) => apiClient.put(url, data),
+  delete: (url) => apiClient.delete(url),
+  upload: (url, formData) => apiClient.post(url, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+};
 
 export default apiClient; 

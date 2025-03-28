@@ -18,7 +18,9 @@ import {
   Avatar,
   Card,
   CardContent,
-  Collapse
+  Collapse,
+  Grid,
+  useTheme
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -31,47 +33,160 @@ import InfoIcon from '@mui/icons-material/Info';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useUser } from '../../context/AppContext';
+import { dashboardData } from '../../utils/mockData/mockDataIndex';
+
+// Icons
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import StarIcon from '@mui/icons-material/Star';
+import CelebrationIcon from '@mui/icons-material/Celebration';
+import MilitaryTechIcon from '@mui/icons-material/MilitaryTech';
+import EmojiObjectsIcon from '@mui/icons-material/EmojiObjects';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import RecommendIcon from '@mui/icons-material/Recommend';
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 
 // Styled components
-const ProgressCircle = styled(Box)(({ theme }) => ({
+const ProgressCard = styled(Card)(({ theme }) => ({
+  height: '100%',
   position: 'relative',
-  display: 'inline-flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  width: 120,
-  height: 120,
+  borderRadius: theme.shape.borderRadius * 2,
+  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+  overflow: 'visible',
+  '&:hover': {
+    transform: 'translateY(-5px)',
+    boxShadow: theme.shadows[8],
+  },
+}));
+
+const ProgressCardContent = styled(CardContent)(({ theme }) => ({
+  padding: theme.spacing(3),
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column',
 }));
 
 const LevelBadge = styled(Box)(({ theme }) => ({
   position: 'absolute',
-  top: -10,
-  right: -10,
-  backgroundColor: theme.palette.primary.main,
-  color: theme.palette.primary.contrastText,
-  borderRadius: '50%',
-  width: 40,
-  height: 40,
+  top: -15,
+  right: 15,
+  zIndex: 1,
+}));
+
+const LevelDisplay = styled(Badge)(({ theme }) => ({
+  '& .MuiBadge-badge': {
+    backgroundColor: theme.palette.secondary.main,
+    color: theme.palette.secondary.contrastText,
+    fontSize: '0.75rem',
+    padding: theme.spacing(0, 1),
+    borderRadius: theme.shape.borderRadius,
+    fontWeight: 'bold',
+  },
+}));
+
+const ProgressCircleContainer = styled(Box)(({ theme }) => ({
+  position: 'relative',
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  fontWeight: 'bold',
-  boxShadow: theme.shadows[3],
-  border: `2px solid ${theme.palette.background.paper}`,
-}));
-
-const XPBar = styled(Box)(({ theme }) => ({
-  width: '100%',
-  marginTop: theme.spacing(2),
   marginBottom: theme.spacing(1),
 }));
 
-const NextStepItem = styled(ListItem)(({ theme }) => ({
-  padding: theme.spacing(1, 0),
-  '&:hover': {
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-    borderRadius: theme.shape.borderRadius,
+const CircularProgressBox = styled(Box)(({ theme, level }) => ({
+  position: 'relative',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  width: 130,
+  height: 130,
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    right: 4,
+    bottom: 4,
+    borderRadius: '50%',
+    background: `linear-gradient(120deg, ${theme.palette.background.paper} 0%, ${
+      level >= 10 
+        ? theme.palette.gold.light
+        : level >= 5
+          ? theme.palette.silver.light
+          : theme.palette.bronze.light
+    } 100%)`,
+    opacity: 0.2,
+    zIndex: 0,
   },
 }));
+
+const AchievementGrid = styled(Grid)(({ theme }) => ({
+  marginTop: theme.spacing(2),
+}));
+
+const AchievementItem = styled(Box)(({ theme, unlocked }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  borderRadius: theme.shape.borderRadius,
+  padding: theme.spacing(1),
+  backgroundColor: unlocked ? theme.palette.primary.light : theme.palette.action.disabledBackground,
+  opacity: unlocked ? 1 : 0.7,
+  marginBottom: theme.spacing(1),
+}));
+
+const NextLevelRequirements = styled(Box)(({ theme }) => ({
+  marginTop: theme.spacing(2),
+  backgroundColor: theme.palette.background.paper,
+  borderRadius: theme.shape.borderRadius,
+  padding: theme.spacing(1.5),
+  boxShadow: theme.shadows[1],
+}));
+
+const Milestone = styled(Box)(({ theme, completed }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  marginBottom: theme.spacing(1),
+  opacity: completed ? 1 : 0.7,
+}));
+
+const UserInfoBox = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  marginBottom: theme.spacing(2),
+}));
+
+const WelcomeMessage = styled(Typography)(({ theme }) => ({
+  marginTop: theme.spacing(1),
+  fontSize: '1.1rem',
+  fontWeight: 'bold',
+  color: theme.palette.text.primary,
+}));
+
+const LevelText = styled(Typography)(({ theme, level }) => ({
+  color: 
+    level >= 10 
+      ? theme.palette.gold.main
+      : level >= 5
+        ? theme.palette.silver.main
+        : theme.palette.bronze.main,
+  fontWeight: 'bold',
+}));
+
+// Animation variants
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.5 }
+  },
+  exit: { 
+    opacity: 0, 
+    y: -20,
+    transition: { duration: 0.3 }
+  }
+};
 
 // Calculate level based on XP
 const calculateLevel = (xp) => {
@@ -101,69 +216,319 @@ const activityIcons = {
   'default': <AssignmentIcon />
 };
 
-const UserProgressCard = ({ userProgress }) => {
+const UserProgressCard = ({ user, expanded = false }) => {
+  const theme = useTheme();
   const navigate = useNavigate();
-  const [expanded, setExpanded] = useState(false);
+  const { profile } = useUser();
+  const userData = user || profile || {};
+  
+  const [isExpanded, setIsExpanded] = useState(expanded);
+  const [userXP, setUserXP] = useState(dashboardData.userProgress.xp || 0);
   const [showAchievement, setShowAchievement] = useState(false);
-  const [currentAchievement, setCurrentAchievement] = useState(null);
+  const [recentAchievement, setRecentAchievement] = useState(null);
   
-  // Mock user XP data
-  const [userData, setUserData] = useState({
-    xp: 1250,
-    recentXPGain: 75,
-    achievements: [
-      { id: 1, name: "Resume Master", icon: "resume", description: "Updated your resume 5 times", xp: 50, isNew: true },
-      { id: 2, name: "Networking Pro", icon: "networking", description: "Connected with 10 professionals", xp: 75, isNew: false },
-      { id: 3, name: "Interview Ready", icon: "interview", description: "Completed 3 mock interviews", xp: 100, isNew: false }
-    ]
-  });
-  
-  // Calculate level and progress
-  const level = calculateLevel(userData.xp);
-  const nextLevel = level + 1;
-  const xpProgress = calculateXPProgress(userData.xp, nextLevel);
-  const xpForNext = xpForNextLevel(nextLevel);
-  const xpNeeded = xpForNext - userData.xp;
-  
-  // Handle expand click
-  const handleExpandClick = () => {
-    setExpanded(!expanded);
+  // Calculate user level and progress
+  const calculateLevel = (xp) => {
+    // XP required for each level follows formula: level * 100
+    const level = Math.floor(xp / 100) + 1;
+    const currentLevelXP = (level - 1) * 100;
+    const nextLevelXP = level * 100;
+    const progress = ((xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+    return { level, progress, currentLevelXP, nextLevelXP, xpToNextLevel: nextLevelXP - xp };
   };
   
-  // Show achievement animation
+  const userLevelData = calculateLevel(userXP);
+  
+  // Mock achievements data
+  const achievements = [
+    { id: 1, title: 'First Login', icon: <CelebrationIcon />, unlocked: true },
+    { id: 2, title: 'Profile Completed', icon: <CheckCircleIcon />, unlocked: userXP >= 50 },
+    { id: 3, title: 'Resume Expert', icon: <WorkspacePremiumIcon />, unlocked: userXP >= 150 },
+    { id: 4, title: 'Interview Master', icon: <MilitaryTechIcon />, unlocked: userXP >= 250 },
+    { id: 5, title: 'Skill Pioneer', icon: <EmojiObjectsIcon />, unlocked: userXP >= 350 },
+    { id: 6, title: 'Job Hunter', icon: <TrendingUpIcon />, unlocked: userXP >= 450 },
+  ];
+  
+  // Mock milestone data
+  const milestones = [
+    { id: 1, title: 'Complete your profile', xp: 50, completed: userXP >= 50 },
+    { id: 2, title: 'Upload your resume', xp: 75, completed: userXP >= 125 },
+    { id: 3, title: 'Take a skill assessment', xp: 100, completed: userXP >= 225 },
+    { id: 4, title: 'Apply to a job', xp: 125, completed: userXP >= 350 },
+  ];
+  
+  // Generate welcome message based on time of day and user data
+  const getWelcomeMessage = () => {
+    const hour = new Date().getHours();
+    const name = userData.firstName || userData.name || 'there';
+    
+    if (hour < 12) {
+      return `Good morning, ${name}!`;
+    } else if (hour < 18) {
+      return `Good afternoon, ${name}!`;
+    } else {
+      return `Good evening, ${name}!`;
+    }
+  };
+  
+  // Simulate gaining XP for demo purposes
   useEffect(() => {
-    const newAchievement = userData.achievements.find(a => a.isNew);
-    if (newAchievement) {
-      setTimeout(() => {
-        setCurrentAchievement(newAchievement);
+    const timer = setTimeout(() => {
+      const newXP = userXP + 25;
+      setUserXP(newXP);
+      
+      // Check if a new achievement was unlocked
+      const newlyUnlocked = achievements.find(a => 
+        !a.unlocked && 
+        calculateLevel(userXP).level < calculateLevel(newXP).level
+      );
+      
+      if (newlyUnlocked) {
+        setRecentAchievement(newlyUnlocked);
         setShowAchievement(true);
         
-        // Hide after 5 seconds
         setTimeout(() => {
           setShowAchievement(false);
-          
-          // Update achievement to not be new anymore
-          setUserData(prev => ({
-            ...prev,
-            achievements: prev.achievements.map(a => 
-              a.id === newAchievement.id ? { ...a, isNew: false } : a
-            )
-          }));
         }, 5000);
-      }, 1000);
-    }
-  }, []);
+      }
+    }, 30000); // Gain XP every 30 seconds
+    
+    return () => clearTimeout(timer);
+  }, [userXP]);
   
   return (
-    <>
-      {/* Achievement popup animation */}
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
+      <ProgressCard>
+        <LevelBadge>
+          <LevelDisplay
+            badgeContent={`Level ${userLevelData.level}`}
+          >
+            <Avatar 
+              sx={{ 
+                width: 48, 
+                height: 48, 
+                bgcolor: 
+                  userLevelData.level >= 10 
+                    ? theme.palette.gold.main
+                    : userLevelData.level >= 5
+                      ? theme.palette.silver.main
+                      : theme.palette.bronze.main,
+              }}
+            >
+              <EmojiEventsIcon />
+            </Avatar>
+          </LevelDisplay>
+        </LevelBadge>
+        
+        <ProgressCardContent>
+          <UserInfoBox>
+            <Avatar 
+              src={userData.avatar} 
+              alt={userData.firstName || userData.name}
+              sx={{ width: 56, height: 56, mr: 2 }}
+            />
+            <Box>
+              <WelcomeMessage variant="h6">
+                {getWelcomeMessage()}
+              </WelcomeMessage>
+              <Typography variant="body2" color="text.secondary">
+                {userData.title || 'Career Explorer'}
+              </Typography>
+            </Box>
+          </UserInfoBox>
+          
+          <ProgressCircleContainer>
+            <CircularProgressBox level={userLevelData.level}>
+              <CircularProgress
+                variant="determinate"
+                value={userLevelData.progress}
+                size={130}
+                thickness={5}
+                sx={{
+                  color: 
+                    userLevelData.level >= 10 
+                      ? theme.palette.gold.main
+                      : userLevelData.level >= 5
+                        ? theme.palette.silver.main
+                        : theme.palette.bronze.main,
+                  zIndex: 1,
+                }}
+              />
+              <Box
+                sx={{
+                  position: 'absolute',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 2,
+                }}
+              >
+                <Typography variant="h4" component="div" fontWeight="bold">
+                  {userXP}
+                </Typography>
+                <Typography variant="caption" component="div" color="text.secondary">
+                  XP Points
+                </Typography>
+              </Box>
+            </CircularProgressBox>
+          </ProgressCircleContainer>
+          
+          <Box sx={{ textAlign: 'center', mb: 2 }}>
+            <LevelText variant="subtitle1" level={userLevelData.level}>
+              Level {userLevelData.level} {
+                userLevelData.level >= 10 
+                  ? 'Gold' 
+                  : userLevelData.level >= 5 
+                    ? 'Silver' 
+                    : 'Bronze'
+              }
+            </LevelText>
+            <Typography variant="body2" color="text.secondary">
+              {userLevelData.xpToNextLevel} XP to Level {userLevelData.level + 1}
+            </Typography>
+          </Box>
+          
+          <Divider sx={{ mb: 2 }} />
+          
+          <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography variant="subtitle1">Recent Achievements</Typography>
+              <Tooltip title="View all achievements">
+                <IconButton size="small">
+                  <InfoOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            <Box>
+              {achievements
+                .filter(a => a.unlocked)
+                .slice(0, 3)
+                .map(achievement => (
+                  <AchievementItem key={achievement.id} unlocked={true}>
+                    <Avatar
+                      sx={{ 
+                        width: 32, 
+                        height: 32, 
+                        mr: 1, 
+                        bgcolor: theme.palette.primary.main
+                      }}
+                    >
+                      {achievement.icon}
+                    </Avatar>
+                    <Typography variant="body2">
+                      {achievement.title}
+                    </Typography>
+                  </AchievementItem>
+                ))}
+            </Box>
+          </Box>
+          
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => setIsExpanded(!isExpanded)}
+            fullWidth
+          >
+            {isExpanded ? 'Hide Details' : 'Show More'}
+          </Button>
+          
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <NextLevelRequirements>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Next Level Requirements
+                  </Typography>
+                  
+                  {milestones.map(milestone => (
+                    <Milestone key={milestone.id} completed={milestone.completed}>
+                      <CheckCircleIcon 
+                        color={milestone.completed ? "success" : "disabled"} 
+                        fontSize="small"
+                        sx={{ mr: 1 }}
+                      />
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2">
+                          {milestone.title}
+                        </Typography>
+                        <LinearProgress
+                          variant="determinate"
+                          value={milestone.completed ? 100 : 0}
+                          sx={{ 
+                            mt: 0.5, 
+                            height: 4, 
+                            borderRadius: 2 
+                          }}
+                        />
+                      </Box>
+                      <Chip
+                        label={`+${milestone.xp} XP`}
+                        size="small"
+                        color={milestone.completed ? "primary" : "default"}
+                        sx={{ ml: 1 }}
+                      />
+                    </Milestone>
+                  ))}
+                </NextLevelRequirements>
+                
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Recommended Actions
+                  </Typography>
+                  
+                  <Grid container spacing={1}>
+                    <Grid item xs={6}>
+                      <Tooltip title="Take a skill assessment to improve your profile">
+                        <Button
+                          variant="outlined"
+                          color="secondary"
+                          startIcon={<SchoolIcon />}
+                          size="small"
+                          fullWidth
+                        >
+                          Skill Quiz
+                        </Button>
+                      </Tooltip>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Tooltip title="Update your skills to get better job matches">
+                        <Button
+                          variant="outlined"
+                          color="secondary"
+                          startIcon={<FitnessCenterIcon />}
+                          size="small"
+                          fullWidth
+                        >
+                          Update Skills
+                        </Button>
+                      </Tooltip>
+                    </Grid>
+                  </Grid>
+                </Box>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </ProgressCardContent>
+      </ProgressCard>
+      
+      {/* New achievement notification */}
       <AnimatePresence>
-        {showAchievement && currentAchievement && (
+        {showAchievement && recentAchievement && (
           <motion.div
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -50, opacity: 0 }}
-            transition={{ duration: 0.5 }}
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
             style={{
               position: 'fixed',
               bottom: 20,
@@ -171,316 +536,30 @@ const UserProgressCard = ({ userProgress }) => {
               zIndex: 1000,
             }}
           >
-            <Card sx={{ 
-              minWidth: 300, 
-              boxShadow: 6,
-              border: '2px solid gold',
-              background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
-            }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <EmojiEventsIcon sx={{ color: 'gold', mr: 1 }} />
-                  <Typography variant="h6" component="div">
+            <Card sx={{ bgcolor: theme.palette.success.light, p: 2, borderRadius: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Avatar
+                  sx={{ 
+                    bgcolor: theme.palette.success.main,
+                    mr: 2
+                  }}
+                >
+                  <StarIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="subtitle1" color="textPrimary">
                     Achievement Unlocked!
                   </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    {recentAchievement.title}
+                  </Typography>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-                    {activityIcons[currentAchievement.icon] || activityIcons.default}
-                  </Avatar>
-                  <Box>
-                    <Typography variant="subtitle1">
-                      {currentAchievement.name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {currentAchievement.description}
-                    </Typography>
-                    <Typography variant="body2" color="primary" sx={{ fontWeight: 'bold', mt: 0.5 }}>
-                      +{currentAchievement.xp} XP
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
+              </Box>
             </Card>
           </motion.div>
         )}
       </AnimatePresence>
-      
-      <Paper sx={{ p: 3, height: '100%' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Typography variant="h6" component="h2" gutterBottom>
-            Your Progress
-          </Typography>
-          <Tooltip title={`You've gained ${userData.recentXPGain} XP in the last week`}>
-            <Chip 
-              label={`+${userData.recentXPGain} XP`} 
-              color="success" 
-              size="small" 
-              variant="outlined"
-            />
-          </Tooltip>
-        </Box>
-        
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', mb: 3 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mr: { xs: 0, sm: 4 }, mb: { xs: 3, sm: 0 } }}>
-            <ProgressCircle>
-              <CircularProgress
-                variant="determinate"
-                value={userProgress.overall_completion}
-                size={120}
-                thickness={4}
-                sx={{ color: 'primary.main' }}
-              />
-              <Box
-                sx={{
-                  top: 0,
-                  left: 0,
-                  bottom: 0,
-                  right: 0,
-                  position: 'absolute',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexDirection: 'column',
-                }}
-              >
-                <Typography variant="h4" component="div" color="text.primary">
-                  {userProgress.overall_completion}%
-                </Typography>
-                <Typography variant="caption" component="div" color="text.secondary">
-                  Complete
-                </Typography>
-              </Box>
-              <LevelBadge component={motion.div} whileHover={{ scale: 1.1 }}>
-                {level}
-              </LevelBadge>
-            </ProgressCircle>
-            
-            <Tooltip 
-              title={
-                <React.Fragment>
-                  <Typography variant="body2">How XP works:</Typography>
-                  <ul style={{ paddingLeft: '16px', margin: '4px 0' }}>
-                    <li>Resume updates: +10 XP</li>
-                    <li>Mock interviews: +25 XP</li>
-                    <li>Job applications: +15 XP</li>
-                    <li>Networking: +10 XP</li>
-                    <li>Skill assessments: +20 XP</li>
-                  </ul>
-                </React.Fragment>
-              }
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Level {level} • {userData.xp} XP
-                </Typography>
-                <InfoIcon fontSize="small" sx={{ ml: 0.5, color: 'text.secondary', fontSize: 16 }} />
-              </Box>
-            </Tooltip>
-          </Box>
-          
-          <Box sx={{ flex: 1, width: '100%' }}>
-            <XPBar>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                {xpNeeded} XP to Level {nextLevel}
-              </Typography>
-              <LinearProgress 
-                variant="determinate" 
-                value={xpProgress} 
-                sx={{ height: 8, borderRadius: 4 }} 
-              />
-            </XPBar>
-            
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Career Progress
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                <Chip 
-                  label={`Resume: ${userProgress.resume_completion}%`} 
-                  size="small" 
-                  color={userProgress.resume_completion > 80 ? "success" : "primary"}
-                  variant="outlined"
-                  onClick={() => navigate('/resume-builder')}
-                />
-                <Chip 
-                  label={`Interviews: ${userProgress.interview_preparation}%`} 
-                  size="small" 
-                  color={userProgress.interview_preparation > 80 ? "success" : "primary"}
-                  variant="outlined"
-                  onClick={() => navigate('/mock-interview')}
-                />
-                <Chip 
-                  label={`Networking: ${userProgress.networking_activity}%`} 
-                  size="small" 
-                  color={userProgress.networking_activity > 80 ? "success" : "primary"}
-                  variant="outlined"
-                  onClick={() => navigate('/networking')}
-                />
-              </Box>
-            </Box>
-            
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Activity Stats
-              </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Tooltip title="View your applications">
-                  <Box 
-                    sx={{ 
-                      textAlign: 'center', 
-                      cursor: 'pointer',
-                      '&:hover': { color: 'primary.main' }
-                    }}
-                    onClick={() => navigate('/job-search')}
-                  >
-                    <Typography variant="h6" color="text.primary">
-                      {userProgress.job_applications}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Applications
-                    </Typography>
-                  </Box>
-                </Tooltip>
-                
-                <Tooltip title="View your interviews">
-                  <Box 
-                    sx={{ 
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      '&:hover': { color: 'primary.main' }
-                    }}
-                    onClick={() => navigate('/interview-results')}
-                  >
-                    <Typography variant="h6" color="text.primary">
-                      {userProgress.interviews_scheduled}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Interviews
-                    </Typography>
-                  </Box>
-                </Tooltip>
-                
-                <Tooltip title="View your achievements">
-                  <Box 
-                    sx={{ 
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      '&:hover': { color: 'primary.main' }
-                    }}
-                    onClick={() => setExpanded(!expanded)}
-                  >
-                    <Typography variant="h6" color="text.primary">
-                      {userData.achievements.length}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Achievements
-                    </Typography>
-                  </Box>
-                </Tooltip>
-              </Box>
-            </Box>
-          </Box>
-        </Box>
-        
-        <Divider sx={{ my: 2 }} />
-        
-        <Box>
-          <Typography variant="subtitle2" gutterBottom>
-            Recommended Next Steps
-          </Typography>
-          <List dense disablePadding>
-            {userProgress.next_steps.map((step, index) => (
-              <NextStepItem 
-                key={step.id || index}
-                disablePadding
-                onClick={() => navigate(step.link)}
-                sx={{ cursor: 'pointer' }}
-              >
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  <motion.div whileHover={{ rotate: 10 }} whileTap={{ scale: 0.95 }}>
-                    {index === 0 ? (
-                      <Badge color="error" variant="dot">
-                        {activityIcons[step.type] || <ArrowForwardIcon color="primary" />}
-                      </Badge>
-                    ) : (
-                      activityIcons[step.type] || <ArrowForwardIcon color="primary" />
-                    )}
-                  </motion.div>
-                </ListItemIcon>
-                <ListItemText 
-                  primary={step.title} 
-                  primaryTypographyProps={{ 
-                    variant: 'body2',
-                    color: index === 0 ? 'primary' : 'text.primary'
-                  }}
-                />
-              </NextStepItem>
-            ))}
-          </List>
-        </Box>
-        
-        <Collapse in={expanded} timeout="auto" unmountOnExit>
-          <Box sx={{ mt: 2 }}>
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="subtitle2" gutterBottom>
-              Recent Achievements
-            </Typography>
-            <List dense disablePadding>
-              {userData.achievements.map((achievement) => (
-                <ListItem 
-                  key={achievement.id}
-                  disablePadding
-                  sx={{ py: 1 }}
-                >
-                  <ListItemIcon sx={{ minWidth: 36 }}>
-                    <Avatar 
-                      sx={{ 
-                        width: 28, 
-                        height: 28, 
-                        bgcolor: 'primary.main',
-                        boxShadow: achievement.isNew ? '0 0 8px gold' : 'none'
-                      }}
-                    >
-                      {activityIcons[achievement.icon] || activityIcons.default}
-                    </Avatar>
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={achievement.name} 
-                    secondary={achievement.description}
-                    primaryTypographyProps={{ variant: 'body2' }}
-                    secondaryTypographyProps={{ variant: 'caption' }}
-                  />
-                  <Chip 
-                    label={`+${achievement.xp} XP`} 
-                    size="small" 
-                    color="primary"
-                    variant="outlined"
-                    sx={{ ml: 1 }}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Box>
-        </Collapse>
-        
-        <Box sx={{ textAlign: 'center', mt: 2 }}>
-          <IconButton 
-            onClick={handleExpandClick}
-            aria-expanded={expanded}
-            aria-label="show more"
-            size="small"
-          >
-            <ExpandMoreIcon 
-              sx={{ 
-                transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: '0.3s'
-              }} 
-            />
-          </IconButton>
-        </Box>
-      </Paper>
-    </>
+    </motion.div>
   );
 };
 

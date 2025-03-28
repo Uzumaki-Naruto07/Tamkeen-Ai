@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -19,7 +19,9 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  TextField,
+  Paper
 } from '@mui/material';
 import WorkIcon from '@mui/icons-material/Work';
 import SchoolIcon from '@mui/icons-material/School';
@@ -34,8 +36,11 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import LaunchIcon from '@mui/icons-material/Launch';
 import StarsIcon from '@mui/icons-material/Stars';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import DashboardAPI from '../../api/DashboardAPI';
+import SendIcon from '@mui/icons-material/Send';
 import { styled } from '@mui/material/styles';
+import { motion, AnimatePresence } from 'framer-motion';
+import chatService from '../../api/chatgpt';
+import { useUser } from '../../context/AppContext';
 
 // Custom styled expand button
 const ExpandButton = styled(IconButton)(({ theme }) => ({
@@ -57,6 +62,13 @@ const ResourceLink = styled(Link)(({ theme }) => ({
     textDecoration: 'none',
   },
 }));
+
+// Animation variants
+const chatBubbleVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+  exit: { opacity: 0, y: -20, transition: { duration: 0.2 } }
+};
 
 // Get icon based on resource type
 const getResourceIcon = (type) => {
@@ -88,23 +100,27 @@ const getRecommendationIcon = (type) => {
   }
 };
 
-const AIRecommendationCard = ({ recommendation, onRefresh }) => {
+const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [aiExplanation, setAiExplanation] = useState(recommendation.aiExplanation || '');
+  const [aiExplanation, setAiExplanation] = useState(initialRecommendation?.aiExplanation || '');
+  const [recommendation, setRecommendation] = useState(initialRecommendation || {});
+  const [chatVisible, setChatVisible] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const { profile } = useUser();
   
-  const {
-    id,
-    title,
-    type,
-    description,
-    match_percentage,
-    relevance_factors = [],
-    resources = [],
-    time_commitment,
-    provider
-  } = recommendation;
+  // Chat container ref for scrolling
+  const chatContainerRef = React.useRef(null);
+  
+  useEffect(() => {
+    // Scroll to bottom of chat when messages change
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
   
   // Toggle explanation expansion
   const handleExpandClick = () => {
@@ -122,26 +138,87 @@ const AIRecommendationCard = ({ recommendation, onRefresh }) => {
     setError(null);
     
     try {
-      // In a real app, you would call your API here
-      // const response = await DashboardAPI.getRecommendationExplanation(id);
-      // setAiExplanation(response.explanation);
-      
-      // Simulated API response
-      setTimeout(() => {
-        const explanations = {
-          job: "Based on your profile, this job aligns perfectly with your backend development experience. Your recent projects demonstrating Node.js and database skills are exactly what this position requires. Additionally, the company culture emphasizes work-life balance which matches your stated preferences.",
-          course: "This course is recommended because it addresses the skill gaps in your profile, particularly in cloud architecture. As you're aiming for a Senior Developer position, strengthening your knowledge in this area will significantly increase your marketability. The course format also suits your preference for hands-on learning.",
-          skill: "Data visualization is becoming increasingly important in your field. Based on your career goals and the job market trends in your region, developing this skill would complement your existing technical abilities and open up new opportunities. Companies in your target industry frequently mention this skill in job postings."
-        };
-        
-        setAiExplanation(explanations[type.toLowerCase()] || 
-          "This recommendation is based on your profile data, career goals, and current market trends. Our AI analysis suggests this would be a valuable addition to your career development path.");
-        setLoading(false);
-      }, 1500);
+      // In a real app, this would be a call to the actual API
+      // Here we're using the chat service
+      const message = `Why is this ${recommendation.type} called "${recommendation.title}" a good match for me? Give a brief explanation.`;
+      const response = await chatService.sendMessage(message, JSON.stringify(profile), 'recommendation');
+      setAiExplanation(response.response);
     } catch (err) {
       console.error('Error fetching AI explanation:', err);
       setError('Failed to load AI explanation. Please try again later.');
+      
+      // Fallback explanation
+      const fallbackExplanations = {
+        job: "Based on your profile, this job aligns with your experience. Your projects demonstrate the skills required for this position. The company culture also seems to match your preferences.",
+        course: "This course addresses skill gaps in your profile. As you're aiming for career advancement, strengthening your knowledge in this area will increase your marketability.",
+        skill: "This skill is becoming increasingly important in your field. Based on your career goals and job market trends, developing this skill would complement your existing abilities and open up new opportunities."
+      };
+      
+      setAiExplanation(fallbackExplanations[recommendation.type.toLowerCase()] || 
+        "This recommendation is based on your profile data, career goals, and current market trends.");
+    } finally {
       setLoading(false);
+    }
+  };
+  
+  // Toggle chat visibility
+  const handleToggleChat = () => {
+    setChatVisible(!chatVisible);
+    
+    // If opening chat for the first time, add initial message
+    if (!chatVisible && chatMessages.length === 0) {
+      setChatMessages([{
+        sender: 'ai',
+        message: `Hi there! I can tell you more about this ${recommendation.type}: "${recommendation.title}". What would you like to know?`,
+        timestamp: new Date()
+      }]);
+    }
+  };
+  
+  // Send message to chat
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
+    
+    const userMessage = {
+      sender: 'user',
+      message: newMessage,
+      timestamp: new Date()
+    };
+    
+    setChatMessages(prev => [...prev, userMessage]);
+    setNewMessage('');
+    setSendingMessage(true);
+    
+    try {
+      // Send message to ChatGPT API
+      const context = `The user is asking about the ${recommendation.type} called "${recommendation.title}". 
+        Description: ${recommendation.description}
+        Match percentage: ${recommendation.match_percentage}%
+        ${recommendation.provider ? `Provider: ${recommendation.provider}` : ''}
+        ${recommendation.relevance_factors ? `Relevant to user's: ${recommendation.relevance_factors.join(', ')}` : ''}`;
+      
+      const response = await chatService.sendMessage(userMessage.message, context, 'recommendation');
+      
+      const aiMessage = {
+        sender: 'ai',
+        message: response.response,
+        timestamp: new Date()
+      };
+      
+      setChatMessages(prev => [...prev, aiMessage]);
+    } catch (err) {
+      console.error('Error sending message:', err);
+      
+      // Add fallback response
+      const aiMessage = {
+        sender: 'ai',
+        message: "I'm sorry, I'm having trouble responding right now. Please try again later.",
+        timestamp: new Date()
+      };
+      
+      setChatMessages(prev => [...prev, aiMessage]);
+    } finally {
+      setSendingMessage(false);
     }
   };
   
@@ -151,7 +228,7 @@ const AIRecommendationCard = ({ recommendation, onRefresh }) => {
     setError(null);
     
     try {
-      await onRefresh(id);
+      await onRefresh(recommendation.id);
       setLoading(false);
     } catch (err) {
       console.error('Error refreshing recommendation:', err);
@@ -161,50 +238,57 @@ const AIRecommendationCard = ({ recommendation, onRefresh }) => {
   };
   
   return (
-    <Card variant="outlined" sx={{ mb: 2, position: 'relative' }}>
+    <Card 
+      component={motion.div}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      variant="outlined" 
+      sx={{ mb: 2, position: 'relative' }}
+    >
       {/* Recommendation Header */}
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-              {getRecommendationIcon(type)}
+              {getRecommendationIcon(recommendation.type)}
             </Avatar>
             <Box>
               <Typography variant="h6" component="div">
-                {title}
+                {recommendation.title}
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                {type} • {provider}
+                {recommendation.type} • {recommendation.provider}
               </Typography>
             </Box>
           </Box>
           <Chip 
-            label={`${match_percentage}% Match`} 
-            color={match_percentage > 80 ? "success" : match_percentage > 60 ? "primary" : "default"} 
+            label={`${recommendation.match_percentage}% Match`} 
+            color={recommendation.match_percentage > 80 ? "success" : recommendation.match_percentage > 60 ? "primary" : "default"} 
           />
         </Box>
         
         <Typography variant="body2" sx={{ mt: 2 }}>
-          {description}
+          {recommendation.description}
         </Typography>
         
-        {time_commitment && (
+        {recommendation.time_commitment && (
           <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, color: 'text.secondary' }}>
             <ScheduleIcon fontSize="small" sx={{ mr: 0.5 }} />
             <Typography variant="body2">
-              Time Commitment: {time_commitment}
+              Time Commitment: {recommendation.time_commitment}
             </Typography>
           </Box>
         )}
         
         {/* Relevance Factors */}
-        {relevance_factors.length > 0 && (
+        {recommendation.relevance_factors && recommendation.relevance_factors.length > 0 && (
           <Box sx={{ mt: 2 }}>
             <Typography variant="body2" color="text.secondary" gutterBottom>
               Relevant to your:
             </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap">
-              {relevance_factors.map((factor, index) => (
+              {recommendation.relevance_factors.map((factor, index) => (
                 <Chip 
                   key={index} 
                   label={factor} 
@@ -218,13 +302,13 @@ const AIRecommendationCard = ({ recommendation, onRefresh }) => {
         )}
         
         {/* Resource Links */}
-        {resources.length > 0 && (
+        {recommendation.resources && recommendation.resources.length > 0 && (
           <Box sx={{ mt: 2 }}>
             <Typography variant="body2" color="text.secondary" gutterBottom>
               Related Resources:
             </Typography>
             <List dense disablePadding>
-              {resources.map((resource, index) => (
+              {recommendation.resources.map((resource, index) => (
                 <ListItem 
                   key={index} 
                   disablePadding 
@@ -248,73 +332,181 @@ const AIRecommendationCard = ({ recommendation, onRefresh }) => {
             </List>
           </Box>
         )}
-      </CardContent>
-      
-      <Divider />
-      
-      {/* AI Explanation Section */}
-      <CardActions disableSpacing>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <PsychologyIcon color="primary" sx={{ mr: 1 }} />
-          <Typography variant="body2" color="primary">
-            AI Explanation
-          </Typography>
-        </Box>
-        <ExpandButton
-          onClick={handleExpandClick}
-          aria-expanded={expanded}
-          aria-label="show explanation"
-        >
-          {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-        </ExpandButton>
-      </CardActions>
-      
-      <Collapse in={expanded} timeout="auto" unmountOnExit>
-        <CardContent sx={{ pt: 0 }}>
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-              <CircularProgress size={24} />
-            </Box>
-          ) : error ? (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          ) : (
-            <Box sx={{ p: 1, bgcolor: 'rgba(25, 118, 210, 0.08)', borderRadius: 1 }}>
-              <Typography variant="body2">
-                {aiExplanation}
+        
+        {/* AI Explanation section */}
+        <Box sx={{ mt: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <PsychologyIcon fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} />
+              <Typography variant="body2" color="text.secondary">
+                AI Explanation
               </Typography>
             </Box>
-          )}
-        </CardContent>
-      </Collapse>
+            <ExpandButton
+              onClick={handleExpandClick}
+              aria-expanded={expanded}
+              aria-label="show more"
+              size="small"
+            >
+              {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            </ExpandButton>
+          </Box>
+          
+          <Collapse in={expanded} timeout="auto" unmountOnExit>
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : error ? (
+              <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
+            ) : (
+              <Box sx={{ mt: 1, py: 1, px: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  {aiExplanation}
+                </Typography>
+              </Box>
+            )}
+          </Collapse>
+        </Box>
+        
+        {/* Chat section */}
+        <Collapse in={chatVisible} timeout="auto" unmountOnExit>
+          <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Chat with AI Assistant
+            </Typography>
+            
+            <Paper 
+              variant="outlined" 
+              sx={{ 
+                height: 200, 
+                p: 1, 
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                bgcolor: 'background.default'
+              }}
+              ref={chatContainerRef}
+            >
+              <AnimatePresence>
+                {chatMessages.map((msg, index) => (
+                  <motion.div
+                    key={index}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    variants={chatBubbleVariants}
+                    layout
+                  >
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+                        mb: 1
+                      }}
+                    >
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 1,
+                          borderRadius: 2,
+                          maxWidth: '80%',
+                          bgcolor: msg.sender === 'user' ? 'primary.main' : 'background.paper',
+                          color: msg.sender === 'user' ? 'primary.contrastText' : 'text.primary',
+                        }}
+                      >
+                        <Typography variant="body2">
+                          {msg.message}
+                        </Typography>
+                      </Paper>
+                    </Box>
+                  </motion.div>
+                ))}
+                
+                {sendingMessage && (
+                  <motion.div
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    variants={chatBubbleVariants}
+                    layout
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 1 }}>
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 1,
+                          borderRadius: 2,
+                          maxWidth: '80%',
+                          bgcolor: 'background.paper',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <CircularProgress size={16} sx={{ mr: 1 }} />
+                        <Typography variant="body2" color="text.secondary">
+                          Typing...
+                        </Typography>
+                      </Paper>
+                    </Box>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Paper>
+            
+            <Box sx={{ display: 'flex', mt: 1 }}>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Ask about this recommendation..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                disabled={sendingMessage}
+                variant="outlined"
+              />
+              <IconButton 
+                color="primary" 
+                onClick={handleSendMessage} 
+                disabled={!newMessage.trim() || sendingMessage}
+                sx={{ ml: 1 }}
+              >
+                <SendIcon />
+              </IconButton>
+            </Box>
+          </Box>
+        </Collapse>
+      </CardContent>
       
-      <Divider />
-      
-      {/* Action Buttons */}
-      <CardActions>
-        <Button
-          size="small"
-          component="a"
-          href={recommendation.apply_url || recommendation.url || '#'}
-          target="_blank"
-          startIcon={<LaunchIcon />}
+      <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
+        <Button 
+          size="small" 
+          onClick={handleToggleChat}
+          startIcon={<PsychologyIcon />}
+          variant={chatVisible ? "outlined" : "text"}
+          color="primary"
         >
-          {type === 'job' ? 'Apply Now' : type === 'course' ? 'Enroll' : 'View Details'}
+          {chatVisible ? "Hide Chat" : "Chat with AI"}
         </Button>
         
-        <Box sx={{ ml: 'auto' }}>
-          <Tooltip title="Get updated recommendations based on your latest profile data">
-            <Button
-              size="small"
-              startIcon={loading ? <CircularProgress size={20} /> : <RefreshIcon />}
-              onClick={handleRefresh}
-              disabled={loading}
-              color="secondary"
-            >
-              Refresh
-            </Button>
-          </Tooltip>
+        <Box>
+          <IconButton 
+            size="small" 
+            onClick={handleRefresh} 
+            disabled={loading}
+            title="Refresh recommendation"
+          >
+            {loading ? <CircularProgress size={16} /> : <RefreshIcon fontSize="small" />}
+          </IconButton>
+          
+          <Button 
+            size="small" 
+            endIcon={<LaunchIcon />} 
+            onClick={() => window.open(recommendation.url, '_blank')}
+            sx={{ ml: 1 }}
+          >
+            View Details
+          </Button>
         </Box>
       </CardActions>
     </Card>
