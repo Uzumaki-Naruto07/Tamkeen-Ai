@@ -214,3 +214,7 @@ if os.path.exists(ENV_SETTINGS_FILE):
         logger.info(f"Loaded environment settings from {ENV_SETTINGS_FILE}")
     except Exception as e:
         logger.error(f"Error loading environment settings: {str(e)}")
+
+# Upload settings
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'uploads')
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt'}

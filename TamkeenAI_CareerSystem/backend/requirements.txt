@@ -35,6 +35,9 @@ pymongo==4.5.0
 # numpy>=1.24.2
 # spacy>=3.5.0
 
+# AI/LLM services
+openai>=1.1.0
+
 # Data visualization
 matplotlib==3.7.2
 seaborn==0.12.2
@@ -110,3 +113,7 @@ pytest>=7.2.1
 
 # Testing and utilities
 pyjwt>=2.6.0
+keybert
+
+# Add PyJWT for token authentication
+PyJWT>=2.8.0

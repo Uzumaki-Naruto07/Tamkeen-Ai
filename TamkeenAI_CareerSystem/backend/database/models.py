@@ -583,4 +583,52 @@ class Cache(BaseModel):
     @classmethod
     def find_by_key(cls, cache_key: str) -> List['Cache']:
         """Find cache entry by key"""
-        return cls.find_by_id(cache_key) 
+        return cls.find_by_id(cache_key)
+
+
+class Resume:
+    def __init__(self, user_id=None, filename=None, file_path=None, content=None, 
+                 parsed_data=None, status=None, created_at=None, updated_at=None):
+        self.user_id = user_id
+        self.filename = filename
+        self.file_path = file_path
+        self.content = content
+        self.parsed_data = parsed_data
+        self.status = status
+        self.created_at = created_at
+        self.updated_at = updated_at
+        
+    def save(self):
+        # Implement save logic
+        return True
+        
+    def delete(self):
+        # Implement delete logic
+        return True
+        
+    def to_dict(self):
+        # Convert to dictionary
+        return {
+            'user_id': self.user_id,
+            'filename': self.filename,
+            'file_path': self.file_path,
+            'content': self.content,
+            'parsed_data': self.parsed_data,
+            'status': self.status,
+            'created_at': self.created_at,
+            'updated_at': self.updated_at
+        }
+    
+    @staticmethod
+    def find_by_user(user_id):
+        # Implement find by user logic
+        return []
+        
+    @staticmethod
+    def find_by_id(resume_id):
+        # Implement find by id logic
+        return []
+
+class User:
+    # Implement User model
+    pass 

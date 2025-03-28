@@ -2,7 +2,37 @@ import os
 import logging
 import pandas as pd
 import numpy as np
-from tensorflow.keras.utils import to_categorical
+
+# Try to import to_categorical from different sources, or use our own implementation
+try:
+    from keras.utils import to_categorical  # type: ignore
+except ImportError:
+    try:
+        from tensorflow.keras.utils import to_categorical  # type: ignore
+    except ImportError:
+        # Fallback implementation of to_categorical
+        def to_categorical(y, num_classes=None, dtype='float32'):
+            """Converts a class vector (integers) to binary class matrix.
+            
+            This is a simplified version of Keras' to_categorical function.
+            
+            Args:
+                y: Class vector to be converted into a matrix 
+                   (integers from 0 to num_classes-1).
+                num_classes: Total number of classes. If None, this is 
+                             calculated from max value in y.
+                dtype: The data type expected by the output array.
+            
+            Returns:
+                A binary matrix representation of the input.
+            """
+            y = np.array(y, dtype='int')
+            if not num_classes:
+                num_classes = np.max(y) + 1
+            n = y.shape[0]
+            categorical = np.zeros((n, num_classes), dtype=dtype)
+            categorical[np.arange(n), y] = 1
+            return categorical
 
 logger = logging.getLogger(__name__)
 

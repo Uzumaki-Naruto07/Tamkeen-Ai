@@ -1,30 +1,23 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 import os
+import argparse
 from dotenv import load_dotenv
 import logging
+import importlib
 
-# Import route modules
-from .api.routes.auth_routes import auth_bp
-from api.routes.resume_routes import resume_bp
-from api.routes.career_routes import career_bp
-from api.routes.interview_routes import interview_bp
-from api.routes.job_routes import job_bp
-from api.routes.analytics_routes import analytics_bp
-from api.routes.admin_routes import admin_bp
+# Import routes
 from api.routes.user_routes import user_bp
-from api.routes.assessment_routes import assessment_bp
-from api.routes.feedback_routes import feedback_bp
-from api.routes.gamification_routes import gamification_bp
-from api.routes.ai_journey_routes import ai_journey_bp
-from api.routes.learning_routes import learning_bp
-from api.routes.skill_routes import skill_bp
-from api.routes.notification_routes import notification_bp
-from api.routes.settings_routes import settings_bp
-from api.routes.emotion_routes import emotion_bp
-from api.routes.pdf_routes import pdf_bp
-from api.routes.search_routes import search_bp
 from api.routes.chat_routes import chat_bp
+from api.routes.resume_routes import resume_bp
+from api.routes.job_routes import job_bp
+from api.routes.interview_routes import interview_bp
+from api.routes.assessment_routes import assessment_bp
+from api.routes.analytics_routes import analytics_bp
+from api.routes.career_routes import career_bp
+from api.routes.skill_routes import skill_bp
+from api.routes.dashboard_routes import dashboard_bp
+from api.routes.auth_routes import auth_bp
 
 # Load environment variables
 load_dotenv()
@@ -53,62 +46,68 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload size
     
     # Enable CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
     
-    # Health check endpoint
+    # Register blueprints
+    app.register_blueprint(user_bp, url_prefix='/api/user')
+    app.register_blueprint(chat_bp, url_prefix='/api/chatgpt')
+    app.register_blueprint(resume_bp, url_prefix='/api/resume')
+    app.register_blueprint(job_bp, url_prefix='/api/jobs')
+    app.register_blueprint(interview_bp, url_prefix='/api/interview')
+    app.register_blueprint(assessment_bp, url_prefix='/api/assessment')
+    app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+    app.register_blueprint(career_bp, url_prefix='/api/career')
+    app.register_blueprint(skill_bp, url_prefix='/api/skills')
+    app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    
     @app.route('/api/health-check')
     def health_check():
+        """Health check endpoint"""
         return jsonify({
-            "status": "ok",
-            "version": "1.0.0",
-            "environment": os.getenv('FLASK_ENV', 'development')
+            "status": "success",
+            "message": "API is running",
+            "version": "1.0.0"
         })
     
-    # Register all blueprints with the /api prefix
-    blueprints = [
-        auth_bp, resume_bp, career_bp, interview_bp, job_bp, 
-        analytics_bp, admin_bp, user_bp, assessment_bp, feedback_bp,
-        gamification_bp, ai_journey_bp, learning_bp, skill_bp,
-        notification_bp, settings_bp, emotion_bp, pdf_bp, search_bp, chat_bp
-    ]
+    @app.route('/api/test-dashboard/<user_id>')
+    def test_dashboard(user_id):
+        """Test endpoint to return mock dashboard data"""
+        from api.utils.mock_data import get_mock_dashboard_data
+        data = get_mock_dashboard_data(user_id)
+        return jsonify({
+            "status": "success",
+            "data": data
+        })
     
-    for bp in blueprints:
-        app.register_blueprint(bp, url_prefix='/api')
-        
-    logger.info(f"Registered {len(blueprints)} API blueprints")
+    @app.route('/api/dashboard/<user_id>')
+    def get_dashboard(user_id):
+        """Get dashboard data for a user"""
+        from api.services.dashboard_service import get_full_dashboard_data
+        try:
+            data = get_full_dashboard_data(user_id)
+            return jsonify({
+                "status": "success",
+                "data": data
+            })
+        except Exception as e:
+            logger.error(f"Error getting dashboard data: {str(e)}")
+            return jsonify({
+                "status": "error",
+                "message": f"Failed to get dashboard data: {str(e)}"
+            }), 500
     
-    # Error handlers
-    @app.errorhandler(404)
-    def not_found(error):
-        return jsonify({"error": "Resource not found"}), 404
-    
-    @app.errorhandler(500)
-    def server_error(error):
-        logger.error(f"Server error: {error}")
-        return jsonify({"error": "Internal server error"}), 500
-    
-    @app.errorhandler(400)
-    def bad_request(error):
-        return jsonify({"error": "Bad request"}), 400
-    
-    @app.errorhandler(401)
-    def unauthorized(error):
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    @app.errorhandler(403)
-    def forbidden(error):
-        return jsonify({"error": "Forbidden"}), 403
-        
     return app
 
-# Create app instance
-app = create_app()
+def parse_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description='TamkeenAI Career System API')
+    parser.add_argument('--host', default='0.0.0.0', help='Host to run the server on')
+    parser.add_argument('--port', type=int, default=5000, help='Port to run the server on')
+    parser.add_argument('--debug', action='store_true', help='Run in debug mode')
+    return parser.parse_args()
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
-    debug = os.getenv('FLASK_DEBUG') == '1'
-    
-    logger.info(f"Starting Tamkeen AI backend server on port {port}")
-    logger.info(f"Debug mode: {'enabled' if debug else 'disabled'}")
-    
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    args = parse_args()
+    app = create_app()
+    app.run(host=args.host, port=args.port, debug=args.debug)
