@@ -1,0 +1,137 @@
+{
+  "common": {
+    "loading": "جاري التحميل...",
+    "error": "خطأ",
+    "success": "نجاح",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "search": "بحث",
+    "filter": "تصفية",
+    "sort": "ترتيب",
+    "view": "عرض",
+    "more": "المزيد",
+    "less": "أقل"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "register": "إنشاء حساب",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "rememberMe": "تذكرني",
+    "noAccount": "ليس لديك حساب؟",
+    "hasAccount": "لديك حساب بالفعل؟",
+    "loginButton": "تسجيل الدخول",
+    "registerButton": "إنشاء حساب",
+    "logout": "تسجيل الخروج"
+  },
+  "navigation": {
+    "dashboard": "لوحة التحكم",
+    "jobs": "الوظائف",
+    "aiCoach": "المدرب الذكي",
+    "resumeBuilder": "منشئ السيرة الذاتية",
+    "skillBuilder": "بناء المهارات",
+    "achievements": "الإنجازات",
+    "settings": "الإعدادات",
+    "profile": "الملف الشخصي",
+    "notifications": "الإشعارات"
+  },
+  "dashboard": {
+    "welcome": "مرحباً بعودتك",
+    "progress": "تقدمك",
+    "level": "المستوى",
+    "xp": "نقاط الخبرة",
+    "nextLevel": "المستوى التالي",
+    "recommendations": "توصيات الذكاء الاصطناعي",
+    "recentActivity": "النشاط الأخير",
+    "upcomingTasks": "المهام القادمة",
+    "achievements": "الإنجازات الأخيرة",
+    "marketInsights": "رؤى السوق"
+  },
+  "jobs": {
+    "searchJobs": "البحث عن وظائف",
+    "jobTitle": "المسمى الوظيفي",
+    "location": "الموقع",
+    "company": "الشركة",
+    "apply": "تقدم الآن",
+    "saved": "محفوظ",
+    "applied": "تم التقديم",
+    "interviewing": "قيد المقابلة",
+    "offered": "تم العرض",
+    "rejected": "مرفوض",
+    "jobDetails": "تفاصيل الوظيفة",
+    "requirements": "المتطلبات",
+    "responsibilities": "المسؤوليات",
+    "benefits": "المزايا",
+    "similarJobs": "وظائف مشابهة"
+  },
+  "aiCoach": {
+    "chat": "تحدث مع المدرب الذكي",
+    "askQuestion": "اطرح سؤالاً",
+    "suggestions": "الأسئلة المقترحة",
+    "feedback": "تعليقات الذكاء الاصطناعي",
+    "improvements": "التحسينات المقترحة",
+    "resources": "موارد التعلم",
+    "practice": "أسئلة التدريب",
+    "progress": "تقدم التعلم"
+  },
+  "resumeBuilder": {
+    "createResume": "إنشاء سيرة ذاتية",
+    "editResume": "تعديل السيرة الذاتية",
+    "templates": "القوالب",
+    "personalInfo": "المعلومات الشخصية",
+    "experience": "الخبرة العملية",
+    "education": "التعليم",
+    "skills": "المهارات",
+    "projects": "المشاريع",
+    "preview": "معاينة",
+    "download": "تحميل",
+    "atsScore": "درجة التوافق"
+  },
+  "skillBuilder": {
+    "skillAssessment": "تقييم المهارات",
+    "currentSkills": "المهارات الحالية",
+    "targetSkills": "المهارات المستهدفة",
+    "learningPath": "مسار التعلم",
+    "courses": "الدورات الموصى بها",
+    "practice": "تمارين التدريب",
+    "progress": "تقدم المهارات",
+    "certifications": "الشهادات"
+  },
+  "achievements": {
+    "allAchievements": "جميع الإنجازات",
+    "recent": "الأخيرة",
+    "locked": "مقفلة",
+    "unlocked": "مفتوحة",
+    "progress": "التقدم",
+    "rewards": "المكافآت",
+    "milestones": "المراحل"
+  },
+  "settings": {
+    "profile": "إعدادات الملف الشخصي",
+    "preferences": "التفضيلات",
+    "notifications": "إعدادات الإشعارات",
+    "privacy": "إعدادات الخصوصية",
+    "language": "اللغة",
+    "theme": "المظهر",
+    "accessibility": "إمكانية الوصول",
+    "help": "المساعدة والدعم"
+  },
+  "errors": {
+    "general": "حدث خطأ ما",
+    "network": "خطأ في الشبكة",
+    "auth": "خطأ في المصادقة",
+    "validation": "خطأ في التحقق",
+    "notFound": "غير موجود",
+    "server": "خطأ في الخادم"
+  },
+  "success": {
+    "saved": "تم الحفظ بنجاح",
+    "updated": "تم التحديث بنجاح",
+    "deleted": "تم الحذف بنجاح",
+    "applied": "تم التقديم بنجاح",
+    "submitted": "تم الإرسال بنجاح"
+  }
+} 

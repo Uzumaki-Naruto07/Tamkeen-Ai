@@ -1,0 +1,137 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "view": "View",
+    "more": "More",
+    "less": "Less"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "rememberMe": "Remember me",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "loginButton": "Login",
+    "registerButton": "Register",
+    "logout": "Logout"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "jobs": "Jobs",
+    "aiCoach": "AI Coach",
+    "resumeBuilder": "Resume Builder",
+    "skillBuilder": "Skill Builder",
+    "achievements": "Achievements",
+    "settings": "Settings",
+    "profile": "Profile",
+    "notifications": "Notifications"
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "progress": "Your Progress",
+    "level": "Level",
+    "xp": "Experience Points",
+    "nextLevel": "Next Level",
+    "recommendations": "AI Recommendations",
+    "recentActivity": "Recent Activity",
+    "upcomingTasks": "Upcoming Tasks",
+    "achievements": "Recent Achievements",
+    "marketInsights": "Market Insights"
+  },
+  "jobs": {
+    "searchJobs": "Search Jobs",
+    "jobTitle": "Job Title",
+    "location": "Location",
+    "company": "Company",
+    "apply": "Apply",
+    "saved": "Saved",
+    "applied": "Applied",
+    "interviewing": "Interviewing",
+    "offered": "Offered",
+    "rejected": "Rejected",
+    "jobDetails": "Job Details",
+    "requirements": "Requirements",
+    "responsibilities": "Responsibilities",
+    "benefits": "Benefits",
+    "similarJobs": "Similar Jobs"
+  },
+  "aiCoach": {
+    "chat": "Chat with AI Coach",
+    "askQuestion": "Ask a question",
+    "suggestions": "Suggested Questions",
+    "feedback": "AI Feedback",
+    "improvements": "Suggested Improvements",
+    "resources": "Learning Resources",
+    "practice": "Practice Questions",
+    "progress": "Learning Progress"
+  },
+  "resumeBuilder": {
+    "createResume": "Create Resume",
+    "editResume": "Edit Resume",
+    "templates": "Templates",
+    "personalInfo": "Personal Information",
+    "experience": "Work Experience",
+    "education": "Education",
+    "skills": "Skills",
+    "projects": "Projects",
+    "preview": "Preview",
+    "download": "Download",
+    "atsScore": "ATS Score"
+  },
+  "skillBuilder": {
+    "skillAssessment": "Skill Assessment",
+    "currentSkills": "Current Skills",
+    "targetSkills": "Target Skills",
+    "learningPath": "Learning Path",
+    "courses": "Recommended Courses",
+    "practice": "Practice Exercises",
+    "progress": "Skill Progress",
+    "certifications": "Certifications"
+  },
+  "achievements": {
+    "allAchievements": "All Achievements",
+    "recent": "Recent",
+    "locked": "Locked",
+    "unlocked": "Unlocked",
+    "progress": "Progress",
+    "rewards": "Rewards",
+    "milestones": "Milestones"
+  },
+  "settings": {
+    "profile": "Profile Settings",
+    "preferences": "Preferences",
+    "notifications": "Notification Settings",
+    "privacy": "Privacy Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "accessibility": "Accessibility",
+    "help": "Help & Support"
+  },
+  "errors": {
+    "general": "Something went wrong",
+    "network": "Network error",
+    "auth": "Authentication error",
+    "validation": "Validation error",
+    "notFound": "Not found",
+    "server": "Server error"
+  },
+  "success": {
+    "saved": "Successfully saved",
+    "updated": "Successfully updated",
+    "deleted": "Successfully deleted",
+    "applied": "Successfully applied",
+    "submitted": "Successfully submitted"
+  }
+} 
