@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="mashrabiya" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+      <!-- Main Geometric Grid -->
+      <rect x="0" y="0" width="100" height="100" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+      
+      <!-- Vertical Lines -->
+      <line x1="25" y1="0" x2="25" y2="100" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+      <line x1="50" y1="0" x2="50" y2="100" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+      <line x1="75" y1="0" x2="75" y2="100" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+      
+      <!-- Horizontal Lines -->
+      <line x1="0" y1="25" x2="100" y2="25" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+      <line x1="0" y1="50" x2="100" y2="50" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+      <line x1="0" y1="75" x2="100" y2="75" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+      
+      <!-- Diagonal Lines -->
+      <line x1="0" y1="0" x2="100" y2="100" stroke="currentColor" stroke-width="0.3" opacity="0.2"/>
+      <line x1="0" y1="100" x2="100" y2="0" stroke="currentColor" stroke-width="0.3" opacity="0.2"/>
+      
+      <!-- Pattern Details -->
+      <circle cx="50" cy="50" r="5" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+      <circle cx="50" cy="50" r="15" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+      
+      <!-- Star Pattern in Center -->
+      <path d="M50,35 L52,45 L62,45 L54,51 L57,60 L50,55 L43,60 L46,51 L38,45 L48,45 Z" 
+            fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.6"/>
+      
+      <!-- Star Pattern in Corners -->
+      <path d="M25,10 L27,20 L37,20 L29,26 L32,35 L25,30 L18,35 L21,26 L13,20 L23,20 Z" 
+            fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+      <path d="M75,10 L77,20 L87,20 L79,26 L82,35 L75,30 L68,35 L71,26 L63,20 L73,20 Z" 
+            fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+      <path d="M25,65 L27,75 L37,75 L29,81 L32,90 L25,85 L18,90 L21,81 L13,75 L23,75 Z" 
+            fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+      <path d="M75,65 L77,75 L87,75 L79,81 L82,90 L75,85 L68,90 L71,81 L63,75 L73,75 Z" 
+            fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+      
+      <!-- Hexagons -->
+      <path d="M12.5,25 L17.5,18.5 L25,18.5 L30,25 L25,31.5 L17.5,31.5 Z" 
+            fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+      <path d="M12.5,75 L17.5,68.5 L25,68.5 L30,75 L25,81.5 L17.5,81.5 Z" 
+            fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+      <path d="M62.5,25 L67.5,18.5 L75,18.5 L80,25 L75,31.5 L67.5,31.5 Z" 
+            fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+      <path d="M62.5,75 L67.5,68.5 L75,68.5 L80,75 L75,81.5 L67.5,81.5 Z" 
+            fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+      
+      <!-- Additional Details -->
+      <circle cx="25" cy="25" r="2" fill="currentColor" opacity="0.3"/>
+      <circle cx="75" cy="25" r="2" fill="currentColor" opacity="0.3"/>
+      <circle cx="25" cy="75" r="2" fill="currentColor" opacity="0.3"/>
+      <circle cx="75" cy="75" r="2" fill="currentColor" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="100" height="100" fill="url(#mashrabiya)"/>
+</svg> 

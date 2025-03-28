@@ -35,12 +35,14 @@ if [ ! -d "minimal_frontend" ]; then
 fi
 
 # Copy App.jsx and App.css
-cp -f ./App.jsx ./minimal_frontend/src/App.jsx
-cp -f ./App.css ./minimal_frontend/src/App.css
+cp -f ./minimal_frontend/src/App.jsx ./minimal_frontend/src/App.jsx.bak
+cp -f ./minimal_frontend/src/App.css ./minimal_frontend/src/App.css.bak
+# No need to copy files as they are already in the right place
 
 # Start frontend
 echo "Starting minimal frontend..."
 cd minimal_frontend
+npm install  # Make sure dependencies are installed
 npm run dev
 
 # Kill backend when script is terminated

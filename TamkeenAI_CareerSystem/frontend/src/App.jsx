@@ -13,6 +13,7 @@ import i18n from './i18n';
 import theme from './theme';
 import { ToastProvider } from './contexts/ToastContext';
 import { ThemeContextProvider } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Direct imports for essential pages
 import Dashboard from './pages/Dashboard';
@@ -549,13 +550,13 @@ const App = () => {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AppContextProvider>
-          <AuthProvider>
-            <ThemeContextProvider>
-              <BrowserRouter>
+          <ThemeContextProvider>
+            <BrowserRouter>
+              <AuthProvider>
                 <AppContent />
-              </BrowserRouter>
-            </ThemeContextProvider>
-          </AuthProvider>
+              </AuthProvider>
+            </BrowserRouter>
+          </ThemeContextProvider>
         </AppContextProvider>
       </ThemeProvider>
     </I18nextProvider>

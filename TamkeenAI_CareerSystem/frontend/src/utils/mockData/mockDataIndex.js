@@ -12,6 +12,7 @@ import mockResumeData from './resumeData';
 
 export {
   mockDashboardData,
+  mockDashboardData as dashboardData,
   mockChatMessages,
   mockJobsData,
   mockSkillsData,

@@ -85,7 +85,8 @@ source venv/bin/activate || { echo -e "${RED}Failed to activate virtual environm
 # Install backend dependencies
 echo -e "${BLUE}Installing backend dependencies...${NC}"
 cd backend || { echo -e "${RED}Failed to change to backend directory${NC}"; exit 1; }
-pip install -r requirements.txt || { echo -e "${RED}Failed to install backend dependencies${NC}"; exit 1; }
+# pip install -r requirements.txt || { echo -e "${RED}Failed to install backend dependencies${NC}"; exit 1; }
+echo -e "${GREEN}Skipping dependency installation...${NC}"
 
 # Starting backend server in the background
 echo -e "${BLUE}Starting backend server...${NC}"

@@ -34,7 +34,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../context/AppContext';
-import { dashboardData } from '../../utils/mockData/mockDataIndex';
+import { mockDashboardData } from '../../utils/mockData/mockDataIndex';
 
 // Icons
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
@@ -223,7 +223,7 @@ const UserProgressCard = ({ user, expanded = false }) => {
   const userData = user || profile || {};
   
   const [isExpanded, setIsExpanded] = useState(expanded);
-  const [userXP, setUserXP] = useState(dashboardData.userProgress.xp || 0);
+  const [userXP, setUserXP] = useState(mockDashboardData.userProgress.xp || 0);
   const [showAchievement, setShowAchievement] = useState(false);
   const [recentAchievement, setRecentAchievement] = useState(null);
   

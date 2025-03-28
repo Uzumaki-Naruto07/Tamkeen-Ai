@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
 import { api } from '../api/apiClient';
 import { USER } from '../api/endpoints';
+import i18n from '../i18n';
 
 // Create context
 export const AppContext = createContext();
@@ -32,12 +33,55 @@ export const AppContextProvider = ({ children }) => {
   const [userRoles, setUserRoles] = useState([]);
   const [error, setError] = useState(null);
   
+  // Initialize theme on component mount
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, []);
+  
+  // Apply theme changes
+  useEffect(() => {
+    localStorage.setItem('theme', theme);
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
+  
+  // Apply language changes
+  useEffect(() => {
+    localStorage.setItem('language', language);
+    i18n.changeLanguage(language);
+    // Set the dir attribute on the html tag
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+  }, [language]);
+  
   // Check authentication status on mount and token change
   useEffect(() => {
     const checkAuth = async () => {
       if (token) {
         try {
           setLoading(true);
+          
+          // In development, we can just set a mock user if we have a token
+          if (import.meta.env.DEV && token.startsWith('mock-token')) {
+            const mockUserId = token.split('-')[2];
+            const mockUser = {
+              id: mockUserId,
+              email: mockUserId === '1' ? 'admin@tamkeen.ai' : 'user@tamkeen.ai',
+              name: mockUserId === '1' ? 'Admin User' : 'Regular User',
+              roles: mockUserId === '1' ? ['admin', 'user'] : ['user'],
+            };
+            
+            setUser(mockUser);
+            setUserRoles(mockUser.roles);
+            setProfile({
+              fullName: mockUser.name,
+              bio: 'This is a mock profile for development purposes',
+              skills: ['React', 'JavaScript', 'UI/UX'],
+              experience: '5 years'
+            });
+            setLoading(false);
+            return;
+          }
+          
+          // Normal API call in production
           const response = await api.get(USER.GET_CURRENT);
           setUser(response.data.data);
           setUserRoles(response.data.data.roles || []);
@@ -88,10 +132,12 @@ export const AppContextProvider = ({ children }) => {
   };
   
   // Login function
-  const login = async (credentials) => {
+  const login = async (email, password) => {
     try {
       setLoading(true);
-      const response = await api.post(USER.LOGIN, credentials);
+      setError(null);
+      
+      const response = await api.post(USER.LOGIN, { email, password });
       const { token, user } = response.data.data;
       
       // Store token
@@ -99,11 +145,14 @@ export const AppContextProvider = ({ children }) => {
       setToken(token);
       setUser(user);
       
-      return user;
+      return { success: true, user };
     } catch (err) {
       console.error('Login failed:', err);
-      setError('Login failed. Please check your credentials.');
-      throw err;
+      setError(err?.response?.data?.message || 'Login failed. Please check your credentials.');
+      return { 
+        success: false, 
+        error: err?.response?.data?.message || 'Login failed. Please check your credentials.' 
+      };
     } finally {
       setLoading(false);
     }
@@ -113,35 +162,50 @@ export const AppContextProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       setLoading(true);
+      setError(null);
+      
       const response = await api.post(USER.REGISTER, userData);
-      return response.data;
+      const { token, user } = response.data.data;
+      
+      // Store token
+      localStorage.setItem('token', token);
+      setToken(token);
+      setUser(user);
+      
+      return { success: true, user };
     } catch (err) {
       console.error('Registration failed:', err);
-      setError('Registration failed. Please try again.');
-      throw err;
+      setError(err?.response?.data?.message || 'Registration failed. Please try again.');
+      return { 
+        success: false, 
+        error: err?.response?.data?.message || 'Registration failed. Please try again.' 
+      };
     } finally {
       setLoading(false);
     }
   };
   
   // Logout function
-  const logout = useCallback(() => {
+  const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
     setProfile(null);
-  }, []);
-  
-  // Toggle theme
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    localStorage.setItem('theme', newTheme);
-    setTheme(newTheme);
+    setUserRoles([]);
   };
   
-  // Change language
+  // Theme toggle
+  const toggleTheme = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  };
+  
+  // Language toggle
+  const toggleLanguage = () => {
+    setLanguage(language === 'en' ? 'ar' : 'en');
+  };
+  
+  // Change language directly
   const changeLanguage = (lang) => {
-    localStorage.setItem('language', lang);
     setLanguage(lang);
   };
   
@@ -149,31 +213,42 @@ export const AppContextProvider = ({ children }) => {
   const fetchNotifications = async () => {
     try {
       const response = await api.get(USER.GET_NOTIFICATIONS);
-      setNotifications(response.data.data.notifications || []);
-      setUnreadCount(response.data.data.unread_count || 0);
+      const notifications = response.data.data.notifications || [];
+      setNotifications(notifications);
+      setUnreadCount(notifications.filter(n => !n.read).length);
+      return notifications;
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
+      setError('Failed to load notifications');
+      return [];
     }
   };
   
   // Mark notification as read
-  const markNotificationAsRead = async (notificationId) => {
+  const markNotificationAsRead = async (id) => {
     try {
-      await api.put(USER.MARK_NOTIFICATION_READ(notificationId));
-      setNotifications(
-        notifications.map(notification => 
-          notification.id === notificationId 
+      await api.put(USER.MARK_NOTIFICATION_READ(id));
+      
+      // Update notifications state
+      setNotifications(prevNotifications => 
+        prevNotifications.map(notification => 
+          notification.id === id 
             ? { ...notification, read: true } 
             : notification
         )
       );
-      setUnreadCount(Math.max(0, unreadCount - 1));
+      
+      // Update unread count
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      
+      return true;
     } catch (err) {
       console.error('Failed to mark notification as read:', err);
+      setError('Failed to update notification');
+      return false;
     }
   };
   
-  // Context value
   const contextValue = {
     user,
     profile,
@@ -189,6 +264,7 @@ export const AppContextProvider = ({ children }) => {
     register,
     logout,
     toggleTheme,
+    toggleLanguage,
     changeLanguage,
     fetchNotifications,
     markNotificationAsRead,

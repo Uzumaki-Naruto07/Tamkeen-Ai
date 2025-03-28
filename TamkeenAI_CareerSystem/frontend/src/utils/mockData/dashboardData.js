@@ -219,4 +219,6 @@ const mockDashboardData = {
   }
 };
 
+export default mockDashboardData;
+
  

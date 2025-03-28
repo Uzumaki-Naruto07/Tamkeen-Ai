@@ -140,4 +140,41 @@ def verify_reset_token(token):
         except Exception as e:
             logger.error(f"Error verifying reset token: {e}")
     
+    return None
+
+def generate_verification_token(user_id, expiry=24):
+    """
+    Generate an email verification token for a user.
+    
+    Args:
+        user_id: User ID to generate token for
+        expiry: Expiry time in hours (default 24)
+        
+    Returns:
+        Generated verification token
+    """
+    # In a real app, use JWT with proper signing
+    # For simplicity, just returning a mock verification token
+    return f"mock_verify_{user_id}_{secrets.token_hex(16)}"
+
+def verify_verification_token(token):
+    """
+    Verify an email verification token.
+    
+    Args:
+        token: Verification token to verify
+        
+    Returns:
+        User ID if valid, None otherwise
+    """
+    # In a real app, verify the JWT signature and expiry
+    # For simplicity, just checking if it's a mock verification token
+    if token and token.startswith('mock_verify_'):
+        try:
+            parts = token.split('_')
+            if len(parts) >= 3:
+                return parts[2]  # Extract user_id
+        except Exception as e:
+            logger.error(f"Error verifying verification token: {e}")
+    
     return None 

@@ -3,8 +3,10 @@
  * Maps to backend /api/utils/endpoints.py
  */
 
-// Base API URL
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// Base API URL - support mock API in development mode
+const BASE_URL = import.meta.env.DEV 
+  ? '/api'  // This will be mocked 
+  : (import.meta.env.VITE_API_URL || 'http://localhost:5001/api');
 
 /**
  * Authentication Endpoints
@@ -27,6 +29,7 @@ export const AUTH = {
  */
 export const USER = {
   GET_CURRENT: `${BASE_URL}/user/me`,
+  GET_PROFILE: `${BASE_URL}/user/profile`,
   UPDATE_PROFILE: `${BASE_URL}/user/profile`,
   UPLOAD_PICTURE: `${BASE_URL}/user/profile/picture`,
   GET_SETTINGS: `${BASE_URL}/user/settings`,
@@ -50,6 +53,11 @@ export const USER = {
   DISABLE_TWO_FACTOR: `${BASE_URL}/user/security/two-factor/disable`,
   GET_STRENGTHS_WEAKNESSES: `${BASE_URL}/user/strengths-weaknesses`,
   DELETE_ACCOUNT: `${BASE_URL}/user/delete-account`,
+  
+  // Custom mappings for API client mocking
+  LOGIN: `${BASE_URL}/auth/login`,
+  REGISTER: `${BASE_URL}/auth/register`,
+  LOGOUT: `${BASE_URL}/auth/logout`,
 };
 
 /**
@@ -71,35 +79,20 @@ export const USER_PROFILE = {
  * Resume Management Endpoints
  */
 export const RESUME = {
-  GET_ALL: `${BASE_URL}/resume/all`,
+  GET_ALL: `${BASE_URL}/resume`,
   GET_BY_ID: (id) => `${BASE_URL}/resume/${id}`,
-  CREATE: `${BASE_URL}/resume/create`,
+  CREATE: `${BASE_URL}/resume`,
   UPDATE: (id) => `${BASE_URL}/resume/${id}`,
   DELETE: (id) => `${BASE_URL}/resume/${id}`,
-  UPLOAD: `${BASE_URL}/resume/upload`,
-  PARSE: `${BASE_URL}/resume/parse`,
+  GENERATE: `${BASE_URL}/resume/generate`,
   ANALYZE: (id) => `${BASE_URL}/resume/${id}/analyze`,
-  GENERATE_ATS: (id) => `${BASE_URL}/resume/${id}/generate-ats`,
-  EXPORT_PDF: (id) => `${BASE_URL}/resume/${id}/export-pdf`,
-  EXPORT_WORD: (id) => `${BASE_URL}/resume/${id}/export-word`,
+  COMPARE: `${BASE_URL}/resume/compare`,
   GET_TEMPLATES: `${BASE_URL}/resume/templates`,
-  MATCH_JOB: (resumeId, jobId) => `${BASE_URL}/resume/${resumeId}/match-job/${jobId}`,
-  EXTRACT_SKILLS: `${BASE_URL}/resume/extract-skills`,
-  GET_IMPROVEMENT_SUGGESTIONS: (id) => `${BASE_URL}/resume/${id}/improvement-suggestions`,
-  GET_KEYWORD_RECOMMENDATIONS: (resumeId) => `${BASE_URL}/resume/${resumeId}/keyword-recommendations`,
-  ANALYZE_SKILL_GAP: (resumeId, jobId) => `${BASE_URL}/resume/${resumeId}/skill-gap/${jobId}`,
-  GET_ATS_HISTORY: (resumeId) => `${BASE_URL}/resume/${resumeId}/ats-history`,
-  GET_ATS_SCORE: (resumeId) => `${BASE_URL}/resume/${resumeId}/ats-score`,
-  EXTRACT_KEYWORDS: `${BASE_URL}/resume/extract-keywords`,
-  OPTIMIZE_FOR_ATS: `${BASE_URL}/resume/optimize-ats`,
-  BUILD_FROM_TEMPLATE: `${BASE_URL}/resume/build-from-template`,
-  EXTRACT_PROFILE: (resumeId) => `${BASE_URL}/resume/${resumeId}/extract-profile`,
-  GENERATE_SECTION: `${BASE_URL}/resume/generate-section`,
-  GET_SECTIONS: (resumeId) => `${BASE_URL}/resume/${resumeId}/sections`,
-  UPDATE_SECTION: (resumeId, sectionId) => `${BASE_URL}/resume/${resumeId}/sections/${sectionId}`,
-  GET_NLP_SUGGESTIONS: (resumeId) => `${BASE_URL}/resume/${resumeId}/nlp-suggestions`,
-  IMPORT_FROM_LINKEDIN: `${BASE_URL}/resume/import-linkedin`,
-  CHECK_QUALITY: (resumeId) => `${BASE_URL}/resume/${resumeId}/quality`,
+  DOWNLOAD: (id, format) => `${BASE_URL}/resume/${id}/download?format=${format}`,
+  PARSE: `${BASE_URL}/resume/parse`,
+  EXTRACT_SKILLS: (id) => `${BASE_URL}/resume/${id}/skills`,
+  IMPROVE: (id) => `${BASE_URL}/resume/${id}/improve`,
+  SHARE: (id) => `${BASE_URL}/resume/${id}/share`,
 };
 
 /**
@@ -147,65 +140,39 @@ export const CAREER = {
  * Jobs and Applications Endpoints
  */
 export const JOB = {
-  SEARCH: `${BASE_URL}/jobs/search`,
+  GET_ALL: `${BASE_URL}/jobs`,
   GET_BY_ID: (id) => `${BASE_URL}/jobs/${id}`,
-  GET_RECOMMENDATIONS: `${BASE_URL}/jobs/recommendations`,
-  SAVE_JOB: (id) => `${BASE_URL}/jobs/${id}/save`,
-  GET_SAVED_JOBS: `${BASE_URL}/jobs/saved`,
+  SEARCH: `${BASE_URL}/jobs/search`,
+  RECOMMEND: `${BASE_URL}/jobs/recommend`,
   APPLY: (id) => `${BASE_URL}/jobs/${id}/apply`,
-  GET_APPLICATIONS: `${BASE_URL}/applications`,
-  GET_APPLICATION: (id) => `${BASE_URL}/applications/${id}`,
-  UPDATE_APPLICATION: (id) => `${BASE_URL}/applications/${id}`,
-  WITHDRAW_APPLICATION: (id) => `${BASE_URL}/applications/${id}/withdraw`,
-  GET_APPLICATION_STATUS: (id) => `${BASE_URL}/applications/${id}/status`,
-  ANALYZE_JOB_DESCRIPTION: `${BASE_URL}/jobs/analyze-description`,
-  GET_COMPANY_DETAILS: (id) => `${BASE_URL}/jobs/company/${id}`,
-  GET_SIMILAR_JOBS: (id) => `${BASE_URL}/jobs/${id}/similar`,
-  AUTOMATE_APPLICATION: `${BASE_URL}/job-application/automate-application`,
-  GET_MARKET_INSIGHTS: `${BASE_URL}/job/market-insights`,
-  GET_PERSONALIZED_RECOMMENDATIONS: `${BASE_URL}/job/personalized-recommendations`,
-  SETUP_ALERTS: `${BASE_URL}/job/alerts`,
-  GET_ALERTS: `${BASE_URL}/job/alerts`,
-  UPDATE_ALERT: (id) => `${BASE_URL}/job/alerts/${id}`,
-  DELETE_ALERT: (id) => `${BASE_URL}/job/alerts/${id}`,
-  GET_APPLICATION_WORKFLOW: (id) => `${BASE_URL}/job/applications/${id}/workflow`,
-  UPDATE_APPLICATION_STAGE: (id) => `${BASE_URL}/job/applications/${id}/stage`,
-  BATCH_APPLY: `${BASE_URL}/job-application/batch-apply`,
-  GET_MATCHING_SCORE: (jobId, resumeId) => `${BASE_URL}/job/${jobId}/match/${resumeId}`,
-  GET_TRENDING: `${BASE_URL}/job/trending`,
-  GET_APPLICATION_INSIGHTS: `${BASE_URL}/job/application-insights`,
+  TRACK_APPLICATION: (id) => `${BASE_URL}/jobs/applications/${id}`,
+  GET_APPLICATIONS: `${BASE_URL}/jobs/applications`,
+  SAVE: (id) => `${BASE_URL}/jobs/${id}/save`,
+  GET_SAVED: `${BASE_URL}/jobs/saved`,
+  MATCH_SCORE: (id) => `${BASE_URL}/jobs/${id}/match`,
+  GET_TRENDS: `${BASE_URL}/jobs/trends`,
+  GET_STATS: `${BASE_URL}/jobs/stats`,
+  GET_MARKET_DATA: `${BASE_URL}/jobs/market-data`,
+  GET_SALARY_INSIGHTS: (title) => `${BASE_URL}/jobs/salary/${encodeURIComponent(title)}`,
 };
 
 /**
  * Interview Preparation Endpoints
  */
 export const INTERVIEW = {
-  GET_QUESTIONS: `${BASE_URL}/interview/questions`,
-  GET_BY_JOB: (jobId) => `${BASE_URL}/interview/questions/job/${jobId}`,
-  SUBMIT_ANSWER_BASIC: `${BASE_URL}/interview/submit-answer`,
-  GET_FEEDBACK_BASIC: (id) => `${BASE_URL}/interview/feedback/${id}`,
-  START_MOCK: `${BASE_URL}/interview/mock/start`,
-  GET_MOCK_SESSIONS: `${BASE_URL}/interview/mock/sessions`,
-  GET_MOCK_SESSION: (id) => `${BASE_URL}/interview/mock/sessions/${id}`,
-  GET_ASSESSMENT: (id) => `${BASE_URL}/interview/assessment/${id}`,
-  GENERATE_ANSWERS: `${BASE_URL}/interview/generate-answers`,
-  ANALYZE_RESPONSE: `${BASE_URL}/interview/analyze-response`,
-  GET_COMMON_QUESTIONS: (category) => `${BASE_URL}/interview/common-questions/${category}`,
-  GET_TIPS: `${BASE_URL}/interview/tips`,
-  START_MOCK_SESSION: `${BASE_URL}/interview/mock/start`,
-  GET_NEXT_QUESTION: (sessionId) => `${BASE_URL}/interview/sessions/${sessionId}/next-question`,
-  SUBMIT_ANSWER: (sessionId) => `${BASE_URL}/interview/sessions/${sessionId}/submit-answer`,
-  END_SESSION: (sessionId) => `${BASE_URL}/interview/sessions/${sessionId}/end`,
-  GET_FEEDBACK: (sessionId) => `${BASE_URL}/interview/sessions/${sessionId}/feedback`,
-  GET_HISTORY: `${BASE_URL}/interview/history`,
-  SCHEDULE_AI_INTERVIEW: `${BASE_URL}/interview/schedule`,
-  GET_PERFORMANCE_METRICS: `${BASE_URL}/interview/performance-metrics`,
-  GET_IMPROVEMENTS: (sessionId) => `${BASE_URL}/interview/sessions/${sessionId}/improvements`,
-  GET_SPECIALIZED_PANEL: `${BASE_URL}/interview/specialized-panel`,
-  GET_TRANSCRIPTION: (sessionId) => `${BASE_URL}/interview/sessions/${sessionId}/transcription`,
-  GET_COMPANY_QUESTIONS: (company) => `${BASE_URL}/interview/companies/${company}/questions`,
-  GENERATE_REPORT: (sessionId) => `${BASE_URL}/interview/sessions/${sessionId}/report`,
-  GET_ENHANCED_SESSION: `${BASE_URL}/interview/enhanced-session`,
+  GET_ALL: `${BASE_URL}/interviews`,
+  GET_BY_ID: (id) => `${BASE_URL}/interviews/${id}`,
+  CREATE: `${BASE_URL}/interviews`,
+  UPDATE: (id) => `${BASE_URL}/interviews/${id}`,
+  DELETE: (id) => `${BASE_URL}/interviews/${id}`,
+  START: (id) => `${BASE_URL}/interviews/${id}/start`,
+  END: (id) => `${BASE_URL}/interviews/${id}/end`,
+  SUBMIT_ANSWER: (id, questionId) => `${BASE_URL}/interviews/${id}/questions/${questionId}/answer`,
+  GET_FEEDBACK: (id) => `${BASE_URL}/interviews/${id}/feedback`,
+  GET_RECORDING: (id) => `${BASE_URL}/interviews/${id}/recording`,
+  GET_TRANSCRIPT: (id) => `${BASE_URL}/interviews/${id}/transcript`,
+  GET_INSIGHTS: (id) => `${BASE_URL}/interviews/${id}/insights`,
+  GET_COMMON_QUESTIONS: (jobTitle) => `${BASE_URL}/interviews/common-questions?job=${encodeURIComponent(jobTitle)}`,
 };
 
 /**
