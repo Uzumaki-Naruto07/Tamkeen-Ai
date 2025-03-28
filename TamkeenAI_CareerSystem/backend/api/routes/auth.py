@@ -9,13 +9,13 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify, g
 
 # Import utilities
-from backend.utils.auth import (
+from api.utils.auth import (
     hash_password, verify_password, validate_password_strength,
     generate_token, decode_token
 )
 
 # Import database models
-from backend.database.models import User, UserActivity
+from api.database.models import User, UserActivity
 
 # Setup logger
 logger = logging.getLogger(__name__)

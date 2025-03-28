@@ -10,29 +10,29 @@ from flask import Blueprint, request, jsonify, g
 from datetime import datetime
 
 # Import utilities
-from backend.utils.date_utils import now, get_date_range
-from backend.utils.cache_utils import cache_result
+from api.utils.date_utils import now, get_date_range
+from api.utils.cache_utils import cache_result
 
 # Import database models
-from backend.database.models import User, Resume, Job, JobApplication
+from api.database.models import User, Resume, Job, JobApplication
 
 # Import core modules
-from backend.core.analytics_generator import AnalyticsGenerator
+from api.core.analytics_generator import AnalyticsGenerator
 
 # Import auth decorators
-from backend.app import require_auth, require_role
+from api.app import require_auth, require_role
 
 # Setup logger
 logger = logging.getLogger(__name__)
 
 # Create blueprint
-analytics_blueprint = Blueprint('analytics', __name__)
+analytics_bp = Blueprint('analytics', __name__)
 
 # Create analytics generator
 analytics_generator = AnalyticsGenerator()
 
 
-@analytics_blueprint.route('/market', methods=['GET'])
+@analytics_bp.route('/market', methods=['GET'])
 def get_market_analytics():
     """Get job market analytics"""
     try:
@@ -65,7 +65,7 @@ def get_market_analytics():
         }), 500
 
 
-@analytics_blueprint.route('/skills', methods=['GET'])
+@analytics_bp.route('/skills', methods=['GET'])
 def get_skills_analytics():
     """Get skills analytics"""
     try:
@@ -102,7 +102,7 @@ def get_skills_analytics():
         }), 500
 
 
-@analytics_blueprint.route('/emerging-trends', methods=['GET'])
+@analytics_bp.route('/emerging-trends', methods=['GET'])
 def get_emerging_trends():
     """Get emerging job market trends"""
     try:
@@ -133,7 +133,7 @@ def get_emerging_trends():
         }), 500
 
 
-@analytics_blueprint.route('/salary', methods=['GET'])
+@analytics_bp.route('/salary', methods=['GET'])
 def get_salary_analytics():
     """Get salary analytics"""
     try:
@@ -162,7 +162,7 @@ def get_salary_analytics():
         }), 500
 
 
-@analytics_blueprint.route('/personal', methods=['GET'])
+@analytics_bp.route('/personal', methods=['GET'])
 @require_auth
 def get_personal_analytics():
     """Get personal analytics for authenticated user"""
@@ -208,7 +208,7 @@ def get_personal_analytics():
         }), 500
 
 
-@analytics_blueprint.route('/skills-gap', methods=['GET'])
+@analytics_bp.route('/skills-gap', methods=['GET'])
 @require_auth
 def get_skills_gap_analysis():
     """Get skills gap analysis for authenticated user"""
@@ -253,7 +253,7 @@ def get_skills_gap_analysis():
         }), 500
 
 
-@analytics_blueprint.route('/career-progression', methods=['GET'])
+@analytics_bp.route('/career-progression', methods=['GET'])
 @require_auth
 def get_career_progression_analysis():
     """Get career progression analysis for authenticated user"""
@@ -306,7 +306,7 @@ def get_career_progression_analysis():
         }), 500
 
 
-@analytics_blueprint.route('/industry-comparison', methods=['GET'])
+@analytics_bp.route('/industry-comparison', methods=['GET'])
 def get_industry_comparison():
     """Get comparison of different industries"""
     try:

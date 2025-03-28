@@ -1,3 +1,7 @@
+"""
+Configuration modules for the API.
+"""
+
 # Config package
 from .env import (
     DEEPSEEK_API_KEY, 
