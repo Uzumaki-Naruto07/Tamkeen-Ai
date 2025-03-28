@@ -1,7 +1,7 @@
 // frontend/src/utils/endpoints.js
 
 // Base API URL - read from environment or use default
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 // Auth endpoints
 export const AUTH_ENDPOINTS = {
@@ -48,3 +48,16 @@ export const USER_ENDPOINTS = {
 
 // Health check
 export const HEALTH_CHECK = `${API_BASE_URL}/health-check`;
+
+// Dashboard endpoints
+export const DASHBOARD_ENDPOINTS = {
+  GET_DATA: (userId) => `${API_BASE_URL}/dashboard/${userId}`,
+  UPDATE_SKILLS: (userId) => `${API_BASE_URL}/dashboard/${userId}/skills`,
+  TRACK_ACTIVITY: (userId) => `${API_BASE_URL}/dashboard/${userId}/activity`,
+  UPDATE_STATS: (userId) => `${API_BASE_URL}/dashboard/${userId}/stats`,
+};
+
+// Admin endpoints
+export const ADMIN_ENDPOINTS = {
+  ANALYTICS_DASHBOARD: `${API_BASE_URL}/analytics/dashboard`,
+};

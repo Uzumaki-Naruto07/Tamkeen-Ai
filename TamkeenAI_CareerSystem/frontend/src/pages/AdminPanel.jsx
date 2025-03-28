@@ -421,6 +421,27 @@ const AdminPanel = () => {
   // Render dashboard stats
   const renderDashboard = () => (
     <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+          <Button
+            variant="contained"
+            startIcon={<Dashboard />}
+            onClick={() => navigate('/admin/insights')}
+          >
+            Insights Dashboard
+          </Button>
+          
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<Assessment />}
+            onClick={() => navigate('/admin-analytics')}
+          >
+            Advanced Analytics
+          </Button>
+        </Box>
+      </Grid>
+      
       <Grid item xs={12} md={4}>
         <Card>
           <CardContent>

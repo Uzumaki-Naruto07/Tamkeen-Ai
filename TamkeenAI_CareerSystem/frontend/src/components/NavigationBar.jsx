@@ -16,7 +16,8 @@ import {
   FiTrendingUp,
   FiBook,
   FiMessageSquare,
-  FiShield
+  FiShield,
+  FiActivity
 } from 'react-icons/fi';
 import { useAppContext } from '../context/AppContext';
 import LanguageToggle from './LanguageToggle';
@@ -84,7 +85,8 @@ const NavigationBar = () => {
   
   // Admin-only nav items
   const adminNavItems = [
-    { label: 'Admin Panel', path: '/admin', icon: <FiShield /> }
+    { label: 'Admin Panel', path: '/admin', icon: <FiShield /> },
+    { label: 'Admin Analytics', path: '/admin-analytics', icon: <FiActivity /> }
   ];
   
   return (
