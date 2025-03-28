@@ -103,7 +103,7 @@ def parse_args():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description='TamkeenAI Career System API')
     parser.add_argument('--host', default='0.0.0.0', help='Host to run the server on')
-    parser.add_argument('--port', type=int, default=5000, help='Port to run the server on')
+    parser.add_argument('--port', type=int, default=5001, help='Port to run the server on')
     parser.add_argument('--debug', action='store_true', help='Run in debug mode')
     return parser.parse_args()
 

@@ -13,13 +13,14 @@ import {
   BusinessCenter, FilterList, Sort, Bookmark,
   BookmarkBorder, Share, CheckCircle, Send,
   CalendarToday, Add, DoNotDisturb, BusinessCenter as Job,
-  Description, FindInPage
+  Description, FindInPage, AutoAwesome
 } from '@mui/icons-material';
 import { useUser, useResume, useJob } from '../components/AppContext';
 import apiEndpoints from '../utils/api';
 import ApplicationTracker from '../components/ApplicationTracker';
 import JobMatchCalculator from '../components/JobMatchCalculator';
 import LoadingSpinner from '../components/LoadingSpinner';
+import JobApplicationAutomation from '../components/JobApplicationAutomation';
 
 const JobSearchDashboard = () => {
   const [searchParams, setSearchParams] = useState({
@@ -208,6 +209,7 @@ const JobSearchDashboard = () => {
   // Handle tab change
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+    if (newValue === 0) handleSearch(); // Reload search results when switching to search tab
   };
   
   // Format date string
@@ -240,110 +242,108 @@ const JobSearchDashboard = () => {
   
   // Render search form
   const renderSearchForm = () => (
-    <Paper component="form" onSubmit={handleSearch} sx={{ p: 3, mb: 3 }}>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={4}>
-          <TextField
-            fullWidth
-            name="query"
-            label="Job Title, Skills, or Keywords"
-            value={searchParams.query}
-            onChange={handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <TextField
-            fullWidth
-            name="location"
-            label="Location"
-            value={searchParams.location}
-            onChange={handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <LocationOn />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <FormControl fullWidth>
-            <InputLabel>Job Type</InputLabel>
-            <Select
-              name="jobType"
-              value={searchParams.jobType}
-              onChange={handleSearchChange}
-              label="Job Type"
-            >
-              <MenuItem value="all">All Job Types</MenuItem>
-              <MenuItem value="full-time">Full-time</MenuItem>
-              <MenuItem value="part-time">Part-time</MenuItem>
-              <MenuItem value="contract">Contract</MenuItem>
-              <MenuItem value="internship">Internship</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <FormControl fullWidth>
-            <InputLabel>Experience Level</InputLabel>
-            <Select
-              name="experienceLevel"
-              value={searchParams.experienceLevel}
-              onChange={handleSearchChange}
-              label="Experience Level"
-            >
-              <MenuItem value="all">All Levels</MenuItem>
-              <MenuItem value="entry">Entry Level</MenuItem>
-              <MenuItem value="mid">Mid Level</MenuItem>
-              <MenuItem value="senior">Senior Level</MenuItem>
-              <MenuItem value="executive">Executive</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <FormControl fullWidth>
-            <InputLabel>Posted Within</InputLabel>
-            <Select
-              name="postedWithin"
-              value={searchParams.postedWithin}
-              onChange={handleSearchChange}
-              label="Posted Within"
-            >
-              <MenuItem value="any">Any Time</MenuItem>
-              <MenuItem value="day">Past 24 Hours</MenuItem>
-              <MenuItem value="week">Past Week</MenuItem>
-              <MenuItem value="month">Past Month</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <Button
-            fullWidth
-            variant="contained"
-            color="primary"
-            type="submit"
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={24} /> : <Search />}
-            sx={{ height: '100%' }}
-          >
-            {loading ? 'Searching...' : 'Search Jobs'}
-          </Button>
-        </Grid>
+    <Grid container spacing={2}>
+      <Grid item xs={12} md={4}>
+        <TextField
+          fullWidth
+          name="query"
+          label="Job Title, Skills, or Keywords"
+          value={searchParams.query}
+          onChange={handleSearchChange}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search />
+              </InputAdornment>
+            ),
+          }}
+        />
       </Grid>
-    </Paper>
+      
+      <Grid item xs={12} md={4}>
+        <TextField
+          fullWidth
+          name="location"
+          label="Location"
+          value={searchParams.location}
+          onChange={handleSearchChange}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <LocationOn />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Grid>
+      
+      <Grid item xs={12} md={4}>
+        <FormControl fullWidth>
+          <InputLabel>Job Type</InputLabel>
+          <Select
+            name="jobType"
+            value={searchParams.jobType}
+            onChange={handleSearchChange}
+            label="Job Type"
+          >
+            <MenuItem value="all">All Job Types</MenuItem>
+            <MenuItem value="full-time">Full-time</MenuItem>
+            <MenuItem value="part-time">Part-time</MenuItem>
+            <MenuItem value="contract">Contract</MenuItem>
+            <MenuItem value="internship">Internship</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid>
+      
+      <Grid item xs={12} md={4}>
+        <FormControl fullWidth>
+          <InputLabel>Experience Level</InputLabel>
+          <Select
+            name="experienceLevel"
+            value={searchParams.experienceLevel}
+            onChange={handleSearchChange}
+            label="Experience Level"
+          >
+            <MenuItem value="all">All Levels</MenuItem>
+            <MenuItem value="entry">Entry Level</MenuItem>
+            <MenuItem value="mid">Mid Level</MenuItem>
+            <MenuItem value="senior">Senior Level</MenuItem>
+            <MenuItem value="executive">Executive</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid>
+      
+      <Grid item xs={12} md={4}>
+        <FormControl fullWidth>
+          <InputLabel>Posted Within</InputLabel>
+          <Select
+            name="postedWithin"
+            value={searchParams.postedWithin}
+            onChange={handleSearchChange}
+            label="Posted Within"
+          >
+            <MenuItem value="any">Any Time</MenuItem>
+            <MenuItem value="day">Past 24 Hours</MenuItem>
+            <MenuItem value="week">Past Week</MenuItem>
+            <MenuItem value="month">Past Month</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid>
+      
+      <Grid item xs={12} md={4}>
+        <Button
+          fullWidth
+          variant="contained"
+          color="primary"
+          type="submit"
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={24} /> : <Search />}
+          sx={{ height: '100%' }}
+        >
+          {loading ? 'Searching...' : 'Search Jobs'}
+        </Button>
+      </Grid>
+    </Grid>
   );
   
   // Render job listings
@@ -541,55 +541,117 @@ const JobSearchDashboard = () => {
   };
   
   return (
-    <Box sx={{ py: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Job Search
-      </Typography>
-      
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-      
-      {/* Search Form */}
-      {renderSearchForm()}
-      
-      {/* Job Tabs */}
-      <Paper sx={{ mb: 3 }}>
-        <Tabs
-          value={activeTab}
-          onChange={handleTabChange}
-          variant="fullWidth"
-        >
-          <Tab 
-            label="Search Results" 
-            icon={<Search />} 
-          />
-          <Tab 
-            label="Saved Jobs" 
-            icon={
-              <Badge badgeContent={savedJobs.length} color="primary">
-                <Bookmark />
-              </Badge>
-            } 
-          />
-          <Tab 
-            label="Applications" 
-            icon={
-              <Badge badgeContent={appliedJobs.length} color="primary">
-                <Description />
-              </Badge>
-            } 
-          />
-        </Tabs>
+    <Box sx={{ width: '100%', mb: 4 }}>
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h5" component="h1" gutterBottom>
+          Job Search & Application Dashboard
+        </Typography>
+        
+        {/* Tabs */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={handleTabChange}
+            aria-label="job search tabs"
+            variant="scrollable"
+            scrollButtons="auto"
+          >
+            <Tab 
+              label="Search Jobs" 
+              icon={<Search />} 
+              iconPosition="start"
+            />
+            <Tab 
+              label={
+                <Badge badgeContent={savedJobs.length} color="primary">
+                  <Box>Saved Jobs</Box>
+                </Badge>
+              } 
+              icon={<Bookmark />} 
+              iconPosition="start"
+            />
+            <Tab 
+              label={
+                <Badge badgeContent={appliedJobs.length} color="primary">
+                  <Box>Applied Jobs</Box>
+                </Badge>
+              }
+              icon={<BusinessCenter />}
+              iconPosition="start" 
+            />
+            <Tab 
+              label="Application Tracker" 
+              icon={<CalendarToday />}
+              iconPosition="start" 
+            />
+            <Tab 
+              label="AI Job Automation" 
+              icon={<AutoAwesome />}
+              iconPosition="start" 
+              sx={{ color: 'success.main' }}
+            />
+          </Tabs>
+        </Box>
+        
+        {/* Search Form */}
+        {activeTab === 0 && (
+          <Box component="form" onSubmit={handleSearch} sx={{ mb: 3 }}>
+            {renderSearchForm()}
+          </Box>
+        )}
+        
+        {/* Job Listings */}
+        {activeTab === 0 && (
+          <Box>
+            {/* Render search results */}
+            {renderJobListings()}
+          </Box>
+        )}
+        
+        {/* Saved Jobs */}
+        {activeTab === 1 && (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Saved Jobs
+            </Typography>
+            
+            {savedJobs.length === 0 ? (
+              <Alert severity="info">
+                You haven't saved any jobs yet. Use the search tab to find and save jobs that interest you.
+              </Alert>
+            ) : renderJobListings(savedJobs)}
+          </Box>
+        )}
+        
+        {/* Applied Jobs */}
+        {activeTab === 2 && (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Applied Jobs
+            </Typography>
+            
+            {appliedJobs.length === 0 ? (
+              <Alert severity="info">
+                No applied jobs. Start applying to jobs!
+              </Alert>
+            ) : renderJobListings(appliedJobs)}
+          </Box>
+        )}
+        
+        {/* Application Tracker */}
+        {activeTab === 3 && (
+          <Box>
+            <ApplicationTracker />
+          </Box>
+        )}
+        
+        {/* AI Job Automation */}
+        {activeTab === 4 && (
+          <Box>
+            <JobApplicationAutomation />
+          </Box>
+        )}
       </Paper>
-      
-      {/* Job Listings */}
-      <Box>
-        {loading && <LoadingSpinner message="Loading jobs..." />}
-        {!loading && renderJobListings()}
-      </Box>
       
       {/* Job Details Dialog */}
       <Dialog

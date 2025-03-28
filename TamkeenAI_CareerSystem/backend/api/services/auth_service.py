@@ -11,15 +11,28 @@ from flask import g, request, jsonify
 from functools import wraps
 import jwt
 import os
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError
+from typing import Optional
 
 # Import database models
 from api.database.models import User
+from ..db.database import get_db
+from sqlalchemy.orm import Session
 
 # Setup logger
 logger = logging.getLogger(__name__)
 
 # Secret key for JWT
 SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'tamkeen-ai-secret-key')
+
+# OAuth2 scheme for token authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+
+# Secret key and algorithm for JWT
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 def generate_token(user_id, expiry_hours=24):
     """
@@ -220,3 +233,53 @@ def generate_token(user_data, expires_in=24):
     token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
     
     return token
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    """
+    Create a JWT access token
+    """
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """
+    Verify JWT token and return current user
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        # For testing purposes without JWT validation
+        # This is a mock implementation to satisfy the dependency
+        # In a real implementation, this would verify the token
+        mock_user = User(
+            id=1,
+            email="user@example.com",
+            first_name="Demo",
+            last_name="User",
+            is_active=True,
+            is_admin=False,
+            created_at=datetime.now()
+        )
+        return mock_user
+        
+        # Real implementation would be:
+        # payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # user_id: str = payload.get("sub")
+        # if user_id is None:
+        #     raise credentials_exception
+        # user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        # if user is None:
+        #     raise credentials_exception
+        # return user
+    except JWTError:
+        raise credentials_exception

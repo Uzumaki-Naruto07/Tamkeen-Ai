@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile, File, Body
 from typing import List, Dict, Any, Optional
 from ..models.job_application_models import (
     JobRole, JobApplicationSettings, PlatformCredentials, 
@@ -16,11 +16,31 @@ from ..models.user_models import User
 from ..services.ats_service import extract_text_from_pdf, extract_text_from_docx
 import io
 import os
+import logging
+from pydantic import BaseModel
+from datetime import datetime
 
 router = APIRouter(
     prefix="/job-application",
-    tags=["job application"]
+    tags=["job application"],
+    responses={404: {"description": "Not found"}},
 )
+
+logger = logging.getLogger(__name__)
+
+class JobApplicationRequest(BaseModel):
+    cv_text: str
+    user_profile: Dict[str, Any]
+    settings: Dict[str, Any]
+    platform_credentials: Dict[str, Dict[str, str]]
+
+class JobApplicationResponse(BaseModel):
+    success: bool
+    applications: List[Dict[str, Any]] = []
+    application_strategy: Dict[str, str] = {}
+    total_applications: int = 0
+    platforms_accessed: List[str] = []
+    error_message: Optional[str] = None
 
 @router.post("/generate-roles")
 async def get_job_roles(
@@ -147,4 +167,115 @@ async def simulate_job_applications(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to simulate job applications: {str(e)}"
+        )
+
+@router.post("/automate-application", response_model=JobApplicationResponse)
+async def automate_job_application(
+    request: JobApplicationRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Automate job applications across multiple platforms.
+    
+    Notes:
+    - LinkedIn automation is for DEMONSTRATION PURPOSES ONLY in a competition setting
+    - Actual implementation respects platform terms of service
+    """
+    try:
+        logger.info(f"Starting automated job application for user: {current_user.id}")
+        
+        # Create automation instance
+        job_automation = JobApplicationAutomation(
+            cv_text=request.cv_text,
+            user_profile=request.user_profile,
+            settings=request.settings
+        )
+        
+        # Run the automation
+        result = job_automation.multi_platform_application(request.platform_credentials)
+        
+        # Log the results
+        logger.info(f"Completed job applications. Total: {result['total_applications']}, Platforms: {result['platforms_accessed']}")
+        
+        # Store application history in database
+        for application in result["applications"]:
+            # This would typically insert records into a database
+            # For now, we'll just log them
+            logger.info(f"Applied to {application['job_title']} at {application['company']} via {application['platform']}")
+            
+            # Example of how you might store in database:
+            # new_application = JobApplicationModel(
+            #     user_id=current_user.id,
+            #     job_title=application["job_title"],
+            #     company=application["company"],
+            #     platform=application["platform"],
+            #     status=application["status"],
+            #     date_applied=datetime.strptime(application["date_applied"], "%Y-%m-%d %H:%M:%S"),
+            #     location=application["location"]
+            # )
+            # db.add(new_application)
+        
+        # db.commit()
+        
+        return result
+    except Exception as e:
+        logger.error(f"Error in job automation: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to automate job applications: {str(e)}"
+        )
+
+@router.get("/applications", response_model=List[Dict[str, Any]])
+async def get_job_applications(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all job applications for the current user"""
+    try:
+        # This would typically query the database
+        # For now, return demo data
+        return [
+            {
+                "id": 1,
+                "job_title": "Software Developer",
+                "company": "Tech Solutions LLC",
+                "platform": "bayt",
+                "status": "applied",
+                "date_applied": "2023-10-15 14:30:00",
+                "location": "Dubai, UAE"
+            },
+            {
+                "id": 2,
+                "job_title": "Data Analyst",
+                "company": "Analytics Pro",
+                "platform": "indeed",
+                "status": "applied", 
+                "date_applied": "2023-10-16 09:45:00",
+                "location": "Dubai, UAE"
+            },
+            {
+                "id": 3,
+                "job_title": "Project Manager",
+                "company": "Global Systems",
+                "platform": "gulftalent",
+                "status": "applied",
+                "date_applied": "2023-10-16 11:20:00", 
+                "location": "Abu Dhabi, UAE"
+            },
+            {
+                "id": 4,
+                "job_title": "Senior Developer",
+                "company": "LinkedIn Corp",
+                "platform": "linkedin",
+                "status": "applied",
+                "date_applied": "2023-10-17 15:10:00",
+                "location": "Dubai, UAE"
+            }
+        ]
+    except Exception as e:
+        logger.error(f"Error retrieving job applications: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve job applications: {str(e)}"
         ) 

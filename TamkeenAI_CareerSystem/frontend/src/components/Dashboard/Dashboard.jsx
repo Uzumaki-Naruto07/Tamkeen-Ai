@@ -14,6 +14,7 @@ import {
   MenuItem,
   Fab
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { styled } from '@mui/material/styles';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
@@ -44,8 +45,14 @@ import OpportunityAlertCard from './OpportunityAlertCard';
 // Context
 import { useUser } from '../../context/AppContext';
 
-// Mock data for development
-import { mockDashboardData } from '../../utils/mockData/mockDataIndex';
+// Import mock data
+import { mockDashboardData } from '../../utils/app-mocks';
+
+// Import our new components
+import SkillTransitionChart from './SkillTransitionChart';
+import EmiratiJourneyMap from './EmiratiJourneyMap';
+import DashboardReportExporter from './DashboardReportExporter';
+import WinnerVibeBanner from './WinnerVibeBanner';
 
 // Styled components
 const WidgetContainer = styled(Paper)(({ theme }) => ({
@@ -203,6 +210,7 @@ const itemVariants = {
 
 const Dashboard = () => {
   const { profile, isAuthenticated } = useUser();
+  const { t } = useTranslation();
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -377,92 +385,69 @@ const Dashboard = () => {
   
   return (
     <Container maxWidth="xl">
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 3, mb: 2 }}>
+      <Box sx={{ my: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          Your Career Dashboard
+          {t('dashboard.title', 'Dashboard')}
         </Typography>
         
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title="Refresh data">
-            <IconButton onClick={refreshDashboard} color="primary">
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-          
-          <Tooltip title="Reset layout">
-            <IconButton onClick={resetLayout} color="primary">
-              <RestoreIcon />
-            </IconButton>
-          </Tooltip>
+        {/* Winner Vibe Banner */}
+        <Box sx={{ mb: 3 }}>
+          <WinnerVibeBanner />
         </Box>
+        
+        {/* First Row */}
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid item xs={12} md={8}>
+            <UserProgressCard />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <AIRecommendationCard />
+          </Grid>
+        </Grid>
+        
+        {/* Second Row - Add Skill Transition Chart with Nivo animations */}
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid item xs={12} md={8}>
+            <SkillTransitionChart />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <SkillGapAnalysis />
+          </Grid>
+        </Grid>
+        
+        {/* Third Row - Add Emirati Journey Map */}
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid item xs={12} md={7}>
+            <EmiratiJourneyMap />
+          </Grid>
+          <Grid item xs={12} md={5}>
+            <ActivityLogSection />
+          </Grid>
+        </Grid>
+        
+        {/* Fourth Row */}
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid item xs={12} md={6}>
+            <CareerPredictionSection />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <OpportunityAlertCard />
+          </Grid>
+        </Grid>
+        
+        {/* Fifth Row - Add Report Exporter */}
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <LeaderboardWidget />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <MarketInsightsSection />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <DashboardReportExporter />
+          </Grid>
+        </Grid>
       </Box>
-      
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <Droppable droppableId="dashboard">
-          {(provided) => (
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              {...provided.droppableProps}
-              ref={provided.innerRef}
-            >
-              <Grid container spacing={3}>
-                {widgetLayout
-                  .filter(widgetId => !hiddenWidgets.includes(widgetId))
-                  .map((widgetId, index) => {
-                    const widget = widgetMap[widgetId];
-                    if (!widget) return null;
-                    
-                    const WidgetComponent = widget.component;
-                    const componentProps = {
-                      [widget.propKey]: dashboardData ? dashboardData[widget.propKey] : null,
-                    };
-                    
-                    return (
-                      <Draggable key={widgetId} draggableId={widgetId} index={index}>
-                        {(provided) => (
-                          <Grid
-                            item
-                            xs={12}
-                            {...widget.defaultSize}
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            component={motion.div}
-                            variants={itemVariants}
-                          >
-                            <WidgetContainer>
-                              <WidgetControls className="widget-controls">
-                                <div {...provided.dragHandleProps}>
-                                  <Tooltip title="Drag to reorder">
-                                    <IconButton size="small">
-                                      <SettingsIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                </div>
-                                <Tooltip title="Hide widget">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => toggleWidgetVisibility(widgetId)}
-                                  >
-                                    <VisibilityOffIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              </WidgetControls>
-                              
-                              <WidgetComponent {...componentProps} />
-                            </WidgetContainer>
-                          </Grid>
-                        )}
-                      </Draggable>
-                    );
-                  })}
-                {provided.placeholder}
-              </Grid>
-            </motion.div>
-          )}
-        </Droppable>
-      </DragDropContext>
       
       {/* Add widget button */}
       <AddWidgetButton 

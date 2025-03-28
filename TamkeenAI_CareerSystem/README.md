@@ -1,3 +1,15 @@
+╔════════════════════════════════════════════════════════════╗
+║                                                            ║
+║  ████████╗ █████╗ ███╗   ███╗██╗  ██╗███████╗███████╗███╗   ██╗ ║
+║  ╚══██╔══╝██╔══██╗████╗ ████║██║ ██╔╝██╔════╝██╔════╝████╗  ██║ ║
+║     ██║   ███████║██╔████╔██║█████╔╝ █████╗  █████╗  ██╔██╗ ██║ ║
+║     ██║   ██╔══██║██║╚██╔╝██║██╔═██╗ ██╔══╝  ██╔══╝  ██║╚██╗██║ ║
+║     ██║   ██║  ██║██║ ╚═╝ ██║██║  ██╗███████╗███████╗██║ ╚████║ ║
+║     ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝ ║
+║                                                            ║
+║           Career Intelligence System - v1.0.0               ║
+╚════════════════════════════════════════════════════════════╝
+
 # TamkeenAI Career Intelligence System
 
 TamkeenAI is a comprehensive career empowerment system that helps users manage their entire career journey using AI-powered tools. From creating a professional profile to finding jobs, improving resumes, and preparing for interviews - TamkeenAI is the all-in-one solution.
@@ -13,6 +25,27 @@ TamkeenAI is a comprehensive career empowerment system that helps users manage t
 - **Interview Simulator**: Practice with AI-powered mock interviews and get feedback.
 - **AI Feedback Engine**: Receive personalized career insights and recommendations.
 - **Admin & Analytics**: Track user progress and system metrics (for administrators).
+
+## Job Application Automation
+
+TamkeenAI Career System includes job application automation features for multiple UAE job platforms:
+
+- Bayt.com
+- GulfTalent
+- Indeed UAE
+- Naukrigulf
+- Monster Gulf
+
+### IMPORTANT DISCLAIMER - LinkedIn Automation
+
+**PLEASE NOTE**: LinkedIn automation features are included in this codebase **EXCLUSIVELY FOR DEMONSTRATION PURPOSES** as part of a private competition submission. This implementation:
+
+- Is NOT meant for public use or distribution
+- Does NOT encourage violation of LinkedIn's Terms of Service
+- Should NOT be used in production environments
+- Respects that LinkedIn prohibits automated access to their platform
+
+In a production version of this application, we fully comply with LinkedIn's automation policies by not including any LinkedIn automation capabilities.
 
 ## Application Flow
 

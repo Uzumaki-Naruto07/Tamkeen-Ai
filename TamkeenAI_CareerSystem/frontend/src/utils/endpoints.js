@@ -37,6 +37,17 @@ export const JOB_ENDPOINTS = {
   SAVE: (id) => `${API_BASE_URL}/job/${id}/save`,
   UNSAVE: (id) => `${API_BASE_URL}/job/${id}/unsave`,
   GET_SAVED: `${API_BASE_URL}/job/saved`,
+  // Job application endpoints
+  GET_APPLICATIONS: `${API_BASE_URL}/job-application/history`,
+  APPLY: `${API_BASE_URL}/job-application/apply`,
+  AUTOMATE_APPLICATION: `${API_BASE_URL}/job-application/automate-application`,
+  BATCH_APPLY: `${API_BASE_URL}/job-application/batch-apply`,
+  GET_APPLICATION_SETTINGS: `${API_BASE_URL}/job-application/settings`,
+  UPDATE_APPLICATION_SETTINGS: `${API_BASE_URL}/job-application/settings/update`,
+  GET_APPLICATION_TEMPLATES: `${API_BASE_URL}/job-application/templates`,
+  CREATE_APPLICATION_TEMPLATE: `${API_BASE_URL}/job-application/templates/create`,
+  UPDATE_APPLICATION_TEMPLATE: (id) => `${API_BASE_URL}/job-application/templates/${id}`,
+  DELETE_APPLICATION_TEMPLATE: (id) => `${API_BASE_URL}/job-application/templates/${id}`,
 };
 
 // User endpoints

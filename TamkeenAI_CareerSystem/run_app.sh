@@ -62,8 +62,8 @@ is_port_in_use() {
 }
 
 # Check if ports are already in use
-if is_port_in_use 5000; then
-    echo -e "${RED}Error: Port 5000 is already in use. Backend cannot start.${NC}"
+if is_port_in_use 5001; then
+    echo -e "${RED}Error: Port 5001 is already in use. Backend cannot start.${NC}"
     exit 1
 fi
 
@@ -127,7 +127,7 @@ echo -e "${GREEN}Frontend server running with PID $FRONTEND_PID${NC}"
 # Print success message
 echo ""
 echo -e "${GREEN}=== TamkeenAI Career System is now running ===${NC}"
-echo -e "${BLUE}Backend server: ${GREEN}http://localhost:5000/api/health-check${NC}"
+echo -e "${BLUE}Backend server: ${GREEN}http://localhost:5001/api/health-check${NC}"
 echo -e "${BLUE}Frontend app: ${GREEN}http://localhost:3000${NC}"
 echo ""
 echo -e "${YELLOW}Press Ctrl+C to stop both servers${NC}"

@@ -50,9 +50,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
 // Context
 import { useUser } from '../../context/AppContext';
-
-// Logo
-import logo from '../../assets/images/logo.png';
+import logoSrc from '../../assets/images/logo.js';
 
 // Styled components
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
@@ -336,7 +334,7 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
                 >
                   <MenuIcon />
                 </IconButton>
-                <LogoImage src={logo} alt="TamkeenAI Logo" />
+                <LogoImage src={logoSrc} alt="TamkeenAI Logo" />
                 <Typography variant="h6" component="div">
                   TamkeenAI
         </Typography>
@@ -347,7 +345,7 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
             {!isMobile && (
               <>
                 <LogoContainer>
-                  <LogoImage src={logo} alt="TamkeenAI Logo" />
+                  <LogoImage src={logoSrc} alt="TamkeenAI Logo" />
                   <Typography variant="h6" component="div">
                     TamkeenAI
                   </Typography>

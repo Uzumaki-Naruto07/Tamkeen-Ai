@@ -172,7 +172,7 @@ const AppContent = () => {
       <CssBaseline />
       <ThemeContextProvider>
         <ToastProvider>
-          <RTL enabled={language === 'ar'}>
+          <RTL direction={language === 'ar' ? 'rtl' : 'ltr'}>
             <div className={`${theme === 'dark' ? 'dark' : ''}`}>
               <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200">
                 <ScrollToTop />
