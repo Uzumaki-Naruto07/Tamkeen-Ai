@@ -1,115 +1,185 @@
-import logging
-import os
-import re
-from typing import Dict, List, Any
+"""
+Resume processing services for the API.
+"""
 
-# Configure logging
+import logging
+import re
+
 logger = logging.getLogger(__name__)
 
-def analyze_resume(file_path: str, job_title: str = '') -> Dict[str, Any]:
+def analyze_resume(file_path, job_title=""):
     """
-    Analyze a resume and provide feedback
+    Analyze a resume and provide feedback.
     
     Args:
-        file_path: Path to the resume file
-        job_title: Optional job title to compare against
+        file_path (str): Path to the resume file
+        job_title (str): Optional job title to tailor analysis
         
     Returns:
-        Dict with analysis results
+        dict: Analysis results
     """
-    logger.info(f"Analyzing resume for job: {job_title if job_title else 'Not specified'}")
-    
-    # Placeholder for actual implementation
-    # In a real scenario, this would use ML models to analyze the resume
-    
-    # Simulate analysis results
-    return {
-        "ats_score": 85,
-        "keyword_match": 78,
-        "missing_keywords": ["team leadership", "project management"] if job_title else [],
-        "format_issues": {
-            "has_header": True,
-            "has_contact_info": True,
-            "has_education": True,
-            "has_experience": True,
-            "has_skills": True
-        },
-        "content_feedback": {
-            "summary": "Your resume is generally good but could use more specific achievements.",
-            "improvements": [
-                "Add quantifiable achievements",
-                "Use more action verbs",
-                "Tailor skills to the job description"
-            ]
-        },
-        "skills_identified": [
-            "Python", "JavaScript", "Data Analysis", "Project Management"
-        ]
-    }
+    try:
+        # Read the file
+        with open(file_path, 'r', errors='ignore') as f:
+            content = f.read()
+        
+        # Analyze content (placeholder implementation)
+        
+        # Basic analysis
+        word_count = len(content.split())
+        
+        # Detect skills (simple approach)
+        skills = extract_skills_from_resume(file_path)
+        
+        # Calculate basic metrics
+        metrics = {
+            'word_count': word_count,
+            'skill_count': len(skills),
+            'readability_score': 70,  # Placeholder score
+            'keyword_relevance': 65,  # Placeholder score
+        }
+        
+        # Generate feedback (placeholder)
+        feedback = []
+        
+        if word_count < 300:
+            feedback.append("Your resume is quite short. Consider adding more details about your experience.")
+        elif word_count > 1000:
+            feedback.append("Your resume is quite long. Consider making it more concise.")
+            
+        if len(skills) < 5:
+            feedback.append("Consider highlighting more skills relevant to your field.")
+            
+        # Sample strengths
+        strengths = ["Well-structured format", "Good use of action verbs"]
+        
+        # Return analysis
+        return {
+            'success': True,
+            'metrics': metrics,
+            'skills': skills,
+            'feedback': feedback,
+            'strengths': strengths,
+            'job_match': job_title_match(content, job_title) if job_title else None
+        }
+    except Exception as e:
+        logger.error(f"Error analyzing resume: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
-def improve_resume(resume_text: str, job_title: str = '') -> Dict[str, Any]:
+def improve_resume(resume_text, job_title=""):
     """
-    Generate suggestions to improve a resume
+    Generate suggestions to improve a resume.
     
     Args:
-        resume_text: The text content of the resume
-        job_title: Optional job title to target
+        resume_text (str): Resume text content
+        job_title (str): Optional job title to tailor suggestions
         
     Returns:
-        Dict with improvement suggestions
+        dict: Improvement suggestions
     """
-    logger.info(f"Generating improvements for resume targeting: {job_title if job_title else 'Not specified'}")
-    
-    # Placeholder for actual implementation
-    # In a real scenario, this would use LLMs to generate specific improvements
-    
-    # Simulate improvement suggestions
-    return {
-        "improved_sections": {
-            "summary": "Results-driven software engineer with 5+ years of experience developing scalable applications and optimizing system performance. Skilled in Python, JavaScript, and cloud architecture with a proven track record of reducing system costs by 30% and improving application response times by 40%.",
-            "experience_bullets": [
-                "Led a team of 5 developers to deliver a mission-critical application that increased customer engagement by 45%",
-                "Optimized database queries resulting in 30% faster application response time",
-                "Implemented automated testing framework reducing bug reports by 60%"
-            ]
-        },
-        "keyword_suggestions": [
-            "full-stack development",
-            "agile methodology",
-            "system architecture"
-        ],
-        "overall_suggestions": [
-            "Quantify achievements with specific numbers and percentages",
-            "Add more technical keywords relevant to the job posting",
-            "Structure your experience in the STAR format (Situation, Task, Action, Result)"
+    try:
+        # Simple analysis (placeholder implementation)
+        
+        # Generate suggestions
+        suggestions = [
+            "Use more action verbs to describe your achievements",
+            "Quantify your achievements with metrics when possible",
+            "Ensure your skills section is prominent and tailored to the job",
+            "Make sure your contact information is up-to-date and professional"
         ]
-    }
+        
+        # Generate sample before/after examples
+        examples = [
+            {
+                'before': "Responsible for managing team projects",
+                'after': "Led cross-functional team of 5 members, delivering 3 major projects on time and under budget"
+            },
+            {
+                'before': "Helped improve company sales",
+                'after': "Increased quarterly sales by 15% through implementation of targeted marketing strategies"
+            }
+        ]
+        
+        # Return suggestions
+        return {
+            'success': True,
+            'suggestions': suggestions,
+            'examples': examples,
+            'job_match': job_title_match(resume_text, job_title) if job_title else None
+        }
+    except Exception as e:
+        logger.error(f"Error generating resume improvements: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
-def extract_skills_from_resume(file_path: str) -> List[str]:
+def extract_skills_from_resume(file_path):
     """
-    Extract skills from a resume file
+    Extract skills from a resume.
     
     Args:
-        file_path: Path to the resume file
+        file_path (str): Path to the resume file
         
     Returns:
-        List of identified skills
+        list: Extracted skills
     """
-    logger.info(f"Extracting skills from resume at {file_path}")
+    try:
+        # Read the file
+        with open(file_path, 'r', errors='ignore') as f:
+            content = f.read()
+        
+        # List of common skills (placeholder - a real implementation would use NLP and a skills database)
+        common_skills = [
+            "Python", "Java", "JavaScript", "C++", "C#", "SQL", "HTML", "CSS",
+            "React", "Angular", "Vue.js", "Node.js", "Django", "Flask", "Spring",
+            "Machine Learning", "Data Analysis", "AI", "Cloud Computing", "AWS",
+            "Azure", "Google Cloud", "Docker", "Kubernetes", "DevOps", "CI/CD",
+            "Agile", "Scrum", "Project Management", "Leadership", "Communication"
+        ]
+        
+        # Extract skills that appear in the content
+        skills = []
+        for skill in common_skills:
+            if re.search(r'\b' + re.escape(skill) + r'\b', content, re.IGNORECASE):
+                skills.append(skill)
+        
+        return skills
+    except Exception as e:
+        logger.error(f"Error extracting skills: {str(e)}")
+        return []
+
+def job_title_match(resume_text, job_title):
+    """
+    Evaluate how well a resume matches a job title.
     
-    # Placeholder for actual implementation
-    # In a real scenario, this would use NLP to extract skills from the document
+    Args:
+        resume_text (str): Resume text content
+        job_title (str): Job title to match against
+        
+    Returns:
+        dict: Match evaluation
+    """
+    # Simple placeholder implementation
+    # In a real app, this would use more sophisticated matching algorithms
     
-    # Simulate extracted skills
-    return [
-        "Python",
-        "JavaScript",
-        "React",
-        "Node.js",
-        "SQL",
-        "Data Analysis",
-        "Project Management",
-        "Agile Development",
-        "Cloud Architecture",
-        "API Development"
-    ] 
+    job_title = job_title.lower()
+    resume_text = resume_text.lower()
+    
+    # Check if job title appears in resume
+    contains_title = job_title in resume_text
+    
+    # Simple relevance score (placeholder)
+    relevance = 75 if contains_title else 50
+    
+    return {
+        'match_percentage': relevance,
+        'contains_job_title': contains_title,
+        'recommendations': [
+            "Add specific keywords from the job description",
+            "Highlight experience most relevant to the target position"
+        ]
+    } 

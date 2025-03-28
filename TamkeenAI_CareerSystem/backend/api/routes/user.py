@@ -6,10 +6,10 @@ This module provides API routes for user management and profiles.
 
 import logging
 from flask import Blueprint, request, jsonify, g
-from backend.utils.auth import hash_password, validate_password_strength
-from backend.database.models import User, UserActivity
-from backend.utils.date_utils import now
-from backend.app import require_auth, require_role
+from api.utils.auth import hash_password, validate_password_strength
+from api.database.models import User, UserActivity
+from api.utils.date_utils import now
+from api.app import require_auth, require_role
 
 # Setup logger
 logger = logging.getLogger(__name__)

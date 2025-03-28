@@ -9,17 +9,17 @@ from flask import Blueprint, request, jsonify, g
 from datetime import datetime
 
 # Import utilities
-from backend.utils.date_utils import now, format_date
-from backend.utils.cache_utils import cache_result
+from api.utils.date_utils import now, format_date
+from api.utils.cache_utils import cache_result
 
 # Import database models
-from backend.database.models import Job, JobApplication, User
+from api.database.models import Job, JobApplication, User
 
 # Import core modules
-from backend.core.job_matching import JobMatcher
+from api.core.job_matching import JobMatcher
 
 # Import auth decorators
-from backend.app import require_auth, require_role
+from api.app import require_auth, require_role
 
 # Setup logger
 logger = logging.getLogger(__name__)
