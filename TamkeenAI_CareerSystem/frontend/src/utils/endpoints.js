@@ -52,23 +52,31 @@ export const JOB_ENDPOINTS = {
 
 // User endpoints
 export const USER_ENDPOINTS = {
-  UPDATE_PROFILE: `${API_BASE_URL}/user/profile`,
-  GET_PROFILE: `${API_BASE_URL}/user/profile`,
-  CHANGE_PASSWORD: `${API_BASE_URL}/user/change-password`,
+  PROFILE: `${API_BASE_URL}/user/profile`,
 };
 
 // Health check
-export const HEALTH_CHECK = `${API_BASE_URL}/health-check`;
+export const SYSTEM_ENDPOINTS = {
+  HEALTH_CHECK: `${API_BASE_URL}/health-check`,
+};
 
 // Dashboard endpoints
 export const DASHBOARD_ENDPOINTS = {
   GET_DATA: (userId) => `${API_BASE_URL}/dashboard/${userId}`,
-  UPDATE_SKILLS: (userId) => `${API_BASE_URL}/dashboard/${userId}/skills`,
-  TRACK_ACTIVITY: (userId) => `${API_BASE_URL}/dashboard/${userId}/activity`,
-  UPDATE_STATS: (userId) => `${API_BASE_URL}/dashboard/${userId}/stats`,
 };
 
 // Admin endpoints
 export const ADMIN_ENDPOINTS = {
   ANALYTICS_DASHBOARD: `${API_BASE_URL}/analytics/dashboard`,
 };
+
+// Export all endpoints
+export const apiEndpoints = {
+  auth: AUTH_ENDPOINTS,
+  user: USER_ENDPOINTS,
+  dashboard: DASHBOARD_ENDPOINTS,
+  jobs: JOB_ENDPOINTS,
+  system: SYSTEM_ENDPOINTS,
+};
+
+export default apiEndpoints;

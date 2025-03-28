@@ -65,7 +65,7 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useUser, useResume } from './AppContext';
-import apiEndpoints from '../utils/api';
+import apiEndpoints from '../utils/endpoints';
 
 // Import mock data
 import { jobApplicationsMock, automationSettingsMock } from '../utils/app-mocks';
@@ -152,15 +152,16 @@ const JobApplicationAutomation = () => {
   
   // Fetch application history
   useEffect(() => {
-    // Simulate API call with mock data
     const fetchApplicationHistory = async () => {
       try {
-        // Simulate network delay
         setLoading(true);
-        setTimeout(() => {
-          setApplicationHistory(jobApplicationsMock.recentApplications);
-          setLoading(false);
-        }, 800);
+        const response = await fetch(apiEndpoints.jobs.GET_APPLICATIONS);
+        if (!response.ok) {
+          throw new Error(`Error fetching application history: ${response.statusText}`);
+        }
+        const data = await response.json();
+        setApplicationHistory(data.data || []);
+        setLoading(false);
       } catch (err) {
         console.error('Error fetching application history:', err);
         setLoading(false);
@@ -306,38 +307,40 @@ const JobApplicationAutomation = () => {
         platform_credentials: credentials
       };
       
-      // Use mock data instead of an actual API call
-      setTimeout(() => {
-        const mockResponse = {
-          success: true,
-          applications: jobApplicationsMock.automationHistory[0].jobsApplied,
-          application_strategy: "Targeted applications based on skill match and job requirements",
-          total_applications: jobApplicationsMock.automationHistory[0].jobsApplied,
-          platforms_accessed: enabledPlatforms.map(p => p.name),
-          job_matches: jobApplicationsMock.automationHistory[0].matches
-        };
+      // Make API call to automate job applications
+      const response = await fetch(apiEndpoints.jobs.AUTOMATE_APPLICATION, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      }
+      
+      const responseData = await response.json();
+      setResults(responseData.data);
+      setLoading(false);
+      
+      // Update application history with the new results (if needed)
+      if (responseData.data.job_matches) {
+        const newApplications = responseData.data.job_matches.map((match, index) => ({
+          id: `new-app-${index}`,
+          jobTitle: match.jobTitle,
+          company: match.company,
+          location: "Dubai, UAE",
+          appliedDate: new Date().toISOString().split('T')[0],
+          status: "Applied",
+          matchScore: match.matchScore,
+          platform: enabledPlatforms[0].name,
+          responseRate: "Pending",
+          estimatedResponse: "7-10 days"
+        }));
         
-        setResults(mockResponse);
-        setLoading(false);
-        
-        // Update application history with the new results
-        setApplicationHistory([
-          ...jobApplicationsMock.automationHistory[0].matches.map((match, index) => ({
-            id: `new-app-${index}`,
-            jobTitle: match.jobTitle,
-            company: match.company,
-            location: "Dubai, UAE",
-            appliedDate: new Date().toISOString().split('T')[0],
-            status: "Applied",
-            matchScore: match.matchScore,
-            platform: enabledPlatforms[0].name,
-            responseRate: "Pending",
-            estimatedResponse: "7-10 days"
-          })),
-          ...applicationHistory
-        ]);
-        
-      }, 3000); // Simulate a 3 second API call
+        setApplicationHistory([...newApplications, ...applicationHistory]);
+      }
     } catch (err) {
       setError(err.message);
       setLoading(false);

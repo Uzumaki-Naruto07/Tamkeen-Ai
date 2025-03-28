@@ -107,3 +107,47 @@ def parse_query_params(params, defaults=None):
             result[key] = value
     
     return result
+
+
+def validate_request(request_data, required_fields=None, optional_fields=None):
+    """
+    Validate request data against required and optional fields.
+    
+    Args:
+        request_data: Request data to validate
+        required_fields: List of required field names
+        optional_fields: List of optional field names
+        
+    Returns:
+        Tuple of (is_valid, errors, validated_data)
+    """
+    if required_fields is None:
+        required_fields = []
+    
+    if optional_fields is None:
+        optional_fields = []
+    
+    errors = []
+    validated_data = {}
+    
+    # Check for required fields
+    for field in required_fields:
+        if field not in request_data or request_data[field] is None:
+            errors.append(f"Missing required field: {field}")
+        else:
+            validated_data[field] = request_data[field]
+    
+    # Include optional fields if present
+    for field in optional_fields:
+        if field in request_data and request_data[field] is not None:
+            validated_data[field] = request_data[field]
+    
+    # Check for unexpected fields
+    allowed_fields = set(required_fields + optional_fields)
+    for field in request_data:
+        if field not in allowed_fields:
+            logger.warning(f"Unexpected field in request: {field}")
+    
+    is_valid = len(errors) == 0
+    
+    return is_valid, errors, validated_data
