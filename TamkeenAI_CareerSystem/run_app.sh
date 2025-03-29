@@ -47,6 +47,12 @@ fi
 
 echo -e "${GREEN}All dependencies found!${NC}"
 
+# Start MongoDB
+echo -e "${BLUE}Checking MongoDB status...${NC}"
+# Make the script executable if needed
+chmod +x ./start_mongodb.sh
+./start_mongodb.sh
+
 # Function to check if a process is running on the port
 is_port_in_use() {
     if command -v lsof &> /dev/null; then

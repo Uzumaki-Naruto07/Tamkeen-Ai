@@ -14,6 +14,15 @@ from logging.handlers import RotatingFileHandler
 from .routes.auth_routes import auth_bp
 from .middleware.auth import jwt_required, role_required
 
+# Add these functions for compatibility with resume_routes.py
+def require_auth(f):
+    """Compatibility wrapper for jwt_required"""
+    return jwt_required(f)
+
+def require_role(roles):
+    """Compatibility wrapper for role_required"""
+    return role_required(roles)
+
 def create_app(config=None):
     """Create and configure the Flask application
 

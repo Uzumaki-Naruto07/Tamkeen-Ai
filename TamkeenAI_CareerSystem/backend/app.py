@@ -5,6 +5,8 @@ import argparse
 from dotenv import load_dotenv
 import logging
 import importlib
+import jwt
+from logging.handlers import RotatingFileHandler
 
 # Import routes
 from api.routes.user_routes import user_bp
@@ -33,6 +35,24 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# Import the resume_bp blueprint
+try:
+    from api.routes.resume_routes import resume_bp
+except ImportError as e:
+    print(f"Warning: Could not import resume_routes: {e}")
+    resume_bp = None
+
+from api.middleware.auth import jwt_required, role_required
+
+# Add these functions for compatibility with resume_routes.py
+def require_auth(f):
+    """Compatibility wrapper for jwt_required"""
+    return jwt_required(f)
+
+def require_role(roles):
+    """Compatibility wrapper for role_required"""
+    return role_required(roles)
 
 def create_app():
     """Create and configure the Flask application"""

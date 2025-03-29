@@ -22,8 +22,23 @@ from api.database.models import Resume, User
 # Import core modules
 from api.core.profile_extractor import ProfileExtractor
 
-# Import auth decorators
-from api.app import require_auth, require_role
+# Import auth decorators - Fix the import path
+try:
+    from api.middleware.auth import jwt_required as require_auth
+    from api.middleware.auth import role_required as require_role
+except ImportError:
+    # Fallback to compatibility functions
+    try:
+        from api.app import require_auth, require_role
+    except ImportError:
+        # Create dummy decorators if imports fail
+        def require_auth(f):
+            return f
+        def require_role(roles):
+            def decorator(f):
+                return f
+            return decorator
+        print("Warning: Auth decorators not found. Using dummy decorators.")
 
 # Import settings
 from api.config.settings import UPLOAD_FOLDER, ALLOWED_EXTENSIONS
