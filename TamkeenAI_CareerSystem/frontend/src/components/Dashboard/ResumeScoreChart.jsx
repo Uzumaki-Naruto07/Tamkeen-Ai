@@ -8,20 +8,27 @@ import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 
-const ResumeScoreChart = ({ resumeScores, onGenerateImprovement }) => {
-  const { scores, average_improvement, latest_score, total_versions, 
-          keywordMatches = [], missingKeywords = [] } = resumeScores;
+const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
+  // Safely handle undefined resumeData with default values
+  const { 
+    scores = [], 
+    average_improvement = 0, 
+    latest_score = 0, 
+    total_versions = 0, 
+    keywordMatches = [], 
+    missingKeywords = [] 
+  } = resumeData || {};
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [improvementOpen, setImprovementOpen] = useState(false);
   const [generatedImprovements, setGeneratedImprovements] = useState(null);
   
-  // Format data for chart
-  const chartData = scores.map(score => ({
+  // Format data for chart - ensure scores has items before mapping
+  const chartData = scores && scores.length > 0 ? scores.map(score => ({
     name: `V${score.version}`,
     score: score.score,
     date: new Date(score.date).toLocaleDateString()
-  }));
+  })) : [];
   
   // Determine trend icon
   const getTrendIcon = () => {
@@ -73,6 +80,22 @@ const ResumeScoreChart = ({ resumeScores, onGenerateImprovement }) => {
     if (score > 4) return '#ffc658';
     return '#e0e0e0';
   };
+
+  // If no data available, show a message
+  if (!resumeData || !scores || scores.length === 0) {
+    return (
+      <Card sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CardContent>
+          <Typography variant="h6" align="center">
+            No resume score data available
+          </Typography>
+          <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
+            Upload your resume to get an ATS score and recommendations
+          </Typography>
+        </CardContent>
+      </Card>
+    );
+  }
   
   return (
     <Card sx={{ height: '100%' }}>
@@ -87,7 +110,7 @@ const ResumeScoreChart = ({ resumeScores, onGenerateImprovement }) => {
             />
             <Chip 
               icon={getTrendIcon()} 
-              label={`${average_improvement > 0 ? '+' : ''}${average_improvement.toFixed(1)} avg`} 
+              label={`${average_improvement > 0 ? '+' : ''}${average_improvement && average_improvement.toFixed ? average_improvement.toFixed(1) : '0.0'} avg`} 
               color={getTrendColor()} 
               variant="outlined" 
             />
@@ -102,7 +125,7 @@ const ResumeScoreChart = ({ resumeScores, onGenerateImprovement }) => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis domain={[0, 100]} />
-                  <Tooltip content={<CustomTooltip />} />
+                  <ChartTooltip content={<CustomTooltip />} />
                   <Line 
                     type="monotone" 
                     dataKey="score" 
@@ -189,11 +212,13 @@ const ResumeScoreChart = ({ resumeScores, onGenerateImprovement }) => {
                 {missingKeywords.map((keyword, index) => (
                   <ListItem key={index}>
                     <Tooltip title={`Suggestion: Add to ${keyword.suggestedSection || 'relevant section'}`}>
-                      <ListItemText 
-                        primary={keyword.text} 
-                        secondary={`Importance: ${keyword.importance || 'High'}`}
-                        sx={{ '& .MuiListItemText-primary': { color: 'warning.main' } }}
-                      />
+                      <Box>
+                        <ListItemText 
+                          primary={keyword.text} 
+                          secondary={`Importance: ${keyword.importance || 'High'}`}
+                          sx={{ '& .MuiListItemText-primary': { color: 'warning.main' } }}
+                        />
+                      </Box>
                     </Tooltip>
                   </ListItem>
                 ))}

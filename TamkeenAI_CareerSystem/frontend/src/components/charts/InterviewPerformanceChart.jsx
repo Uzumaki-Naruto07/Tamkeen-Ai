@@ -3,7 +3,7 @@ import {
   RadialBarChart,
   RadialBar,
   Legend,
-  Tooltip,
+  Tooltip as ChartTooltip,
   ResponsiveContainer
 } from 'recharts';
 import { useAppContext } from '../../context/AppContext';
@@ -76,7 +76,7 @@ const InterviewPerformanceChart = ({ data, height = 400, className = '' }) => {
             minAngle={15}
             clockWise
           />
-          <Tooltip content={<CustomTooltip />} />
+          <ChartTooltip content={<CustomTooltip />} />
           <Legend 
             iconSize={10} 
             layout="vertical" 

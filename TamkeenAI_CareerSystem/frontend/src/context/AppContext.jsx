@@ -17,8 +17,33 @@ export const useUser = () => {
     throw new Error('useUser must be used within an AppContextProvider');
   }
   
-  const { user, profile, updateUserProfile, loading } = context;
-  return { user, profile, updateUserProfile, loading };
+  const { 
+    user, 
+    profile, 
+    updateUserProfile, 
+    loading, 
+    login, 
+    logout, 
+    register, 
+    error,
+    userRoles 
+  } = context;
+  
+  // Add isAuthenticated computed property
+  const isAuthenticated = !!user;
+  
+  return { 
+    user, 
+    profile, 
+    updateUserProfile, 
+    loading, 
+    login, 
+    logout, 
+    register, 
+    error,
+    userRoles,
+    isAuthenticated
+  };
 };
 
 // Provider component

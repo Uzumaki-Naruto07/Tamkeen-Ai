@@ -239,8 +239,147 @@ const Dashboard = () => {
         setDashboardData(response.data.data);
       } catch (err) {
         console.warn('Using mock data due to API error:', err);
-        // Fall back to mock data
-        setDashboardData(mockDashboardData);
+        // Fall back to mock data with fallback defaults for all required properties
+        const fallbackData = {
+          // Ensure mock data has all required properties with defaults
+          progress: {
+            overall: 65,
+            resume: 80,
+            skills: 70,
+            applications: 50,
+            interviews: 60,
+            networking: 55,
+            goals: [
+              { id: 1, name: 'Complete profile', progress: 100, completed: "true", unlocked: "true" },
+              { id: 2, name: 'Apply to 5 jobs', progress: 60, completed: "false", unlocked: "true" },
+              { id: 3, name: 'Update resume', progress: 80, completed: "false", unlocked: "true" }
+            ],
+            nextSteps: ['Update LinkedIn profile', 'Practice interview skills']
+          },
+          resumeScore: {
+            overall: 75,
+            sections: {
+              content: 80,
+              format: 75,
+              keywords: 70,
+              impact: 65
+            },
+            scores: [
+              { name: 'Content', value: 80 },
+              { name: 'Format', value: 75 },
+              { name: 'Keywords', value: 70 },
+              { name: 'Impact', value: 65 }
+            ]
+          },
+          resumeHistory: [
+            { date: '2023-04-01', score: 65 },
+            { date: '2023-05-01', score: 70 },
+            { date: '2023-06-01', score: 75 }
+          ],
+          currentSkills: ['React', 'JavaScript', 'CSS', 'HTML', 'Node.js'],
+          requiredSkills: ['React', 'JavaScript', 'TypeScript', 'Next.js', 'GraphQL'],
+          targetRole: 'Frontend Developer',
+          recommendations: [
+            { 
+              id: 1, 
+              type: 'skill', 
+              title: 'Learn TypeScript', 
+              description: 'Adding TypeScript to your skillset would make you more competitive for Frontend Developer roles.',
+              priority: 'high'
+            },
+            { 
+              id: 2, 
+              type: 'course', 
+              title: 'Next.js Fundamentals', 
+              description: 'Next.js is becoming a standard for React applications.',
+              priority: 'medium'
+            }
+          ],
+          careerMilestones: [
+            { id: 1, title: 'Graduated from University', date: '2020-05-15', type: 'education', completed: true },
+            { id: 2, title: 'First Developer Job', date: '2020-08-01', type: 'job', completed: true },
+            { id: 3, title: 'Senior Developer', date: '2023-12-01', type: 'job', completed: false }
+          ],
+          badges: [
+            { id: 1, title: 'Profile Completer', description: 'Completed your profile', earned: true, date: '2023-03-15' },
+            { id: 2, title: 'Resume Master', description: 'Achieved a resume score over 70', earned: true, date: '2023-04-10' }
+          ],
+          careerPredictions: [
+            { role: 'Senior Frontend Developer', likelihood: 85, timeframe: '1-2 years', salary: '$100,000 - $120,000' },
+            { role: 'Frontend Team Lead', likelihood: 65, timeframe: '2-3 years', salary: '$120,000 - $140,000' }
+          ],
+          learningPaths: [
+            { 
+              id: 1, 
+              title: 'Frontend Mastery', 
+              progress: 45, 
+              courses: [
+                { id: 101, title: 'Advanced React Patterns', completed: true },
+                { id: 102, title: 'TypeScript for React Developers', completed: false }
+              ]
+            }
+          ],
+          marketInsights: {
+            salary_data: {
+              current_role: { min: 85000, max: 110000, avg: 95000 },
+              target_role: { min: 100000, max: 130000, avg: 115000 }
+            },
+            demand_trends: [
+              { skill: 'React', demand: 'High', growth: '+15%' },
+              { skill: 'TypeScript', demand: 'High', growth: '+20%' }
+            ],
+            job_market: { 
+              openings: 1500, 
+              competition: 'Medium',
+              cities: [
+                { name: 'San Francisco', openings: 350 },
+                { name: 'New York', openings: 300 }
+              ]
+            }
+          },
+          topUsers: [
+            { id: 1, name: 'Alex Johnson', points: 1250, badges: 8, avatar: '' },
+            { id: 2, name: 'Sam Martinez', points: 1150, badges: 7, avatar: '' }
+          ],
+          recentActivities: [
+            { id: 1, type: 'resume', action: 'Updated resume', date: '2023-06-01T10:30:00Z' },
+            { id: 2, type: 'application', action: 'Applied to Frontend Developer at TechCorp', date: '2023-05-28T14:45:00Z' }
+          ],
+          opportunities: {
+            jobs: [
+              { 
+                id: 101, 
+                title: 'Senior Frontend Developer', 
+                company: 'TechCorp', 
+                location: 'Remote',
+                match: 92,
+                posted: '2023-05-25T00:00:00Z',
+                saved: false
+              }
+            ],
+            courses: [
+              {
+                id: 201,
+                title: 'GraphQL Fundamentals',
+                provider: 'Udemy',
+                duration: '10 hours',
+                match: 88,
+                saved: true
+              }
+            ]
+          },
+          learningRoadmap: {
+            current_level: 'Intermediate',
+            target_level: 'Advanced',
+            steps: [
+              { id: 1, title: 'Complete TypeScript Course', completed: false },
+              { id: 2, title: 'Build 3 Next.js Projects', completed: false }
+            ]
+          },
+          last_updated: new Date().toISOString()
+        };
+        // Merge with any existing mockDashboardData
+        setDashboardData({...mockDashboardData, ...fallbackData});
       }
       
       // Load saved layout if available
@@ -661,6 +800,106 @@ const Dashboard = () => {
     navigate('/login');
   };
   
+  // Compute visible widgets - ensure it doesn't fail if dashboardLayout is null
+  const visibleWidgets = dashboardLayout 
+    ? dashboardLayout.filter(widgetId => !hiddenWidgets.includes(widgetId))
+    : [];
+    
+  // Get props for a specific widget
+  const getWidgetProps = (widgetId) => {
+    if (!dashboardData) return { isEmpty: true };
+    
+    // Add default structure for every widget to prevent errors
+    const defaultData = {
+      progress: {
+        overall: 0,
+        resume: 0,
+        skills: 0,
+        applications: 0,
+        interviews: 0,
+        networking: 0,
+        goals: [],
+        nextSteps: []
+      },
+      resumeScore: {
+        overall: 0,
+        sections: { content: 0, format: 0, keywords: 0, impact: 0 },
+        scores: [
+          { name: 'Content', value: 0 },
+          { name: 'Format', value: 0 },
+          { name: 'Keywords', value: 0 },
+          { name: 'Impact', value: 0 }
+        ]
+      },
+      resumeHistory: [],
+      currentSkills: [],
+      requiredSkills: [],
+      targetRole: 'Not specified',
+      recommendations: [],
+      careerMilestones: [],
+      badges: [],
+      careerPredictions: [],
+      learningPaths: [],
+      marketInsights: {
+        salary_data: {
+          current_role: { min: 0, max: 0, avg: 0 },
+          target_role: { min: 0, max: 0, avg: 0 }
+        },
+        demand_trends: [],
+        job_market: { openings: 0, competition: 'Low', cities: [] }
+      },
+      topUsers: [],
+      recentActivities: [],
+      opportunities: { jobs: [], courses: [] },
+      learningRoadmap: { current_level: '', target_level: '', steps: [] }
+    };
+    
+    // Merge default data with actual data
+    const safeData = { ...defaultData, ...dashboardData };
+    
+    switch (widgetId) {
+      case 'userProgress':
+        return { data: safeData.progress || defaultData.progress };
+      case 'resumeScore':
+        return { 
+          score: safeData.resumeScore || defaultData.resumeScore,
+          history: safeData.resumeHistory || defaultData.resumeHistory,
+          resumeScores: safeData.resumeScore || defaultData.resumeScore // Add this for backward compatibility
+        };
+      case 'skillGap':
+        return { 
+          currentSkills: safeData.currentSkills || defaultData.currentSkills, 
+          requiredSkills: safeData.requiredSkills || defaultData.requiredSkills,
+          targetRole: safeData.targetRole || defaultData.targetRole
+        };
+      case 'aiRecommendation':
+        return { recommendations: safeData.recommendations || defaultData.recommendations };
+      case 'careerJourney':
+        return { milestones: safeData.careerMilestones || defaultData.careerMilestones };
+      case 'badges':
+        return { badges: safeData.badges || defaultData.badges };
+      case 'careerPrediction':
+        return { predictions: safeData.careerPredictions || defaultData.careerPredictions };
+      case 'learningPaths':
+        return { paths: safeData.learningPaths || defaultData.learningPaths };
+      case 'marketInsights':
+        return { 
+          insights: safeData.marketInsights || defaultData.marketInsights,
+          marketInsights: safeData.marketInsights || defaultData.marketInsights // Add this for backward compatibility
+        };
+      case 'leaderboard':
+        return { users: safeData.topUsers || defaultData.topUsers };
+      case 'activityLog':
+        return { activities: safeData.recentActivities || defaultData.recentActivities };
+      case 'opportunityAlert':
+        return { opportunities: safeData.opportunities || defaultData.opportunities };
+      case 'learningRoadmap':
+        return { roadmap: safeData.learningRoadmap || defaultData.learningRoadmap };
+      default:
+        return {};
+    }
+  };
+  
   // Main render
   if (loading && !dashboardData) {
     return (
@@ -688,62 +927,25 @@ const Dashboard = () => {
     );
   }
   
-  // Create a fallback if we don't have dashboardData for some reason
-  if (!dashboardData) {
-    // Force load mock data as fallback
-    console.warn('No dashboard data available, using fallback data');
-    const fallbackData = mockDashboardData;
-    setDashboardData(fallbackData);
-    
+  // Show message if no data is available (unexpected state)
+  if (!dashboardData || !dashboardLayout) {
     return (
-      <Container maxWidth="xl">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Dashboard (Fallback Mode)
-          </Typography>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<LogoutIcon />}
-            onClick={handleLogout}
+      <Container maxWidth="lg" sx={{ pt: 4, pb: 8 }}>
+        <Alert severity="warning" sx={{ mt: 4 }}>
+          No dashboard data available. Try refreshing the page.
+          <Button 
+            onClick={fetchDashboardData} 
+            variant="outlined" 
+            size="small" 
+            startIcon={<RefreshIcon />} 
+            sx={{ ml: 2 }}
           >
-            Logout
+            Refresh
           </Button>
-        </Box>
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          Using fallback data. Some features may be limited.
         </Alert>
-        <Button variant="contained" onClick={refreshDashboard}>
-          Refresh Dashboard
-        </Button>
       </Container>
     );
   }
-  
-  // Get visible widgets
-  const visibleWidgets = dashboardLayout?.filter(id => !hiddenWidgets.includes(id)) || [];
-  
-  // Get corresponding props based on widget type
-  const getWidgetProps = (widgetId) => {
-    // Map widget IDs to the correct data properties in dashboardData
-    const propsMap = {
-      userProgress: dashboardData?.userProgress,
-      resumeScore: dashboardData?.resumeScores,
-      skillGap: dashboardData?.skillGap || {},
-      aiRecommendation: dashboardData?.recommendations || [],
-      careerJourney: dashboardData?.careerJourney || [],
-      badges: dashboardData?.badges || [],
-      careerPrediction: dashboardData?.careerPrediction || {},
-      learningPaths: dashboardData?.learningPaths || [],
-      marketInsights: dashboardData?.marketInsights || {},
-      leaderboard: dashboardData?.leaderboard || {},
-      activityLog: dashboardData?.activities || [],
-      opportunityAlert: dashboardData?.opportunities || {},
-      learningRoadmap: dashboardData?.learningRoadmap || {}
-    };
-    
-    return propsMap[widgetId] || {};
-  };
   
   return (
     <Container 
@@ -752,12 +954,12 @@ const Dashboard = () => {
       animate="visible"
       variants={containerVariants}
       maxWidth="xl" 
-      sx={{ mt: 4, mb: 8 }}
+      sx={{ mt: 1, mb: 4 }}
     >
       {/* Dashboard header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 1 }}>
             Your Career Dashboard
       </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -775,26 +977,16 @@ const Dashboard = () => {
               variant="outlined" 
               size="small" 
               onClick={resetDashboardLayout}
-              sx={{ mr: 1 }}
             >
               Reset Layout
             </Button>
           </Tooltip>
           
           <Tooltip title="Refresh dashboard">
-            <IconButton onClick={refreshDashboard} disabled={loading}>
+            <IconButton onClick={refreshDashboard} disabled={loading} sx={{ ml: 1 }}>
               <RefreshIcon />
             </IconButton>
           </Tooltip>
-          
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<LogoutIcon />}
-            onClick={handleLogout}
-          >
-            Logout
-          </Button>
         </Box>
       </Box>
       

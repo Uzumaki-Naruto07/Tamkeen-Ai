@@ -410,7 +410,7 @@ const UserProgressCard = ({ user, expanded = false }) => {
                 .filter(a => a.unlocked)
                 .slice(0, 3)
                 .map(achievement => (
-                  <AchievementItem key={achievement.id} unlocked={true}>
+                  <AchievementItem key={achievement.id} unlocked={achievement.unlocked.toString()}>
                     <Avatar
                       sx={{ 
                         width: 32, 

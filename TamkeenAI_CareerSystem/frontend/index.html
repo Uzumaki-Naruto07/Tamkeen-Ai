@@ -5,117 +5,175 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tamkeen AI Career System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-      /* Simple loading indicator */
-      .initial-loading {
+      /* Loading styles */
+      .loading-container {
         display: flex;
-        flex-direction: column;
-        align-items: center;
         justify-content: center;
+        align-items: center;
         height: 100vh;
-        font-family: 'Inter', sans-serif;
+        width: 100vw;
+        background-color: #f5f7fa;
+        flex-direction: column;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       }
-      .initial-loading h2 {
-        margin-bottom: 20px;
-        color: #333;
+      
+      .dark .loading-container {
+        background-color: #111827;
+        color: #f9fafb;
       }
-      .spinner {
+      
+      .loading-spinner {
         border: 4px solid rgba(0, 0, 0, 0.1);
+        border-left-color: #2563eb;
         border-radius: 50%;
-        border-top: 4px solid #3498db;
         width: 40px;
         height: 40px;
         animation: spin 1s linear infinite;
+        margin-bottom: 16px;
       }
+      
+      .dark .loading-spinner {
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-left-color: #3b82f6;
+      }
+      
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
-      /* Error message */
+      
+      .loading-text {
+        margin-top: 16px;
+        font-size: 16px;
+        color: #6b7280;
+        text-align: center;
+      }
+      
+      .dark .loading-text {
+        color: #d1d5db;
+      }
+      
       .browser-warning {
-        background-color: #ffebee;
-        border: 1px solid #f44336;
-        color: #d32f2f;
-        padding: 15px;
-        border-radius: 4px;
-        margin-top: 20px;
+        margin-top: 16px;
+        padding: 8px 16px;
+        background-color: #fee2e2;
+        border-left: 4px solid #ef4444;
+        color: #b91c1c;
+        max-width: 600px;
+        font-size: 14px;
         display: none;
-        font-family: 'Inter', sans-serif;
+      }
+      
+      .dark .browser-warning {
+        background-color: #7f1d1d;
+        color: #fca5a5;
+      }
+      
+      .check-console {
+        margin-top: 12px;
+        font-size: 14px;
+        color: #6b7280;
+        display: none;
+      }
+      
+      .dark .check-console {
+        color: #9ca3af;
+      }
+      
+      /* Make sure body has no margin */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        overflow-x: hidden;
+      }
+      
+      /* Make sure root div fills the screen */
+      #root {
+        min-height: 100vh;
+        width: 100%;
       }
     </style>
-    <!-- Browser compatibility check -->
     <script>
+      // Set preferred theme based on saved preference or system preference
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      
+      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      }
+      
+      // Check browser compatibility
       function checkBrowserCompatibility() {
-        var issues = [];
+        let issues = [];
         
         // Check for ES6 support
         try {
-          eval('let test = () => {}; class TestClass {}');
+          eval('let x = (y) => y');
         } catch (e) {
-          issues.push('Your browser does not support modern JavaScript (ES6). Please use a newer browser.');
+          issues.push('Your browser does not support modern JavaScript (ES6) features.');
         }
         
         // Check for Fetch API
         if (!window.fetch) {
-          issues.push('Your browser does not support the Fetch API. Please use a newer browser.');
+          issues.push('Your browser does not support the Fetch API.');
         }
         
         // Check for Promises
         if (!window.Promise) {
-          issues.push('Your browser does not support Promises. Please use a newer browser.');
+          issues.push('Your browser does not support Promises.');
         }
         
-        // Display warnings if any
+        // Show warning if compatibility issues found
         if (issues.length > 0) {
-          window.addEventListener('DOMContentLoaded', function() {
-            var warningEl = document.createElement('div');
-            warningEl.className = 'browser-warning';
-            warningEl.innerHTML = '<h3>Browser Compatibility Issues:</h3><ul>' + 
-              issues.map(function(issue) { return '<li>' + issue + '</li>'; }).join('') + 
-              '</ul><p>The application may not work correctly in your browser.</p>';
-            document.body.appendChild(warningEl);
-            warningEl.style.display = 'block';
-          });
+          const warningElement = document.getElementById('browser-warning');
+          if (warningElement) {
+            warningElement.style.display = 'block';
+            warningElement.innerHTML = issues.join('<br>') + 
+              '<br><br>Please update your browser to the latest version for the best experience.';
+          }
+          console.warn('Browser compatibility issues:', issues);
         }
         
-        // Add console compatibility message
-        console.log('Browser compatibility check completed. If you see this message in your console, but nothing is rendering, check for JavaScript errors in the console.');
+        // Log that we've completed the check
+        console.log('Browser compatibility check completed');
       }
       
-      // Run the check
-      checkBrowserCompatibility();
+      // Add event listener to check console errors if nothing renders
+      window.addEventListener('load', function() {
+        // Hide loading spinner after 5 seconds if the app hasn't loaded
+        setTimeout(function() {
+          const loadingSpinner = document.getElementById('loading-spinner');
+          const loadingText = document.getElementById('loading-text');
+          const checkConsole = document.getElementById('check-console');
+          
+          if (loadingSpinner && loadingText && document.getElementById('root').childElementCount <= 1) {
+            loadingText.textContent = 'App is taking longer than expected to load...';
+            checkConsole.style.display = 'block';
+            console.log('If you see this message and no content is loading, please check for JavaScript errors in the console.');
+          }
+        }, 5000);
+        
+        // Run compatibility check
+        checkBrowserCompatibility();
+      });
     </script>
   </head>
   <body>
     <div id="root">
-      <!-- Initial loading state that will be replaced by React -->
-      <div class="initial-loading">
-        <h2>Loading Tamkeen AI...</h2>
-        <div class="spinner"></div>
-        <p style="margin-top: 20px; font-style: italic;">If this screen doesn't change, please check the browser console for errors.</p>
+      <div class="loading-container">
+        <div id="loading-spinner" class="loading-spinner"></div>
+        <div id="loading-text" class="loading-text">Loading Tamkeen AI Career System...</div>
+        <div id="browser-warning" class="browser-warning"></div>
+        <div id="check-console" class="check-console">
+          If nothing appears, please check the browser console for errors (F12 or Ctrl+Shift+J).
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.jsx"></script>
-    <!-- Fallback message if script loading fails -->
-    <script>
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          var loading = document.querySelector('.initial-loading');
-          if (loading && loading.parentNode && loading.parentNode.children.length === 1) {
-            loading.innerHTML += '<div style="margin-top: 20px; color: #d32f2f;">' +
-              '<h3>Application not loading correctly</h3>' +
-              '<p>Possible issues:</p>' +
-              '<ul>' +
-              '<li>JavaScript is disabled in your browser</li>' +
-              '<li>JavaScript errors are preventing the application from loading</li>' +
-              '<li>Network issues are preventing resources from loading</li>' +
-              '</ul>' +
-              '<p>Please check your browser console for errors (F12 or Ctrl+Shift+J).</p>' +
-              '</div>';
-          }
-        }, 5000);  // Check after 5 seconds
-      });
-    </script>
   </body>
 </html> 

@@ -36,52 +36,85 @@ import WarningIcon from '@mui/icons-material/Warning';
 import InfoIcon from '@mui/icons-material/Info';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 
-const MarketInsightsSection = ({ marketInsights }) => {
+const MarketInsightsSection = ({ marketInsights, insights }) => {
   const [currentTab, setCurrentTab] = useState('salary');
   
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
   };
   
+  // Make sure we have valid data to work with
+  const safeInsights = marketInsights || insights || {};
+  
   const { 
-    salary_data, 
-    regional_demand, 
-    skill_demand, 
-    industry_trends, 
-    personalized_insights, 
+    salary_data = {}, 
+    regional_demand = [], 
+    skill_demand = [], 
+    industry_trends = [], 
+    personalized_insights = {
+      market_position: { percentile: 0, explanation: '' },
+      suggestions: [],
+      salary_potential: { low: 0, high: 0, median: 0, factors: [] }
+    }, 
     // New data we'll expect from the backend
     skill_trends = [], 
     hiring_companies = [],
     declining_skills = []
-  } = marketInsights;
+  } = safeInsights;
   
-  // Format salary data for chart
-  const salaryChartData = salary_data.map(item => ({
-    name: item.role,
-    median: item.median,
-    low: item.range_low,
-    high: item.range_high
-  }));
+  // Format salary data for chart - handle both object and array formats
+  let salaryChartData = [];
   
-  // Format region data for chart
-  const regionChartData = regional_demand.slice(0, 5).map(item => ({
-    name: item.region,
-    value: item.demand_index
-  }));
+  if (Array.isArray(salary_data)) {
+    // Handle array format
+    salaryChartData = salary_data.map(item => ({
+      name: item.role,
+      median: item.median,
+      low: item.range_low,
+      high: item.range_high
+    }));
+  } else if (salary_data && typeof salary_data === 'object') {
+    // Handle object format from mock data
+    // Transform current_role and target_role data into array format for the chart
+    salaryChartData = [
+      {
+        name: 'Current Role',
+        median: salary_data.current_role?.avg || 0,
+        low: salary_data.current_role?.min || 0,
+        high: salary_data.current_role?.max || 0
+      },
+      {
+        name: 'Target Role',
+        median: salary_data.target_role?.avg || 0,
+        low: salary_data.target_role?.min || 0,
+        high: salary_data.target_role?.max || 0
+      }
+    ];
+  }
   
-  // Format skill data for chart
-  const skillChartData = skill_demand.map(item => ({
-    name: item.skill,
-    value: item.demand_index,
-    growth: item.growth_rate
-  }));
+  // Format region data for chart - ensure regional_demand is an array
+  const regionChartData = Array.isArray(regional_demand) 
+    ? regional_demand.slice(0, 5).map(item => ({
+        name: item.region,
+        value: item.demand_index
+      }))
+    : [];
+  
+  // Format skill data for chart - ensure skill_demand is an array
+  const skillChartData = Array.isArray(skill_demand) 
+    ? skill_demand.map(item => ({
+        name: item.skill,
+        value: item.demand_index,
+        growth: item.growth_rate
+      }))
+    : [];
   
   // Colors for charts
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
   
   // Format skill trends data for line chart
   const skillTrendChartData = [];
-  if (skill_trends.length > 0) {
+  if (Array.isArray(skill_trends) && skill_trends.length > 0 && skill_trends[0]?.forecast) {
     // Transform the data into the format needed for the line chart
     // Each time period is an entry with values for each skill
     const timePoints = skill_trends[0].forecast.map(f => f.period);
@@ -110,7 +143,7 @@ const MarketInsightsSection = ({ marketInsights }) => {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
             <YAxis />
-            <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+            <RechartsTooltip formatter={(value) => `$${value.toLocaleString()}`} />
             <Bar dataKey="median" fill="#8884d8" name="Median Salary" />
           </BarChart>
         </ResponsiveContainer>
@@ -127,12 +160,12 @@ const MarketInsightsSection = ({ marketInsights }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {salary_data.map((row) => (
-              <TableRow key={row.role}>
-                <TableCell component="th" scope="row">{row.role}</TableCell>
+            {salaryChartData.map((row, index) => (
+              <TableRow key={index}>
+                <TableCell component="th" scope="row">{row.name}</TableCell>
                 <TableCell align="right">${row.median.toLocaleString()}</TableCell>
-                <TableCell align="right">${row.range_low.toLocaleString()} - ${row.range_high.toLocaleString()}</TableCell>
-                <TableCell align="right">+{Math.round((row.experience_factor - 1) * 100)}% per year</TableCell>
+                <TableCell align="right">${row.low.toLocaleString()} - ${row.high.toLocaleString()}</TableCell>
+                <TableCell align="right">+5% per year</TableCell>
               </TableRow>
             ))}
           </TableBody>

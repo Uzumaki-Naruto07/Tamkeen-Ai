@@ -2,6 +2,7 @@ import axios from 'axios';
 
 // Environment detection
 const isDevelopment = import.meta.env.DEV;
+const useMockData = isDevelopment || import.meta.env.VITE_USE_MOCK_DATA === 'true';
 
 // Track pending login requests to prevent duplicates
 let pendingLoginRequest = null;
@@ -143,7 +144,36 @@ apiClient.interceptors.response.use(
 
 // General API request functions with mock support for development
 export const api = {
-  get: (url, params = {}) => apiClient.get(url, { params }),
+  get: async (url, params = {}) => {
+    // In development or if mock data is enabled, provide fallback mock data
+    if (useMockData) {
+      // Check if there's a mock handler for this endpoint
+      if (url.includes('/dashboard/data')) {
+        // Only log in development mode and not too frequently
+        if (isDevelopment && Math.random() > 0.8) {
+          console.log('Using mock dashboard data');
+        }
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return { data: { data: mockDashboardData, success: true } };
+      }
+    }
+    // If no mock handler or not in development, try the real API
+    try {
+      return await apiClient.get(url, { params });
+    } catch (error) {
+      // If in development and API failed, try to use mock data as fallback
+      if (isDevelopment) {
+        if (url.includes('/dashboard/data')) {
+          if (isDevelopment && Math.random() > 0.8) {
+            console.log('API failed, falling back to mock dashboard data');
+          }
+          return { data: { data: mockDashboardData, success: true } };
+        }
+      }
+      throw error;
+    }
+  },
   post: (url, data = {}) => {
     // Mock authentication in development mode for login path
     if (isDevelopment && url.includes('/auth/login')) {
@@ -162,6 +192,41 @@ export const api = {
   clearPendingLogin: () => {
     pendingLoginRequest = null;
   }
+};
+
+// Add mock dashboard data
+const mockDashboardData = {
+  progress: {
+    overall: 65,
+    resume: 80,
+    skills: 70,
+    applications: 50,
+    interviews: 60,
+    networking: 55,
+    goals: [
+      { id: 1, name: 'Complete profile', progress: 100, completed: "true", unlocked: "true" },
+      { id: 2, name: 'Apply to 5 jobs', progress: 60, completed: "false", unlocked: "true" },
+      { id: 3, name: 'Update resume', progress: 80, completed: "false", unlocked: "true" }
+    ],
+    nextSteps: ['Update LinkedIn profile', 'Practice interview skills']
+  },
+  // Add other required mock data for components
+  resumeScore: {
+    overall: 75,
+    sections: {
+      content: 80,
+      format: 75,
+      keywords: 70,
+      impact: 65
+    },
+    scores: [
+      { name: 'Content', value: 80 },
+      { name: 'Format', value: 75 },
+      { name: 'Keywords', value: 70 },
+      { name: 'Impact', value: 65 }
+    ]
+  },
+  // ... add more mock data as needed ...
 };
 
 export default apiClient; 

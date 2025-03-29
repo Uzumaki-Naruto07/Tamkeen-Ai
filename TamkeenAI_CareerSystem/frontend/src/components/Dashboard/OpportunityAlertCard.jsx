@@ -66,6 +66,15 @@ const getMatchLevel = (matchPercentage) => {
 };
 
 const OpportunityAlertCard = ({ opportunity, onSave, onApply, onDismiss }) => {
+  // Handle the case where opportunity is undefined
+  if (!opportunity) {
+    return (
+      <Card variant="outlined" sx={{ mb: 2, p: 2 }}>
+        <Typography variant="body1">No opportunity data available</Typography>
+      </Card>
+    );
+  }
+  
   const [saved, setSaved] = useState(opportunity.saved || false);
   
   const {

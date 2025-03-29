@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, Typography, Box, Tabs, Tab, LinearProgress, Slider, Button } from '@mui/material';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import DashboardAPI from '../../api/DashboardAPI';
 
 const SkillProgressSection = ({ skillProgress }) => {
@@ -101,7 +101,7 @@ const SkillProgressSection = ({ skillProgress }) => {
             <PolarRadiusAxis />
             <Radar name="Your Skills" dataKey="userScore" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
             <Radar name="Industry Average" dataKey="industryAvg" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
-            <Tooltip />
+            <ChartTooltip />
           </RadarChart>
         </ResponsiveContainer>
       </Box>
@@ -239,7 +239,7 @@ const SkillProgressSection = ({ skillProgress }) => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip />
+              <ChartTooltip />
               {Object.keys(currentSkills).map((skill, index) => (
                 <Line 
                   key={skill}

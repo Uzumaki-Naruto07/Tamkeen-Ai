@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { useTranslation } from 'react-i18next';
@@ -30,6 +30,9 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const videoRef = useRef(null);
   
   const { login, theme, language, toggleLanguage, isLoggingIn } = useAppContext();
   const navigate = useNavigate();
@@ -58,6 +61,31 @@ const Login = () => {
   const handleTogglePassword = () => {
     setShowPassword(!showPassword);
   };
+  
+  // Handle video load events
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    const handleVideoLoaded = () => {
+      setVideoLoaded(true);
+      setVideoError(false);
+    };
+    
+    const handleVideoError = () => {
+      console.error('Error loading video');
+      setVideoError(true);
+      setVideoLoaded(false);
+    };
+    
+    video.addEventListener('loadeddata', handleVideoLoaded);
+    video.addEventListener('error', handleVideoError);
+    
+    return () => {
+      video.removeEventListener('loadeddata', handleVideoLoaded);
+      video.removeEventListener('error', handleVideoError);
+    };
+  }, [videoRef]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -263,15 +291,26 @@ const Login = () => {
           </form>
         </div>
 
-        {/* Video section - simplified structure */}
+        {/* Video section with fallback */}
         <div className="login-video-section">
-          <video 
+          {/* Video element with better handling */}
+          <video
+            ref={videoRef}
             src={tamkeenVideo}
             autoPlay
             muted
             loop
             playsInline
+            onError={() => setVideoError(true)}
           />
+          
+          {/* Fallback content shown if video fails to load */}
+          {videoError && (
+            <div className="login-video-fallback">
+              <h2>Tamkeen AI</h2>
+              <p>Building your path to career success</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

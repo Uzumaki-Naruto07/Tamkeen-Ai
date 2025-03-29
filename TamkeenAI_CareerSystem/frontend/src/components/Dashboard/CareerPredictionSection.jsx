@@ -351,7 +351,9 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
         New Career Predictions:
       </Typography>
       {simulationResults.new_predictions.map((prediction, index) => (
-        renderPredictionCard(prediction, true)
+        <React.Fragment key={prediction.role + '-sim-' + index}>
+          {renderPredictionCard(prediction, true)}
+        </React.Fragment>
       ))}
     </Box>
   );
@@ -408,7 +410,9 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
                   Your Predicted Career Path:
                 </Typography>
                 {predictions.map((prediction, index) => (
-                  renderPredictionCard(prediction)
+                  <React.Fragment key={prediction.role + '-' + index}>
+                    {renderPredictionCard(prediction)}
+                  </React.Fragment>
                 ))}
               </Box>
             )}

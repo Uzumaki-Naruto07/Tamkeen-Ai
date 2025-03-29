@@ -88,6 +88,8 @@ const getResourceIcon = (type) => {
 
 // Get icon based on recommendation type
 const getRecommendationIcon = (type) => {
+  if (!type) return <AssignmentIcon />;
+  
   switch (type.toLowerCase()) {
     case 'job':
       return <WorkIcon />;

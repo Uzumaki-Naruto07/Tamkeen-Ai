@@ -29,6 +29,30 @@ const resources = {
       // Dashboard
       dashboard: {
         title: 'Dashboard',
+        yourCareerDashboard: 'Your Career Dashboard',
+        widgets: {
+          userProgress: 'Your Progress',
+          resumeScore: 'Resume Score',
+          skillGap: 'Skill Gap Analysis',
+          aiRecommendation: 'AI Recommendations',
+          careerJourney: 'Career Journey',
+          badges: 'Achievements',
+          careerPrediction: 'Career Predictions',
+          learningPaths: 'Learning Paths',
+          marketInsights: 'Market Insights',
+          leaderboard: 'Leaderboard',
+          activityLog: 'Recent Activities',
+          opportunityAlert: 'Opportunity Alerts',
+          learningRoadmap: 'Learning Roadmap'
+        },
+        actions: {
+          refresh: 'Refresh Dashboard',
+          customize: 'Customize Dashboard',
+          resetLayout: 'Reset Layout',
+          hide: 'Hide Widget',
+          show: 'Show Widget',
+          dragToReorder: 'Drag to reorder'
+        }
       },
       
       // Common elements
@@ -83,6 +107,30 @@ const resources = {
       // Dashboard
       dashboard: {
         title: 'لوحة المعلومات',
+        yourCareerDashboard: 'لوحة معلومات المسار المهني',
+        widgets: {
+          userProgress: 'تقدمك',
+          resumeScore: 'تقييم السيرة الذاتية',
+          skillGap: 'تحليل فجوة المهارات',
+          aiRecommendation: 'توصيات الذكاء الاصطناعي',
+          careerJourney: 'رحلتك المهنية',
+          badges: 'الإنجازات',
+          careerPrediction: 'توقعات المسار المهني',
+          learningPaths: 'مسارات التعلم',
+          marketInsights: 'رؤى سوق العمل',
+          leaderboard: 'لوحة المتصدرين',
+          activityLog: 'النشاطات الأخيرة',
+          opportunityAlert: 'تنبيهات الفرص',
+          learningRoadmap: 'خريطة التعلم'
+        },
+        actions: {
+          refresh: 'تحديث اللوحة',
+          customize: 'تخصيص اللوحة',
+          resetLayout: 'إعادة ضبط التصميم',
+          hide: 'إخفاء العنصر',
+          show: 'إظهار العنصر',
+          dragToReorder: 'اسحب لإعادة الترتيب'
+        }
       },
       
       // Common elements

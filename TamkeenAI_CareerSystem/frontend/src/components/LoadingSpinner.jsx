@@ -79,7 +79,7 @@ const LoadingSpinner = ({
           <LinearProgress
             color={color}
             variant={variant}
-            value={progress}
+            value={variant === 'determinate' ? (progress || 0) : undefined}
             sx={{ width: '100%', ...sx }}
           />
         );
@@ -136,7 +136,7 @@ const LoadingSpinner = ({
             size={circularSize}
             thickness={thickness}
             variant={variant}
-            value={progress}
+            value={variant === 'determinate' ? (progress || 0) : undefined}
             sx={sx}
           />
         );

@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import rtlPlugin from 'stylis-plugin-rtl';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
 import { prefixer } from 'stylis';
-import theme from '../theme';
+import { getTheme } from '../theme';
 
 const ThemeContext = createContext(null);
 
@@ -56,9 +56,13 @@ export const ThemeContextProvider = ({ children }) => {
     }
   }, [isDarkMode, isRTL, isHighContrast, isInitialized]);
 
+  // Precompute themes for better performance
+  const lightTheme = useMemo(() => getTheme('light'), []);
+  const darkTheme = useMemo(() => getTheme('dark'), []);
+
   const toggleDarkMode = () => {
     try {
-      setIsDarkMode(!isDarkMode);
+      setIsDarkMode(prev => !prev);
     } catch (err) {
       console.error('Error toggling dark mode:', err);
       setError('Failed to toggle dark mode.');
@@ -84,17 +88,20 @@ export const ThemeContextProvider = ({ children }) => {
   };
 
   // Create RTL cache if needed
-  const cacheRtl = createCache({
+  const cacheRtl = useMemo(() => createCache({
     key: 'muirtl',
     stylisPlugins: [prefixer, rtlPlugin],
-  });
+  }), []);
 
   // Create LTR cache
-  const cacheLtr = createCache({
+  const cacheLtr = useMemo(() => createCache({
     key: 'muiltr',
-  });
+  }), []);
 
-  const value = {
+  // Use the pre-computed themes based on current mode
+  const currentTheme = isDarkMode ? darkTheme : lightTheme;
+
+  const value = useMemo(() => ({
     isDarkMode,
     isRTL,
     isHighContrast,
@@ -102,7 +109,7 @@ export const ThemeContextProvider = ({ children }) => {
     toggleDarkMode,
     toggleRTL,
     toggleHighContrast,
-  };
+  }), [isDarkMode, isRTL, isHighContrast, error]);
 
   if (!isInitialized) {
     return null; // or a loading spinner
@@ -111,7 +118,7 @@ export const ThemeContextProvider = ({ children }) => {
   return (
     <ThemeContext.Provider value={value}>
       <CacheProvider value={isRTL ? cacheRtl : cacheLtr}>
-        <MuiThemeProvider theme={theme}>
+        <MuiThemeProvider theme={currentTheme}>
           <CssBaseline />
           {children}
         </MuiThemeProvider>

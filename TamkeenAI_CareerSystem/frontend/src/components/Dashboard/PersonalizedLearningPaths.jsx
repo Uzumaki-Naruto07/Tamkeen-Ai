@@ -135,10 +135,10 @@ const WeeklyProgressBar = styled(Box)(({ theme, day, completed }) => ({
   }
 }));
 
-const WeekdayLabel = styled(Typography)(({ theme, isToday }) => ({
-  fontSize: '0.7rem',
-  color: isToday ? theme.palette.primary.main : theme.palette.text.secondary,
-  fontWeight: isToday ? 'bold' : 'normal'
+const WeekdayLabel = styled(Typography)(({ theme, istoday }) => ({
+  padding: theme.spacing(1, 0),
+  color: istoday === 'true' ? theme.palette.primary.main : theme.palette.text.secondary,
+  fontWeight: istoday === 'true' ? 'bold' : 'normal'
 }));
 
 const OptimizationCard = styled(Paper)(({ theme }) => ({
@@ -158,6 +158,13 @@ const OptimizationCard = styled(Paper)(({ theme }) => ({
     height: '100%',
     backgroundColor: theme.palette.primary.main
   }
+}));
+
+const Milestone = styled(Box)(({ theme, completed }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  marginBottom: theme.spacing(1),
+  opacity: completed ? 1 : 0.7,
 }));
 
 // Get icon based on node type
@@ -239,7 +246,7 @@ const PersonalizedLearningPaths = ({ learningPathsData, userProfile }) => {
       // Simulated API response
       setTimeout(() => {
         setAiOptimization({
-          targetJob: userProfile.dreamJob || 'Senior Software Engineer',
+          targetJob: userProfile?.dreamJob || 'Senior Software Engineer',
           currentSkillLevel: 65,
           requiredSkillLevel: 85,
           estimatedTimeToTarget: '6 months',
@@ -332,7 +339,7 @@ const PersonalizedLearningPaths = ({ learningPathsData, userProfile }) => {
               <React.Fragment key={index}>
                 {index > 0 && (
                   <TrackConnector 
-                    completed={selectedPath.nodes[index - 1].completed}
+                    data-completed={selectedPath.nodes[index - 1].completed.toString()}
                     sx={{ 
                       left: (nodeLeft - 90),
                       width: 60 
@@ -345,7 +352,7 @@ const PersonalizedLearningPaths = ({ learningPathsData, userProfile }) => {
                     <Box>
                       <TrackNode 
                         nodeType={node.type} 
-                        completed={node.completed}
+                        data-completed={node.completed.toString()}
                         onClick={() => !isLocked && handleNodeClick(node)}
                         sx={{ 
                           opacity: isLocked ? 0.6 : 1,
@@ -425,11 +432,17 @@ const PersonalizedLearningPaths = ({ learningPathsData, userProfile }) => {
                 alignItems: 'center' 
               }}
             >
-              <WeekdayLabel isToday={index === currentDay}>
+              <WeekdayLabel istoday={(index === currentDay).toString()}>
                 {day.day}
               </WeekdayLabel>
               
-              <WeeklyProgressBar day={day.day} completed={day.completed} />
+              <WeeklyProgressBar 
+                day={day.day} 
+                data-completed={index <= currentDay ? "true" : "false"}
+                sx={{ 
+                  mx: 0.5 
+                }} 
+              />
               
               <Box sx={{ mt: 0.5, height: 18, display: 'flex', alignItems: 'center' }}>
                 {day.completed ? (

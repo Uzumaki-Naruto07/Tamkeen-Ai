@@ -3,7 +3,7 @@ import {
   PieChart,
   Pie,
   Cell,
-  Tooltip,
+  Tooltip as ChartTooltip,
   Legend,
   ResponsiveContainer
 } from 'recharts';
@@ -58,7 +58,7 @@ const ApplicationStatusChart = ({ data, height = 400, className = '' }) => {
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
-          <Tooltip content={<CustomTooltip />} />
+          <ChartTooltip content={<CustomTooltip />} />
           <Legend />
         </PieChart>
       </ResponsiveContainer>

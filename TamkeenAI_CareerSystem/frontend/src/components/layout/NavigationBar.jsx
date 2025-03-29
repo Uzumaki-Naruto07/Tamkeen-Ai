@@ -28,6 +28,10 @@ import {
 import { styled } from '@mui/material/styles';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+import { useContext } from 'react';
+import { ThemeContext } from '../../contexts/ThemeContext';
+import LanguageIcon from '@mui/icons-material/Language';
 
 // Icons
 import MenuIcon from '@mui/icons-material/Menu';
@@ -59,26 +63,28 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
   boxShadow: theme.shadows[1],
   borderBottom: `1px solid ${theme.palette.divider}`,
   zIndex: theme.zIndex.drawer + 1,
+  minHeight: '56px',
 }));
 
 const LogoContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  padding: theme.spacing(0, 2),
+  padding: theme.spacing(0, 1),
 }));
 
 const LogoImage = styled('img')(({ theme }) => ({
-  height: 40,
+  height: 36,
   marginRight: theme.spacing(1),
 }));
 
 const NavTabs = styled(Tabs)(({ theme }) => ({
-  marginLeft: theme.spacing(4),
+  marginLeft: theme.spacing(2),
   '& .MuiTab-root': {
     minWidth: 'auto',
-    padding: theme.spacing(1.5, 2),
+    padding: theme.spacing(1, 1.5),
     textTransform: 'none',
     fontWeight: 500,
+    fontSize: '0.9rem',
   },
 }));
 
@@ -87,8 +93,9 @@ const NavTab = styled(Tab)(({ theme }) => ({
   flexDirection: 'row',
   alignItems: 'center',
   '& .MuiSvgIcon-root': {
-    marginRight: theme.spacing(1),
+    marginRight: theme.spacing(0.5),
     marginBottom: 0,
+    fontSize: '1.1rem',
   },
 }));
 
@@ -123,6 +130,53 @@ const DrawerHeader = styled(Box)(({ theme }) => ({
 const DrawerFooter = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2),
   marginTop: 'auto',
+}));
+
+const DarkModeSwitch = styled(Switch)(({ theme }) => ({
+  width: 62,
+  height: 34,
+  padding: 7,
+  '& .MuiSwitch-switchBase': {
+    margin: 1,
+    padding: 0,
+    transform: 'translateX(6px)',
+    '&.Mui-checked': {
+      color: '#fff',
+      transform: 'translateX(22px)',
+      '& .MuiSwitch-thumb:before': {
+        backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 20 20"><path fill="${encodeURIComponent(
+          '#fff',
+        )}" d="M4.2 2.5l-.7 1.8-1.8.7 1.8.7.7 1.8.6-1.8L6.7 5l-1.9-.7-.6-1.8zm15 8.3a6.7 6.7 0 11-6.6-6.6 5.8 5.8 0 006.6 6.6z"/></svg>')`,
+      },
+      '& + .MuiSwitch-track': {
+        opacity: 1,
+        backgroundColor: theme.palette.mode === 'dark' ? '#8796A5' : '#aab4be',
+      },
+    },
+  },
+  '& .MuiSwitch-thumb': {
+    backgroundColor: theme.palette.mode === 'dark' ? '#003892' : '#001e3c',
+    width: 32,
+    height: 32,
+    '&:before': {
+      content: "''",
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
+      left: 0,
+      top: 0,
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center',
+      backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 20 20"><path fill="${encodeURIComponent(
+        '#fff',
+      )}" d="M9.305 1.667V3.75h1.389V1.667h-1.39zm-4.707 1.95l-.982.982L5.09 6.072l.982-.982-1.473-1.473zm10.802 0L13.927 5.09l.982.982 1.473-1.473-.982-.982zM10 5.139a4.872 4.872 0 00-4.862 4.86A4.872 4.872 0 0010 14.862 4.872 4.872 0 0014.86 10 4.872 4.872 0 0010 5.139zm0 1.389A3.462 3.462 0 0113.471 10a3.462 3.462 0 01-3.473 3.472A3.462 3.462 0 016.527 10 3.462 3.462 0 0110 6.528zM1.665 9.305v1.39h2.083v-1.39H1.666zm14.583 0v1.39h2.084v-1.39h-2.084zM5.09 13.928L3.616 15.4l.982.982 1.473-1.473-.982-.982zm9.82 0l-.982.982 1.473 1.473.982-.982-1.473-1.473zM9.305 16.25v2.083h1.389V16.25h-1.39z"/></svg>')`,
+    },
+  },
+  '& .MuiSwitch-track': {
+    opacity: 1,
+    backgroundColor: theme.palette.mode === 'dark' ? '#8796A5' : '#aab4be',
+    borderRadius: 20 / 2,
+  },
 }));
 
 // Animation variants
@@ -165,6 +219,7 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile, logout, isAuthenticated } = useUser();
+  const { t, i18n } = useTranslation();
   
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
@@ -174,7 +229,7 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
   const [notificationsMenuAnchor, setNotificationsMenuAnchor] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [languageMenuAnchor, setLanguageMenuAnchor] = useState(null);
-  const [language, setLanguage] = useState('en'); // en or ar
+  const [language, setLanguage] = useState(localStorage.getItem('language') || 'en'); // en or ar
   
   // Set the current tab based on location
   useEffect(() => {
@@ -237,7 +292,22 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
   const changeLanguage = (lang) => {
     setLanguage(lang);
     handleLanguageMenuClose();
-    // In a real app, you would update the i18n context here
+    
+    // Navigate to the appropriate dashboard based on language
+    if (lang === 'ar') {
+      navigate('/dashboard-ar');
+    } else {
+      navigate('/dashboard');
+    }
+    
+    // Update language in localStorage
+    localStorage.setItem('language', lang);
+    
+    // Update i18n
+    i18n.changeLanguage(lang);
+    
+    // Update document direction
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
   };
   
   // Handle logout
@@ -262,7 +332,7 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
       onKeyDown={toggleDrawer(false)}
     >
       <DrawerHeader>
-        <Typography variant="h6">TamkeenAI</Typography>
+        <LogoImage src={logoSrc} alt="TamkeenAI Logo" />
         <IconButton color="inherit" onClick={toggleDrawer(false)}>
           <MenuIcon />
         </IconButton>
@@ -288,30 +358,87 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
       
       <Divider />
       
-      <DrawerFooter>
+      <Box sx={{ p: 2 }}>
         <FormControlLabel
           control={
-            <Switch
+            <DarkModeSwitch
               checked={darkMode}
-              onChange={toggleDarkMode}
-              color="primary"
+              onChange={() => {
+                // Add a visual indicator that the switch was clicked
+                const switchThumb = document.querySelector('.MuiSwitch-thumb');
+                if (switchThumb) {
+                  switchThumb.style.transition = 'transform 0.2s ease-in-out';
+                  switchThumb.style.transform = darkMode ? 'scale(0.8)' : 'scale(0.8)';
+                  setTimeout(() => {
+                    switchThumb.style.transform = '';
+                  }, 200);
+                }
+                toggleDarkMode();
+              }}
             />
           }
           label={darkMode ? "Dark Mode" : "Light Mode"}
         />
-        
+      </Box>
+      
+      <DrawerFooter>
         <Button
           variant="outlined"
-          fullWidth
+          color="primary"
           startIcon={<LogoutIcon />}
+          fullWidth
           onClick={handleLogout}
-          sx={{ mt: 2 }}
         >
           Logout
         </Button>
       </DrawerFooter>
     </Box>
   );
+
+  const renderUserMenu = () => {
+    return (
+      <>
+        <Tooltip title="Toggle dark mode">
+          <FormControlLabel
+            control={
+              <DarkModeSwitch
+                checked={darkMode}
+                onChange={() => {
+                  // Add a visual indicator that the switch was clicked
+                  const switchThumb = document.querySelector('.MuiSwitch-thumb');
+                  if (switchThumb) {
+                    switchThumb.style.transition = 'transform 0.2s ease-in-out';
+                    switchThumb.style.transform = darkMode ? 'scale(0.8)' : 'scale(0.8)';
+                    setTimeout(() => {
+                      switchThumb.style.transform = '';
+                    }, 200);
+                  }
+                  toggleDarkMode();
+                }}
+                sx={{ mx: 1 }}
+              />
+            }
+            label=""
+          />
+        </Tooltip>
+        {/* Rest of the user menu */}
+      </>
+    );
+  };
+
+  const handleLanguageToggle = () => {
+    const currentLang = i18n.language;
+    const newLang = currentLang === 'ar' ? 'en' : 'ar';
+    i18n.changeLanguage(newLang);
+    localStorage.setItem('language', newLang);
+    
+    // Navigate to the appropriate dashboard
+    if (newLang === 'ar') {
+      navigate('/dashboard-ar');
+    } else {
+      navigate('/dashboard');
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -335,9 +462,6 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
                   <MenuIcon />
                 </IconButton>
                 <LogoImage src={logoSrc} alt="TamkeenAI Logo" />
-                <Typography variant="h6" component="div">
-                  TamkeenAI
-        </Typography>
               </LogoContainer>
             )}
             
@@ -346,9 +470,6 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
               <>
                 <LogoContainer>
                   <LogoImage src={logoSrc} alt="TamkeenAI Logo" />
-                  <Typography variant="h6" component="div">
-                    TamkeenAI
-                  </Typography>
                 </LogoContainer>
                 
                 <NavTabs
@@ -378,20 +499,15 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
             
             {/* User controls section */}
             <UserSection>
-              {/* Theme toggle */}
-              <Tooltip title={darkMode ? "Light mode" : "Dark mode"}>
-                <IconButton color="inherit" onClick={toggleDarkMode}>
-                  {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-                </IconButton>
-              </Tooltip>
+              {renderUserMenu()}
               
               {/* Language selector */}
               <Tooltip title="Change language">
                 <IconButton
                   color="inherit"
-                  onClick={handleLanguageMenuOpen}
+                  onClick={handleLanguageToggle}
                 >
-                  <TranslateIcon />
+                  <LanguageIcon />
                 </IconButton>
               </Tooltip>
               

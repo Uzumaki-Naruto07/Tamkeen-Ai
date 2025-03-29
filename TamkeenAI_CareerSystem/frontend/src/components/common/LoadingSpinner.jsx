@@ -1,13 +1,29 @@
 // frontend/src/components/common/LoadingSpinner.jsx
 import React from "react";
-import { CircularProgress, Box } from "@mui/material";
+import { CircularProgress, Box, Typography } from "@mui/material";
 
-const LoadingSpinner = ({ size = 40, color = "primary", fullScreen = false }) => {
+const LoadingSpinner = ({ size = 40, color = "primary", fullScreen = false, message }) => {
+  const spinnerContent = (
+    <>
+      <CircularProgress size={size} color={color} />
+      {message && (
+        <Typography
+          variant="body2"
+          color="textSecondary"
+          sx={{ mt: 2, textAlign: 'center' }}
+        >
+          {message}
+        </Typography>
+      )}
+    </>
+  );
+
   if (fullScreen) {
     return (
       <Box 
         sx={{
           display: 'flex',
+          flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
           position: 'fixed',
@@ -19,14 +35,14 @@ const LoadingSpinner = ({ size = 40, color = "primary", fullScreen = false }) =>
           zIndex: 9999
         }}
       >
-        <CircularProgress size={size} color={color} />
+        {spinnerContent}
       </Box>
     );
   }
   
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-      <CircularProgress size={size} color={color} />
+    <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', p: 2 }}>
+      {spinnerContent}
     </Box>
   );
 };

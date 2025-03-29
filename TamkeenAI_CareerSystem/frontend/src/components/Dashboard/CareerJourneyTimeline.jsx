@@ -168,11 +168,14 @@ const CareerJourneyTimeline = ({ journeyData }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
   
+  // Make sure journeyData is defined and is an array
+  const safeJourneyData = journeyData || [];
+  
   // Find current stage index
-  const currentStageIndex = journeyData.findIndex(stage => stage.isCurrent);
+  const currentStageIndex = safeJourneyData.findIndex(stage => stage.isCurrent);
   
   // Total experience points accumulated
-  const totalXP = journeyData.reduce((sum, stage) => {
+  const totalXP = safeJourneyData.reduce((sum, stage) => {
     if (stage.isCompleted || stage.isCurrent) {
       return sum + (stage.experiencePoints || 0);
     }
@@ -208,10 +211,10 @@ const CareerJourneyTimeline = ({ journeyData }) => {
   useEffect(() => {
     const animationTimeout = setTimeout(() => {
       setAnimationComplete(true);
-    }, journeyData.length * 200 + 500);
+    }, safeJourneyData.length * 200 + 500);
     
     return () => clearTimeout(animationTimeout);
-  }, [journeyData.length]);
+  }, [safeJourneyData.length]);
   
   return (
     <Card>
@@ -239,7 +242,7 @@ const CareerJourneyTimeline = ({ journeyData }) => {
         {/* Interactive Timeline */}
         <TimelineContainer>
           <TimelineWrapper>
-            {journeyData.map((stage, index) => {
+            {safeJourneyData.map((stage, index) => {
               const isCompleted = stage.isCompleted;
               const isCurrent = stage.isCurrent;
               const isUpcoming = !isCompleted && !isCurrent;
@@ -261,7 +264,7 @@ const CareerJourneyTimeline = ({ journeyData }) => {
                   {/* Connector line between stages */}
                   {index > 0 && (
                     <TimelineConnector 
-                      filled={journeyData[index-1].isCompleted || journeyData[index-1].isCurrent}
+                      filled={safeJourneyData[index-1].isCompleted || safeJourneyData[index-1].isCurrent}
                     />
                   )}
                   

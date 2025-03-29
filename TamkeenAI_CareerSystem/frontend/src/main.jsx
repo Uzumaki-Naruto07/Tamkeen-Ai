@@ -5,17 +5,56 @@ import './index.css';
 import { startTransition } from 'react';
 
 // Fix for React Router warnings by setting future flags
-window.__reactRouterFutureFlags = {
-  v7_startTransition: true,
-  v7_relativeSplatPath: true 
+if (typeof window !== 'undefined') {
+  window.__reactRouterFutureFlags = {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true 
+  };
+}
+
+// Error handler for the entire application
+const handleError = (error) => {
+  console.error('Application Error:', error);
+  
+  // Find loading container
+  const loadingContainer = document.querySelector('.loading-container');
+  if (loadingContainer) {
+    loadingContainer.innerHTML = `
+      <div style="color: #ef4444; padding: 20px; text-align: center;">
+        <h2>Something went wrong</h2>
+        <p>${error.message || 'An unexpected error occurred'}</p>
+        <button onclick="window.location.reload()" style="margin-top: 16px; padding: 8px 16px; background-color: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Reload Application
+        </button>
+      </div>
+    `;
+  }
 };
 
-// Create root and render app
-const root = ReactDOM.createRoot(document.getElementById('root'));
-
-// Wrap the app in startTransition to work with the React Router future flags
-root.render(
-  <React.StrictMode>
-    {startTransition(() => <App />)}
-  </React.StrictMode>
-); 
+try {
+  // Create root and render app
+  const rootElement = document.getElementById('root');
+  
+  if (!rootElement) {
+    throw new Error('Root element not found in the document');
+  }
+  
+  const root = ReactDOM.createRoot(rootElement);
+  
+  // Wrap the app in startTransition to work with the React Router future flags
+  root.render(
+    <React.StrictMode>
+      {React.createElement(
+        React.Fragment,
+        null,
+        <App />
+      )}
+    </React.StrictMode>
+  );
+  
+  // Log that rendering has started
+  console.log('React application rendering started');
+  
+} catch (error) {
+  handleError(error);
+} 

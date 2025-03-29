@@ -85,9 +85,20 @@ const RankSparkline = ({ data, height = 20, width = 60 }) => {
   );
 };
 
-const LeaderboardWidget = ({ position = mockLeaderboardData }) => {
-  const navigate = useNavigate();
+const LeaderboardWidget = ({ leaderboardData }) => {
+  // Default position with empty data if leaderboardData is undefined
+  const position = leaderboardData || {
+    user_position: 0,
+    rank_history: [0, 0, 0, 0, 0],
+    top_percentile: 0,
+    points: 0,
+    next_milestone: 100,
+    leaderboard: [],
+    friends: []
+  };
+  
   const [view, setView] = useState('global');
+  const navigate = useNavigate();
   
   const handleViewChange = (event, newView) => {
     if (newView !== null) {
@@ -206,9 +217,10 @@ const LeaderboardWidget = ({ position = mockLeaderboardData }) => {
             </ListItemAvatar>
             <ListItemText 
               primary={
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box component="div" sx={{ display: 'flex', alignItems: 'center' }}>
                   <Typography 
                     variant="body1"
+                    component="span"
                     sx={{ fontWeight: user.isCurrentUser ? 'bold' : 'normal' }}
                   >
                     {user.name}
@@ -232,8 +244,12 @@ const LeaderboardWidget = ({ position = mockLeaderboardData }) => {
                 </Box>
               }
               secondary={
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography variant="body2" color="text.secondary">
+                <Box component="div" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography 
+                    variant="body2" 
+                    component="span" 
+                    color="text.secondary"
+                  >
                     {user.points} points
                   </Typography>
                   {view === 'global' && index === 0 && (
