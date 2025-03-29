@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useContext } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container, 
   Grid, 
@@ -22,88 +22,168 @@ import {
   ListItemText,
   Avatar,
   LinearProgress,
-  useTheme,
-  useMediaQuery
+  useTheme as useMuiTheme
 } from '@mui/material';
-import { Responsive, WidthProvider } from 'react-grid-layout';
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
-import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import AddIcon from '@mui/icons-material/Add';
+import { motion } from 'framer-motion';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { format, formatDistance } from 'date-fns';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { useTranslation } from 'react-i18next';
 
 // Icons
-import RefreshIcon from '@mui/icons-material/Refresh';
-import EditIcon from '@mui/icons-material/Edit';
-import DoneIcon from '@mui/icons-material/Done';
-import CloseIcon from '@mui/icons-material/Close';
+import BusinessIcon from '@mui/icons-material/Business';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import FlagIcon from '@mui/icons-material/Flag';
+import CheckIcon from '@mui/icons-material/Check';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import MilitaryTechIcon from '@mui/icons-material/MilitaryTech';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import DescriptionIcon from '@mui/icons-material/Description';
+import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import SchoolIcon from '@mui/icons-material/School';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import ViewTimelineIcon from '@mui/icons-material/ViewTimeline';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import PsychologyIcon from '@mui/icons-material/Psychology';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import GroupIcon from '@mui/icons-material/Group';
+import AccessAlarmIcon from '@mui/icons-material/AccessAlarm';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+
+// Import API clients
+import { api } from '../api/apiClient';
+import chatService from '../api/chatgpt';
 
 // Import components
 import UserProgressCard from '../components/Dashboard/UserProgressCard';
+import SkillProgressSection from '../components/Dashboard/SkillProgressSection';
 import ResumeScoreChart from '../components/Dashboard/ResumeScoreChart';
-import CareerJourneyTimeline from '../components/Dashboard/CareerJourneyTimeline';
-import SkillGapAnalysis from '../components/Dashboard/SkillGapAnalysis';
-import AIRecommendationCard from '../components/Dashboard/AIRecommendationCard';
-import BadgesSection from '../components/Dashboard/BadgesSection';
-import LeaderboardWidget from '../components/Dashboard/LeaderboardWidget';
-import OpportunityAlertCard from '../components/Dashboard/OpportunityAlertCard';
+import CareerPathsSection from '../components/Dashboard/CareerPathsSection';
 import MarketInsightsSection from '../components/Dashboard/MarketInsightsSection';
-import PersonalizedLearningPaths from '../components/Dashboard/PersonalizedLearningPaths';
+import BadgesSection from '../components/Dashboard/BadgesSection';
 import ActivityLogSection from '../components/Dashboard/ActivityLogSection';
 import CareerPredictionSection from '../components/Dashboard/CareerPredictionSection';
+import LeaderboardWidget from '../components/Dashboard/LeaderboardWidget';
+import AIRecommendationCard from '../components/Dashboard/AIRecommendationCard';
+import SkillGapAnalysis from '../components/Dashboard/SkillGapAnalysis';
+import CareerJourneyTimeline from '../components/Dashboard/CareerJourneyTimeline';
+import PersonalizedLearningPaths from '../components/Dashboard/PersonalizedLearningPaths';
+import OpportunityAlertCard from '../components/Dashboard/OpportunityAlertCard';
+import LearningRoadmap from '../components/Dashboard/LearningRoadmap';
 
 // Import context
-import { useUser } from '../contexts/UserContext';
-import { ThemeContext } from '../contexts/ThemeContext';
+import { useUser } from '../context/AppContext';
+import { useTheme } from '../contexts/ThemeContext';
 
-// Mock data (will be replaced with API calls)
+// Mock data
 import mockDashboardData from '../utils/mockData/dashboardData';
 
-// Responsive grid layout
-const ResponsiveGridLayout = WidthProvider(Responsive);
-
-// Widget definitions with Arabic titles
-const getWidgetDefinitions = () => {
-  return {
-    userProgress: { title: 'تقدم المستخدم', component: UserProgressCard, minH: 2, minW: 1, maxH: 3, maxW: 3 },
-    resumeScore: { title: 'تقييم السيرة الذاتية', component: ResumeScoreChart, minH: 2, minW: 2, maxH: 3, maxW: 3 },
-    careerJourney: { title: 'رحلة المهنية', component: CareerJourneyTimeline, minH: 2, minW: 2, maxH: 3, maxW: 3 },
-    skillGap: { title: 'تحليل فجوة المهارات', component: SkillGapAnalysis, minH: 2, minW: 1, maxH: 3, maxW: 3 },
-    recommendations: { title: 'توصيات الذكاء الاصطناعي', component: AIRecommendationCard, minH: 2, minW: 1, maxH: 3, maxW: 2 },
-    badges: { title: 'الشارات والإنجازات', component: BadgesSection, minH: 2, minW: 1, maxH: 3, maxW: 2 },
-    leaderboard: { title: 'لوحة المتصدرين', component: LeaderboardWidget, minH: 2, minW: 1, maxH: 3, maxW: 2 },
-    opportunityAlerts: { title: 'تنبيهات الفرص', component: OpportunityAlertCard, minH: 2, minW: 1, maxH: 3, maxW: 2 },
-    marketInsights: { title: 'رؤى سوق العمل', component: MarketInsightsSection, minH: 2, minW: 2, maxH: 3, maxW: 3 },
-    learningPaths: { title: 'مسارات التعلم', component: PersonalizedLearningPaths, minH: 2, minW: 1, maxH: 3, maxW: 2 },
-    recentActivities: { title: 'الأنشطة الأخيرة', component: ActivityLogSection, minH: 2, minW: 1, maxH: 3, maxW: 2 },
-    careerPrediction: { title: 'توقعات المسار المهني', component: CareerPredictionSection, minH: 2, minW: 2, maxH: 3, maxW: 3 },
-  };
-};
-
-// Generate initial layout
-const generateInitialLayout = () => {
-  return {
-    lg: [
-      { i: 'userProgress', x: 0, y: 0, w: 1, h: 2 },
-      { i: 'resumeScore', x: 1, y: 0, w: 2, h: 2 },
-      { i: 'careerPrediction', x: 0, y: 2, w: 2, h: 2 },
-      { i: 'leaderboard', x: 2, y: 2, w: 1, h: 2 },
-      { i: 'recommendations', x: 0, y: 4, w: 1, h: 2 },
-      { i: 'badges', x: 1, y: 4, w: 1, h: 2 },
-      { i: 'learningPaths', x: 2, y: 4, w: 1, h: 2 },
-    ],
-    md: [
-      { i: 'userProgress', x: 0, y: 0, w: 1, h: 2 },
-      { i: 'resumeScore', x: 1, y: 0, w: 1, h: 2 },
-      { i: 'careerPrediction', x: 0, y: 2, w: 2, h: 2 },
-      { i: 'leaderboard', x: 0, y: 4, w: 1, h: 2 },
-      { i: 'recommendations', x: 1, y: 4, w: 1, h: 2 },
-    ],
-    sm: [
-      { i: 'userProgress', x: 0, y: 0, w: 1, h: 2 },
-      { i: 'resumeScore', x: 0, y: 2, w: 1, h: 2 },
-      { i: 'careerPrediction', x: 0, y: 4, w: 1, h: 2 },
-    ],
-  };
+// Define dashboard widgets
+const widgetMap = {
+  userProgress: {
+    id: 'userProgress',
+    titleKey: 'dashboard.widgets.userProgress',
+    component: UserProgressCard,
+    defaultSize: { xs: 12, md: 4 },
+    defaultOrder: 0
+  },
+  resumeScore: {
+    id: 'resumeScore',
+    titleKey: 'dashboard.widgets.resumeScore',
+    component: ResumeScoreChart,
+    defaultSize: { xs: 12, md: 8 },
+    defaultOrder: 1
+  },
+  skillGap: {
+    id: 'skillGap',
+    titleKey: 'dashboard.widgets.skillGap',
+    component: SkillGapAnalysis,
+    defaultSize: { xs: 12, md: 6 },
+    defaultOrder: 2
+  },
+  aiRecommendation: {
+    id: 'aiRecommendation',
+    titleKey: 'dashboard.widgets.aiRecommendation',
+    component: AIRecommendationCard,
+    defaultSize: { xs: 12, md: 6 },
+    defaultOrder: 3
+  },
+  careerJourney: {
+    id: 'careerJourney',
+    titleKey: 'dashboard.widgets.careerJourney',
+    component: CareerJourneyTimeline,
+    defaultSize: { xs: 12, md: 8 },
+    defaultOrder: 4
+  },
+  badges: {
+    id: 'badges',
+    titleKey: 'dashboard.widgets.badges',
+    component: BadgesSection,
+    defaultSize: { xs: 12, md: 4 },
+    defaultOrder: 5
+  },
+  careerPrediction: {
+    id: 'careerPrediction',
+    titleKey: 'dashboard.widgets.careerPrediction',
+    component: CareerPredictionSection,
+    defaultSize: { xs: 12, md: 6 },
+    defaultOrder: 6
+  },
+  learningPaths: {
+    id: 'learningPaths',
+    titleKey: 'dashboard.widgets.learningPaths',
+    component: PersonalizedLearningPaths,
+    defaultSize: { xs: 12, md: 6 },
+    defaultOrder: 7
+  },
+  marketInsights: {
+    id: 'marketInsights',
+    titleKey: 'dashboard.widgets.marketInsights',
+    component: MarketInsightsSection,
+    defaultSize: { xs: 12, md: 8 },
+    defaultOrder: 8
+  },
+  leaderboard: {
+    id: 'leaderboard',
+    titleKey: 'dashboard.widgets.leaderboard',
+    component: LeaderboardWidget,
+    defaultSize: { xs: 12, md: 4 },
+    defaultOrder: 9
+  },
+  activityLog: {
+    id: 'activityLog',
+    titleKey: 'dashboard.widgets.activityLog',
+    component: ActivityLogSection,
+    defaultSize: { xs: 12, md: 4 },
+    defaultOrder: 10
+  },
+  opportunityAlert: {
+    id: 'opportunityAlert',
+    titleKey: 'dashboard.widgets.opportunityAlert',
+    component: OpportunityAlertCard,
+    defaultSize: { xs: 12, md: 8 },
+    defaultOrder: 11
+  },
+  learningRoadmap: {
+    id: 'learningRoadmap',
+    titleKey: 'dashboard.widgets.learningRoadmap',
+    component: LearningRoadmap,
+    defaultSize: { xs: 12, md: 8 },
+    defaultOrder: 12
+  }
 };
 
 // Animation variants
@@ -123,165 +203,264 @@ const itemVariants = {
     y: 0,
     opacity: 1,
     transition: {
-      duration: 0.4,
-      ease: "easeOut"
+      type: 'spring',
+      duration: 0.5
     }
   }
 };
 
+// Simple component error boundary for widget rendering
+const WidgetErrorBoundary = ({ children }) => {
+  const [hasError, setHasError] = useState(false);
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    const errorHandler = (error) => {
+      console.error('Widget rendering error:', error);
+      setHasError(true);
+      return true; // Prevents default error handling
+    };
+
+    window.addEventListener('error', errorHandler);
+    return () => window.removeEventListener('error', errorHandler);
+  }, []);
+
+  if (hasError) {
+    return (
+      <Box sx={{ p: 2, textAlign: 'center' }}>
+        <Typography color="error" gutterBottom>
+          {t('common.error')}
+        </Typography>
+        <Button 
+          variant="outlined" 
+          size="small" 
+          onClick={() => setHasError(false)}
+        >
+          {t('common.tryAgain')}
+        </Button>
+      </Box>
+    );
+  }
+
+  return children;
+};
+
 const ArabicDashboard = () => {
   const { t } = useTranslation();
-  const { user, isAuthenticated } = useUser();
-  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const { user } = useUser();
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
-  const [layoutConfiguration, setLayoutConfiguration] = useState(generateInitialLayout());
-  const [isCustomizing, setIsCustomizing] = useState(false);
-  const [draggableEnabled, setDraggableEnabled] = useState(false);
-  const theme = useTheme();
-  const { toggleColorMode } = useContext(ThemeContext);
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-  
-  // Get widget map with translations
-  const widgetMap = getWidgetDefinitions();
+  const muiTheme = useMuiTheme();
+  const { toggleDarkMode } = useTheme();
+  const [visibleWidgets, setVisibleWidgets] = useState([
+    'userProgress', 'resumeScore', 'skillGap', 'aiRecommendation', 'careerJourney', 
+    'badges', 'careerPrediction', 'learningPaths', 'marketInsights', 'leaderboard', 
+    'activityLog', 'opportunityAlert', 'learningRoadmap'
+  ]);
+  const [widgetOrder, setWidgetOrder] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const navigate = useNavigate();
   
   // Set RTL mode when component mounts
   useEffect(() => {
+    console.log('Setting RTL mode for Arabic dashboard');
     document.dir = 'rtl';
     return () => {
+      console.log('Cleaning up RTL mode');
       document.dir = 'ltr';
     };
   }, []);
 
-  // Use mock data directly instead of simulating API call
+  // Initialize widget order on mount
   useEffect(() => {
-    const fetchDashboardData = () => {
+    const savedOrder = localStorage.getItem('arabicDashboardWidgetOrder');
+    if (savedOrder) {
       try {
-        console.log('Loading dashboard data...');
-        // Set mock data directly without setTimeout
-        setDashboardData(mockDashboardData);
-        setDashboardLoading(false);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        setError('فشل في تحميل البيانات. يرجى المحاولة مرة أخرى.');
-        setDashboardLoading(false);
+        setWidgetOrder(JSON.parse(savedOrder));
+      } catch (e) {
+        console.error('Error parsing saved widget order', e);
+        initDefaultWidgetOrder();
       }
-    };
-
-    fetchDashboardData();
+    } else {
+      initDefaultWidgetOrder();
+    }
+    
+    // Load visible widgets from localStorage
+    const savedVisibleWidgets = localStorage.getItem('arabicDashboardVisibleWidgets');
+    if (savedVisibleWidgets) {
+      try {
+        setVisibleWidgets(JSON.parse(savedVisibleWidgets));
+      } catch (e) {
+        console.error('Error parsing saved visible widgets', e);
+      }
+    }
   }, []);
 
-  // Get props for each widget based on its type
-  const getWidgetProps = (widgetType) => {
-    if (!dashboardData) {
-      console.warn(`Dashboard data not available for widget: ${widgetType}`);
-      return {};
-    }
-
-    let props = {};
-    
-    switch (widgetType) {
-      case 'userProgress':
-        props = { progressData: dashboardData.progress || {} };
-        break;
-      case 'resumeScore':
-        props = { 
-          resumeData: dashboardData.resumeScore || {
-            scores: [], 
-            average_improvement: 0,
-            latest_score: 0
-          } 
-        };
-        break;
-      case 'careerJourney':
-        props = { journeyData: dashboardData.careerJourney || [] };
-        break;
-      case 'recommendations':
-        props = { recommendations: dashboardData.recommendations || [] };
-        break;
-      case 'badges':
-        props = { badges: dashboardData.badges || [] };
-        break;
-      case 'marketInsights':
-        props = { insights: dashboardData.marketInsights || {} };
-        break;
-      case 'leaderboard':
-        props = { leaderboardData: dashboardData.leaderboard || {} };
-        break;
-      case 'learningPaths':
-        props = { paths: dashboardData.learningPaths || [] };
-        break;
-      case 'opportunityAlerts':
-        props = { opportunities: dashboardData.opportunityAlerts || [] };
-        break;
-      case 'recentActivities':
-        props = { activities: dashboardData.recentActivities || [] };
-        break;
-      case 'careerPrediction':
-        props = { predictions: dashboardData.careerPredictions || [] };
-        break;
-      default:
-        console.warn(`Unknown widget type: ${widgetType}`);
-        props = {};
-    }
-    
-    return props;
+  // Initialize default widget order
+  const initDefaultWidgetOrder = () => {
+    const defaultOrder = Object.entries(widgetMap)
+      .sort((a, b) => a[1].defaultOrder - b[1].defaultOrder)
+      .map(([id]) => id);
+    setWidgetOrder(defaultOrder);
   };
-  
-  // Render a widget
-  const renderWidget = (key, widget) => {
-    const WidgetComponent = widget.component;
-    const widgetProps = getWidgetProps(key);
+
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        console.log('Loading dashboard data...');
+        // In a real app, replace this with API call
+        setDashboardData(mockDashboardData);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        setError(t('dashboard.errors.loadFailed'));
+        setLoading(false);
+      }
+    };
     
-    return (
-      <Paper 
-        elevation={2} 
-        sx={{ 
-          height: '100%', 
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          borderRadius: '10px',
-          transition: 'all 0.3s ease',
-          '&:hover': {
-            boxShadow: '0px 6px 10px rgba(0, 0, 0, 0.1)',
+    fetchDashboardData();
+  }, [t]);
+
+  // Initialize mock data for user progress widget to fix the UserProgressCard error
+  useEffect(() => {
+    // Ensure the dashboardData includes a complete userProgress object
+    if (dashboardData && !dashboardData.userProgress) {
+      const updatedData = {
+        ...dashboardData,
+        userProgress: {
+          xp: dashboardData?.progress?.xp || 250,
+          level: dashboardData?.progress?.level || 3,
+          nextLevelXp: dashboardData?.progress?.nextLevelXp || 400,
+          rank: dashboardData?.progress?.rank || "مستكشف المهنة",
+          completedTasks: dashboardData?.progress?.completedTasks || 24,
+          totalTasks: dashboardData?.progress?.totalTasks || 36,
+          skills: dashboardData?.progress?.skills || {
+            main: [
+              { name: "جافاسكريبت", level: 75 },
+              { name: "رياكت", level: 68 },
+              { name: "نود.جي إس", level: 55 }
+            ],
+            secondary: [
+              { name: "تصميم واجهة المستخدم", level: 45 },
+              { name: "إدارة المشاريع", level: 62 }
+            ]
+          },
+          badges: dashboardData?.progress?.badges || []
+        }
+      };
+      
+      // Add fallback badges data if necessary
+      if (!dashboardData.badges || !Array.isArray(dashboardData.badges) || dashboardData.badges.length === 0) {
+        updatedData.badges = [
+          { 
+            id: 1, 
+            name: "بادئ السيرة الذاتية", 
+            status: "earned", 
+            date_earned: "2023-02-10", 
+            icon: "description",
+            category: "مسار مهني",
+            description: "أنشأت أول سيرة ذاتية لك!"
+          },
+          { 
+            id: 2, 
+            name: "نجم المقابلة", 
+            status: "earned", 
+            date_earned: "2023-03-15", 
+            icon: "record_voice_over",
+            category: "مهارات",
+            description: "أكملت مقابلة تجريبية بنجاح"
+          },
+          { 
+            id: 3, 
+            name: "بناء الشبكات", 
+            status: "progress", 
+            progress: 70, 
+            icon: "people",
+            category: "تواصل",
+            description: "تواصل مع 10 محترفين في مجالك"
+          },
+          { 
+            id: 4, 
+            name: "مطور المهارات", 
+            status: "progress", 
+            progress: 45, 
+            icon: "trending_up",
+            category: "تعلم",
+            description: "أكمل 5 دورات تدريبية في مهاراتك الأساسية"
+          },
+          { 
+            id: 5, 
+            name: "باحث وظيفي متميز", 
+            status: "locked", 
+            icon: "work",
+            category: "مسار مهني",
+            description: "تقدم بطلب لـ 10 وظائف مناسبة"
           }
-        }}
-      >
-        <Box 
-          sx={{ 
-            p: 2, 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            borderBottom: '1px solid rgba(0, 0, 0, 0.12)'
-          }}
-        >
-          <Typography variant="h6" fontWeight="bold">{widget.title}</Typography>
-        </Box>
-        <Box sx={{ p: 1, flexGrow: 1, overflow: 'auto' }}>
-          <WidgetComponent {...widgetProps} />
-        </Box>
-      </Paper>
-    );
-  };
-
-  // Handle layout changes
-  const onLayoutChange = (currentLayout, allLayouts) => {
-    if (isCustomizing) {
-      setLayoutConfiguration(allLayouts);
-      localStorage.setItem('dashboardLayout', JSON.stringify(allLayouts));
+        ];
+      }
+      
+      setDashboardData(updatedData);
     }
+  }, [dashboardData]);
+
+  // Handle drag end
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+    
+    const newOrder = Array.from(widgetOrder);
+    const [reorderedItem] = newOrder.splice(result.source.index, 1);
+    newOrder.splice(result.destination.index, 0, reorderedItem);
+    
+    setWidgetOrder(newOrder);
+    localStorage.setItem('arabicDashboardWidgetOrder', JSON.stringify(newOrder));
   };
 
-  // Toggle layout customization
-  const toggleCustomization = () => {
-    setIsCustomizing(!isCustomizing);
-    setDraggableEnabled(!draggableEnabled);
+  // Toggle widget visibility
+  const toggleWidgetVisibility = (widgetId) => {
+    let newVisibleWidgets;
+    
+    if (visibleWidgets.includes(widgetId)) {
+      newVisibleWidgets = visibleWidgets.filter(id => id !== widgetId);
+    } else {
+      newVisibleWidgets = [...visibleWidgets, widgetId];
+    }
+    
+    setVisibleWidgets(newVisibleWidgets);
+    localStorage.setItem('arabicDashboardVisibleWidgets', JSON.stringify(newVisibleWidgets));
+  };
+
+  // Reset dashboard layout
+  const resetDashboardLayout = () => {
+    initDefaultWidgetOrder();
+    const allWidgetIds = Object.keys(widgetMap);
+    setVisibleWidgets(allWidgetIds);
+    localStorage.removeItem('arabicDashboardWidgetOrder');
+    localStorage.removeItem('arabicDashboardVisibleWidgets');
+  };
+
+  // Refresh dashboard
+  const refreshDashboard = async () => {
+    setRefreshing(true);
+    
+    try {
+      // In a real app, replace with API call
+      setDashboardData(mockDashboardData);
+      
+      // Simulate delay for refresh animation
+      setTimeout(() => {
+        setRefreshing(false);
+      }, 1500);
+    } catch (error) {
+      console.error('Error refreshing dashboard:', error);
+      setError(t('dashboard.errors.refreshFailed'));
+      setRefreshing(false);
+    }
   };
 
   // If loading
-  if (dashboardLoading) {
+  if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'center', height: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <CircularProgress />
@@ -295,67 +474,186 @@ const ArabicDashboard = () => {
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'center' }}>
         <Typography variant="h5" color="error">{error}</Typography>
         <Button variant="contained" color="primary" onClick={() => window.location.reload()} sx={{ mt: 2 }}>
-          {t('common.retry')}
+          {t('common.tryAgain')}
         </Button>
       </Container>
     );
   }
 
+  // Get widget props for rendering
+  const getWidgetProps = (widgetId) => {
+    // Fix data mapping for each widget type
+    let widgetData = {};
+    
+    // Map dashboardData to the expected structure for each widget
+    switch(widgetId) {
+      case 'userProgress':
+        // UserProgressCard expects data with 'xp' property
+        widgetData = dashboardData?.userProgress || { 
+          xp: dashboardData?.progress?.xp || 250,
+          level: dashboardData?.progress?.level || 3
+        };
+        break;
+      case 'resumeScore':
+        widgetData = dashboardData?.resumeScore || {};
+        break;
+      case 'skillGap':
+        widgetData = dashboardData?.skillGap || [];
+        break;
+      case 'aiRecommendation':
+        widgetData = dashboardData?.recommendations || [];
+        break;
+      case 'careerJourney':
+        widgetData = dashboardData?.careerJourney || [];
+        break;
+      case 'badges':
+        widgetData = dashboardData?.badges || [];
+        break;
+      case 'careerPrediction':
+        widgetData = dashboardData?.careerPredictions || [];
+        break;
+      case 'learningPaths':
+        widgetData = dashboardData?.learningPaths || [];
+        break;
+      case 'marketInsights':
+        widgetData = dashboardData?.marketInsights || {};
+        break;
+      case 'leaderboard':
+        widgetData = dashboardData?.leaderboard || {};
+        break;
+      case 'activityLog':
+        widgetData = dashboardData?.recentActivities || [];
+        break;
+      case 'opportunityAlert':
+        widgetData = dashboardData?.opportunityAlerts || [];
+        break;
+      case 'learningRoadmap':
+        widgetData = dashboardData?.learningRoadmap || {};
+        break;
+      default:
+        widgetData = dashboardData?.[widgetId] || {};
+    }
+    
+    return {
+      data: widgetData,
+      onToggleVisibility: () => toggleWidgetVisibility(widgetId),
+      isVisible: visibleWidgets.includes(widgetId),
+    };
+  };
+
   return (
     <Container maxWidth="xl" sx={{ mt: 2, mb: 4 }}>
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" component="h1" fontWeight="bold" sx={{ color: theme.palette.text.primary }}>
-          {t('dashboard.title')}
+        <Typography variant="h4" component="h1" fontWeight="bold" sx={{ color: muiTheme.palette.text.primary }}>
+          {t('dashboard.yourCareerDashboard')}
         </Typography>
-        <Box>
-          <Button
-            variant={isCustomizing ? "contained" : "outlined"}
-            color={isCustomizing ? "primary" : "secondary"}
-            onClick={toggleCustomization}
-            startIcon={isCustomizing ? <DoneIcon /> : <EditIcon />}
-            sx={{ mr: 1 }}
-          >
-            {isCustomizing ? t('dashboard.actions.saveLayout') : t('dashboard.actions.customizeLayout')}
-          </Button>
-          {isCustomizing && (
-            <Button
-              variant="outlined"
-              color="error"
-              onClick={() => {
-                setIsCustomizing(false);
-                setDraggableEnabled(false);
-              }}
-              startIcon={<CloseIcon />}
+        
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title={t('dashboard.actions.resetLayout')}>
+            <Button 
+              variant="outlined" 
+              color="secondary"
+              onClick={resetDashboardLayout}
+              startIcon={<RefreshIcon />}
             >
-              {t('common.cancel')}
+              {t('dashboard.actions.resetLayout')}
             </Button>
-          )}
+          </Tooltip>
+          
+          <Tooltip title={t('dashboard.actions.refresh')}>
+            <IconButton onClick={refreshDashboard} disabled={refreshing}>
+              <RefreshIcon sx={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+            </IconButton>
+          </Tooltip>
         </Box>
       </Box>
       
-      <ResponsiveGridLayout
-        className="layout"
-        layouts={layoutConfiguration}
-        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-        cols={{ lg: 3, md: 2, sm: 1, xs: 1, xxs: 1 }}
-        rowHeight={200}
-        isDraggable={draggableEnabled}
-        isResizable={draggableEnabled}
-        onLayoutChange={onLayoutChange}
-        margin={[16, 16]}
-      >
-        {Object.entries(widgetMap).map(([key, widget]) => {
-          // Check if this widget is in the layout
-          const isInLayout = layoutConfiguration.lg.some(item => item.i === key);
-          if (!isInLayout) return null;
-          
-          return (
-            <div key={key}>
-              {renderWidget(key, widget)}
-            </div>
-          );
-        })}
-      </ResponsiveGridLayout>
+      {dashboardData && widgetOrder && (
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="dashboard">
+            {(provided) => (
+              <Box
+                {...provided.droppableProps}
+                ref={provided.innerRef}
+                component={motion.div}
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <Grid container spacing={3}>
+                  {widgetOrder.map((widgetId, index) => {
+                    if (!visibleWidgets.includes(widgetId)) return null;
+                    
+                    const widget = widgetMap[widgetId];
+                    if (!widget) return null;
+                    
+                    const WidgetComponent = widget.component;
+                    
+                    return (
+                      <Draggable key={widgetId} draggableId={widgetId} index={index}>
+                        {(provided) => (
+                          <Grid
+                            item
+                            {...widget.defaultSize}
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            component={motion.div}
+                            variants={itemVariants}
+                          >
+                            <Paper
+                              sx={{
+                                p: 2,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                borderRadius: 2,
+                                position: 'relative',
+                                overflow: 'hidden',
+                                height: '100%',
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  mb: 2,
+                                }}
+                              >
+                                <Typography variant="h6" fontWeight="bold">
+                                  {t(widget.titleKey)}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <Tooltip title={t('dashboard.actions.hide')}>
+                                    <IconButton size="small" onClick={() => toggleWidgetVisibility(widgetId)}>
+                                      <VisibilityOffIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title={t('dashboard.actions.dragToReorder')}>
+                                    <Box {...provided.dragHandleProps}>
+                                      <DragIndicatorIcon color="action" />
+                                    </Box>
+                                  </Tooltip>
+                                </Box>
+                              </Box>
+                              
+                              <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                                <WidgetErrorBoundary>
+                                  <WidgetComponent {...getWidgetProps(widgetId)} />
+                                </WidgetErrorBoundary>
+                              </Box>
+                            </Paper>
+                          </Grid>
+                        )}
+                      </Draggable>
+                    );
+                  })}
+                </Grid>
+                {provided.placeholder}
+              </Box>
+            )}
+          </Droppable>
+        </DragDropContext>
+      )}
     </Container>
   );
 };

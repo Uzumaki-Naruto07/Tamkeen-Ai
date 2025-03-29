@@ -52,7 +52,38 @@ const resources = {
           hide: 'Hide Widget',
           show: 'Show Widget',
           dragToReorder: 'Drag to reorder'
+        },
+        errors: {
+          loadFailed: 'Failed to load dashboard data. Please try again.',
+          refreshFailed: 'Failed to refresh dashboard data. Please try again.'
         }
+      },
+      
+      // Navigation items
+      navigation: {
+        dashboard: 'Dashboard',
+        jobs: 'Jobs',
+        aiCoach: 'AI Coach',
+        resumeBuilder: 'Resume Builder',
+        skillBuilder: 'Skill Builder',
+        achievements: 'Achievements',
+        settings: 'Settings',
+        profile: 'Profile',
+        logout: 'Logout'
+      },
+      
+      // Notifications
+      notifications: {
+        newJobRecommendation: 'New job recommendation',
+        resumeUpdate: 'Your resume needs updating',
+        skillGap: 'Skill gap detected',
+        mockInterview: 'Mock interview completed',
+        newAchievement: 'New achievement unlocked!',
+        markAllRead: 'Mark all read',
+        read: 'Read',
+        new: 'New',
+        empty: 'No notifications',
+        viewAll: 'View all notifications'
       },
       
       // Common elements
@@ -78,6 +109,14 @@ const resources = {
         failure: 'Failure',
         confirm: 'Confirm',
         reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
       },
     },
   },
@@ -130,7 +169,97 @@ const resources = {
           hide: 'إخفاء العنصر',
           show: 'إظهار العنصر',
           dragToReorder: 'اسحب لإعادة الترتيب'
+        },
+        errors: {
+          loadFailed: 'فشل في تحميل البيانات. يرجى المحاولة مرة أخرى.',
+          refreshFailed: 'فشل في تحديث البيانات. يرجى المحاولة مرة أخرى.'
         }
+      },
+      
+      // Navigation items
+      navigation: {
+        dashboard: 'لوحة المعلومات',
+        jobs: 'الوظائف',
+        aiCoach: 'مدرب الذكاء الاصطناعي',
+        resumeBuilder: 'منشئ السيرة الذاتية',
+        skillBuilder: 'منشئ المهارات',
+        achievements: 'الإنجازات',
+        settings: 'الإعدادات',
+        profile: 'الملف الشخصي',
+        logout: 'تسجيل الخروج'
+      },
+      
+      // Notifications
+      notifications: {
+        newJobRecommendation: 'توصية وظيفة جديدة',
+        resumeUpdate: 'تحتاج سيرتك الذاتية إلى تحديث',
+        skillGap: 'تم اكتشاف فجوة مهارية',
+        mockInterview: 'تم إكمال المقابلة التجريبية',
+        newAchievement: 'تم فتح إنجاز جديد!',
+        markAllRead: 'تعليم الكل كمقروء',
+        read: 'مقروء',
+        new: 'جديد',
+        empty: 'لا توجد إشعارات',
+        viewAll: 'عرض جميع الإشعارات'
+      },
+      
+      // Badge section translations
+      badges: {
+        yourAchievements: 'إنجازاتك',
+        earned: 'مكتسبة',
+        achievementProgress: 'مستوى الإنجاز',
+        complete: 'مكتمل',
+        badgesTab: 'الأوسمة',
+        progressionTab: 'التقدم',
+        challengesTab: 'التحديات',
+        badgeProgressionPaths: 'مسارات تقدم الأوسمة',
+        yourBadgeChallenges: 'تحديات الأوسمة الخاصة بك',
+        careerCategory: 'مسار مهني',
+        learningCategory: 'التعلم',
+        networkingCategory: 'التواصل',
+        skillsCategory: 'المهارات',
+        generalCategory: 'عام',
+        nextLabel: 'التالي',
+        progress: 'التقدم',
+        completed: 'مكتمل',
+        almostThere: 'اقتربت من الهدف!',
+        readyToClaim: 'جاهز للمطالبة!',
+        earnedOn: 'تم الحصول عليها في'
+      },
+      
+      // User progress translations
+      userProgress: {
+        welcome: {
+          morning: 'صباح الخير، {name}!',
+          afternoon: 'مساء الخير، {name}!',
+          evening: 'مساء الخير، {name}!'
+        },
+        careerExplorer: 'مستكشف المهنة',
+        level: 'المستوى {level}',
+        gold: 'ذهبي',
+        silver: 'فضي',
+        bronze: 'برونزي',
+        xpPoints: 'نقاط الخبرة',
+        toNextLevel: '{points} نقطة للمستوى التالي',
+        recentAchievements: 'الإنجازات الأخيرة',
+        viewAll: 'عرض الكل',
+        firstLogin: 'أول تسجيل دخول',
+        completedProfile: 'اكتمال الملف الشخصي',
+        firstResume: 'السيرة الذاتية الأولى'
+      },
+      
+      // Resume score translations
+      resumeScore: {
+        yourResumeScore: 'تقييم سيرتك الذاتية',
+        lastUpdated: 'آخر تحديث',
+        improvement: 'تحسن بنسبة {percent}%',
+        keywordMatches: 'تطابق الكلمات الرئيسية',
+        missingKeywords: 'الكلمات الرئيسية المفقودة',
+        suggestedSection: 'القسم المقترح',
+        high: 'عالي',
+        medium: 'متوسط',
+        low: 'منخفض',
+        updateResume: 'تحديث السيرة الذاتية'
       },
       
       // Common elements
@@ -156,7 +285,44 @@ const resources = {
         failure: 'فشل',
         confirm: 'تأكيد',
         reject: 'رفض',
+        close: 'إغلاق',
+        share: 'مشاركة',
+        retry: 'إعادة المحاولة',
+        noData: 'لا توجد بيانات متاحة',
+        user: 'مستخدم',
+        login: 'تسجيل الدخول',
+        logout: 'تسجيل الخروج',
+        profile: 'الملف الشخصي',
+        settings: 'الإعدادات',
+        notifications: 'الإشعارات',
+        lightMode: 'الوضع الفاتح',
+        darkMode: 'الوضع الداكن'
       },
+      
+      // Market insights
+      marketInsights: {
+        salaryData: 'بيانات الرواتب',
+        average: 'متوسط',
+        range: 'النطاق',
+        jobDemand: 'الطلب على الوظائف',
+        competitionLevel: 'مستوى المنافسة',
+        growthRate: 'معدل النمو',
+        topSkills: 'أهم المهارات',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض'
+      },
+      
+      // Learning paths
+      learningPaths: {
+        inProgress: 'قيد التقدم',
+        completed: 'مكتمل',
+        today: 'اليوم',
+        viewCourse: 'عرض الدورة',
+        startCourse: 'بدء الدورة',
+        resumeCourse: 'استئناف الدورة',
+        certificate: 'شهادة'
+      }
     },
   },
 };

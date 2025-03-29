@@ -13,7 +13,7 @@ const MainLayout = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {isAuthenticated && (
-        <NavigationBar toggleDarkMode={toggleDarkMode} darkMode={isDarkMode} />
+        <NavigationBar darkMode={isDarkMode} />
       )}
       <Box
         component="main"

@@ -35,6 +35,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../context/AppContext';
 import { mockDashboardData } from '../../utils/mockData/mockDataIndex';
+import { useTranslation } from 'react-i18next';
 
 // Icons
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
@@ -216,14 +217,16 @@ const activityIcons = {
   'default': <AssignmentIcon />
 };
 
-const UserProgressCard = ({ user, expanded = false }) => {
+const UserProgressCard = ({ data, user, expanded = false }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const navigate = useNavigate();
   const { profile } = useUser();
   const userData = user || profile || {};
   
   const [isExpanded, setIsExpanded] = useState(expanded);
-  const [userXP, setUserXP] = useState(mockDashboardData.userProgress.xp || 0);
+  // Use data from props or fallback to default values to avoid undefined errors
+  const [userXP, setUserXP] = useState(data?.xp || mockDashboardData?.progress?.xp || 0);
   const [showAchievement, setShowAchievement] = useState(false);
   const [recentAchievement, setRecentAchievement] = useState(null);
   
@@ -241,33 +244,33 @@ const UserProgressCard = ({ user, expanded = false }) => {
   
   // Mock achievements data
   const achievements = [
-    { id: 1, title: 'First Login', icon: <CelebrationIcon />, unlocked: true },
-    { id: 2, title: 'Profile Completed', icon: <CheckCircleIcon />, unlocked: userXP >= 50 },
-    { id: 3, title: 'Resume Expert', icon: <WorkspacePremiumIcon />, unlocked: userXP >= 150 },
-    { id: 4, title: 'Interview Master', icon: <MilitaryTechIcon />, unlocked: userXP >= 250 },
-    { id: 5, title: 'Skill Pioneer', icon: <EmojiObjectsIcon />, unlocked: userXP >= 350 },
-    { id: 6, title: 'Job Hunter', icon: <TrendingUpIcon />, unlocked: userXP >= 450 },
+    { id: 1, title: t('userProgress.firstLogin', 'أول تسجيل دخول'), icon: <CelebrationIcon />, unlocked: true },
+    { id: 2, title: t('userProgress.profileCompleted', 'اكتمال الملف الشخصي'), icon: <CheckCircleIcon />, unlocked: userXP >= 50 },
+    { id: 3, title: t('userProgress.resumeExpert', 'خبير السيرة الذاتية'), icon: <WorkspacePremiumIcon />, unlocked: userXP >= 150 },
+    { id: 4, title: t('userProgress.interviewMaster', 'سيد المقابلات'), icon: <MilitaryTechIcon />, unlocked: userXP >= 250 },
+    { id: 5, title: t('userProgress.skillPioneer', 'رائد المهارات'), icon: <EmojiObjectsIcon />, unlocked: userXP >= 350 },
+    { id: 6, title: t('userProgress.jobHunter', 'صياد الوظائف'), icon: <TrendingUpIcon />, unlocked: userXP >= 450 },
   ];
   
   // Mock milestone data
   const milestones = [
-    { id: 1, title: 'Complete your profile', xp: 50, completed: userXP >= 50 },
-    { id: 2, title: 'Upload your resume', xp: 75, completed: userXP >= 125 },
-    { id: 3, title: 'Take a skill assessment', xp: 100, completed: userXP >= 225 },
-    { id: 4, title: 'Apply to a job', xp: 125, completed: userXP >= 350 },
+    { id: 1, title: t('userProgress.completeProfile', 'أكمل ملفك الشخصي'), xp: 50, completed: userXP >= 50 },
+    { id: 2, title: t('userProgress.uploadResume', 'ارفع سيرتك الذاتية'), xp: 75, completed: userXP >= 125 },
+    { id: 3, title: t('userProgress.takeSkillAssessment', 'خذ تقييم المهارات'), xp: 100, completed: userXP >= 225 },
+    { id: 4, title: t('userProgress.applyToJob', 'تقدم لوظيفة'), xp: 125, completed: userXP >= 350 },
   ];
   
   // Generate welcome message based on time of day and user data
   const getWelcomeMessage = () => {
     const hour = new Date().getHours();
-    const name = userData.firstName || userData.name || 'there';
+    const name = userData.firstName || userData.name || t('common.user');
     
     if (hour < 12) {
-      return `Good morning, ${name}!`;
+      return t('userProgress.welcome.morning', { name });
     } else if (hour < 18) {
-      return `Good afternoon, ${name}!`;
+      return t('userProgress.welcome.afternoon', { name });
     } else {
-      return `Good evening, ${name}!`;
+      return t('userProgress.welcome.evening', { name });
     }
   };
   
@@ -306,7 +309,7 @@ const UserProgressCard = ({ user, expanded = false }) => {
       <ProgressCard>
         <LevelBadge>
           <LevelDisplay
-            badgeContent={`Level ${userLevelData.level}`}
+            badgeContent={t('userProgress.level', { level: userLevelData.level })}
           >
             <Avatar 
               sx={{ 
@@ -337,7 +340,7 @@ const UserProgressCard = ({ user, expanded = false }) => {
                 {getWelcomeMessage()}
               </WelcomeMessage>
               <Typography variant="body2" color="text.secondary">
-                {userData.title || 'Career Explorer'}
+                {userData.title || t('userProgress.careerExplorer')}
               </Typography>
             </Box>
           </UserInfoBox>
@@ -373,7 +376,7 @@ const UserProgressCard = ({ user, expanded = false }) => {
                   {userXP}
                 </Typography>
                 <Typography variant="caption" component="div" color="text.secondary">
-                  XP Points
+                  {t('userProgress.xpPoints')}
                 </Typography>
               </Box>
             </CircularProgressBox>
@@ -381,16 +384,16 @@ const UserProgressCard = ({ user, expanded = false }) => {
           
           <Box sx={{ textAlign: 'center', mb: 2 }}>
             <LevelText variant="subtitle1" level={userLevelData.level}>
-              Level {userLevelData.level} {
+              {t('userProgress.level', { level: userLevelData.level })} {
                 userLevelData.level >= 10 
-                  ? 'Gold' 
+                  ? t('userProgress.gold') 
                   : userLevelData.level >= 5 
-                    ? 'Silver' 
-                    : 'Bronze'
+                    ? t('userProgress.silver') 
+                    : t('userProgress.bronze')
               }
             </LevelText>
             <Typography variant="body2" color="text.secondary">
-              {userLevelData.xpToNextLevel} XP to Level {userLevelData.level + 1}
+              {t('userProgress.toNextLevel', { points: userLevelData.xpToNextLevel })}
             </Typography>
           </Box>
           
@@ -398,8 +401,8 @@ const UserProgressCard = ({ user, expanded = false }) => {
           
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="subtitle1">Recent Achievements</Typography>
-              <Tooltip title="View all achievements">
+              <Typography variant="subtitle1">{t('userProgress.recentAchievements')}</Typography>
+              <Tooltip title={t('userProgress.viewAll')}>
                 <IconButton size="small">
                   <InfoOutlinedIcon fontSize="small" />
                 </IconButton>

@@ -2,17 +2,22 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+// Get WS port from environment or use server port
+const getPort = () => {
+  return process.env.VITE_WS_PORT ? parseInt(process.env.VITE_WS_PORT) : 3000;
+};
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000,
+    port: getPort(),
     host: true, // Listen on all addresses
-    strictPort: true, // Don't try another port if 3000 is taken
+    strictPort: false, // Try another port if preferred port is taken
     open: true,
     cors: true, // Enable CORS for all requests
     hmr: {
-      clientPort: 3000, // Force the client to use port 3000
+      clientPort: getPort(), // Use the same port for HMR WebSocket
       overlay: true, // Show errors as overlay
     }
   },

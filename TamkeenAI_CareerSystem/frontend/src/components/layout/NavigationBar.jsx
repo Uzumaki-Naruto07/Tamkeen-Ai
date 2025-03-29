@@ -30,7 +30,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useContext } from 'react';
-import { ThemeContext } from '../../contexts/ThemeContext';
+import { useTheme as useCustomTheme } from '../../contexts/ThemeContext';
 import LanguageIcon from '@mui/icons-material/Language';
 
 // Icons
@@ -196,32 +196,37 @@ const navVariants = {
 
 // Navigation items
 const navigationItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
-  { path: '/jobs', label: 'Jobs', icon: <WorkIcon /> },
-  { path: '/ai-coach', label: 'AI Coach', icon: <SmartToyIcon /> },
-  { path: '/resume-builder', label: 'Resume Builder', icon: <DescriptionIcon /> },
-  { path: '/skill-builder', label: 'Skill Builder', icon: <SchoolIcon /> },
-  { path: '/achievements', label: 'Achievements', icon: <EmojiEventsIcon /> },
-  { path: '/settings', label: 'Settings', icon: <SettingsIcon /> },
+  { path: '/dashboard', label: 'Dashboard', labelKey: 'navigation.dashboard', icon: <DashboardIcon /> },
+  { path: '/jobs', label: 'Jobs', labelKey: 'navigation.jobs', icon: <WorkIcon /> },
+  { path: '/ai-coach', label: 'AI Coach', labelKey: 'navigation.aiCoach', icon: <SmartToyIcon /> },
+  { path: '/resume-builder', label: 'Resume Builder', labelKey: 'navigation.resumeBuilder', icon: <DescriptionIcon /> },
+  { path: '/skill-builder', label: 'Skill Builder', labelKey: 'navigation.skillBuilder', icon: <SchoolIcon /> },
+  { path: '/achievements', label: 'Achievements', labelKey: 'navigation.achievements', icon: <EmojiEventsIcon /> },
+  { path: '/settings', label: 'Settings', labelKey: 'navigation.settings', icon: <SettingsIcon /> },
 ];
 
 // Notification data (mock)
 const notifications = [
-  { id: 1, message: "New job recommendation", read: false },
-  { id: 2, message: "Your resume needs updating", read: false },
-  { id: 3, message: "Skill gap detected", read: true },
-  { id: 4, message: "Mock interview completed", read: true },
-  { id: 5, message: "New achievement unlocked!", read: false },
+  { id: 1, message: "New job recommendation", messageKey: "notifications.newJobRecommendation", read: false },
+  { id: 2, message: "Your resume needs updating", messageKey: "notifications.resumeUpdate", read: false },
+  { id: 3, message: "Skill gap detected", messageKey: "notifications.skillGap", read: true },
+  { id: 4, message: "Mock interview completed", messageKey: "notifications.mockInterview", read: true },
+  { id: 5, message: "New achievement unlocked!", messageKey: "notifications.newAchievement", read: false },
 ];
 
-const NavigationBar = ({ toggleDarkMode, darkMode }) => {
-  const theme = useTheme();
+const NavigationBar = ({ open, onToggleDrawer }) => {
+  const muiTheme = useTheme();
+  const { isDarkMode, toggleDarkMode } = useCustomTheme();
+  const { user, logout } = useUser();
+  const [value, setValue] = useState(0);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [notificationsAnchorEl, setNotificationsAnchorEl] = useState(null);
+  const [notificationsCount, setNotificationsCount] = useState(3);
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile, logout, isAuthenticated } = useUser();
-  const { t, i18n } = useTranslation();
   
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down('md'));
   
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
@@ -249,7 +254,7 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
   
   // Toggle drawer
   const toggleDrawer = (open) => (event) => {
-    if (event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) {
+    if (event && event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) {
       return;
     }
     setDrawerOpen(open);
@@ -290,13 +295,16 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
   
   // Change language
   const changeLanguage = (lang) => {
+    console.log(`Changing language to: ${lang}`);
     setLanguage(lang);
     handleLanguageMenuClose();
     
     // Navigate to the appropriate dashboard based on language
     if (lang === 'ar') {
+      console.log('Navigating to Arabic dashboard');
       navigate('/dashboard-ar');
     } else {
+      console.log('Navigating to English dashboard');
       navigate('/dashboard');
     }
     
@@ -351,7 +359,7 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
             <ListItemIcon>
               {item.icon}
             </ListItemIcon>
-            <ListItemText primary={item.label} />
+            <ListItemText primary={t(item.labelKey, item.label)} />
           </ListItem>
         ))}
       </List>
@@ -362,13 +370,13 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
         <FormControlLabel
           control={
             <DarkModeSwitch
-              checked={darkMode}
+              checked={isDarkMode}
               onChange={() => {
                 // Add a visual indicator that the switch was clicked
                 const switchThumb = document.querySelector('.MuiSwitch-thumb');
                 if (switchThumb) {
                   switchThumb.style.transition = 'transform 0.2s ease-in-out';
-                  switchThumb.style.transform = darkMode ? 'scale(0.8)' : 'scale(0.8)';
+                  switchThumb.style.transform = isDarkMode ? 'scale(0.8)' : 'scale(0.8)';
                   setTimeout(() => {
                     switchThumb.style.transform = '';
                   }, 200);
@@ -377,7 +385,7 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
               }}
             />
           }
-          label={darkMode ? "Dark Mode" : "Light Mode"}
+          label={isDarkMode ? t('common.darkMode') : t('common.lightMode')}
         />
       </Box>
       
@@ -389,7 +397,7 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
           fullWidth
           onClick={handleLogout}
         >
-          Logout
+          {t('common.logout')}
         </Button>
       </DrawerFooter>
     </Box>
@@ -398,28 +406,13 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
   const renderUserMenu = () => {
     return (
       <>
-        <Tooltip title="Toggle dark mode">
-          <FormControlLabel
-            control={
-              <DarkModeSwitch
-                checked={darkMode}
-                onChange={() => {
-                  // Add a visual indicator that the switch was clicked
-                  const switchThumb = document.querySelector('.MuiSwitch-thumb');
-                  if (switchThumb) {
-                    switchThumb.style.transition = 'transform 0.2s ease-in-out';
-                    switchThumb.style.transform = darkMode ? 'scale(0.8)' : 'scale(0.8)';
-                    setTimeout(() => {
-                      switchThumb.style.transform = '';
-                    }, 200);
-                  }
-                  toggleDarkMode();
-                }}
-                sx={{ mx: 1 }}
-              />
-            }
-            label=""
-          />
+        <Tooltip title={isDarkMode ? t('common.lightMode') : t('common.darkMode')}>
+          <IconButton
+            color="inherit"
+            onClick={toggleDarkMode}
+          >
+            {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+          </IconButton>
         </Tooltip>
         {/* Rest of the user menu */}
       </>
@@ -429,15 +422,7 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
   const handleLanguageToggle = () => {
     const currentLang = i18n.language;
     const newLang = currentLang === 'ar' ? 'en' : 'ar';
-    i18n.changeLanguage(newLang);
-    localStorage.setItem('language', newLang);
-    
-    // Navigate to the appropriate dashboard
-    if (newLang === 'ar') {
-      navigate('/dashboard-ar');
-    } else {
-      navigate('/dashboard');
-    }
+    changeLanguage(newLang);
   };
 
   return (
@@ -487,7 +472,7 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           {item.icon}
                           <Box component="span" sx={{ ml: 1 }}>
-                            {item.label}
+                            {t(item.labelKey, item.label)}
                           </Box>
                         </Box>
                       }
@@ -524,21 +509,21 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
               </Tooltip>
               
               {/* User profile */}
-              {isAuthenticated ? (
+              {user ? (
                 <ProfileButton
                   color="inherit"
                   onClick={handleProfileMenuOpen}
                   endIcon={<ArrowDropDownIcon />}
                 >
                   <Avatar 
-                    src={profile?.avatar || undefined} 
+                    src={user?.avatar || undefined} 
                     sx={{ width: 32, height: 32, mr: 1 }}
                   >
-                    {profile?.firstName?.charAt(0) || "U"}
+                    {user?.firstName?.charAt(0) || "U"}
                   </Avatar>
                   {!isMobile && (
                     <Typography variant="body2">
-                      {profile?.firstName || "User"}
+                      {user?.firstName || "User"}
                     </Typography>
                   )}
                 </ProfileButton>
@@ -548,7 +533,7 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
                   variant="contained"
                   onClick={() => navigate('/login')}
                 >
-                  Login
+                  {t('common.login')}
               </Button>
               )}
             </UserSection>
@@ -587,20 +572,20 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
                 <ListItemIcon>
                   <AccountCircleIcon fontSize="small" />
                 </ListItemIcon>
-                Profile
+                {t('common.profile')}
               </MenuItem>
               <MenuItem onClick={() => { navigate('/settings'); handleProfileMenuClose(); }}>
                 <ListItemIcon>
                   <SettingsIcon fontSize="small" />
                 </ListItemIcon>
-                Settings
+                {t('common.settings')}
               </MenuItem>
               <Divider />
               <MenuItem onClick={handleLogout}>
                 <ListItemIcon>
                   <LogoutIcon fontSize="small" />
                 </ListItemIcon>
-                Logout
+                {t('common.logout')}
               </MenuItem>
             </Menu>
             
@@ -616,9 +601,9 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
               }}
             >
               <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="h6">Notifications</Typography>
+                <Typography variant="h6">{t('common.notifications')}</Typography>
                 <Button size="small" onClick={handleMarkAllRead}>
-                  Mark all read
+                  {t('notifications.markAllRead')}
               </Button>
               </Box>
               <Divider />
@@ -635,14 +620,14 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
                       }}
                     >
                       <ListItemText 
-                        primary={notification.message}
-                        secondary={notification.read ? "Read" : "New"}
+                        primary={t(notification.messageKey, notification.message)}
+                        secondary={notification.read ? t('notifications.read') : t('notifications.new')}
                       />
                     </ListItem>
                   ))
                 ) : (
                   <ListItem>
-                    <ListItemText primary="No notifications" />
+                    <ListItemText primary={t('notifications.empty')} />
                   </ListItem>
                 )}
               </List>
@@ -653,7 +638,7 @@ const NavigationBar = ({ toggleDarkMode, darkMode }) => {
                   size="small"
                   onClick={() => { navigate('/notifications'); handleNotificationsMenuClose(); }}
                 >
-                  View all notifications
+                  {t('notifications.viewAll')}
               </Button>
         </Box>
             </Menu>

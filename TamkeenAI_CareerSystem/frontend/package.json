@@ -36,6 +36,7 @@
     "react-beautiful-dnd": "^13.1.1",
     "react-d3-cloud": "^1.0.6",
     "react-dom": "^18.2.0",
+    "react-grid-layout": "^1.5.1",
     "react-i18next": "^15.4.1",
     "react-router-dom": "^6.11.1",
     "start": "^5.1.0",

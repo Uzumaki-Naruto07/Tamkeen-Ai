@@ -31,6 +31,7 @@ import {
   StepLabel,
   StepContent
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import MilitaryTechIcon from '@mui/icons-material/MilitaryTech';
@@ -69,16 +70,20 @@ const badgeColors = {
   'diamond': '#B9F2FF'
 };
 
-const BadgesSection = ({ badges }) => {
+const BadgesSection = ({ data }) => {
+  const { t } = useTranslation();
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
   const [expandedCategory, setExpandedCategory] = useState(null);
   
+  // Ensure badges exist with fallback to empty array
+  const badges = Array.isArray(data) ? data : [];
+  
   // Calculate badge stats
   const earnedBadges = badges.filter(badge => badge.date_earned);
   const totalBadges = badges.length;
-  const completionPercentage = Math.round((earnedBadges.length / totalBadges) * 100);
+  const completionPercentage = Math.round((earnedBadges.length / totalBadges) * 100) || 0;
   
   // Handle badge click
   const handleBadgeClick = (badge) => {
@@ -98,22 +103,22 @@ const BadgesSection = ({ badges }) => {
     // Could use Web Share API or copy link to clipboard
     if (navigator.share) {
       navigator.share({
-        title: `I earned the ${selectedBadge.name} badge on TamkeenAI!`,
+        title: t('badges.earned', { badge: selectedBadge.name }),
         text: selectedBadge.description,
         url: window.location.href,
       });
     } else {
       // Fallback - copy to clipboard
       navigator.clipboard.writeText(
-        `I earned the ${selectedBadge.name} badge on TamkeenAI! ${selectedBadge.description}`
+        `${t('badges.earned', { badge: selectedBadge.name })} ${selectedBadge.description}`
       );
-      alert('Badge info copied to clipboard!');
+      alert(t('common.share') + ': ' + selectedBadge.name);
     }
   };
   
   // Organize badges into categories and trees
   const categorizedBadges = badges.reduce((acc, badge) => {
-    const category = badge.category || 'General';
+    const category = badge.category || t('badges.generalCategory');
     if (!acc[category]) {
       acc[category] = [];
     }
@@ -169,7 +174,7 @@ const BadgesSection = ({ badges }) => {
     return (
       <Box sx={{ mt: 2 }}>
         <Typography variant="subtitle2" gutterBottom>
-          Badge Progression Paths
+          {t('badges.badgeProgressionPaths')}
         </Typography>
         
         {Object.keys(badgeTrees).map(path => (
@@ -240,9 +245,9 @@ const BadgesSection = ({ badges }) => {
                             {progress && (
                               <Box sx={{ mt: 1 }}>
                                 <Typography variant="caption" display="block">
-                                  Progress: {progress.current}/{progress.total} 
-                                  {progress.percentage >= 50 && progress.percentage < 100 && " - Almost there!"}
-                                  {progress.percentage === 100 && " - Ready to claim!"}
+                                  {t('badges.progress')}: {progress.current}/{progress.total} 
+                                  {progress.percentage >= 50 && progress.percentage < 100 && ` - ${t('badges.almostThere')}`}
+                                  {progress.percentage === 100 && ` - ${t('badges.readyToClaim')}`}
                                 </Typography>
                                 <LinearProgress 
                                   variant="determinate" 
@@ -256,7 +261,7 @@ const BadgesSection = ({ badges }) => {
                         
                         {isEarned && badge.date_earned && (
                           <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                            Earned on: {new Date(badge.date_earned).toLocaleDateString()}
+                            {t('badges.earnedOn')}: {new Date(badge.date_earned).toLocaleDateString()}
                           </Typography>
                         )}
                       </StepContent>
@@ -276,7 +281,7 @@ const BadgesSection = ({ badges }) => {
     return (
       <Box sx={{ mt: 2 }}>
         <Typography variant="subtitle2" gutterBottom>
-          Your Badge Challenges
+          {t('badges.yourBadgeChallenges')}
         </Typography>
         
         <List sx={{ width: '100%' }}>
@@ -288,15 +293,15 @@ const BadgesSection = ({ badges }) => {
                 sx={{ bgcolor: 'background.paper', mb: 1, borderRadius: 1 }}
               >
                 <ListItemIcon>
-                  {category === 'Career' && <WorkIcon />}
-                  {category === 'Learning' && <SchoolIcon />}
-                  {category === 'Networking' && <PeopleIcon />}
-                  {category === 'Skills' && <AssignmentTurnedInIcon />}
-                  {category === 'General' && <StarIcon />}
+                  {category === t('badges.careerCategory') && <WorkIcon />}
+                  {category === t('badges.learningCategory') && <SchoolIcon />}
+                  {category === t('badges.networkingCategory') && <PeopleIcon />}
+                  {category === t('badges.skillsCategory') && <AssignmentTurnedInIcon />}
+                  {category === t('badges.generalCategory') && <StarIcon />}
                 </ListItemIcon>
                 <ListItemText 
-                  primary={`${category} Badges`} 
-                  secondary={`${categorizedBadges[category].filter(b => b.date_earned).length}/${categorizedBadges[category].length} Earned`} 
+                  primary={`${category}`} 
+                  secondary={`${categorizedBadges[category].filter(b => b.date_earned).length}/${categorizedBadges[category].length} ${t('badges.earned')}`} 
                 />
               </ListItem>
               
@@ -327,7 +332,7 @@ const BadgesSection = ({ badges }) => {
                                 {badge.name}
                                 {isNext && (
                                   <Chip 
-                                    label="NEXT" 
+                                    label={t('badges.nextLabel')} 
                                     size="small" 
                                     color="primary" 
                                     sx={{ ml: 1, height: 20 }} 
@@ -354,7 +359,7 @@ const BadgesSection = ({ badges }) => {
                                 <Box sx={{ mt: 1, width: '100%' }}>
                                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <Typography variant="caption" color="text.secondary">
-                                      {progress.current}/{progress.total} Completed
+                                      {progress.current}/{progress.total} {t('badges.completed')}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
                                       {progress.percentage}%
@@ -390,11 +395,11 @@ const BadgesSection = ({ badges }) => {
     <Paper sx={{ p: 3, height: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6" component="h2">
-          Your Achievements
+          {t('badges.yourAchievements')}
         </Typography>
         <Chip 
           icon={<EmojiEventsIcon />} 
-          label={`${earnedBadges.length}/${totalBadges} Earned`} 
+          label={`${earnedBadges.length}/${totalBadges} ${t('badges.earned')}`} 
           color="primary" 
           variant="outlined"
         />
@@ -402,7 +407,7 @@ const BadgesSection = ({ badges }) => {
       
       <Box sx={{ mb: 2 }}>
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          Achievement Progress
+          {t('badges.achievementProgress')}
         </Typography>
         <LinearProgress 
           variant="determinate" 
@@ -411,7 +416,7 @@ const BadgesSection = ({ badges }) => {
         />
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
           <Typography variant="body2" color="text.secondary">
-            {completionPercentage}% Complete
+            {completionPercentage}% {t('badges.complete')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {earnedBadges.length}/{totalBadges}
@@ -425,9 +430,9 @@ const BadgesSection = ({ badges }) => {
         sx={{ mb: 2 }}
         centered
       >
-        <Tab value="grid" label="Badges" />
-        <Tab value="tree" label="Progression" icon={<AccountTreeIcon fontSize="small" />} iconPosition="start" />
-        <Tab value="gamified" label="Challenges" />
+        <Tab value="grid" label={t('badges.badgesTab')} />
+        <Tab value="tree" label={t('badges.progressionTab')} icon={<AccountTreeIcon fontSize="small" />} iconPosition="start" />
+        <Tab value="gamified" label={t('badges.challengesTab')} />
       </Tabs>
       
       {viewMode === 'grid' && (
@@ -442,7 +447,7 @@ const BadgesSection = ({ badges }) => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <Tooltip title={isEarned ? badge.description : `Locked: ${badge.description}`}>
+                    <Tooltip title={isEarned ? badge.description : `${t('common.locked')}: ${badge.description}`}>
                       <Box
                         onClick={() => isEarned && handleBadgeClick(badge)}
                         sx={{
@@ -537,7 +542,7 @@ const BadgesSection = ({ badges }) => {
                     {selectedBadge.description}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Earned on: {new Date(selectedBadge.date_earned).toLocaleDateString()}
+                    {t('badges.earnedOn')}: {new Date(selectedBadge.date_earned).toLocaleDateString()}
                   </Typography>
                   {selectedBadge.tier && (
                     <Chip 
@@ -556,7 +561,7 @@ const BadgesSection = ({ badges }) => {
               {selectedBadge.criteria && (
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="subtitle2" gutterBottom>
-                    How to earn this badge:
+                    {t('common.howToEarn')}
                   </Typography>
                   <Typography variant="body2">
                     {selectedBadge.criteria}
@@ -567,7 +572,7 @@ const BadgesSection = ({ badges }) => {
               {selectedBadge.benefits && (
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="subtitle2" gutterBottom>
-                    Benefits:
+                    {t('common.benefits')}
                   </Typography>
                   <Typography variant="body2">
                     {selectedBadge.benefits}
@@ -578,7 +583,7 @@ const BadgesSection = ({ badges }) => {
               {selectedBadge.next_level && (
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="subtitle2" gutterBottom>
-                    Next level:
+                    {t('common.nextLevel')}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Avatar
@@ -600,7 +605,7 @@ const BadgesSection = ({ badges }) => {
               )}
             </DialogContent>
             <DialogActions>
-              <Button onClick={handleCloseDialog}>Close</Button>
+              <Button onClick={handleCloseDialog}>{t('common.close')}</Button>
             </DialogActions>
           </>
         )}
