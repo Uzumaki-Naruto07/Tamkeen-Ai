@@ -136,6 +136,11 @@ npm run dev
    - Email: demo@tamkeen.ai
    - Password: tamkeen2023
 
+   You can also use these test accounts:
+   - For admin access: admin@tamkeen.ai
+   - For regular user access: user@tamkeen.ai
+   - Password for both: password
+
 2. Complete your profile information to get personalized recommendations.
 
 3. Explore the dashboard widgets to see your career progress.
@@ -147,6 +152,14 @@ npm run dev
 6. Search for jobs and apply with one click.
 
 7. Practice interviews with the AI coach.
+
+## Recent Fixes
+
+These changes resolve the login issues and eliminate the React Router warnings:
+- Fixed login error handling to prevent "Login failed: Object" errors
+- Configured React Router future flags to eliminate warnings
+- Improved error messaging in the login process
+- Enhanced mock login functionality for clearer responses
 
 ## Configuration
 

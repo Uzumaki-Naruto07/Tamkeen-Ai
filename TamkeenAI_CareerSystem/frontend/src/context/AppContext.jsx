@@ -1,7 +1,8 @@
 import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
 import { api } from '../api/apiClient';
-import { USER } from '../api/endpoints';
+import { AUTH, USER } from '../api/endpoints';
 import i18n from '../i18n';
+import { initializeTheme, setTheme, toggleTheme as toggleThemeUtil } from '../utils/themeToggle';
 
 // Create context
 export const AppContext = createContext();
@@ -26,23 +27,13 @@ export const AppContextProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [theme, setThemeState] = useState(initializeTheme());
   const [language, setLanguage] = useState(localStorage.getItem('language') || 'en');
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [userRoles, setUserRoles] = useState([]);
   const [error, setError] = useState(null);
-  
-  // Initialize theme on component mount
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, []);
-  
-  // Apply theme changes
-  useEffect(() => {
-    localStorage.setItem('theme', theme);
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
   
   // Apply language changes
   useEffect(() => {
@@ -131,14 +122,36 @@ export const AppContextProvider = ({ children }) => {
     }
   };
   
-  // Login function
+  // Login function - fixed to use AUTH endpoint and prevent duplicate calls
   const login = async (email, password) => {
+    if (isLoggingIn) return { success: false, error: 'Login already in progress' };
+    
     try {
+      setIsLoggingIn(true);
       setLoading(true);
       setError(null);
       
-      const response = await api.post(USER.LOGIN, { email, password });
+      // Always use AUTH.LOGIN instead of USER.LOGIN to prevent multiple calls
+      const response = await api.post(AUTH.LOGIN, { email, password });
+      
+      // Check if response has the expected structure
+      if (!response || !response.data || !response.data.data) {
+        console.error('Invalid response format:', response);
+        return { 
+          success: false, 
+          error: 'Invalid response from server' 
+        };
+      }
+      
       const { token, user } = response.data.data;
+      
+      if (!token || !user) {
+        console.error('Missing token or user in response:', response.data);
+        return { 
+          success: false, 
+          error: 'Authentication failed: missing token or user data' 
+        };
+      }
       
       // Store token
       localStorage.setItem('token', token);
@@ -148,13 +161,31 @@ export const AppContextProvider = ({ children }) => {
       return { success: true, user };
     } catch (err) {
       console.error('Login failed:', err);
-      setError(err?.response?.data?.message || 'Login failed. Please check your credentials.');
+      
+      // Safely convert any error to a string
+      let errorMessage = 'Login failed. Please check your credentials.';
+      
+      try {
+        if (err?.response?.data?.message) {
+          errorMessage = String(err.response.data.message);
+        } else if (err?.message && typeof err.message === 'string') {
+          errorMessage = err.message;
+        } else if (err && typeof err.toString === 'function') {
+          errorMessage = `Login failed: ${err.toString()}`;
+        }
+      } catch (stringifyError) {
+        console.error('Error while processing login error:', stringifyError);
+        errorMessage = 'An unexpected error occurred during login';
+      }
+      
+      setError(errorMessage);
       return { 
         success: false, 
-        error: err?.response?.data?.message || 'Login failed. Please check your credentials.' 
+        error: errorMessage
       };
     } finally {
       setLoading(false);
+      setIsLoggingIn(false);
     }
   };
   
@@ -164,7 +195,7 @@ export const AppContextProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const response = await api.post(USER.REGISTER, userData);
+      const response = await api.post(AUTH.REGISTER, userData);
       const { token, user } = response.data.data;
       
       // Store token
@@ -194,9 +225,11 @@ export const AppContextProvider = ({ children }) => {
     setUserRoles([]);
   };
   
-  // Theme toggle
+  // Theme toggle using our utility
   const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
+    const newTheme = toggleThemeUtil();
+    setThemeState(newTheme);
+    return newTheme;
   };
   
   // Language toggle
@@ -253,6 +286,7 @@ export const AppContextProvider = ({ children }) => {
     user,
     profile,
     loading,
+    isLoggingIn,
     theme,
     language,
     notifications,

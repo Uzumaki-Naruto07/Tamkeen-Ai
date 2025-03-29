@@ -6,217 +6,179 @@
 const mockDashboardData = {
   // User progress data
   userProgress: {
-    overall_completion: 65,
-    progress_items: [
-      { name: "Resume Builder", type: "resume", progress: 80 },
-      { name: "Interview Preparation", type: "interview", progress: 45 },
-      { name: "Job Applications", type: "application", progress: 70 },
-      { name: "Networking", type: "networking", progress: 30 }
-    ],
-    next_steps: [
-      { 
-        name: "Complete your profile", 
-        type: "resume", 
-        description: "Add your work experience and skills", 
-        link: "/profile" 
-      },
-      { 
-        name: "Practice interview questions", 
-        type: "interview", 
-        description: "Try our AI mock interview", 
-        link: "/mock-interview" 
-      },
-      { 
-        name: "Update your resume", 
-        type: "resume", 
-        description: "Optimize your resume for ATS scanning", 
-        link: "/resume-builder" 
-      },
-      { 
-        name: "Apply to matching jobs", 
-        type: "application", 
-        description: "3 new job matches available", 
-        link: "/jobs" 
-      }
+    level: 3,
+    xp: 750,
+    nextLevelXp: 1000,
+    rank: "Career Explorer",
+    completedTasks: 24,
+    totalTasks: 36,
+    skills: {
+      main: [
+        { name: "JavaScript", level: 75 },
+        { name: "React", level: 68 },
+        { name: "Node.js", level: 55 }
+      ],
+      secondary: [
+        { name: "UI/UX Design", level: 45 },
+        { name: "Project Management", level: 62 }
+      ]
+    },
+    badges: [
+      { id: 1, name: "First Resume", icon: "description", earned: true },
+      { id: 2, name: "Interview Ready", icon: "record_voice_over", earned: true },
+      { id: 3, name: "Network Builder", icon: "people", earned: false }
     ]
   },
-
-  // Resume score data
-  resumeScore: {
-    score: 78,
+  
+  // Resume scores
+  resumeScores: {
+    scores: [
+      { category: "Formatting", score: 85 },
+      { category: "Content", score: 78 },
+      { category: "Keywords", score: 92 },
+      { category: "Impact", score: 68 },
+      { category: "Overall", score: 82 }
+    ],
     history: [
-      { date: "2023-10-01", score: 65 },
-      { date: "2023-10-15", score: 68 },
-      { date: "2023-11-01", score: 72 },
-      { date: "2023-11-15", score: 74 },
-      { date: "2023-12-01", score: 78 }
-    ],
-    improvement_areas: [
-      { name: "Keywords", score: 60, recommendation: "Add more industry-specific keywords" },
-      { name: "Experience", score: 85, recommendation: "Make achievements more quantifiable" },
-      { name: "Skills", score: 90, recommendation: "Your skills section is well-optimized" },
-      { name: "Format", score: 75, recommendation: "Improve readability with better formatting" }
+      { date: "2023-01-15", score: 65 },
+      { date: "2023-02-10", score: 72 },
+      { date: "2023-03-05", score: 78 },
+      { date: "2023-04-20", score: 82 }
     ]
   },
-
-  // Skill gap analysis
-  skillGap: {
-    current_skills: [
-      { name: "JavaScript", level: 85, demand: "high" },
-      { name: "React", level: 80, demand: "high" },
-      { name: "Node.js", level: 65, demand: "high" },
-      { name: "Python", level: 60, demand: "high" },
-      { name: "Docker", level: 40, demand: "high" }
-    ],
-    recommended_skills: [
-      { name: "TypeScript", reason: "Complements your JavaScript skills", priority: "high" },
-      { name: "AWS", reason: "High demand in your target roles", priority: "medium" },
-      { name: "Kubernetes", reason: "Builds on your Docker knowledge", priority: "medium" },
-      { name: "GraphQL", reason: "Trending in web development", priority: "low" }
-    ],
-    gap_score: 68
-  },
-
+  
+  // Career journey
+  careerJourney: [
+    { id: 1, date: "2021-06", title: "Graduated", status: "completed" },
+    { id: 2, date: "2021-08", title: "First Job", status: "completed" },
+    { id: 3, date: "2022-05", title: "Promotion", status: "completed" },
+    { id: 4, date: "2023-01", title: "New Skills", status: "in_progress" },
+    { id: 5, date: "2023-06", title: "Career Change", status: "planned" }
+  ],
+  
   // AI recommendations
-  aiRecommendation: {
-    type: "job",
-    title: "Senior Frontend Developer",
-    provider: "TechCorp Inc.",
-    description: "A role focusing on React-based applications with an emphasis on performance optimization and accessibility.",
-    match_percentage: 87,
-    time_commitment: "Full-time",
-    relevance_factors: ["skills", "experience", "career goals"],
-    resources: [
-      { type: "article", title: "Optimizing React Performance", provider: "Medium", url: "https://example.com/article" },
-      { type: "course", title: "Advanced React Patterns", provider: "Coursera", url: "https://example.com/course" },
-      { type: "youtube", title: "React Best Practices 2023", provider: "YouTube", url: "https://example.com/video" }
-    ],
-    url: "https://example.com/job-details",
-    aiExplanation: "This job aligns well with your current skills in React and JavaScript. Your experience with performance optimization also makes you a strong candidate. The company culture emphasizes work-life balance, which matches your preferences."
-  },
-
-  // Career journey timeline
-  careerJourney: {
-    milestones: [
-      { date: "2023-09-15", event: "Joined TamkeenAI", type: "platform", description: "Started your career journey with us" },
-      { date: "2023-10-05", event: "Resume Optimized", type: "resume", description: "Improved resume score by 20%" },
-      { date: "2023-10-20", event: "First Job Application", type: "application", description: "Applied to Software Developer role" },
-      { date: "2023-11-10", event: "Mock Interview", type: "interview", description: "Completed first mock interview" },
-      { date: "2023-12-02", event: "Interview Invitation", type: "interview", description: "Received interview invitation from TechCorp" }
-    ],
-    upcoming_events: [
-      { date: "2023-12-15", event: "Technical Interview", type: "interview", description: "TechCorp - 2:00 PM" }
-    ]
-  },
-
-  // Application statistics
-  applications: {
-    total: 12,
-    active: 5,
-    interviews: 2,
-    offers: 1,
-    rejected: 4
-  },
-
-  // Upcoming interviews
-  upcomingInterviews: [
-    { company: "TechCorp Inc.", position: "Senior Frontend Developer", date: "2023-12-15T14:00:00", type: "Technical" },
-    { company: "InnovateSoft", position: "Full Stack Developer", date: "2023-12-18T10:30:00", type: "Initial" },
-    { company: "DataViz Systems", position: "UI Developer", date: "2023-12-22T15:00:00", type: "Remote" }
-  ],
-
-  // Today's schedule
-  todaysSchedule: [
-    { title: "Resume Review Session", type: "Learning", startTime: "2023-12-10T10:00:00", endTime: "2023-12-10T11:00:00" },
-    { title: "Networking Event - Tech Meetup", type: "Networking", startTime: "2023-12-10T14:00:00", endTime: "2023-12-10T16:00:00" },
-    { title: "Job Application Deadline - InnovateSoft", type: "Deadline", startTime: "2023-12-10T23:59:00", endTime: "2023-12-10T23:59:00" }
-  ],
-
-  // Weekly goals
-  weeklyGoals: [
-    { id: 1, title: "Apply to 3 jobs", completed: true, dueDate: "2023-12-08" },
-    { id: 2, title: "Update LinkedIn profile", completed: false, dueDate: "2023-12-12" },
-    { id: 3, title: "Complete React assessment", completed: false, dueDate: "2023-12-15" },
-    { id: 4, title: "Attend networking event", completed: false, dueDate: "2023-12-10" }
-  ],
-
-  // Job recommendations
-  jobRecommendations: [
+  recommendations: [
     {
       id: 1,
-      title: "Senior Frontend Developer",
-      company: "TechCorp Inc.",
-      companyLogo: "",
-      location: "San Francisco, CA",
-      jobType: "Full-time",
-      datePosted: "2023-12-01",
-      matchPercentage: 87
+      type: "job",
+      title: "Frontend Developer Position at TechCorp",
+      description: "This position matches 85% of your skills and experience.",
+      priority: "high"
     },
     {
       id: 2,
-      title: "Full Stack Developer",
-      company: "InnovateSoft",
-      companyLogo: "",
-      location: "Remote",
-      jobType: "Full-time",
-      datePosted: "2023-12-03",
-      matchPercentage: 82
+      type: "skill",
+      title: "Learn TypeScript",
+      description: "Adding TypeScript to your skillset could increase your job matches by 20%.",
+      priority: "medium"
     },
     {
       id: 3,
-      title: "UI Developer",
-      company: "DataViz Systems",
-      companyLogo: "",
-      location: "New York, NY",
-      jobType: "Contract",
-      datePosted: "2023-12-05",
-      matchPercentage: 75
+      type: "resume",
+      title: "Update Resume Skills Section",
+      description: "Your resume skills section needs updating with your latest projects.",
+      priority: "low"
     }
   ],
-
-  // Recent activities
-  recentActivities: [
-    { type: "application", description: "Applied to Senior Frontend Developer at TechCorp Inc.", timestamp: "2023-12-09T14:30:00" },
-    { type: "resume", description: "Updated resume with new project experience", timestamp: "2023-12-08T10:15:00" },
-    { type: "interview", description: "Completed mock interview for JavaScript", timestamp: "2023-12-07T16:00:00" },
-    { type: "achievement", description: "Earned 'Resume Master' badge", timestamp: "2023-12-05T09:45:00" },
-    { type: "learning", description: "Completed React Best Practices course", timestamp: "2023-12-04T19:20:00" }
+  
+  // Badges/achievements
+  badges: [
+    { id: 1, name: "Resume Master", status: "earned", date: "2023-02-10", icon: "description" },
+    { id: 2, name: "Interview Ace", status: "earned", date: "2023-03-15", icon: "record_voice_over" },
+    { id: 3, name: "Networking Star", status: "progress", progress: 70, icon: "people" },
+    { id: 4, name: "Skill Developer", status: "progress", progress: 45, icon: "trending_up" },
+    { id: 5, name: "Job Seeker Pro", status: "locked", icon: "work" }
   ],
-
-  // Career progress
-  careerProgress: {
-    level: 5,
-    xp: 1250,
-    nextLevelXp: 1500,
-    recentAchievements: [
-      { title: "Resume Master", xpGained: 50, date: "2023-12-05T09:45:00" },
-      { title: "Course Completer", xpGained: 75, date: "2023-12-04T19:20:00" },
-      { title: "Job Hunter", xpGained: 30, date: "2023-12-02T11:10:00" }
+  
+  // Market insights
+  marketInsights: {
+    salary_data: {
+      average: 85000,
+      range: { min: 70000, max: 110000 }
+    },
+    job_demand: "high",
+    competition_level: "medium",
+    growth_rate: 12,
+    top_skills: [
+      { name: "JavaScript", demand: "high" },
+      { name: "React", demand: "high" },
+      { name: "Node.js", demand: "medium" },
+      { name: "TypeScript", demand: "high" },
+      { name: "UI/UX", demand: "medium" }
     ]
   },
-
-  // Career insights
-  insights: [
-    { title: "Your React skills are in high demand", description: "85% of jobs in your field require React experience." },
-    { title: "Consider adding TypeScript", description: "TypeScript appears in 65% of jobs matching your profile." },
-    { title: "Interview performance improving", description: "Your mock interview scores increased by 20% in the last month." }
-  ],
-
-  // Skills data
-  skills: {
-    top: [
-      { name: "JavaScript", verified: true },
-      { name: "React", verified: true },
-      { name: "HTML/CSS", verified: true },
-      { name: "Node.js", verified: false },
-      { name: "Python", verified: false }
+  
+  // Job opportunities
+  opportunities: {
+    saved: [
+      { id: 1, title: "Frontend Developer", company: "TechCorp", status: "Applied" },
+      { id: 2, title: "React Developer", company: "WebSolutions", status: "Saved" }
     ],
-    inDemand: [
-      { name: "TypeScript" },
-      { name: "AWS" },
-      { name: "Docker" }
+    recommended: [
+      { id: 3, title: "UI Developer", company: "DesignHub", matchRate: 92 },
+      { id: 4, title: "JavaScript Engineer", company: "CodeWorks", matchRate: 88 },
+      { id: 5, title: "Full Stack Developer", company: "InnovateTech", matchRate: 76 }
     ]
-  }
+  },
+  
+  // Application stats
+  applications: {
+    total: 12,
+    active: 5,
+    interviews: 3,
+    offers: 1,
+    rejected: 3
+  },
+  
+  // Activity log
+  activities: [
+    { id: 1, type: "resume", action: "updated", date: "2023-04-28T14:22:10Z", details: "Updated skills section" },
+    { id: 2, type: "job", action: "applied", date: "2023-04-25T09:15:45Z", details: "Applied to Frontend Developer at TechCorp" },
+    { id: 3, type: "skill", action: "completed", date: "2023-04-20T16:30:00Z", details: "Completed React Advanced course" },
+    { id: 4, type: "interview", action: "scheduled", date: "2023-04-18T11:45:22Z", details: "Interview scheduled with WebSolutions" }
+  ],
+  
+  // Learning paths
+  learningPaths: [
+    {
+      id: 1,
+      title: "Frontend Master Path",
+      progress: 65,
+      courses: [
+        { id: 101, title: "Advanced React", completed: true, isToday: false },
+        { id: 102, title: "Redux State Management", completed: true, isToday: false },
+        { id: 103, title: "React Performance Optimization", completed: false, isToday: true },
+        { id: 104, title: "Advanced TypeScript", completed: false, isToday: false }
+      ]
+    },
+    {
+      id: 2,
+      title: "UX Design Fundamentals",
+      progress: 30,
+      courses: [
+        { id: 201, title: "UI Design Principles", completed: true, isToday: false },
+        { id: 202, title: "User Research Methods", completed: false, isToday: false },
+        { id: 203, title: "Wireframing and Prototyping", completed: false, isToday: false }
+      ]
+    }
+  ],
+  
+  // Schedule data
+  todaysSchedule: [
+    { id: 1, time: "09:30", title: "Interview Prep", type: "practice" },
+    { id: 2, time: "11:00", title: "React Course", type: "learning" },
+    { id: 3, time: "14:00", title: "Phone Interview with TechCorp", type: "interview" }
+  ],
+  
+  // Weekly goals
+  weeklyGoals: [
+    { id: 1, title: "Apply to 5 jobs", completed: 3, total: 5 },
+    { id: 2, title: "Complete React course", completed: 4, total: 5 },
+    { id: 3, title: "Update LinkedIn profile", completed: 1, total: 1 }
+  ],
+  
+  // Last updated timestamp
+  last_updated: new Date().toISOString()
 };
 
 export default mockDashboardData;

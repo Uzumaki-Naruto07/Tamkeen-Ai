@@ -29,8 +29,9 @@ import { motion } from 'framer-motion';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { format, formatDistance } from 'date-fns';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 // Icons
 import BusinessIcon from '@mui/icons-material/Business';
@@ -85,6 +86,7 @@ import LearningRoadmap from '../components/Dashboard/LearningRoadmap';
 import { useUser } from '../context/AppContext';
 
 // Mock data (will be replaced with API calls)
+// Make sure we're importing from the correct path
 import mockDashboardData from '../utils/mockData/dashboardData';
 
 // Define dashboard widgets
@@ -214,7 +216,8 @@ const Dashboard = () => {
   const [hiddenWidgets, setHiddenWidgets] = useState([]);
   const [activeTab, setActiveTab] = useState(0);
   const [quickStatsMenuAnchor, setQuickStatsMenuAnchor] = useState(null);
-  const { profile, user } = useUser();
+  const { profile, user, logout } = useUser();
+  const navigate = useNavigate();
   
   // Get dummy data for additional widgets 
   // This would normally come from the API
@@ -653,21 +656,65 @@ const Dashboard = () => {
     </Box>
   );
   
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+  
   // Main render
   if (loading && !dashboardData) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
-        <CircularProgress />
-      </Box>
+      <Container maxWidth="xl">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh', flexDirection: 'column' }}>
+          <Typography variant="h4" gutterBottom>Loading Dashboard...</Typography>
+          <CircularProgress />
+        </Box>
+      </Container>
     );
   }
   
   if (error && !dashboardData) {
-  return (
+    return (
       <Container maxWidth="xl" sx={{ mt: 4 }}>
         <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+        <Typography variant="h5" gutterBottom>Unable to load dashboard data</Typography>
         <Button variant="contained" onClick={refreshDashboard}>
           Try Again
+        </Button>
+        <Button variant="outlined" color="error" sx={{ ml: 2 }} onClick={handleLogout}>
+          Logout
+        </Button>
+      </Container>
+    );
+  }
+  
+  // Create a fallback if we don't have dashboardData for some reason
+  if (!dashboardData) {
+    // Force load mock data as fallback
+    console.warn('No dashboard data available, using fallback data');
+    const fallbackData = mockDashboardData;
+    setDashboardData(fallbackData);
+    
+    return (
+      <Container maxWidth="xl">
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Dashboard (Fallback Mode)
+          </Typography>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<LogoutIcon />}
+            onClick={handleLogout}
+          >
+            Logout
+          </Button>
+        </Box>
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          Using fallback data. Some features may be limited.
+        </Alert>
+        <Button variant="contained" onClick={refreshDashboard}>
+          Refresh Dashboard
         </Button>
       </Container>
     );
@@ -675,6 +722,28 @@ const Dashboard = () => {
   
   // Get visible widgets
   const visibleWidgets = dashboardLayout?.filter(id => !hiddenWidgets.includes(id)) || [];
+  
+  // Get corresponding props based on widget type
+  const getWidgetProps = (widgetId) => {
+    // Map widget IDs to the correct data properties in dashboardData
+    const propsMap = {
+      userProgress: dashboardData?.userProgress,
+      resumeScore: dashboardData?.resumeScores,
+      skillGap: dashboardData?.skillGap || {},
+      aiRecommendation: dashboardData?.recommendations || [],
+      careerJourney: dashboardData?.careerJourney || [],
+      badges: dashboardData?.badges || [],
+      careerPrediction: dashboardData?.careerPrediction || {},
+      learningPaths: dashboardData?.learningPaths || [],
+      marketInsights: dashboardData?.marketInsights || {},
+      leaderboard: dashboardData?.leaderboard || {},
+      activityLog: dashboardData?.activities || [],
+      opportunityAlert: dashboardData?.opportunities || {},
+      learningRoadmap: dashboardData?.learningRoadmap || {}
+    };
+    
+    return propsMap[widgetId] || {};
+  };
   
   return (
     <Container 
@@ -717,6 +786,15 @@ const Dashboard = () => {
               <RefreshIcon />
             </IconButton>
           </Tooltip>
+          
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<LogoutIcon />}
+            onClick={handleLogout}
+          >
+            Logout
+          </Button>
         </Box>
       </Box>
       
@@ -757,7 +835,7 @@ const Dashboard = () => {
                 if (!widget) return null;
                 
                 const WidgetComponent = widget.component;
-                const widgetProps = dashboardData?.[widgetId] || {};
+                const widgetProps = getWidgetProps(widgetId);
                 
                 return (
                   <Draggable key={widgetId} draggableId={widgetId} index={index}>

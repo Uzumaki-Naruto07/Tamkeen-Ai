@@ -3,6 +3,9 @@ import axios from 'axios';
 // Environment detection
 const isDevelopment = import.meta.env.DEV;
 
+// Track pending login requests to prevent duplicates
+let pendingLoginRequest = null;
+
 // Create an axios instance with default config
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
@@ -35,14 +38,19 @@ const mockUsers = [
 
 // Mock authentication function for development
 const mockLogin = (credentials) => {
-  return new Promise((resolve, reject) => {
+  // If there's already a pending login request, return it
+  if (pendingLoginRequest) {
+    return pendingLoginRequest;
+  }
+  
+  pendingLoginRequest = new Promise((resolve, reject) => {
     setTimeout(() => {
       const user = mockUsers.find(u => u.email === credentials.email);
       
       if (user && (credentials.password === user.password || credentials.password === 'password')) {
         const token = `mock-token-${user.id}-${Date.now()}`;
         
-        resolve({
+        const response = {
           data: {
             data: {
               token,
@@ -57,19 +65,28 @@ const mockLogin = (credentials) => {
             message: 'Login successful',
             success: true
           }
-        });
+        };
+        
+        // Clear the pending request
+        pendingLoginRequest = null;
+        resolve(response);
       } else {
+        // Clear the pending request
+        pendingLoginRequest = null;
         reject({
           response: {
             data: {
               message: 'Invalid email or password',
               success: false
             }
-          }
+          },
+          message: 'Invalid email or password'
         });
       }
     }, 500); // Simulate network delay
   });
+  
+  return pendingLoginRequest;
 };
 
 // Request interceptor for adding the auth token
@@ -83,43 +100,44 @@ apiClient.interceptors.request.use(
   },
   (error) => {
     console.error('Request error:', error);
-    return Promise.reject(error);
+    return Promise.reject({
+      message: 'Network error. Please check your connection.',
+      originalError: error
+    });
   }
 );
 
-// Response interceptor for handling errors
+// Response interceptor for handling common errors
 apiClient.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
-    // Handle unauthorized errors (401)
-    if (error.response && error.response.status === 401) {
-      // Clear token and redirect to login
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-      return Promise.reject(new Error('Authentication required. Please log in again.'));
+    // Create a standardized error object
+    let errorObj = {
+      message: 'An unexpected error occurred',
+      status: error?.response?.status || 0,
+      originalError: error
+    };
+
+    if (error.response) {
+      // The request was made and the server responded with an error status
+      errorObj.message = error.response.data?.message || `Server error: ${error.response.status}`;
+      errorObj.data = error.response.data;
+      
+      // Handle authentication errors
+      if (error.response.status === 401) {
+        // Clear pendingLoginRequest to allow new login attempts
+        pendingLoginRequest = null;
+        // Clear token if unauthorized
+        localStorage.removeItem('token');
+        errorObj.message = 'Authentication failed. Please log in again.';
+      }
+    } else if (error.request) {
+      // The request was made but no response was received
+      errorObj.message = 'No response from server. Please try again later.';
     }
-    
-    // Handle server errors (500)
-    if (error.response && error.response.status >= 500) {
-      console.error('Server error:', error.response.data);
-      return Promise.reject(new Error('Server error. Please try again later.'));
-    }
-    
-    // Handle network errors
-    if (error.message === 'Network Error') {
-      console.error('Network error:', error);
-      return Promise.reject(new Error('Network error. Please check your internet connection.'));
-    }
-    
-    // Handle timeout errors
-    if (error.code === 'ECONNABORTED') {
-      console.error('Request timeout:', error);
-      return Promise.reject(new Error('Request timeout. Please try again later.'));
-    }
-    
-    return Promise.reject(error);
+
+    console.error('API Error:', errorObj.message, error);
+    return Promise.reject(errorObj);
   }
 );
 
@@ -127,7 +145,7 @@ apiClient.interceptors.response.use(
 export const api = {
   get: (url, params = {}) => apiClient.get(url, { params }),
   post: (url, data = {}) => {
-    // Mock authentication in development mode
+    // Mock authentication in development mode for login path
     if (isDevelopment && url.includes('/auth/login')) {
       return mockLogin(data);
     }
@@ -139,7 +157,11 @@ export const api = {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
-  })
+  }),
+  // Helper method to clear any pending login requests (for testing/debugging)
+  clearPendingLogin: () => {
+    pendingLoginRequest = null;
+  }
 };
 
 export default apiClient; 
