@@ -1,8 +1,21 @@
+"""
+TamkeenAI Career System API Server
+
+This is the main entry point for the TamkeenAI Career System API.
+It loads environment variables, sets up the Flask application, 
+and registers all routes.
+"""
+
+# Load environment variables before any other imports
+import os
+from dotenv import load_dotenv
+
+# Load environment variables at the very beginning
+load_dotenv()
+
 from flask import Flask, jsonify
 from flask_cors import CORS
-import os
 import argparse
-from dotenv import load_dotenv
 import logging
 import importlib
 import jwt
@@ -21,20 +34,22 @@ from api.routes.skill_routes import skill_bp
 from api.routes.dashboard_routes import dashboard_bp
 from api.routes.auth_routes import auth_bp
 
-# Load environment variables
-load_dotenv()
-
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG if os.getenv('FLASK_DEBUG') == '1' else logging.INFO,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('app.log')
+        RotatingFileHandler('app.log', maxBytes=10485760, backupCount=3)
     ]
 )
 
+# Set MongoDB logging to INFO level
+logging.getLogger('api.database.connector').setLevel(logging.INFO)
+logging.getLogger('pymongo').setLevel(logging.INFO)
+
 logger = logging.getLogger(__name__)
+logger.info("Starting TamkeenAI Career System API Server")
 
 # Import the resume_bp blueprint
 try:
@@ -84,10 +99,15 @@ def create_app():
     @app.route('/api/health-check')
     def health_check():
         """Health check endpoint"""
+        # Import here to check MongoDB status during health check
+        from api.database.connector import db
+        mongo_status = "connected" if db is not None else "disconnected (using mock)"
+        
         return jsonify({
             "status": "success",
             "message": "API is running",
-            "version": "1.0.0"
+            "version": "1.0.0",
+            "mongodb": mongo_status
         })
     
     @app.route('/api/test-dashboard/<user_id>')
@@ -123,11 +143,12 @@ def parse_args():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description='TamkeenAI Career System API')
     parser.add_argument('--host', default='0.0.0.0', help='Host to run the server on')
-    parser.add_argument('--port', type=int, default=5001, help='Port to run the server on')
+    parser.add_argument('--port', type=int, default=int(os.getenv('PORT', 5001)), help='Port to run the server on')
     parser.add_argument('--debug', action='store_true', help='Run in debug mode')
     return parser.parse_args()
 
 if __name__ == '__main__':
     args = parse_args()
     app = create_app()
+    logger.info(f"Starting server on {args.host}:{args.port}")
     app.run(host=args.host, port=args.port, debug=args.debug)

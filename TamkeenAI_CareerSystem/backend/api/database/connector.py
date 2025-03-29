@@ -6,80 +6,149 @@ This module provides connections to the database (MongoDB in this case).
 
 import os
 import logging
+from typing import Dict, List, Optional, Union, Any
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 from dotenv import load_dotenv
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
 
-# Setup logger
-logger = logging.getLogger(__name__)
-
-# MongoDB connection parameters
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/')
-MONGO_DB = os.getenv('MONGO_DB', 'tamkeen_db')
+# MongoDB connection details
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+MONGO_DB = os.getenv("MONGO_DB", "tamkeen")
 USE_MOCK_DB = os.getenv('USE_MOCK_DB', 'false').lower() == 'true'
 
-# Create mock collections class
+# Mock collection for testing or when MongoDB is not available
 class MockCollection:
     def __init__(self, name):
         self.name = name
-        self.data = []
-        self.indexes = []
-    
-    def create_index(self, keys, **kwargs):
-        if isinstance(keys, list):
-            index_name = '_'.join([k[0] for k in keys])
-        else:
-            index_name = keys
-        self.indexes.append(index_name)
-        return index_name
-    
+        self.data = {}
+        self._id = 0
+
     def insert_one(self, document):
-        self.data.append(document)
-        return type('obj', (object,), {'inserted_id': id(document)})
-    
-    def find(self, query=None, projection=None):
-        # Simple mock find
-        return self.data
-    
-    def find_one(self, query):
-        # Simple mock find_one
-        for doc in self.data:
+        self._id += 1
+        _id = document.get("_id", self._id)
+        document["_id"] = _id
+        self.data[_id] = document
+        return InsertOneResult(_id, True)
+
+    def find_one(self, query=None, *args, **kwargs):
+        if query is None:
+            query = {}
+
+        if "_id" in query:
+            _id = query["_id"]
+            return self.data.get(_id)
+
+        for doc in self.data.values():
             match = True
-            for k, v in query.items():
-                if k not in doc or doc[k] != v:
+            for key, value in query.items():
+                if key not in doc or doc[key] != value:
                     match = False
                     break
             if match:
                 return doc
         return None
-    
-    def update_one(self, query, update, **kwargs):
-        # Simple mock update_one
-        for doc in self.data:
+
+    def find(self, query=None, *args, **kwargs):
+        if query is None:
+            query = {}
+
+        result = []
+        for doc in self.data.values():
             match = True
-            for k, v in query.items():
-                if k not in doc or doc[k] != v:
+            for key, value in query.items():
+                if key not in doc or doc[key] != value:
                     match = False
                     break
             if match:
-                for k, v in update.get('$set', {}).items():
-                    doc[k] = v
-                return type('obj', (object,), {'modified_count': 1})
-        return type('obj', (object,), {'modified_count': 0})
+                result.append(doc)
+        return MockCursor(result)
+    
+    def update_one(self, query, update, *args, **kwargs):
+        doc = self.find_one(query)
+        if doc is not None:
+            _id = doc["_id"]
+            if "$set" in update:
+                for key, value in update["$set"].items():
+                    doc[key] = value
+            self.data[_id] = doc
+            return UpdateResult(True, 1)
+        return UpdateResult(True, 0)
     
     def delete_one(self, query):
-        # Simple mock delete_one
-        for i, doc in enumerate(self.data):
-            match = True
-            for k, v in query.items():
-                if k not in doc or doc[k] != v:
-                    match = False
-                    break
-            if match:
-                self.data.pop(i)
-                return type('obj', (object,), {'deleted_count': 1})
-        return type('obj', (object,), {'deleted_count': 0})
+        doc = self.find_one(query)
+        if doc is not None:
+            _id = doc["_id"]
+            del self.data[_id]
+            return DeleteResult(True, 1)
+        return DeleteResult(True, 0)
+
+class MockCursor:
+    def __init__(self, data):
+        self.data = data
+        self.current = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.current < len(self.data):
+            doc = self.data[self.current]
+            self.current += 1
+            return doc
+        raise StopIteration
+
+class InsertOneResult:
+    def __init__(self, inserted_id, acknowledged):
+        self.inserted_id = inserted_id
+        self.acknowledged = acknowledged
+
+class UpdateResult:
+    def __init__(self, acknowledged, modified_count):
+        self.acknowledged = acknowledged
+        self.modified_count = modified_count
+
+class DeleteResult:
+    def __init__(self, acknowledged, deleted_count):
+        self.acknowledged = acknowledged
+        self.deleted_count = deleted_count
+
+# MongoDB client
+mongo_client = None
+db = None
+collections = {}
+
+try:
+    # Connect to MongoDB with timeout
+    logger.info(f"Connecting to MongoDB at {MONGO_URI}...")
+    mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+    # Verify connection
+    mongo_client.admin.command('ping')
+    db = mongo_client[MONGO_DB]
+    logger.info(f"Successfully connected to MongoDB at {MONGO_URI}")
+except (ConnectionFailure, ServerSelectionTimeoutError) as e:
+    logger.error(f"Failed to connect to MongoDB: {e}")
+    logger.warning("Using mock database instead")
+    db = None
+
+def get_collection(name):
+    """Get a collection from MongoDB or create a mock collection if MongoDB is not available."""
+    if name in collections:
+        return collections[name]
+    
+    if db is not None:
+        collections[name] = db[name]
+    else:
+        logger.warning(f"Creating mock collection for {name}")
+        collections[name] = MockCollection(name)
+    
+    return collections[name]
 
 # Function to create mock collections
 def create_mock_collections():

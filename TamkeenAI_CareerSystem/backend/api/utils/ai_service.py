@@ -12,17 +12,13 @@ import random
 from datetime import datetime
 
 try:
-    from openai import OpenAI
+    from .openai_config import get_openai_client
     AI_AVAILABLE = True
 except ImportError:
     AI_AVAILABLE = False
 
-# Initialize OpenAI client if API key is available
-api_key = os.environ.get("OPENAI_API_KEY")
-if AI_AVAILABLE and api_key:
-    client = OpenAI(api_key=api_key)
-else:
-    client = None
+# Get OpenAI client from centralized config
+client = get_openai_client() if AI_AVAILABLE else None
 
 def generate_career_insights(user_data: Dict[str, Any], prediction_type: str = "insights") -> Union[Dict[str, Any], List[str], None]:
     """
