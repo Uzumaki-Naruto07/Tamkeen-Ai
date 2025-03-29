@@ -6,7 +6,7 @@
 // Base API URL - support mock API in development mode
 const BASE_URL = import.meta.env.DEV 
   ? '/api'  // This will be mocked 
-  : (import.meta.env.VITE_API_URL || 'http://localhost:5001/api');
+  : (import.meta.env.VITE_API_URL || 'http://localhost:5001') + '/api';
 
 /**
  * Authentication Endpoints

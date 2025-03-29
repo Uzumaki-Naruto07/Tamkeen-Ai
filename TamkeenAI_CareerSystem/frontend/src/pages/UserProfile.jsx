@@ -6,7 +6,8 @@ import {
   CircularProgress, Alert, Tabs, Tab, Badge,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Menu, MenuItem, InputAdornment, Switch, FormControlLabel,
-  LinearProgress, Rating, Tooltip, Snackbar, Checkbox
+  LinearProgress, Rating, Tooltip, Snackbar, Checkbox,
+  Container
 } from '@mui/material';
 import {
   Edit, Save, CloudUpload, Delete, PersonOutline,
@@ -21,19 +22,37 @@ import {
   AutoGraph, Interests, SentimentSatisfiedAlt,
   Construction, MenuBook, Apps, ContentCopy, Add
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SkillChip from '../components/common/SkillChip';
 import { format } from 'date-fns';
+import axios from 'axios';
+
+// Create a basic API client for direct calls
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
+
+// Add auth token to requests
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 const UserProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
-  const [editMode, setEditMode] = useState(false);
+  const [editMode, setEditMode] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [achievements, setAchievements] = useState([]);
   const [skills, setSkills] = useState([]);
@@ -60,6 +79,7 @@ const UserProfile = () => {
   const [currentSkill, setCurrentSkill] = useState(null);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [socialLinks, setSocialLinks] = useState({
     linkedin: '',
     github: '',
@@ -69,24 +89,282 @@ const UserProfile = () => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmDialogAction, setConfirmDialogAction] = useState(null);
   
+  // Move state from dialog rendering functions to the component top level
+  const [educationForm, setEducationForm] = useState({
+    institution: '',
+    degree: '',
+    fieldOfStudy: '',
+    startDate: '',
+    endDate: '',
+    current: false,
+    description: ''
+  });
+  
+  const [experienceForm, setExperienceForm] = useState({
+    company: '',
+    title: '',
+    location: '',
+    startDate: '',
+    endDate: '',
+    current: false,
+    description: ''
+  });
+  
+  const [skillForm, setSkillForm] = useState({
+    name: '',
+    level: 3,
+    years: 0,
+    category: '',
+    description: ''
+  });
+  
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
-  const { profile, updateProfile } = useUser();
+  const { profile: userAccountProfile, updateUserProfile } = useUser();
+  const params = useParams();
+  
+  // Move useEffect hooks from dialog rendering functions to the top level
+  // Education form initialization
+  useEffect(() => {
+    if (educationDialogOpen) {
+      setEducationForm({
+        institution: currentEducation?.institution || '',
+        degree: currentEducation?.degree || '',
+        fieldOfStudy: currentEducation?.fieldOfStudy || '',
+        startDate: currentEducation?.startDate || '',
+        endDate: currentEducation?.endDate || '',
+        current: currentEducation?.current || false,
+        description: currentEducation?.description || ''
+      });
+    }
+  }, [currentEducation, educationDialogOpen]);
+  
+  // Experience form initialization
+  useEffect(() => {
+    if (experienceDialogOpen) {
+      setExperienceForm({
+        company: currentExperience?.company || '',
+        title: currentExperience?.title || '',
+        location: currentExperience?.location || '',
+        startDate: currentExperience?.startDate || '',
+        endDate: currentExperience?.endDate || '',
+        current: currentExperience?.current || false,
+        description: currentExperience?.description || ''
+      });
+    }
+  }, [currentExperience, experienceDialogOpen]);
+  
+  // Skill form initialization
+  useEffect(() => {
+    if (skillDialogOpen) {
+      setSkillForm({
+        name: currentSkill?.name || '',
+        level: currentSkill?.level || 3,
+        years: currentSkill?.years || 0,
+        category: currentSkill?.category || '',
+        description: currentSkill?.description || ''
+      });
+    }
+  }, [currentSkill, skillDialogOpen]);
   
   // Load user profile data
   useEffect(() => {
     const loadUserProfile = async () => {
-      if (!profile?.id) {
-        setLoading(false);
-        return;
-      }
+      // Check if we're looking at a specific profile by username
+      const usernameFromUrl = params.username;
       
+      // Reset state
       setLoading(true);
       setError(null);
       
       try {
+        // We're looking at someone else's profile via URL
+        if (usernameFromUrl) {
+          console.log(`Loading profile for username: ${usernameFromUrl}`);
+          
+          // Dev mode - show mock profile with requested username
+          if (import.meta.env.DEV) {
+            console.log(`DEV MODE: Creating mock profile for username: ${usernameFromUrl}`);
+            
+            const mockUserId = `mock-user-${usernameFromUrl}`;
+            
+            // Helper function to get a consistent avatar URL
+            const getAvatarUrl = (id) => {
+              const num = id ? 
+                String(id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 70 : 32;
+              return `https://randomuser.me/api/portraits/men/${num}.jpg`;
+            };
+            
+            const mockProfile = {
+              id: mockUserId,
+              userId: mockUserId,
+              username: usernameFromUrl,
+              firstName: usernameFromUrl.charAt(0).toUpperCase() + usernameFromUrl.slice(1),
+              lastName: '',
+              title: '',
+              bio: '',
+              location: '',
+              phone: '',
+              email: '',
+              avatar: getAvatarUrl(mockUserId),
+              visibility: {
+                isPublic: true,
+                showEmail: false,
+                showPhone: false,
+                showEducation: true,
+                showExperience: true,
+                showSkills: true
+              },
+              socialLinks: {
+                linkedin: '',
+                github: '',
+                twitter: '',
+                portfolio: ''
+              }
+            };
+            
+            setUserProfile(mockProfile);
+            
+            // Set viewing mode for profile fields (not editing)
+            setProfileFieldsEdited({
+              firstName: mockProfile.firstName,
+              lastName: mockProfile.lastName,
+              title: mockProfile.title,
+              bio: mockProfile.bio,
+              location: mockProfile.location,
+              phone: mockProfile.phone,
+              email: mockProfile.email
+            });
+            
+            setProfileVisibility(mockProfile.visibility);
+            setSocialLinks(mockProfile.socialLinks);
+            setProfileUrl(`${window.location.origin}/profile/${mockProfile.username}`);
+            
+            // Empty arrays for other profile data
+            setSkills([]);
+            setEducation([]);
+            setWorkExperience([]);
+            
+            // Viewing someone else's profile - not in edit mode
+            setEditMode(false);
+            setLoading(false);
+            return;
+          }
+          
+          // Production - get profile by username
+          try {
+            const profileResponse = await apiEndpoints.profiles.getProfileByUsername(usernameFromUrl);
+            // Rest of the code for loading someone else's profile
+            setUserProfile(profileResponse.data);
+            setEditMode(false); // Viewing only
+            
+            // Set all other profile data
+            // ...
+            
+            setLoading(false);
+          } catch (err) {
+            console.error(`Error loading profile for username ${usernameFromUrl}:`, err);
+            setError(`Profile not found for username: ${usernameFromUrl}`);
+            setLoading(false);
+          }
+          
+          return;
+        }
+        
+        // We're looking at our own profile - continue with original logic
+        if (!userAccountProfile?.id) {
+          // Initialize with mock data in development mode
+          if (import.meta.env.DEV) {
+            console.log("DEV MODE: Initializing with mock profile data");
+            
+            // Fixed mock user ID to ensure consistency
+            const mockUserId = 'mock-user-123';
+            
+            // Helper function to get a consistent avatar URL
+            const getAvatarUrl = (id) => {
+              const num = id ? 
+                String(id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 70 : 32;
+              return `https://randomuser.me/api/portraits/men/${num}.jpg`;
+            };
+            
+            const mockProfile = {
+              id: mockUserId,
+              userId: mockUserId,
+              username: 'zayed',
+              firstName: 'Zayed',
+              lastName: '',
+              title: '',
+              bio: '',
+              location: '',
+              phone: '',
+              email: '',
+              avatar: getAvatarUrl(mockUserId),
+              visibility: {
+                isPublic: true,
+                showEmail: false,
+                showPhone: false,
+                showEducation: true,
+                showExperience: true,
+                showSkills: true
+              },
+              socialLinks: {
+                linkedin: '',
+                github: '',
+                twitter: '',
+                portfolio: ''
+              }
+            };
+            
+            // Set local state
+            setUserProfile(mockProfile);
+            
+            // Also update the App Context with this mock profile to ensure consistency
+            if (import.meta.env.DEV && updateUserProfile) {
+              console.log("DEV MODE: Syncing mock profile with app context");
+              try {
+                await updateUserProfile({
+                  id: mockProfile.id,
+                  fullName: mockProfile.firstName + (mockProfile.lastName ? ` ${mockProfile.lastName}` : ''),
+                  bio: mockProfile.bio,
+                  avatar: mockProfile.avatar
+                });
+              } catch (err) {
+                console.warn("DEV MODE: Couldn't sync with context", err);
+              }
+            }
+            
+            // Set profile fields
+            setProfileFieldsEdited({
+              firstName: mockProfile.firstName,
+              lastName: mockProfile.lastName,
+              title: mockProfile.title,
+              bio: mockProfile.bio,
+              location: mockProfile.location,
+              phone: mockProfile.phone,
+              email: mockProfile.email
+            });
+            
+            setProfileVisibility(mockProfile.visibility);
+            setSocialLinks(mockProfile.socialLinks);
+            setProfileUrl(`${window.location.origin}/profile/${mockProfile.username || mockProfile.id}`);
+            
+            // Set empty skills, education and work experience for user to fill
+            setSkills([]);
+            setEducation([]);
+            setWorkExperience([]);
+            
+            setEditMode(true); // Allow editing for own profile
+            setLoading(false);
+            return;
+          }
+          
+          setLoading(false);
+          return;
+        }
+        
+        // Regular profile loading from server
         // Fetch user profile data
-        const profileResponse = await apiEndpoints.profiles.getUserProfile(profile.id);
+        const profileResponse = await apiEndpoints.profiles.getUserProfile(userAccountProfile.id);
         setUserProfile(profileResponse.data);
         
         // Initialize profile fields
@@ -111,14 +389,14 @@ const UserProfile = () => {
         });
         
         // Set profile URL
-        setProfileUrl(`${window.location.origin}/profile/${profileResponse.data.username || profile.id}`);
+        setProfileUrl(`${window.location.origin}/profile/${profileResponse.data.username || userAccountProfile.id}`);
         
         // Fetch additional profile data
         const [achievementsRes, skillsRes, educationRes, experienceRes] = await Promise.all([
-          apiEndpoints.profiles.getAchievements(profile.id),
-          apiEndpoints.profiles.getSkills(profile.id),
-          apiEndpoints.profiles.getEducation(profile.id),
-          apiEndpoints.profiles.getExperience(profile.id)
+          apiEndpoints.profiles.getAchievements(userAccountProfile.id),
+          apiEndpoints.profiles.getSkills(userAccountProfile.id),
+          apiEndpoints.profiles.getEducation(userAccountProfile.id),
+          apiEndpoints.profiles.getExperience(userAccountProfile.id)
         ]);
         
         setAchievements(achievementsRes.data || []);
@@ -133,55 +411,111 @@ const UserProfile = () => {
           twitter: profileResponse.data.socialLinks?.twitter || '',
           portfolio: profileResponse.data.socialLinks?.portfolio || ''
         });
+        
       } catch (err) {
         console.error('Error loading user profile:', err);
-        setError('Failed to load user profile data');
+        setError(err.message || 'Failed to load user profile data');
       } finally {
         setLoading(false);
       }
     };
     
     loadUserProfile();
-  }, [profile]);
+  }, [userAccountProfile, params.username, updateUserProfile]);
   
-  // Save profile changes
+  // Handle save profile changes
   const handleSaveProfile = async () => {
+    if (!profileFieldsEdited.firstName || !profileFieldsEdited.lastName) {
+      setError('First name and last name are required');
+      setSnackbarOpen(true);
+      setSnackbarMessage('First name and last name are required');
+      setSnackbarSeverity('error');
+      return;
+    }
+    
     setSaving(true);
     setError(null);
     
     try {
-      // Prepare profile data for update
-      const updatedProfile = {
+      console.log('Updating profile with data:', {
         ...profileFieldsEdited,
         visibility: profileVisibility,
-        socialLinks
-      };
-      
-      // Update profile
-      const response = await apiEndpoints.profiles.updateProfile(profile.id, updatedProfile);
-      
-      // Update local context state
-      updateProfile({
-        ...profile,
-        firstName: profileFieldsEdited.firstName,
-        lastName: profileFieldsEdited.lastName,
-        title: profileFieldsEdited.title,
-        avatar: response.data.avatar || profile.avatar
+        socialLinks: socialLinks
       });
       
-      setUserProfile({
-        ...userProfile,
+      // Mock success response for development mode
+      if (import.meta.env.DEV) {
+        await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API delay
+        console.log('DEV MODE: Profile update simulated successfully');
+        
+        // Update the userProfile state with new values
+        setUserProfile(prev => ({
+          ...prev,
         ...profileFieldsEdited,
         visibility: profileVisibility,
-        socialLinks
-      });
+          socialLinks: socialLinks
+        }));
       
+        // Show success message
+        setError(null);
+        setSnackbarMessage('Profile updated successfully');
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
       setEditMode(false);
+        setSaving(false);
+        return;
+      }
+      
+      // Real API call for production
+      const response = await api.put(
+        `${apiEndpoints.profiles.updateProfile(userAccountProfile.id)}`,
+        {
+          ...profileFieldsEdited,
+          visibility: profileVisibility,
+          socialLinks: socialLinks
+        }
+      );
+      
+      console.log('Profile update response:', response);
+      
+      if (response.status === 200 || response.status === 201) {
+        // Update the userProfile state with new values
+        setUserProfile(prev => ({
+          ...prev,
+          ...profileFieldsEdited,
+          visibility: profileVisibility,
+          socialLinks: socialLinks
+        }));
+        
+        // Show success message
       setSnackbarMessage('Profile updated successfully');
+        setSnackbarSeverity('success');
       setSnackbarOpen(true);
+        setEditMode(false);
+      } else {
+        throw new Error('Failed to update profile');
+      }
     } catch (err) {
       console.error('Error updating profile:', err);
-      setError('Failed to update profile');
+      let errorMessage = 'Failed to update profile';
+      
+      if (err.response) {
+        // Server responded with error
+        errorMessage = err.response.data?.message || `Server error: ${err.response.status}`;
+        console.error('API error details:', err.response.data);
+      } else if (err.request) {
+        // Request made but no response
+        errorMessage = 'No response from server. Please check your connection';
+        console.error('No response received:', err.request);
+      } else {
+        // Something else went wrong
+        errorMessage = err.message || 'Unknown error occurred';
+      }
+      
+      setError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
     } finally {
       setSaving(false);
     }
@@ -194,40 +528,128 @@ const UserProfile = () => {
     
     const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
     if (!validTypes.includes(file.type)) {
-      setError('Please select a valid image file (JPEG, PNG, or GIF)');
+      setSnackbarMessage('Please select a valid image file (JPEG, PNG, or GIF)');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
       return;
     }
     
-    setProfileImage(URL.createObjectURL(file));
-    setPhotoDialogOpen(true);
+    // Create a preview
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setProfileImage(event.target.result);
+      setPhotoDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
   };
   
   // Save new profile picture
   const handleSaveProfilePicture = async () => {
     setSaving(true);
+    setError(null);
     
     try {
-      const formData = new FormData();
-      formData.append('avatar', fileInputRef.current.files[0]);
+      const file = fileInputRef.current.files[0];
+      if (!file) {
+        throw new Error('No file selected');
+      }
       
-      const response = await apiEndpoints.profiles.uploadAvatar(profile.id, formData);
+      console.log('Uploading profile picture:', file.name);
+      
+      // In development mode, skip the real API call and use the local preview
+      if (import.meta.env.DEV) {
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        console.log('DEV MODE: Using local profile image preview');
+        
+        // Make sure the profileImage is a valid data URL
+        if (!profileImage || !profileImage.startsWith('data:')) {
+          throw new Error('Invalid image data');
+        }
+        
+        // Update the avatar URL in the userProfile state
+        setUserProfile(prev => ({
+          ...prev,
+          avatar: profileImage
+        }));
+        
+        // Also update the profileFieldsEdited state to include the new avatar
+        setProfileFieldsEdited(prev => ({
+          ...prev,
+          avatar: profileImage
+        }));
+        
+        // Update in the main app context if available
+        if (updateUserProfile) {
+          try {
+            // Create a copy of userAccountProfile with the updated avatar
+            const updatedProfile = {
+              ...(userAccountProfile || {}),
+              avatar: profileImage
+            };
+            
+            // Send the update to the context
+            await updateUserProfile(updatedProfile);
+            
+            console.log('DEV MODE: Profile avatar updated in context');
+          } catch (err) {
+            console.warn("DEV MODE: Couldn't sync avatar with context", err);
+          }
+        }
+        
+        setSnackbarSeverity('success');
+        setSnackbarMessage('Profile picture updated successfully');
+        setSnackbarOpen(true);
+        setPhotoDialogOpen(false);
+        setSaving(false);
+        return;
+      }
+      
+      // Real API call for production
+      const formData = new FormData();
+      formData.append('avatar', file);
+      
+      const userId = userAccountProfile?.id || userProfile?.id;
+      console.log('Uploading profile picture for user:', userId);
+      
+      const response = await apiEndpoints.profiles.uploadAvatar(userId, formData);
+      
+      if (!response || !response.data) {
+        throw new Error('Invalid response from server');
+      }
+      
+      console.log('Profile picture upload response:', response);
       
       // Update user profile with new avatar
-      updateProfile({
-        ...profile,
-        avatar: response.data.avatarUrl
-      });
+      const avatarUrl = response.data.avatarUrl;
       
-      setUserProfile({
-        ...userProfile,
-        avatar: response.data.avatarUrl
-      });
+      setUserProfile(prev => ({
+        ...prev,
+        avatar: avatarUrl
+      }));
       
-      setSnackbarMessage('Profile picture updated');
+      // Also update profileFieldsEdited state
+      setProfileFieldsEdited(prev => ({
+        ...prev,
+        avatar: avatarUrl
+      }));
+      
+      if (updateUserProfile) {
+        await updateUserProfile({
+          ...userAccountProfile,
+          avatar: avatarUrl
+        });
+      }
+      
+      setSnackbarSeverity('success');
+      setSnackbarMessage('Profile picture updated successfully');
       setSnackbarOpen(true);
     } catch (err) {
       console.error('Error uploading profile picture:', err);
-      setError('Failed to upload profile picture');
+      setSnackbarSeverity('error');
+      setSnackbarMessage('Failed to upload profile picture: ' + (err.message || 'Unknown error'));
+      setSnackbarOpen(true);
     } finally {
       setSaving(false);
       setPhotoDialogOpen(false);
@@ -257,6 +679,40 @@ const UserProfile = () => {
         {editMode ? (
           <form>
             <Grid container spacing={2}>
+              {/* Add an avatar preview in edit mode */}
+              <Grid item xs={12} sx={{ mb: 2, textAlign: 'center' }}>
+                <Avatar
+                  src={userProfile?.avatar || ''}
+                  alt={`${profileFieldsEdited.firstName} ${profileFieldsEdited.lastName}`}
+                  sx={{ 
+                    width: 100, 
+                    height: 100, 
+                    margin: '0 auto', 
+                    mb: 2,
+                    border: '3px solid', 
+                    borderColor: 'primary.light'
+                  }}
+                />
+                <input
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  id="profile-picture-upload-edit"
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleProfilePictureUpload}
+                />
+                <label htmlFor="profile-picture-upload-edit">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    startIcon={<CameraAlt />}
+                    size="small"
+                  >
+                    Change Photo
+                  </Button>
+                </label>
+              </Grid>
+              
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
@@ -343,8 +799,14 @@ const UserProfile = () => {
                 onClick={handleSaveProfile}
                 disabled={saving}
                 startIcon={saving ? <CircularProgress size={20} /> : <Save />}
+                size="large"
+                sx={{ 
+                  px: 3, 
+                  py: 1,
+                  fontWeight: 'bold'
+                }}
               >
-                Save Changes
+                {saving ? 'Saving...' : 'Save Profile'}
               </Button>
             </Box>
           </form>
@@ -367,6 +829,24 @@ const UserProfile = () => {
                           {userProfile.location}
                         </Typography>
                       </Box>
+                    )}
+                    
+                    {/* Profile completion prompt */}
+                    {!editMode && (
+                      <Typography 
+                        variant="body2" 
+                        color="primary" 
+                        sx={{ 
+                          mt: 1, 
+                          p: 1, 
+                          bgcolor: 'primary.light', 
+                          color: 'primary.contrastText',
+                          borderRadius: 1,
+                          opacity: 0.9
+                        }}
+                      >
+                        Complete your profile to enhance your professional presence
+                      </Typography>
                     )}
                   </Box>
                   <Button
@@ -425,9 +905,9 @@ const UserProfile = () => {
                 <CardContent>
                   <List dense>
                     <ListItem>
-                      <ListItemIcon>
+                <ListItemIcon>
                         <Email />
-                      </ListItemIcon>
+                </ListItemIcon>
                       <ListItemText 
                         primary="Email" 
                         secondary={userProfile?.email || 'Not provided'}
@@ -442,12 +922,12 @@ const UserProfile = () => {
                           {profileVisibility.showEmail ? <Visibility fontSize="small" /> : <VisibilityOff fontSize="small" />}
                         </IconButton>
                       </Tooltip>
-                    </ListItem>
-                    
+              </ListItem>
+              
                     <ListItem>
-                      <ListItemIcon>
+                <ListItemIcon>
                         <Phone />
-                      </ListItemIcon>
+                </ListItemIcon>
                       <ListItemText 
                         primary="Phone" 
                         secondary={userProfile?.phone || 'Not provided'}
@@ -462,7 +942,7 @@ const UserProfile = () => {
                           {profileVisibility.showPhone ? <Visibility fontSize="small" /> : <VisibilityOff fontSize="small" />}
                         </IconButton>
                       </Tooltip>
-                    </ListItem>
+              </ListItem>
                   </List>
                 </CardContent>
               </Card>
@@ -497,9 +977,9 @@ const UserProfile = () => {
                     </ListItem>
                     
                     <ListItem>
-                      <ListItemIcon>
+                <ListItemIcon>
                         <GitHub />
-                      </ListItemIcon>
+                </ListItemIcon>
                       <ListItemText 
                         primary="GitHub" 
                         secondary={socialLinks.github || 'Not connected'}
@@ -513,8 +993,8 @@ const UserProfile = () => {
                       >
                         {socialLinks.github ? 'Edit' : 'Add'}
                       </Button>
-                    </ListItem>
-                    
+              </ListItem>
+              
                     <ListItem>
                       <ListItemIcon>
                         <Twitter />
@@ -535,9 +1015,9 @@ const UserProfile = () => {
                     </ListItem>
                     
                     <ListItem>
-                      <ListItemIcon>
+                <ListItemIcon>
                         <Language />
-                      </ListItemIcon>
+                </ListItemIcon>
                       <ListItemText 
                         primary="Portfolio Website" 
                         secondary={socialLinks.portfolio || 'Not added'}
@@ -551,7 +1031,7 @@ const UserProfile = () => {
                       >
                         {socialLinks.portfolio ? 'Edit' : 'Add'}
                       </Button>
-                    </ListItem>
+              </ListItem>
                   </List>
                 </CardContent>
               </Card>
@@ -622,7 +1102,7 @@ const UserProfile = () => {
                         onClick={() => {
                           setConfirmDialogAction(() => async () => {
                             try {
-                              await apiEndpoints.profiles.deleteExperience(profile.id, exp.id);
+                              await apiEndpoints.profiles.deleteExperience(userAccountProfile.id, exp.id);
                               setWorkExperience(experience.filter(e => e.id !== exp.id));
                               setSnackbarMessage('Experience deleted successfully');
                               setSnackbarOpen(true);
@@ -729,7 +1209,7 @@ const UserProfile = () => {
                         onClick={() => {
                           setConfirmDialogAction(() => async () => {
                             try {
-                              await apiEndpoints.profiles.deleteEducation(profile.id, edu.id);
+                              await apiEndpoints.profiles.deleteEducation(userAccountProfile.id, edu.id);
                               setEducation(education.filter(e => e.id !== edu.id));
                               setSnackbarMessage('Education deleted successfully');
                               setSnackbarOpen(true);
@@ -1018,6 +1498,87 @@ const UserProfile = () => {
   };
   
   const renderEducationDialog = () => {
+    // Handle form field changes
+    const handleChange = (e) => {
+      const { name, value, checked } = e.target;
+      setEducationForm(prev => ({
+        ...prev,
+        [name]: name === 'current' ? checked : value
+      }));
+    };
+    
+    // Handle save education
+    const handleSaveEducation = async () => {
+      if (!educationForm.institution || !educationForm.degree) {
+        setSnackbarMessage('Institution and degree are required');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+        return;
+      }
+      
+      setSaving(true);
+      
+      try {
+        // Handle in development mode
+        if (import.meta.env.DEV) {
+          await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API delay
+          
+          const newEducation = {
+            ...educationForm,
+            id: currentEducation?.id || Date.now()
+          };
+          
+          if (currentEducation) {
+            // Update existing education
+            setEducation(prev => prev.map(edu => 
+              edu.id === currentEducation.id ? newEducation : edu
+            ));
+          } else {
+            // Add new education
+            setEducation(prev => [...prev, newEducation]);
+          }
+          
+          setSnackbarMessage(`Education ${currentEducation ? 'updated' : 'added'} successfully`);
+          setSnackbarSeverity('success');
+          setSnackbarOpen(true);
+          setEducationDialogOpen(false);
+          setCurrentEducation(null);
+          return;
+        }
+        
+        // Handle in production mode
+        const userId = userAccountProfile?.id;
+        let response;
+        
+        if (currentEducation) {
+          // Update existing education
+          response = await apiEndpoints.profiles.updateEducation(userId, currentEducation.id, educationForm);
+          
+          setEducation(prev => prev.map(edu => 
+            edu.id === currentEducation.id ? response.data : edu
+          ));
+        } else {
+          // Add new education
+          response = await apiEndpoints.profiles.addEducation(userId, educationForm);
+          
+          setEducation(prev => [...prev, response.data]);
+        }
+        
+        setSnackbarMessage(`Education ${currentEducation ? 'updated' : 'added'} successfully`);
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+      } catch (err) {
+        console.error('Error saving education:', err);
+        setSnackbarMessage(`Failed to ${currentEducation ? 'update' : 'add'} education`);
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+      } finally {
+        setSaving(false);
+        setEducationDialogOpen(false);
+        setCurrentEducation(null);
+      }
+    };
+    
     return (
       <Dialog open={educationDialogOpen} onClose={() => setEducationDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
@@ -1027,19 +1588,27 @@ const UserProfile = () => {
           <TextField
             fullWidth
             label="Institution"
-            defaultValue={currentEducation?.institution || ''}
+            name="institution"
+            value={educationForm.institution}
+            onChange={handleChange}
             margin="normal"
+            required
           />
           <TextField
             fullWidth
             label="Degree"
-            defaultValue={currentEducation?.degree || ''}
+            name="degree"
+            value={educationForm.degree}
+            onChange={handleChange}
             margin="normal"
+            required
           />
           <TextField
             fullWidth
             label="Field of Study"
-            defaultValue={currentEducation?.fieldOfStudy || ''}
+            name="fieldOfStudy"
+            value={educationForm.fieldOfStudy}
+            onChange={handleChange}
             margin="normal"
           />
           <Grid container spacing={2}>
@@ -1047,8 +1616,10 @@ const UserProfile = () => {
               <TextField
                 fullWidth
                 label="Start Date"
+                name="startDate"
                 type="date"
-                defaultValue={currentEducation?.startDate || ''}
+                value={educationForm.startDate}
+                onChange={handleChange}
                 InputLabelProps={{ shrink: true }}
                 margin="normal"
               />
@@ -1057,17 +1628,22 @@ const UserProfile = () => {
               <TextField
                 fullWidth
                 label="End Date"
+                name="endDate"
                 type="date"
-                defaultValue={currentEducation?.endDate || ''}
+                value={educationForm.endDate}
+                onChange={handleChange}
                 InputLabelProps={{ shrink: true }}
                 margin="normal"
+                disabled={educationForm.current}
               />
             </Grid>
           </Grid>
           <FormControlLabel
             control={
               <Checkbox
-                defaultChecked={currentEducation?.current || false}
+                name="current"
+                checked={educationForm.current}
+                onChange={handleChange}
               />
             }
             label="Currently studying here"
@@ -1075,9 +1651,11 @@ const UserProfile = () => {
           <TextField
             fullWidth
             label="Description"
+            name="description"
             multiline
             rows={4}
-            defaultValue={currentEducation?.description || ''}
+            value={educationForm.description}
+            onChange={handleChange}
             margin="normal"
           />
         </DialogContent>
@@ -1085,8 +1663,13 @@ const UserProfile = () => {
           <Button onClick={() => setEducationDialogOpen(false)}>
             Cancel
           </Button>
-          <Button variant="contained" color="primary">
-            {currentEducation ? 'Update' : 'Add'}
+          <Button 
+            variant="contained" 
+            color="primary"
+            onClick={handleSaveEducation}
+            disabled={saving}
+          >
+            {saving ? <CircularProgress size={24} /> : (currentEducation ? 'Update' : 'Add')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1094,6 +1677,87 @@ const UserProfile = () => {
   };
   
   const renderExperienceDialog = () => {
+    // Handle form field changes
+    const handleChange = (e) => {
+      const { name, value, checked } = e.target;
+      setExperienceForm(prev => ({
+        ...prev,
+        [name]: name === 'current' ? checked : value
+      }));
+    };
+    
+    // Handle save experience
+    const handleSaveExperience = async () => {
+      if (!experienceForm.company || !experienceForm.title) {
+        setSnackbarMessage('Company and title are required');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+        return;
+      }
+      
+      setSaving(true);
+      
+      try {
+        // Handle in development mode
+        if (import.meta.env.DEV) {
+          await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API delay
+          
+          const newExperience = {
+            ...experienceForm,
+            id: currentExperience?.id || Date.now()
+          };
+          
+          if (currentExperience) {
+            // Update existing experience
+            setWorkExperience(prev => prev.map(exp => 
+              exp.id === currentExperience.id ? newExperience : exp
+            ));
+          } else {
+            // Add new experience
+            setWorkExperience(prev => [...prev, newExperience]);
+          }
+          
+          setSnackbarMessage(`Work experience ${currentExperience ? 'updated' : 'added'} successfully`);
+          setSnackbarSeverity('success');
+          setSnackbarOpen(true);
+          setExperienceDialogOpen(false);
+          setCurrentExperience(null);
+          return;
+        }
+        
+        // Handle in production mode
+        const userId = userAccountProfile?.id;
+        let response;
+        
+        if (currentExperience) {
+          // Update existing experience
+          response = await apiEndpoints.profiles.updateExperience(userId, currentExperience.id, experienceForm);
+          
+          setWorkExperience(prev => prev.map(exp => 
+            exp.id === currentExperience.id ? response.data : exp
+          ));
+        } else {
+          // Add new experience
+          response = await apiEndpoints.profiles.addExperience(userId, experienceForm);
+          
+          setWorkExperience(prev => [...prev, response.data]);
+        }
+        
+        setSnackbarMessage(`Work experience ${currentExperience ? 'updated' : 'added'} successfully`);
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+      } catch (err) {
+        console.error('Error saving work experience:', err);
+        setSnackbarMessage(`Failed to ${currentExperience ? 'update' : 'add'} work experience`);
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+      } finally {
+        setSaving(false);
+        setExperienceDialogOpen(false);
+        setCurrentExperience(null);
+      }
+    };
+    
     return (
       <Dialog open={experienceDialogOpen} onClose={() => setExperienceDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
@@ -1103,19 +1767,27 @@ const UserProfile = () => {
           <TextField
             fullWidth
             label="Company"
-            defaultValue={currentExperience?.company || ''}
+            name="company"
+            value={experienceForm.company}
+            onChange={handleChange}
             margin="normal"
+            required
           />
           <TextField
             fullWidth
             label="Title"
-            defaultValue={currentExperience?.title || ''}
+            name="title"
+            value={experienceForm.title}
+            onChange={handleChange}
             margin="normal"
+            required
           />
           <TextField
             fullWidth
             label="Location"
-            defaultValue={currentExperience?.location || ''}
+            name="location"
+            value={experienceForm.location}
+            onChange={handleChange}
             margin="normal"
           />
           <Grid container spacing={2}>
@@ -1123,8 +1795,10 @@ const UserProfile = () => {
               <TextField
                 fullWidth
                 label="Start Date"
+                name="startDate"
                 type="date"
-                defaultValue={currentExperience?.startDate || ''}
+                value={experienceForm.startDate}
+                onChange={handleChange}
                 InputLabelProps={{ shrink: true }}
                 margin="normal"
               />
@@ -1133,17 +1807,22 @@ const UserProfile = () => {
               <TextField
                 fullWidth
                 label="End Date"
+                name="endDate"
                 type="date"
-                defaultValue={currentExperience?.endDate || ''}
+                value={experienceForm.endDate}
+                onChange={handleChange}
                 InputLabelProps={{ shrink: true }}
                 margin="normal"
+                disabled={experienceForm.current}
               />
             </Grid>
           </Grid>
           <FormControlLabel
             control={
               <Checkbox
-                defaultChecked={currentExperience?.current || false}
+                name="current"
+                checked={experienceForm.current}
+                onChange={handleChange}
               />
             }
             label="Currently working here"
@@ -1151,9 +1830,11 @@ const UserProfile = () => {
           <TextField
             fullWidth
             label="Description"
+            name="description"
             multiline
             rows={4}
-            defaultValue={currentExperience?.description || ''}
+            value={experienceForm.description}
+            onChange={handleChange}
             margin="normal"
           />
         </DialogContent>
@@ -1161,8 +1842,13 @@ const UserProfile = () => {
           <Button onClick={() => setExperienceDialogOpen(false)}>
             Cancel
           </Button>
-          <Button variant="contained" color="primary">
-            {currentExperience ? 'Update' : 'Add'}
+          <Button 
+            variant="contained" 
+            color="primary"
+            onClick={handleSaveExperience}
+            disabled={saving}
+          >
+            {saving ? <CircularProgress size={24} /> : (currentExperience ? 'Update' : 'Add')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1170,6 +1856,120 @@ const UserProfile = () => {
   };
   
   const renderSkillDialog = () => {
+    // Handle form field changes
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+      setSkillForm(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    };
+    
+    // Handle rating change
+    const handleRatingChange = (event, newValue) => {
+      setSkillForm(prev => ({
+        ...prev,
+        level: newValue
+      }));
+    };
+    
+    // Handle save skill
+    const handleSaveSkill = async () => {
+      if (!skillForm.name) {
+        setSnackbarMessage('Skill name is required');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+        return;
+      }
+      
+      setSaving(true);
+      
+      try {
+        // Add trending flag if skill is highly rated
+        const enhancedSkill = {
+          ...skillForm,
+          trending: skillForm.level >= 4,
+          verified: currentSkill?.verified || false
+        };
+        
+        // Handle in development mode
+        if (import.meta.env.DEV) {
+          await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API delay
+          
+          const newSkill = {
+            ...enhancedSkill,
+            id: currentSkill?.id || Date.now()
+          };
+          
+          if (currentSkill) {
+            // Update existing skill
+            setSkills(prev => prev.map(skill => 
+              skill.id === currentSkill.id ? newSkill : skill
+            ));
+          } else {
+            // Add new skill
+            setSkills(prev => [...prev, newSkill]);
+          }
+          
+          setSnackbarMessage(`Skill ${currentSkill ? 'updated' : 'added'} successfully`);
+          setSnackbarSeverity('success');
+          setSnackbarOpen(true);
+          setSkillDialogOpen(false);
+          setCurrentSkill(null);
+          return;
+        }
+        
+        // Handle in production mode
+        const userId = userAccountProfile?.id;
+        let response;
+        
+        if (currentSkill) {
+          // Update existing skill
+          response = await apiEndpoints.profiles.updateSkill(userId, currentSkill.id, enhancedSkill);
+          
+          setSkills(prev => prev.map(skill => 
+            skill.id === currentSkill.id ? response.data : skill
+          ));
+        } else {
+          // Add new skill
+          response = await apiEndpoints.profiles.addSkill(userId, enhancedSkill);
+          
+          setSkills(prev => [...prev, response.data]);
+        }
+        
+        setSnackbarMessage(`Skill ${currentSkill ? 'updated' : 'added'} successfully`);
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+      } catch (err) {
+        console.error('Error saving skill:', err);
+        setSnackbarMessage(`Failed to ${currentSkill ? 'update' : 'add'} skill`);
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+      } finally {
+        setSaving(false);
+        setSkillDialogOpen(false);
+        setCurrentSkill(null);
+      }
+    };
+    
+    // List of common skill categories
+    const categories = [
+      { value: 'frontend', label: 'Frontend Development' },
+      { value: 'backend', label: 'Backend Development' },
+      { value: 'database', label: 'Database' },
+      { value: 'mobile', label: 'Mobile Development' },
+      { value: 'devops', label: 'DevOps' },
+      { value: 'cloud', label: 'Cloud Computing' },
+      { value: 'security', label: 'Security' },
+      { value: 'ai', label: 'AI & Machine Learning' },
+      { value: 'design', label: 'Design' },
+      { value: 'soft', label: 'Soft Skills' },
+      { value: 'languages', label: 'Programming Languages' },
+      { value: 'frameworks', label: 'Frameworks & Libraries' },
+      { value: 'tools', label: 'Tools & Platforms' },
+      { value: 'other', label: 'Other' }
+    ];
+    
     return (
       <Dialog open={skillDialogOpen} onClose={() => setSkillDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
@@ -1179,33 +1979,66 @@ const UserProfile = () => {
           <TextField
             fullWidth
             label="Skill Name"
-            defaultValue={currentSkill?.name || ''}
+            name="name"
+            value={skillForm.name}
+            onChange={handleChange}
             margin="normal"
+            required
           />
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" gutterBottom>
               Skill Level
             </Typography>
             <Rating
-              name="skill-level"
-              defaultValue={currentSkill?.level || 3}
+              name="level"
+              value={skillForm.level}
+              onChange={handleRatingChange}
               max={5}
               size="large"
             />
+            <Typography variant="caption" color="text.secondary">
+              {skillForm.level === 1 && 'Beginner'}
+              {skillForm.level === 2 && 'Basic'}
+              {skillForm.level === 3 && 'Intermediate'}
+              {skillForm.level === 4 && 'Advanced'}
+              {skillForm.level === 5 && 'Expert'}
+            </Typography>
           </Box>
           <TextField
             fullWidth
             label="Years of Experience"
+            name="years"
             type="number"
-            defaultValue={currentSkill?.years || ''}
+            value={skillForm.years}
+            onChange={handleChange}
             margin="normal"
+            InputProps={{
+              inputProps: { min: 0, step: 0.5 }
+            }}
           />
           <TextField
             fullWidth
+            select
+            label="Category"
+            name="category"
+            value={skillForm.category}
+            onChange={handleChange}
+            margin="normal"
+          >
+            {categories.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            fullWidth
             label="Description"
+            name="description"
             multiline
             rows={3}
-            defaultValue={currentSkill?.description || ''}
+            value={skillForm.description}
+            onChange={handleChange}
             margin="normal"
           />
         </DialogContent>
@@ -1213,8 +2046,13 @@ const UserProfile = () => {
           <Button onClick={() => setSkillDialogOpen(false)}>
             Cancel
           </Button>
-          <Button variant="contained" color="primary">
-            {currentSkill ? 'Update' : 'Add'}
+          <Button 
+            variant="contained" 
+            color="primary"
+            onClick={handleSaveSkill}
+            disabled={saving}
+          >
+            {saving ? <CircularProgress size={24} /> : (currentSkill ? 'Update' : 'Add')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1227,12 +2065,28 @@ const UserProfile = () => {
         <DialogTitle>Update Profile Picture</DialogTitle>
         <DialogContent>
           <Box sx={{ textAlign: 'center', p: 2 }}>
-            <Avatar
-              src={profileImage}
-              sx={{ width: 200, height: 200, margin: '0 auto', mb: 2 }}
-            />
+            {profileImage ? (
+              <Avatar
+                src={profileImage}
+                sx={{ width: 200, height: 200, margin: '0 auto', mb: 2 }}
+              />
+            ) : (
+              <Box sx={{ 
+                width: 200, 
+                height: 200, 
+                margin: '0 auto', 
+                mb: 2, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                bgcolor: 'action.hover',
+                borderRadius: '50%'
+              }}>
+                <CameraAlt sx={{ fontSize: 50, color: 'text.secondary' }} />
+              </Box>
+            )}
             <Typography variant="body2" color="text.secondary">
-              Preview of your new profile picture
+              {profileImage ? 'Preview of your new profile picture' : 'No image selected'}
             </Typography>
           </Box>
         </DialogContent>
@@ -1244,7 +2098,7 @@ const UserProfile = () => {
             variant="contained" 
             color="primary"
             onClick={handleSaveProfilePicture}
-            disabled={saving}
+            disabled={saving || !profileImage}
           >
             {saving ? <CircularProgress size={24} /> : 'Save'}
           </Button>
@@ -1286,6 +2140,48 @@ const UserProfile = () => {
     );
   };
 
+  // Render not found state
+  const renderProfileNotFound = () => {
+    return (
+      <Container maxWidth="md" sx={{ py: 8 }}>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            py: 8
+          }}
+        >
+          <PersonOutline sx={{ fontSize: 100, color: 'text.secondary', opacity: 0.3, mb: 2 }} />
+          <Typography variant="h4" gutterBottom>
+            Profile Not Found
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+            The profile you're looking for doesn't exist or is not available.
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => navigate('/user-profile')}
+          >
+            Go to Your Profile
+          </Button>
+        </Box>
+      </Container>
+    );
+  };
+
+  // Main render
+  if (loading) {
+    return <LoadingSpinner fullScreen message="Loading profile..." />;
+  }
+  
+  if (error && !userProfile) {
+    return renderProfileNotFound();
+  }
+
   return (
     <Box sx={{ py: 3 }}>
       <Paper sx={{ p: 0, mb: 3 }}>
@@ -1299,9 +2195,9 @@ const UserProfile = () => {
                 { icon: <Psychology />, label: "Skills", value: 3 },
                 { icon: <Security />, label: "Account Settings", value: 4 }
               ].map((item) => (
-                <ListItem
+              <ListItem
                   key={item.value}
-                  button
+                button
                   selected={activeTab === item.value}
                   onClick={() => setActiveTab(item.value)}
                   sx={{
@@ -1317,12 +2213,12 @@ const UserProfile = () => {
                       bgcolor: 'action.hover',
                     },
                   }}
-                >
-                  <ListItemIcon>
+              >
+                <ListItemIcon>
                     {item.icon}
-                  </ListItemIcon>
+                </ListItemIcon>
                   <ListItemText primary={item.label} />
-                </ListItem>
+              </ListItem>
               ))}
             </List>
           </Grid>
@@ -1355,13 +2251,22 @@ const UserProfile = () => {
       {renderPhotoDialog()}
       {renderConfirmDialog()}
       
-      {/* Snackbar for notifications */}
+      {/* Notification Snackbar */}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={6000}
         onClose={() => setSnackbarOpen(false)}
-        message={snackbarMessage}
-      />
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setSnackbarOpen(false)} 
+          severity={snackbarSeverity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

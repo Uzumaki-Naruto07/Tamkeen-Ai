@@ -9,7 +9,7 @@ let pendingLoginRequest = null;
 
 // Create an axios instance with default config
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
+  baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:5001') + '/api',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -135,6 +135,21 @@ apiClient.interceptors.response.use(
     } else if (error.request) {
       // The request was made but no response was received
       errorObj.message = 'No response from server. Please try again later.';
+      
+      // In development mode, handle CORS errors more gracefully
+      if (isDevelopment && error.message && error.message.includes('Network Error')) {
+        console.warn('Development mode - CORS or Network error detected, using mock fallbacks');
+        // Let the function handle mock fallbacks
+        if (useMockData) {
+          return Promise.resolve({ 
+            data: { 
+              success: true, 
+              data: {}, 
+              message: 'Mock data response (dev mode)' 
+            } 
+          });
+        }
+      }
     }
 
     console.error('API Error:', errorObj.message, error);

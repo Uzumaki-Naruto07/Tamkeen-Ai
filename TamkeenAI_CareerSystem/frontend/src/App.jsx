@@ -47,6 +47,13 @@ const SuspenseFallback = () => (
   </div>
 );
 
+// Wrap UserProfile with specific error handling since it has known issues
+const UserProfileWithErrorBoundary = (props) => (
+  <ErrorBoundary>
+    <UserProfile {...props} />
+  </ErrorBoundary>
+);
+
 // Plain layout without navigation, for auth pages
 const AuthLayout = () => {
   return (
@@ -94,11 +101,13 @@ const router = createBrowserRouter(
         {/* Admin routes */}
         <Route path="/admin-panel" element={<ProtectedRoute element={<AdminPanel />} />} />
         
-        {/* User Profile route */}
-        <Route path="/user-profile" element={<ProtectedRoute element={<UserProfile />} />} />
+        {/* User Profile routes */}
+        <Route path="/user-profile" element={<ProtectedRoute element={<UserProfileWithErrorBoundary />} />} />
+        <Route path="/user-profile/:username" element={<ProtectedRoute element={<UserProfileWithErrorBoundary />} />} />
         
         {/* Redirect /profile to /user-profile to fix 404 */}
         <Route path="/profile" element={<Navigate to="/user-profile" replace />} />
+        <Route path="/profile/:username" element={<Navigate to={params => `/user-profile/${params.username}`} replace />} />
         
         {/* 404 - Not Found */}
         <Route path="*" element={<NotFound />} />

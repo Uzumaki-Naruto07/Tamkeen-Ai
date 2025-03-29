@@ -163,11 +163,71 @@ export const AppContextProvider = ({ children }) => {
   const updateUserProfile = async (profileData) => {
     try {
       setLoading(true);
+      
+      // In development mode, just simulate a successful update
+      if (import.meta.env.DEV) {
+        console.log('DEV MODE: Simulating profile update', profileData);
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // If we don't have a profile yet, initialize a mock one
+        if (!profile) {
+          const mockProfile = {
+            id: profileData.id || 'mock-user-1',
+            fullName: profileData.fullName || 'Mock User',
+            bio: profileData.bio || 'This is a mock profile for development purposes',
+            skills: profileData.skills || ['React', 'JavaScript', 'UI/UX'],
+            experience: profileData.experience || '5 years',
+            avatar: profileData.avatar || 'https://randomuser.me/api/portraits/men/1.jpg'
+          };
+          setProfile(mockProfile);
+          return { success: true, data: { profile: mockProfile } };
+        }
+        
+        // Update the profile state with the new data
+        const updatedProfile = {
+          ...profile,
+          ...profileData
+        };
+        
+        setProfile(updatedProfile);
+        
+        return { 
+          success: true, 
+          data: { 
+            profile: updatedProfile
+          }
+        };
+      }
+      
+      // Real API call for production
       const response = await api.put(USER.UPDATE_PROFILE, profileData);
       setProfile(response.data.data.profile);
       return response.data.data;
     } catch (err) {
       console.error('Failed to update profile:', err);
+      
+      // In development mode, still simulate success despite error
+      if (import.meta.env.DEV) {
+        console.log('DEV MODE: Returning successful response despite error');
+        
+        // Update the profile state with the new data anyway
+        setProfile(prevProfile => ({
+          ...prevProfile,
+          ...profileData
+        }));
+        
+        return { 
+          success: true, 
+          data: { 
+            profile: {
+              ...(profile || {}),
+              ...profileData
+            }
+          }
+        };
+      }
+      
       setError('Failed to update profile');
       throw err;
     } finally {

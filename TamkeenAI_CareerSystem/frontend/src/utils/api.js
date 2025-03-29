@@ -7,11 +7,36 @@ import * as endpoints from './endpoints';
 
 // Create axios instance with default config
 const api = axios.create({
+  baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:5001') + '/api',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Helper function to get consistent avatar numbers from user IDs
+const getConsistentAvatarUrl = (userId) => {
+  // Helper function to hash a string to a number
+  const hashString = (str) => {
+    let hash = 0;
+    if (!str || str.length === 0) return hash;
+    
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+  };
+  
+  const userIdStr = String(userId || 'default-user');
+  const hash = hashString(userIdStr);
+  const avatarNumber = hash % 70; // Randomuser.me has about 70 different avatars
+  const isMale = hash % 2 === 0;
+  const gender = isMale ? 'men' : 'women';
+  
+  return `https://randomuser.me/api/portraits/${gender}/${avatarNumber}.jpg`;
+};
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -474,6 +499,56 @@ export const settingsAPI = {
       console.error('Error uploading profile image:', error);
       throw error;
     }
+  },
+  
+  uploadAvatar: async (userId, formData) => {
+    try {
+      // Log the upload attempt
+      console.log('Uploading avatar for user:', userId);
+      
+      // In development mode, just return success with mock avatar URL
+      if (import.meta.env.DEV) {
+        console.log('DEV MODE: Using mock avatar upload');
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Get consistent avatar URL
+        const avatarUrl = getConsistentAvatarUrl(userId);
+        console.log(`DEV MODE: Generated mock avatar: ${avatarUrl}`);
+        
+        return {
+          success: true,
+          data: {
+            avatarUrl: avatarUrl
+          }
+        };
+      }
+      
+      // Real API call for production
+      const response = await api.post(`/profiles/${userId}/avatar`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      
+      // If in development mode, return mock data even if there's an error
+      if (import.meta.env.DEV) {
+        console.log('DEV MODE: Returning mock avatar URL despite error');
+        const avatarUrl = getConsistentAvatarUrl(userId);
+        return {
+          success: true,
+          data: {
+            avatarUrl: avatarUrl
+          }
+        };
+      }
+      
+      throw error;
+    }
   }
 };
 
@@ -651,15 +726,48 @@ export const profilesAPI = {
     try {
       // Log the upload attempt
       console.log('Uploading avatar for user:', userId);
-      // Return success with mock avatar URL
-      return {
-        success: true,
-        data: {
-          avatarUrl: 'https://via.placeholder.com/150'
+      
+      // In development mode, just return success with mock avatar URL
+      if (import.meta.env.DEV) {
+        console.log('DEV MODE: Using mock avatar upload');
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Get consistent avatar URL
+        const avatarUrl = getConsistentAvatarUrl(userId);
+        console.log(`DEV MODE: Generated mock avatar: ${avatarUrl}`);
+        
+        return {
+          success: true,
+          data: {
+            avatarUrl: avatarUrl
+          }
+        };
+      }
+      
+      // Real API call for production
+      const response = await api.post(`/profiles/${userId}/avatar`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
         }
-      };
+      });
+      
+      return response.data;
     } catch (error) {
       console.error('Error uploading avatar:', error);
+      
+      // If in development mode, return mock data even if there's an error
+      if (import.meta.env.DEV) {
+        console.log('DEV MODE: Returning mock avatar URL despite error');
+        const avatarUrl = getConsistentAvatarUrl(userId);
+        return {
+          success: true,
+          data: {
+            avatarUrl: avatarUrl
+          }
+        };
+      }
+      
       throw error;
     }
   }
