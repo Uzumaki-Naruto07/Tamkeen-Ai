@@ -33,6 +33,7 @@ from api.routes.career_routes import career_bp
 from api.routes.skill_routes import skill_bp
 from api.routes.dashboard_routes import dashboard_bp
 from api.routes.auth_routes import auth_bp
+from api.routes.confidence_chart_routes import confidence_charts
 
 # Configure logging
 logging.basicConfig(
@@ -95,6 +96,7 @@ def create_app():
     app.register_blueprint(skill_bp, url_prefix='/api/skills')
     app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(confidence_charts)
     
     @app.route('/api/health-check')
     def health_check():

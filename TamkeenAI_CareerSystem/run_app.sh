@@ -3,6 +3,9 @@
 # TamkeenAI Career System Startup Script
 # This script starts both the backend Flask API and frontend React app
 
+# Get script directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
 # Colors for terminal output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -49,9 +52,18 @@ echo -e "${GREEN}All dependencies found!${NC}"
 
 # Start MongoDB
 echo -e "${BLUE}Checking MongoDB status...${NC}"
-# Make the script executable if needed
-chmod +x ./start_mongodb.sh
-./start_mongodb.sh
+# Check if MongoDB script exists
+if [ -f "start_mongodb.sh" ]; then
+    # Make the script executable if needed
+    chmod +x ./start_mongodb.sh
+    ./start_mongodb.sh
+elif [ -f "${SCRIPT_DIR}/start_mongodb.sh" ]; then
+    # Try with script directory
+    chmod +x "${SCRIPT_DIR}/start_mongodb.sh"
+    ${SCRIPT_DIR}/start_mongodb.sh
+else
+    echo -e "${YELLOW}Warning: MongoDB startup script not found. Assuming MongoDB is already running.${NC}"
+fi
 
 # Function to check if a process is running on the port
 is_port_in_use() {
@@ -91,8 +103,11 @@ source venv/bin/activate || { echo -e "${RED}Failed to activate virtual environm
 # Install backend dependencies
 echo -e "${BLUE}Installing backend dependencies...${NC}"
 cd backend || { echo -e "${RED}Failed to change to backend directory${NC}"; exit 1; }
-# pip install -r requirements.txt || { echo -e "${RED}Failed to install backend dependencies${NC}"; exit 1; }
-echo -e "${GREEN}Skipping dependency installation...${NC}"
+# Install essential packages
+echo -e "${BLUE}Installing necessary Python packages...${NC}"
+pip install numpy pandas scikit-learn || { echo -e "${RED}Failed to install required Python packages${NC}"; }
+# Install from requirements file
+pip install -r requirements.txt || { echo -e "${YELLOW}Warning: Some dependencies failed to install${NC}"; }
 
 # Starting backend server in the background
 echo -e "${BLUE}Starting backend server...${NC}"
