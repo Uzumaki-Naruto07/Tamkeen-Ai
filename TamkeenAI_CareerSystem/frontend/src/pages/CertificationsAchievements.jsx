@@ -12,7 +12,7 @@ import {
   Star, StarBorder, DateRange, CheckCircle, Bookmark,
   MoreVert, Share, Download, Link, FilterList
 } from '@mui/icons-material';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import apiEndpoints from '../utils/api';
 import { useNavigate } from 'react-router-dom';

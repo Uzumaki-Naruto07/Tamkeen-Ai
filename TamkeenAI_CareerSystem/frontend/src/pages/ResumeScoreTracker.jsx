@@ -17,7 +17,7 @@ import {
   Warning, WbIncandescent, Assignment, Compare, Delete, Refresh
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format, subDays, parseISO } from 'date-fns';
@@ -32,7 +32,7 @@ import {
 } from 'recharts';
 
 // Custom Components
-import SkillChip from '../components/SkillChip';
+import SkillChip from '../components/common/SkillChip';
 import ScoreGauge from '../components/ScoreGauge';
 import TimelineComponent from '../components/TimelineComponent';
 

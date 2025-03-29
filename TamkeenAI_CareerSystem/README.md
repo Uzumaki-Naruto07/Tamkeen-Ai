@@ -69,7 +69,7 @@ Compare uploaded resumes with job descriptions and get improvement suggestions.
 
 6. **Admin Panel & Analytics**
 Track user progress and system metrics (for administrators).
-   - See all users’ dashboards, stats, skill heatmaps
+   - See all users' dashboards, stats, skill heatmaps
 
 7. **Gamification & Learning**
  Track your progress with XP, levels, badges, and a career leaderboard.
@@ -134,6 +134,12 @@ In a production version of this application, we fully comply with LinkedIn's aut
 > ```bash
 > chmod +x run_full_app.sh
 > ./run_full_app.sh
+> ```
+>
+> To stop the application, press Ctrl+C in the terminal where it's running. If processes remain running in the background, you can stop them with:
+> ```bash
+> pkill -f "python app.py"  # Stop backend server
+> pkill -f "npm run dev"    # Stop frontend server
 > ```
 
 ## 🚀 How to Run the Project
@@ -307,6 +313,9 @@ TamkeenAI_CareerSystem/
    lsof -i:5001
    # Kill the process
    kill <PID>
+   
+   # Alternatively, kill all Python app instances at once:
+   pkill -f "python app.py"
    ```
 
 3. **MongoDB connection issues**
@@ -366,11 +375,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 ## 🏁 Built With Vision
 
-“نحن لا نرضى إلا بالمركز الأول” — 🇦🇪
+"نحن لا نرضى إلا بالمركز الأول" — 🇦🇪
 
 TamkeenAI was built to serve Emirati students, graduates, and professionals to achieve excellence in their careers using the power of AI.
 
-> 💡 If you’re reading this, you’re not just using an app — you're stepping into the future.
+> 💡 If you're reading this, you're not just using an app — you're stepping into the future.
 
 Built with ❤️ by حصة المازمي — CEO of Solo Anonymous, Sharjah Capability Winner 🏆
 

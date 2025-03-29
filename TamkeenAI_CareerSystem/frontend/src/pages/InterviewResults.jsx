@@ -15,7 +15,7 @@ import {
   ArrowBack, Refresh, Download
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SpeechVisualization from '../components/Speech/SpeechVisualization';

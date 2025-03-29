@@ -21,7 +21,7 @@ import {
   CloudDownload, HelpOutline, Calculate, Insights
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useTheme } from '@mui/material/styles';

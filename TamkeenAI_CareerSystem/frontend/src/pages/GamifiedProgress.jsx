@@ -17,7 +17,7 @@ import {
   Engineering, Code, Business, SportsEsports, Language,
   Settings, RestartAlt, Share
 } from '@mui/icons-material';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SkillRadarChart from '../components/SkillRadarChart';

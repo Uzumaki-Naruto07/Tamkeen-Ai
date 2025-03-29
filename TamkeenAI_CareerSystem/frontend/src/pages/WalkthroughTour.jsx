@@ -16,7 +16,7 @@ import {
   TouchApp, SkipNext, Refresh, Flare, PersonAdd, Done, Speed
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import { useTheme } from '@mui/material/styles';
 import Joyride, { STATUS } from 'react-joyride';
@@ -319,7 +319,7 @@ const WalkthroughTour = () => {
     
     // Add common actions
     actions.push(
-      { title: 'Complete Your Profile', path: '/profile', icon: <PersonAdd /> },
+      { title: 'Complete Your Profile', path: '/user-profile', icon: <PersonAdd /> },
       { title: 'Set Career Goals', path: '/goals', icon: <Flag /> }
     );
     

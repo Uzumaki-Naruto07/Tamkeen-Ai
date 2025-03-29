@@ -18,7 +18,7 @@ import {
   PlayArrow, Check as CheckIcon, ContentCopy, Edit
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import { ThemeProvider, createTheme, useTheme, styled } from '@mui/material/styles';
 import { CacheProvider } from '@emotion/react';

@@ -27,7 +27,7 @@ import {
   Undo, Redo, History, Settings, Portrait, Business
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format } from 'date-fns';
@@ -36,7 +36,7 @@ import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { ChromePicker } from 'react-color';
-import SkillChip from '../components/SkillChip';
+import SkillChip from '../components/common/SkillChip';
 
 const ResumeBuilder = () => {
   const [loading, setLoading] = useState(true);

@@ -31,7 +31,7 @@ import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format, formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
-import SkillChip from '../components/SkillChip';
+import SkillChip from '../components/common/SkillChip';
 
 const JobDetails = () => {
   const { jobId } = useParams();

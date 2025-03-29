@@ -21,7 +21,6 @@ import MainLayout from './components/layout/MainLayout';
 
 // Direct imports for essential pages to reduce initial load time
 import Dashboard from './pages/Dashboard';
-import ArabicDashboard from './pages/ArabicDashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -38,6 +37,7 @@ const lazyLoad = (importFn) => {
 const ForgotPassword = lazyLoad(() => import('./pages/ForgotPassword'));
 const ResumeAnalysis = lazyLoad(() => import('./pages/ResumeAnalysis'));
 const AdminPanel = lazyLoad(() => import('./pages/AdminPanel'));
+const UserProfile = lazyLoad(() => import('./pages/UserProfile'));
 const NotFound = lazyLoad(() => import('./pages/NotFound'));
 
 // Suspense fallback component
@@ -89,11 +89,16 @@ const router = createBrowserRouter(
       <Route element={<MainLayout />}>
         <Route path="/" element={<Navigate to="/dashboard" />} />
         <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
-        <Route path="/dashboard-ar" element={<ProtectedRoute element={<ArabicDashboard />} />} />
         <Route path="/resume-analysis" element={<ProtectedRoute element={<ResumeAnalysis />} />} />
         
         {/* Admin routes */}
         <Route path="/admin-panel" element={<ProtectedRoute element={<AdminPanel />} />} />
+        
+        {/* User Profile route */}
+        <Route path="/user-profile" element={<ProtectedRoute element={<UserProfile />} />} />
+        
+        {/* Redirect /profile to /user-profile to fix 404 */}
+        <Route path="/profile" element={<Navigate to="/user-profile" replace />} />
         
         {/* 404 - Not Found */}
         <Route path="*" element={<NotFound />} />

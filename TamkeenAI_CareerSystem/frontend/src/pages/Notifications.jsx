@@ -22,7 +22,7 @@ import {
   Description, Group, Article, Feedback, Public
 } from '@mui/icons-material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format, formatDistanceToNow } from 'date-fns';

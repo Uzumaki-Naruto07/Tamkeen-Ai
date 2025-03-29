@@ -15,7 +15,7 @@ import {
   Code, Business, SportsEsports, Language
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import SkillAssessment from '../components/SkillAssessment';
 import LearningPathGenerator from '../components/LearningPathGenerator';

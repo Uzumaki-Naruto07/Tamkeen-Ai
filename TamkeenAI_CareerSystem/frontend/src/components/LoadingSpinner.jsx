@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 import Lottie from 'lottie-react';
-import { useUI } from './AppContext';
+import { useUI } from '../context/AppContext';
 
 // Pulse animation for the dot loading indicator
 const pulsate = keyframes`

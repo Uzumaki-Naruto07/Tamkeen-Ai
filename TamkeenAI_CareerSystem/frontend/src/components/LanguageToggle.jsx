@@ -19,7 +19,7 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import CheckIcon from '@mui/icons-material/Check';
-import { useUI } from './AppContext';
+import { useUI } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 
 const LanguageToggle = ({

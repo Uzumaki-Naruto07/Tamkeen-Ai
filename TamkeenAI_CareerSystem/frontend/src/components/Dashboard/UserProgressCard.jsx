@@ -244,34 +244,33 @@ const UserProgressCard = ({ data, user, expanded = false }) => {
   
   // Mock achievements data
   const achievements = [
-    { id: 1, title: t('userProgress.firstLogin', 'أول تسجيل دخول'), icon: <CelebrationIcon />, unlocked: true },
-    { id: 2, title: t('userProgress.profileCompleted', 'اكتمال الملف الشخصي'), icon: <CheckCircleIcon />, unlocked: userXP >= 50 },
-    { id: 3, title: t('userProgress.resumeExpert', 'خبير السيرة الذاتية'), icon: <WorkspacePremiumIcon />, unlocked: userXP >= 150 },
-    { id: 4, title: t('userProgress.interviewMaster', 'سيد المقابلات'), icon: <MilitaryTechIcon />, unlocked: userXP >= 250 },
-    { id: 5, title: t('userProgress.skillPioneer', 'رائد المهارات'), icon: <EmojiObjectsIcon />, unlocked: userXP >= 350 },
-    { id: 6, title: t('userProgress.jobHunter', 'صياد الوظائف'), icon: <TrendingUpIcon />, unlocked: userXP >= 450 },
+    { id: 1, title: 'First Login', icon: <CelebrationIcon />, unlocked: true },
+    { id: 2, title: 'Profile Completed', icon: <CheckCircleIcon />, unlocked: userXP >= 50 },
+    { id: 3, title: 'Resume Expert', icon: <WorkspacePremiumIcon />, unlocked: userXP >= 150 },
+    { id: 4, title: 'Interview Master', icon: <MilitaryTechIcon />, unlocked: userXP >= 250 },
+    { id: 5, title: 'Networking Pro', icon: <PeopleIcon />, unlocked: userXP >= 350 },
   ];
   
   // Mock milestone data
   const milestones = [
-    { id: 1, title: t('userProgress.completeProfile', 'أكمل ملفك الشخصي'), xp: 50, completed: userXP >= 50 },
-    { id: 2, title: t('userProgress.uploadResume', 'ارفع سيرتك الذاتية'), xp: 75, completed: userXP >= 125 },
-    { id: 3, title: t('userProgress.takeSkillAssessment', 'خذ تقييم المهارات'), xp: 100, completed: userXP >= 225 },
-    { id: 4, title: t('userProgress.applyToJob', 'تقدم لوظيفة'), xp: 125, completed: userXP >= 350 },
+    { id: 1, title: 'Complete Your Profile', xp: 50, completed: userXP >= 50 },
+    { id: 2, title: 'Upload Your Resume', xp: 75, completed: userXP >= 125 },
+    { id: 3, title: 'Take Skills Assessment', xp: 100, completed: userXP >= 225 },
+    { id: 4, title: 'Apply for a Job', xp: 125, completed: userXP >= 350 },
   ];
   
-  // Generate welcome message based on time of day and user data
+  // Get welcome message based on time of day
   const getWelcomeMessage = () => {
-    const hour = new Date().getHours();
-    const name = userData.firstName || userData.name || t('common.user');
+    const hours = new Date().getHours();
+    let greeting = 'Good morning';
     
-    if (hour < 12) {
-      return t('userProgress.welcome.morning', { name });
-    } else if (hour < 18) {
-      return t('userProgress.welcome.afternoon', { name });
-    } else {
-      return t('userProgress.welcome.evening', { name });
+    if (hours >= 12 && hours < 17) {
+      greeting = 'Good afternoon';
+    } else if (hours >= 17) {
+      greeting = 'Good evening';
     }
+    
+    return `${greeting}, Zayed`;
   };
   
   // Simulate gaining XP for demo purposes
@@ -376,7 +375,7 @@ const UserProgressCard = ({ data, user, expanded = false }) => {
                   {userXP}
                 </Typography>
                 <Typography variant="caption" component="div" color="text.secondary">
-                  {t('userProgress.xpPoints')}
+                  XP Points
                 </Typography>
               </Box>
             </CircularProgressBox>
@@ -384,16 +383,16 @@ const UserProgressCard = ({ data, user, expanded = false }) => {
           
           <Box sx={{ textAlign: 'center', mb: 2 }}>
             <LevelText variant="subtitle1" level={userLevelData.level}>
-              {t('userProgress.level', { level: userLevelData.level })} {
+              Level {userLevelData.level} {
                 userLevelData.level >= 10 
-                  ? t('userProgress.gold') 
+                  ? 'Gold' 
                   : userLevelData.level >= 5 
-                    ? t('userProgress.silver') 
-                    : t('userProgress.bronze')
+                    ? 'Silver' 
+                    : 'Bronze'
               }
             </LevelText>
             <Typography variant="body2" color="text.secondary">
-              {t('userProgress.toNextLevel', { points: userLevelData.xpToNextLevel })}
+              {userLevelData.xpToNextLevel} XP to next level
             </Typography>
           </Box>
           
@@ -401,8 +400,8 @@ const UserProgressCard = ({ data, user, expanded = false }) => {
           
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="subtitle1">{t('userProgress.recentAchievements')}</Typography>
-              <Tooltip title={t('userProgress.viewAll')}>
+              <Typography variant="subtitle1">Recent Achievements</Typography>
+              <Tooltip title="View All">
                 <IconButton size="small">
                   <InfoOutlinedIcon fontSize="small" />
                 </IconButton>

@@ -23,7 +23,7 @@ import {
   ModeEdit, ReceiptLong, ChatBubbleOutline, Business, Work
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useTheme } from '@mui/material/styles';

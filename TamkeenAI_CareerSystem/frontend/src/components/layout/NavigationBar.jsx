@@ -205,26 +205,13 @@ const navigationItems = [
   { path: '/settings', label: 'Settings', labelKey: 'navigation.settings', icon: <SettingsIcon /> },
 ];
 
-// Notification data (mock)
-const notifications = [
-  { id: 1, message: "New job recommendation", messageKey: "notifications.newJobRecommendation", read: false },
-  { id: 2, message: "Your resume needs updating", messageKey: "notifications.resumeUpdate", read: false },
-  { id: 3, message: "Skill gap detected", messageKey: "notifications.skillGap", read: true },
-  { id: 4, message: "Mock interview completed", messageKey: "notifications.mockInterview", read: true },
-  { id: 5, message: "New achievement unlocked!", messageKey: "notifications.newAchievement", read: false },
-];
-
 const NavigationBar = ({ open, onToggleDrawer }) => {
   const muiTheme = useTheme();
   const { isDarkMode, toggleDarkMode } = useCustomTheme();
   const { user, logout } = useUser();
-  const [value, setValue] = useState(0);
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [notificationsAnchorEl, setNotificationsAnchorEl] = useState(null);
-  const [notificationsCount, setNotificationsCount] = useState(3);
-  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t, i18n } = useTranslation();
   
   const isMobile = useMediaQuery(muiTheme.breakpoints.down('md'));
   
@@ -234,13 +221,15 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
   const [notificationsMenuAnchor, setNotificationsMenuAnchor] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [languageMenuAnchor, setLanguageMenuAnchor] = useState(null);
-  const [language, setLanguage] = useState(localStorage.getItem('language') || 'en'); // en or ar
+  const [language, setLanguage] = useState('en'); // Always default to English
   
   // Set the current tab based on location
   useEffect(() => {
     const findTabIndex = () => {
-      const currentPath = location.pathname;
-      const index = navigationItems.findIndex(item => currentPath.startsWith(item.path));
+      const path = location.pathname;
+      const index = navigationItems.findIndex(item => 
+        path === item.path || path.startsWith(`${item.path}/`)
+      );
       return index >= 0 ? index : 0;
     };
     
@@ -249,12 +238,13 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
   
   // Calculate unread notifications count
   useEffect(() => {
-    setUnreadCount(notifications.filter(note => !note.read).length);
+    // Mock implementation - in a real app you would fetch from the server
+    setUnreadCount(3);
   }, []);
   
   // Toggle drawer
   const toggleDrawer = (open) => (event) => {
-    if (event && event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) {
+    if (event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) {
       return;
     }
     setDrawerOpen(open);
@@ -295,18 +285,8 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
   
   // Change language
   const changeLanguage = (lang) => {
-    console.log(`Changing language to: ${lang}`);
     setLanguage(lang);
     handleLanguageMenuClose();
-    
-    // Navigate to the appropriate dashboard based on language
-    if (lang === 'ar') {
-      console.log('Navigating to Arabic dashboard');
-      navigate('/dashboard-ar');
-    } else {
-      console.log('Navigating to English dashboard');
-      navigate('/dashboard');
-    }
     
     // Update language in localStorage
     localStorage.setItem('language', lang);
@@ -331,319 +311,231 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
     // In a real app, you would update the notifications in the backend
   };
   
-  // Mobile drawer content
-  const drawerContent = (
-    <Box
-      sx={{ width: 280, height: '100%', display: 'flex', flexDirection: 'column' }}
-      role="presentation"
-      onClick={toggleDrawer(false)}
-      onKeyDown={toggleDrawer(false)}
-    >
-      <DrawerHeader>
-        <LogoImage src={logoSrc} alt="TamkeenAI Logo" />
-        <IconButton color="inherit" onClick={toggleDrawer(false)}>
-          <MenuIcon />
-        </IconButton>
-      </DrawerHeader>
-      
-      <Divider />
-      
-      <List>
-        {navigationItems.map((item, index) => (
-          <ListItem 
-            button 
-            key={item.path}
-            onClick={() => navigate(item.path)}
-            selected={currentTab === index}
-          >
-            <ListItemIcon>
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText primary={t(item.labelKey, item.label)} />
-          </ListItem>
-        ))}
-      </List>
-      
-      <Divider />
-      
-      <Box sx={{ p: 2 }}>
-        <FormControlLabel
-          control={
-            <DarkModeSwitch
-              checked={isDarkMode}
-              onChange={() => {
-                // Add a visual indicator that the switch was clicked
-                const switchThumb = document.querySelector('.MuiSwitch-thumb');
-                if (switchThumb) {
-                  switchThumb.style.transition = 'transform 0.2s ease-in-out';
-                  switchThumb.style.transform = isDarkMode ? 'scale(0.8)' : 'scale(0.8)';
-                  setTimeout(() => {
-                    switchThumb.style.transform = '';
-                  }, 200);
-                }
-                toggleDarkMode();
-              }}
-            />
-          }
-          label={isDarkMode ? t('common.darkMode') : t('common.lightMode')}
-        />
-      </Box>
-      
-      <DrawerFooter>
-        <Button
-          variant="outlined"
-          color="primary"
-          startIcon={<LogoutIcon />}
-          fullWidth
-          onClick={handleLogout}
-        >
-          {t('common.logout')}
-        </Button>
-      </DrawerFooter>
-    </Box>
-  );
-
-  const renderUserMenu = () => {
-    return (
-      <>
-        <Tooltip title={isDarkMode ? t('common.lightMode') : t('common.darkMode')}>
-          <IconButton
-            color="inherit"
-            onClick={toggleDarkMode}
-          >
-            {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-          </IconButton>
-        </Tooltip>
-        {/* Rest of the user menu */}
-      </>
-    );
-  };
-
-  const handleLanguageToggle = () => {
-    const currentLang = i18n.language;
-    const newLang = currentLang === 'ar' ? 'en' : 'ar';
-    changeLanguage(newLang);
-  };
-
+  // Define mock notifications for the example
+  const notifications = [
+    { id: 1, messageKey: 'notifications.newJobRecommendation', message: 'New job recommendation', read: false },
+    { id: 2, messageKey: 'notifications.resumeUpdate', message: 'Your resume needs updating', read: false },
+    { id: 3, messageKey: 'notifications.skillGap', message: 'Skill gap detected', read: false },
+    { id: 4, messageKey: 'notifications.mockInterview', message: 'Mock interview completed', read: true }
+  ];
+  
   return (
-    <AnimatePresence>
-      <motion.div
-        variants={navVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-      >
-        <StyledAppBar position="sticky">
+    <StyledAppBar position="sticky">
       <Toolbar>
-            {/* Logo and brand for mobile */}
-            {isMobile && (
-              <LogoContainer>
-                <IconButton
-                  edge="start"
-                  color="inherit"
-                  aria-label="menu"
-                  onClick={toggleDrawer(true)}
-                >
-                  <MenuIcon />
-                </IconButton>
-                <LogoImage src={logoSrc} alt="TamkeenAI Logo" />
-              </LogoContainer>
-            )}
+        {/* Logo and brand for mobile */}
+        {isMobile && (
+          <LogoContainer>
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={toggleDrawer(true)}
+              sx={{ mr: 2 }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <LogoImage src={logoSrc} alt="Career Intelligence System Logo" />
+          </LogoContainer>
+        )}
+        
+        {/* Logo and navigation tabs for desktop */}
+        {!isMobile && (
+          <>
+            <LogoContainer>
+              <LogoImage src={logoSrc} alt="Career Intelligence System Logo" />
+            </LogoContainer>
             
-            {/* Logo and navigation tabs for desktop */}
-            {!isMobile && (
-              <>
-                <LogoContainer>
-                  <LogoImage src={logoSrc} alt="TamkeenAI Logo" />
-                </LogoContainer>
-                
-                <NavTabs
-                  value={currentTab}
-                  onChange={handleTabChange}
-                  indicatorColor="primary"
-                  textColor="primary"
-                  variant="scrollable"
-                  scrollButtons="auto"
-                >
-                  {navigationItems.map((item) => (
-                    <NavTab 
-                      key={item.path} 
-                      label={
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          {item.icon}
-                          <Box component="span" sx={{ ml: 1 }}>
-                            {t(item.labelKey, item.label)}
-                          </Box>
-                        </Box>
-                      }
-                    />
-                  ))}
-                </NavTabs>
-              </>
-            )}
-            
-            {/* User controls section */}
-            <UserSection>
-              {renderUserMenu()}
-              
-              {/* Language selector */}
-              <Tooltip title="Change language">
-                <IconButton
-                  color="inherit"
-                  onClick={handleLanguageToggle}
-                >
-                  <LanguageIcon />
-                </IconButton>
-              </Tooltip>
-              
-              {/* Notifications */}
-              <Tooltip title="Notifications">
-                <IconButton
-                  color="inherit"
-                  onClick={handleNotificationsMenuOpen}
-                >
-                  <NotificationBadge badgeContent={unreadCount} color="error">
-                    <NotificationsIcon />
-                  </NotificationBadge>
-                </IconButton>
-              </Tooltip>
-              
-              {/* User profile */}
-              {user ? (
-                <ProfileButton
-                  color="inherit"
-                  onClick={handleProfileMenuOpen}
-                  endIcon={<ArrowDropDownIcon />}
-                >
-                  <Avatar 
-                    src={user?.avatar || undefined} 
-                    sx={{ width: 32, height: 32, mr: 1 }}
-                  >
-                    {user?.firstName?.charAt(0) || "U"}
-                  </Avatar>
-                  {!isMobile && (
-                    <Typography variant="body2">
-                      {user?.firstName || "User"}
-                    </Typography>
-                  )}
-                </ProfileButton>
-              ) : (
-                <Button 
-                  color="primary" 
-                  variant="contained"
-                  onClick={() => navigate('/login')}
-                >
-                  {t('common.login')}
-              </Button>
+            <NavTabs
+              value={currentTab}
+              onChange={handleTabChange}
+              indicatorColor="primary"
+              textColor="primary"
+              variant="scrollable"
+              scrollButtons="auto"
+            >
+              {navigationItems.map((item) => (
+                <NavTab
+                  key={item.path}
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      {item.icon}
+                      <span>{t(item.labelKey)}</span>
+                    </Box>
+                  }
+                />
+              ))}
+            </NavTabs>
+          </>
+        )}
+        
+        {/* User section */}
+        <UserSection>
+          {/* Theme toggle */}
+          <Tooltip title={isDarkMode ? t('common.lightMode') : t('common.darkMode')}>
+            <IconButton
+              color="inherit"
+              onClick={toggleDarkMode}
+              edge="end"
+            >
+              {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
+          </Tooltip>
+          
+          {/* Language toggle */}
+          <Tooltip title="Change language">
+            <IconButton
+              color="inherit"
+              onClick={handleLanguageMenuOpen}
+            >
+              <LanguageIcon />
+            </IconButton>
+          </Tooltip>
+          
+          {/* Notifications */}
+          <Tooltip title={t('common.notifications')}>
+            <IconButton
+              color="inherit"
+              edge="end"
+              onClick={handleNotificationsMenuOpen}
+            >
+              <NotificationBadge badgeContent={unreadCount} color="error">
+                <NotificationsIcon />
+              </NotificationBadge>
+            </IconButton>
+          </Tooltip>
+          
+          {/* Profile button */}
+          {user ? (
+            <ProfileButton
+              onClick={handleProfileMenuOpen}
+              endIcon={<ArrowDropDownIcon />}
+            >
+              <Avatar 
+                src={user?.avatar || undefined} 
+                sx={{ width: 32, height: 32, mr: 1 }}
+              >
+                {user?.firstName?.charAt(0) || "U"}
+              </Avatar>
+              {!isMobile && (
+                <Typography variant="body2">
+                  {user?.firstName || "User"}
+                </Typography>
               )}
-            </UserSection>
-            
-            {/* Language menu */}
-            <Menu
-              anchorEl={languageMenuAnchor}
-              open={Boolean(languageMenuAnchor)}
-              onClose={handleLanguageMenuClose}
-              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            </ProfileButton>
+          ) : (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => navigate('/login')}
             >
-              <MenuItem 
-                onClick={() => changeLanguage('en')}
-                selected={language === 'en'}
-              >
-                English
-              </MenuItem>
-              <MenuItem 
-                onClick={() => changeLanguage('ar')}
-                selected={language === 'ar'}
-              >
-                العربية
-              </MenuItem>
-            </Menu>
-            
-            {/* Profile menu */}
-            <Menu
-              anchorEl={profileMenuAnchor}
-              open={Boolean(profileMenuAnchor)}
-              onClose={handleProfileMenuClose}
-              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-            >
-              <MenuItem onClick={() => { navigate('/profile'); handleProfileMenuClose(); }}>
-                <ListItemIcon>
-                  <AccountCircleIcon fontSize="small" />
-                </ListItemIcon>
-                {t('common.profile')}
-              </MenuItem>
-              <MenuItem onClick={() => { navigate('/settings'); handleProfileMenuClose(); }}>
-                <ListItemIcon>
-                  <SettingsIcon fontSize="small" />
-                </ListItemIcon>
-                {t('common.settings')}
-              </MenuItem>
-              <Divider />
-              <MenuItem onClick={handleLogout}>
-                <ListItemIcon>
-                  <LogoutIcon fontSize="small" />
-                </ListItemIcon>
-                {t('common.logout')}
-              </MenuItem>
-            </Menu>
-            
-            {/* Notifications menu */}
-            <Menu
-              anchorEl={notificationsMenuAnchor}
-              open={Boolean(notificationsMenuAnchor)}
-              onClose={handleNotificationsMenuClose}
-              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-              PaperProps={{
-                sx: { width: 320, maxHeight: 400 }
-              }}
-            >
-              <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="h6">{t('common.notifications')}</Typography>
-                <Button size="small" onClick={handleMarkAllRead}>
-                  {t('notifications.markAllRead')}
-              </Button>
-              </Box>
-              <Divider />
-              <List sx={{ p: 0 }}>
-                {notifications.length > 0 ? (
-                  notifications.map((notification) => (
-                    <ListItem 
-                      key={notification.id}
-                      sx={{ 
-                        backgroundColor: notification.read ? 'inherit' : 'rgba(25, 118, 210, 0.08)',
-                        '&:hover': {
-                          backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                        }
-                      }}
-                    >
-                      <ListItemText 
-                        primary={t(notification.messageKey, notification.message)}
-                        secondary={notification.read ? t('notifications.read') : t('notifications.new')}
-                      />
-                    </ListItem>
-                  ))
-                ) : (
-                  <ListItem>
-                    <ListItemText primary={t('notifications.empty')} />
-                  </ListItem>
-                )}
-              </List>
-              <Divider />
-              <Box sx={{ p: 1 }}>
-                <Button 
-                  fullWidth
-                  size="small"
-                  onClick={() => { navigate('/notifications'); handleNotificationsMenuClose(); }}
+              {t('common.login')}
+            </Button>
+          )}
+        </UserSection>
+        
+        {/* Profile menu */}
+        <Menu
+          anchorEl={profileMenuAnchor}
+          open={Boolean(profileMenuAnchor)}
+          onClose={handleProfileMenuClose}
+          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        >
+          <MenuItem onClick={() => { navigate('/user-profile'); handleProfileMenuClose(); }}>
+            <ListItemIcon>
+              <AccountCircleIcon fontSize="small" />
+            </ListItemIcon>
+            {t('common.profile')}
+          </MenuItem>
+          <MenuItem onClick={() => { navigate('/settings'); handleProfileMenuClose(); }}>
+            <ListItemIcon>
+              <SettingsIcon fontSize="small" />
+            </ListItemIcon>
+            {t('common.settings')}
+          </MenuItem>
+          <Divider />
+          <MenuItem onClick={handleLogout}>
+            <ListItemIcon>
+              <LogoutIcon fontSize="small" />
+            </ListItemIcon>
+            {t('common.logout')}
+          </MenuItem>
+        </Menu>
+        
+        {/* Notifications menu */}
+        <Menu
+          anchorEl={notificationsMenuAnchor}
+          open={Boolean(notificationsMenuAnchor)}
+          onClose={handleNotificationsMenuClose}
+          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+          PaperProps={{
+            sx: { width: 320, maxHeight: 400 }
+          }}
+        >
+          <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h6">{t('common.notifications')}</Typography>
+            <Button size="small" onClick={handleMarkAllRead}>
+              {t('notifications.markAllRead')}
+            </Button>
+          </Box>
+          <Divider />
+          <List sx={{ p: 0 }}>
+            {notifications.length > 0 ? (
+              notifications.map((notification) => (
+                <ListItem 
+                  key={notification.id}
+                  sx={{ 
+                    backgroundColor: notification.read ? 'inherit' : 'rgba(25, 118, 210, 0.08)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                    }
+                  }}
                 >
-                  {t('notifications.viewAll')}
-              </Button>
-        </Box>
-            </Menu>
-      </Toolbar>
-        </StyledAppBar>
+                  <ListItemText 
+                    primary={t(notification.messageKey, notification.message)}
+                    secondary={notification.read ? t('notifications.read') : t('notifications.new')}
+                  />
+                </ListItem>
+              ))
+            ) : (
+              <ListItem>
+                <ListItemText primary={t('notifications.empty')} />
+              </ListItem>
+            )}
+          </List>
+          <Divider />
+          <Box sx={{ p: 1 }}>
+            <Button 
+              fullWidth
+              size="small"
+              onClick={() => { navigate('/notifications'); handleNotificationsMenuClose(); }}
+            >
+              {t('notifications.viewAll')}
+            </Button>
+          </Box>
+        </Menu>
+        
+        {/* Language menu */}
+        <Menu
+          anchorEl={languageMenuAnchor}
+          open={Boolean(languageMenuAnchor)}
+          onClose={handleLanguageMenuClose}
+          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        >
+          <MenuItem 
+            onClick={() => changeLanguage('en')}
+            selected={language === 'en'}
+          >
+            English
+          </MenuItem>
+          <MenuItem 
+            onClick={() => changeLanguage('ar')}
+            selected={language === 'ar'}
+          >
+            العربية
+          </MenuItem>
+        </Menu>
         
         {/* Mobile drawer */}
         <Drawer
@@ -651,10 +543,52 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
           open={drawerOpen}
           onClose={toggleDrawer(false)}
         >
-          {drawerContent}
+          <Box
+            sx={{ width: 280 }}
+            role="presentation"
+            onClick={toggleDrawer(false)}
+            onKeyDown={toggleDrawer(false)}
+          >
+            <DrawerHeader>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <LogoImage src={logoSrc} alt="Career Intelligence System Logo" />
+              </Box>
+              <IconButton color="inherit" onClick={toggleDrawer(false)}>
+                <MenuIcon />
+              </IconButton>
+            </DrawerHeader>
+            <Divider />
+            <List>
+              {navigationItems.map((item, index) => (
+                <ListItem 
+                  button 
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  selected={currentTab === index}
+                >
+                  <ListItemIcon>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={t(item.labelKey)} />
+                </ListItem>
+              ))}
+            </List>
+            <Divider />
+            <DrawerFooter>
+              <FormControlLabel
+                control={
+                  <DarkModeSwitch
+                    checked={isDarkMode}
+                    onChange={toggleDarkMode}
+                  />
+                }
+                label={isDarkMode ? t('common.darkMode') : t('common.lightMode')}
+              />
+            </DrawerFooter>
+          </Box>
         </Drawer>
-      </motion.div>
-    </AnimatePresence>
+      </Toolbar>
+    </StyledAppBar>
   );
 };
 

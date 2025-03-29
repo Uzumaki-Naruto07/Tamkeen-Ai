@@ -24,11 +24,11 @@ import {
   Close, Check, SaveAlt, Feedback, RateReview
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format } from 'date-fns';
-import SkillChip from '../components/SkillChip';
+import SkillChip from '../components/common/SkillChip';
 import { useDebounce } from '../hooks/useDebounce';
 
 const LearningResources = () => {

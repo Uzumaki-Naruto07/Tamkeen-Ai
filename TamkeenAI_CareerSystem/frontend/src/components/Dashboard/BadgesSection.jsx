@@ -85,6 +85,28 @@ const BadgesSection = ({ data }) => {
   const totalBadges = badges.length;
   const completionPercentage = Math.round((earnedBadges.length / totalBadges) * 100) || 0;
   
+  // Heading and badge stats
+  const renderHeading = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        Your Achievements
+      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+          {earnedBadges.length}/{totalBadges} earned
+        </Typography>
+        <LinearProgress 
+          variant="determinate" 
+          value={completionPercentage} 
+          sx={{ flexGrow: 1, height: 8, borderRadius: 4 }} 
+        />
+        <Typography variant="body2" color="text.secondary" sx={{ ml: 1, minWidth: '40px', textAlign: 'right' }}>
+          {completionPercentage}% complete
+        </Typography>
+      </Box>
+    </Box>
+  );
+  
   // Handle badge click
   const handleBadgeClick = (badge) => {
     setSelectedBadge(badge);
@@ -393,36 +415,7 @@ const BadgesSection = ({ data }) => {
   
   return (
     <Paper sx={{ p: 3, height: '100%' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" component="h2">
-          {t('badges.yourAchievements')}
-        </Typography>
-        <Chip 
-          icon={<EmojiEventsIcon />} 
-          label={`${earnedBadges.length}/${totalBadges} ${t('badges.earned')}`} 
-          color="primary" 
-          variant="outlined"
-        />
-      </Box>
-      
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="body2" color="text.secondary" gutterBottom>
-          {t('badges.achievementProgress')}
-        </Typography>
-        <LinearProgress 
-          variant="determinate" 
-          value={completionPercentage} 
-          sx={{ height: 8, borderRadius: 4 }} 
-        />
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
-          <Typography variant="body2" color="text.secondary">
-            {completionPercentage}% {t('badges.complete')}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {earnedBadges.length}/{totalBadges}
-          </Typography>
-        </Box>
-      </Box>
+      {renderHeading()}
       
       <Tabs 
         value={viewMode} 

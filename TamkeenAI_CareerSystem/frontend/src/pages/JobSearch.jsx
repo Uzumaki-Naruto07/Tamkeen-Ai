@@ -26,7 +26,7 @@ import {
   ArticleOutlined, CategoryOutlined
 } from '@mui/icons-material';
 import { useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format } from 'date-fns';

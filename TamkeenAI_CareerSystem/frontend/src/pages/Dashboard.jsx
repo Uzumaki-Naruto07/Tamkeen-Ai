@@ -32,6 +32,7 @@ import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { format, formatDistance } from 'date-fns';
 import LogoutIcon from '@mui/icons-material/Logout';
+import DescriptionIcon from '@mui/icons-material/Description';
 
 // Icons
 import BusinessIcon from '@mui/icons-material/Business';
@@ -45,7 +46,6 @@ import MilitaryTechIcon from '@mui/icons-material/MilitaryTech';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import DescriptionIcon from '@mui/icons-material/Description';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
@@ -65,6 +65,9 @@ import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import { api } from '../api/apiClient';
 import chatService from '../api/chatgpt';
 
+// Import mock data
+import mockDashboardData from '../utils/mockData/dashboardData';
+
 // Import components
 import UserProgressCard from '../components/Dashboard/UserProgressCard';
 import SkillProgressSection from '../components/Dashboard/SkillProgressSection';
@@ -81,13 +84,11 @@ import CareerJourneyTimeline from '../components/Dashboard/CareerJourneyTimeline
 import PersonalizedLearningPaths from '../components/Dashboard/PersonalizedLearningPaths';
 import OpportunityAlertCard from '../components/Dashboard/OpportunityAlertCard';
 import LearningRoadmap from '../components/Dashboard/LearningRoadmap';
+import ProfileCompletionPrompt from '../components/Dashboard/ProfileCompletionPrompt';
+import ResumeExpertPrompt from '../components/Dashboard/ResumeExpertPrompt';
 
 // Import context
 import { useUser } from '../context/AppContext';
-
-// Mock data (will be replaced with API calls)
-// Make sure we're importing from the correct path
-import mockDashboardData from '../utils/mockData/dashboardData';
 
 // Define dashboard widgets
 const widgetMap = {
@@ -253,7 +254,7 @@ const Dashboard = () => {
   const [hiddenWidgets, setHiddenWidgets] = useState([]);
   const [activeTab, setActiveTab] = useState(0);
   const [quickStatsMenuAnchor, setQuickStatsMenuAnchor] = useState(null);
-  const { profile, user, logout } = useUser();
+  const { profile, user, logout, isAuthenticated } = useUser();
   const navigate = useNavigate();
   
   // Get dummy data for additional widgets 
@@ -262,11 +263,68 @@ const Dashboard = () => {
   const weeklyGoals = dashboardData?.weeklyGoals || [];
   const jobRecommendations = dashboardData?.jobRecommendations || [];
   
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  const [ready, setReady] = useState(false);
+  const [showProfilePrompt, setShowProfilePrompt] = useState(false);
+  const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [profileCompletionPercentage, setProfileCompletionPercentage] = useState(0);
+  const hasCheckedProfile = useRef(false);
   
-    const fetchDashboardData = async () => {
+  useEffect(() => {
+    // Initialize dashboard
+    if (isAuthenticated && profile) {
+      fetchDashboardData();
+    }
+  }, [isAuthenticated, profile]);
+  
+  useEffect(() => {
+    // Check profile completion and show prompts if needed
+    if (profile && !hasCheckedProfile.current) {
+      // Calculate profile completion
+      const calculateProfileCompletion = () => {
+        // Required fields for a complete profile
+        const requiredFields = [
+          'firstName',
+          'lastName',
+          'email',
+          'skills',
+          'education',
+          'experience',
+          'careerGoals'
+        ];
+        
+        // Count completed fields
+        let completedCount = 0;
+        requiredFields.forEach(field => {
+          if (profile[field] && 
+              ((Array.isArray(profile[field]) && profile[field].length > 0) || 
+               (typeof profile[field] === 'object' && Object.keys(profile[field]).length > 0) ||
+               (typeof profile[field] === 'string' && profile[field].trim() !== ''))) {
+            completedCount++;
+          }
+        });
+        
+        // Calculate percentage
+        const percentage = Math.round((completedCount / requiredFields.length) * 100);
+        setProfileCompletionPercentage(percentage);
+        
+        // If profile is less than 70% complete, show prompt
+        if (percentage < 70) {
+          setShowProfilePrompt(true);
+        }
+        
+        // If they have profile but no resume, show resume prompt
+        // We'll show this after they dismiss the profile prompt or if profile is complete
+        if (percentage >= 70 && (!profile.resume || !profile.resumeScore || profile.resumeScore < 60)) {
+          setShowResumePrompt(true);
+        }
+      };
+      
+      calculateProfileCompletion();
+      hasCheckedProfile.current = true;
+    }
+  }, [profile]);
+  
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
       
@@ -374,45 +432,29 @@ const Dashboard = () => {
               ]
             }
           },
-          topUsers: [
-            { id: 1, name: 'Alex Johnson', points: 1250, badges: 8, avatar: '' },
-            { id: 2, name: 'Sam Martinez', points: 1150, badges: 7, avatar: '' }
+          topUsers: [],
+          recentActivities: [],
+          opportunities: { jobs: [], courses: [] },
+          learningRoadmap: { current_level: '', target_level: '', steps: [] },
+          leaderboard: [
+            { id: 1, name: 'Fatima Al Mansoori', avatar: '/avatars/emirati-woman-1.jpg', points: 1250, position: 1 },
+            { id: 2, name: 'Mohammed Al Hashimi', avatar: '/avatars/emirati-man-1.jpg', points: 980, position: 2 },
+            { id: 3, name: 'Aisha Al Nuaimi', avatar: '/avatars/emirati-woman-2.jpg', points: 850, position: 3 },
+            { id: 5, name: 'Omar Al Shamsi', avatar: '/avatars/emirati-man-2.jpg', points: 820, position: 4 },
+            { id: 6, name: 'Mariam Al Zaabi', avatar: '/avatars/emirati-woman-3.jpg', points: 765, position: 5 }
           ],
-          recentActivities: [
-            { id: 1, type: 'resume', action: 'Updated resume', date: '2023-06-01T10:30:00Z' },
-            { id: 2, type: 'application', action: 'Applied to Frontend Developer at TechCorp', date: '2023-05-28T14:45:00Z' }
+          friends: [
+            { id: 1, name: 'Fatima Al Mansoori', avatar: '/avatars/emirati-woman-1.jpg', points: 1250, position: 1 },
+            { id: 5, name: 'Omar Al Shamsi', avatar: '/avatars/emirati-man-2.jpg', points: 820, position: 4 },
+            { id: 6, name: 'Mariam Al Zaabi', avatar: '/avatars/emirati-woman-3.jpg', points: 765, position: 5 }
           ],
-          opportunities: {
-            jobs: [
-              { 
-                id: 101, 
-                title: 'Senior Frontend Developer', 
-                company: 'TechCorp', 
-                location: 'Remote',
-                match: 92,
-                posted: '2023-05-25T00:00:00Z',
-                saved: false
-              }
-            ],
-            courses: [
-              {
-                id: 201,
-                title: 'GraphQL Fundamentals',
-                provider: 'Udemy',
-                duration: '10 hours',
-                match: 88,
-                saved: true
-              }
-            ]
-          },
-          learningRoadmap: {
-            current_level: 'Intermediate',
-            target_level: 'Advanced',
-            steps: [
-              { id: 1, title: 'Complete TypeScript Course', completed: false },
-              { id: 2, title: 'Build 3 Next.js Projects', completed: false }
-            ]
-          },
+          topPerformers: [
+            { id: 1, name: 'Ahmed Al Falasi', points: 1250, badges: 8, avatar: '/avatars/emirati-man-3.jpg' },
+            { id: 2, name: 'Sara Al Shamsi', points: 1150, badges: 7, avatar: '/avatars/emirati-woman-4.jpg' },
+            { id: 3, name: 'Khalid Al Mansoori', points: 1050, badges: 6, avatar: '/avatars/emirati-man-4.jpg' },
+            { id: 4, name: 'Noora Al Kaabi', points: 950, badges: 5, avatar: '/avatars/emirati-woman-5.jpg' },
+            { id: 5, name: 'Hamad Al Nahyan', points: 900, badges: 6, avatar: '/avatars/emirati-man-5.jpg' }
+          ],
           last_updated: new Date().toISOString()
         };
         // Merge with any existing mockDashboardData
@@ -889,12 +931,24 @@ const Dashboard = () => {
       recentActivities: [],
       opportunities: { jobs: [], courses: [] },
       learningRoadmap: { current_level: '', target_level: '', steps: [] },
+      leaderboard: [
+        { id: 1, name: 'Fatima Al Mansoori', avatar: '/avatars/emirati-woman-1.jpg', points: 1250, position: 1 },
+        { id: 2, name: 'Mohammed Al Hashimi', avatar: '/avatars/emirati-man-1.jpg', points: 980, position: 2 },
+        { id: 3, name: 'Aisha Al Nuaimi', avatar: '/avatars/emirati-woman-2.jpg', points: 850, position: 3 },
+        { id: 5, name: 'Omar Al Shamsi', avatar: '/avatars/emirati-man-2.jpg', points: 820, position: 4 },
+        { id: 6, name: 'Mariam Al Zaabi', avatar: '/avatars/emirati-woman-3.jpg', points: 765, position: 5 }
+      ],
+      friends: [
+        { id: 1, name: 'Fatima Al Mansoori', avatar: '/avatars/emirati-woman-1.jpg', points: 1250, position: 1 },
+        { id: 5, name: 'Omar Al Shamsi', avatar: '/avatars/emirati-man-2.jpg', points: 820, position: 4 },
+        { id: 6, name: 'Mariam Al Zaabi', avatar: '/avatars/emirati-woman-3.jpg', points: 765, position: 5 }
+      ],
       topPerformers: [
-        { id: 1, name: 'Alex Johnson', points: 1250, badges: 8, avatar: '' },
-        { id: 2, name: 'Sam Martinez', points: 1150, badges: 7, avatar: '' },
-        { id: 3, name: 'Taylor McKenzie', points: 1050, badges: 6, avatar: '' },
-        { id: 4, name: 'Jordan Lee', points: 950, badges: 5, avatar: '' },
-        { id: 5, name: 'Casey Wilson', points: 900, badges: 6, avatar: '' }
+        { id: 1, name: 'Ahmed Al Falasi', points: 1250, badges: 8, avatar: '/avatars/emirati-man-3.jpg' },
+        { id: 2, name: 'Sara Al Shamsi', points: 1150, badges: 7, avatar: '/avatars/emirati-woman-4.jpg' },
+        { id: 3, name: 'Khalid Al Mansoori', points: 1050, badges: 6, avatar: '/avatars/emirati-man-4.jpg' },
+        { id: 4, name: 'Noora Al Kaabi', points: 950, badges: 5, avatar: '/avatars/emirati-woman-5.jpg' },
+        { id: 5, name: 'Hamad Al Nahyan', points: 900, badges: 6, avatar: '/avatars/emirati-man-5.jpg' }
       ]
     };
     
@@ -932,7 +986,18 @@ const Dashboard = () => {
           marketInsights: safeData.marketInsights || defaultData.marketInsights // Add this for backward compatibility
         };
       case 'leaderboard':
-        return { users: safeData.topUsers || defaultData.topUsers };
+        return { 
+          leaderboard: safeData.leaderboard || defaultData.leaderboard, 
+          friends: safeData.friends || defaultData.friends,
+          position: {
+            user_position: 0, // Not ranked
+            total_users: safeData.leaderboard?.length || defaultData.leaderboard.length,
+            top_percentile: 0,
+            points: 0,
+            next_milestone: 100,
+            rank_history: [0, 0, 0, 0, 0, 0, 0]
+          }
+        };
       case 'activityLog':
         return { activities: safeData.recentActivities || defaultData.recentActivities };
       case 'opportunityAlert':
@@ -940,10 +1005,35 @@ const Dashboard = () => {
       case 'learningRoadmap':
         return { roadmap: safeData.learningRoadmap || defaultData.learningRoadmap };
       case 'topPerformers':
-        return { users: safeData.topPerformers || defaultData.topPerformers };
+        return { 
+          leaderboard: safeData.topPerformers || defaultData.topPerformers, 
+          friends: [],
+          position: {
+            user_position: 0,
+            total_users: safeData.topPerformers?.length || defaultData.topPerformers.length,
+            top_percentile: 0,
+            points: 0,
+            next_milestone: 100,
+            rank_history: [0, 0, 0, 0, 0, 0, 0]
+          }
+        };
       default:
         return {};
     }
+  };
+  
+  // Handle closing prompts
+  const handleCloseProfilePrompt = () => {
+    setShowProfilePrompt(false);
+    
+    // If they also need to complete their resume, show that prompt next
+    if ((!profile.resume || !profile.resumeScore || profile.resumeScore < 60)) {
+      setShowResumePrompt(true);
+    }
+  };
+  
+  const handleCloseResumePrompt = () => {
+    setShowResumePrompt(false);
   };
   
   // Main render
@@ -995,6 +1085,64 @@ const Dashboard = () => {
   
   return (
     <Container maxWidth="xl" sx={{ mt: 3, mb: 5 }}>
+      {/* Profile and Resume Completion Prompts */}
+      <ProfileCompletionPrompt 
+        open={showProfilePrompt} 
+        onClose={handleCloseProfilePrompt}
+      />
+      
+      <ResumeExpertPrompt
+        open={showResumePrompt && !showProfilePrompt}
+        onClose={handleCloseResumePrompt}
+      />
+      
+      {/* Resume Completion Alert - always show if resume not completed, even after dialog closed */}
+      {(!profile?.resume || !profile?.resumeScore || profile?.resumeScore < 60) && (
+        <Paper 
+          elevation={0}
+          sx={{
+            p: 2,
+            mb: 3,
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'warning.light',
+            bgcolor: 'warning.light',
+            color: 'warning.contrastText',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <DescriptionIcon sx={{ mr: 2, color: 'warning.dark' }} />
+            <Box>
+              <Typography variant="subtitle1" fontWeight="bold">
+                Your resume needs your attention!
+              </Typography>
+              <Typography variant="body2">
+                Complete your resume to increase your visibility to potential employers.
+              </Typography>
+            </Box>
+          </Box>
+          <Button 
+            variant="contained" 
+            color="warning"
+            size="small"
+            onClick={() => navigate('/resume-builder')}
+            sx={{ 
+              fontWeight: 'bold',
+              borderRadius: 20,
+              boxShadow: 2,
+              '&:hover': {
+                boxShadow: 4
+              }
+            }}
+          >
+            Build My Resume
+          </Button>
+        </Paper>
+      )}
+      
       <Box
         sx={{
           mb: 3,
@@ -1063,7 +1211,7 @@ const Dashboard = () => {
         boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
       }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={5}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Avatar 
                 src={profile?.avatar} 
@@ -1075,11 +1223,11 @@ const Dashboard = () => {
                   boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
                 }}
               >
-                {profile?.firstName?.charAt(0) || "T"}
+                {profile?.firstName?.charAt(0) || "U"}
               </Avatar>
               <Box>
                 <Typography variant="h5" fontWeight="bold">
-                  {profile?.firstName ? `${profile?.firstName} ${profile?.lastName || ''}` : 'Tamkeen AI User'}
+                  {profile?.firstName ? `${profile?.firstName} ${profile?.lastName || ''}` : 'User'}
                 </Typography>
                 <Typography variant="body1" sx={{ opacity: 0.9 }}>
                   {dashboardData?.progress?.rank || 'Career Explorer'} - Level {dashboardData?.progress?.level || 1}
@@ -1087,35 +1235,127 @@ const Dashboard = () => {
               </Box>
             </Box>
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={7}>
             <Grid container spacing={2}>
-              <Grid item xs={4}>
+              <Grid item xs={6} sm={3}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Typography variant="h4" fontWeight="bold">
                     {dashboardData?.progress?.xp || 0}
                   </Typography>
                   <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    XP Points
+                    Career Points
                   </Typography>
                 </Box>
               </Grid>
-              <Grid item xs={4}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4" fontWeight="bold">
-                    {dashboardData?.progress?.completedTasks || 0}
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Tasks Completed
+              <Grid item xs={6} sm={3}>
+                <Box sx={{ 
+                  textAlign: 'center',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  '&:hover': { opacity: 0.9 }
+                }} onClick={() => setShowProfilePrompt(true)}>
+                  <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                    <CircularProgress
+                      variant="determinate"
+                      value={profileCompletionPercentage}
+                      sx={{ 
+                        color: 'white', 
+                        opacity: 0.9,
+                        '& .MuiCircularProgress-circle': {
+                          strokeLinecap: 'round',
+                          strokeWidth: 4,
+                        }
+                      }}
+                      size={50}
+                    />
+                    <Box
+                      sx={{
+                        top: 0,
+                        left: 0,
+                        bottom: 0,
+                        right: 0,
+                        position: 'absolute',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+                        {`${profileCompletionPercentage}%`}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
+                    Profile
+                    {profileCompletionPercentage < 100 && (
+                      <Chip 
+                        label="Improve" 
+                        size="small" 
+                        sx={{ ml: 1, height: 20, bgcolor: 'rgba(255,255,255,0.2)' }} 
+                        onClick={() => setShowProfilePrompt(true)}
+                      />
+                    )}
                   </Typography>
                 </Box>
               </Grid>
-              <Grid item xs={4}>
+              <Grid item xs={6} sm={3}>
+                <Box sx={{ 
+                  textAlign: 'center',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  '&:hover': { opacity: 0.9 }
+                }} onClick={() => setShowResumePrompt(true)}>
+                  <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                    <CircularProgress
+                      variant="determinate"
+                      value={profile?.resumeScore || 0}
+                      sx={{ 
+                        color: 'white', 
+                        opacity: 0.9,
+                        '& .MuiCircularProgress-circle': {
+                          strokeLinecap: 'round',
+                          strokeWidth: 4,
+                        }
+                      }}
+                      size={50}
+                    />
+                    <Box
+                      sx={{
+                        top: 0,
+                        left: 0,
+                        bottom: 0,
+                        right: 0,
+                        position: 'absolute',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+                        {`${profile?.resumeScore || 0}%`}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
+                    Resume
+                    {(!profile?.resumeScore || profile?.resumeScore < 85) && (
+                      <Chip 
+                        label="Improve" 
+                        size="small" 
+                        sx={{ ml: 1, height: 20, bgcolor: 'rgba(255,255,255,0.2)' }} 
+                        onClick={() => setShowResumePrompt(true)}
+                      />
+                    )}
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={6} sm={3}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Typography variant="h4" fontWeight="bold">
-                    {dashboardData?.resumeScore?.latest_score || 0}
+                    {dashboardData?.progress?.completedGoals || 0}
                   </Typography>
                   <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Resume Score
+                    Goals Achieved
                   </Typography>
                 </Box>
               </Grid>

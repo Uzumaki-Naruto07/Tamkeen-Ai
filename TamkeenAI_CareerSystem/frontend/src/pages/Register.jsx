@@ -13,7 +13,7 @@ import {
   AccountCircle, Email, Lock, School, Work
 } from '@mui/icons-material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import logoImage from '../assets/logo.png';
 import { useAppContext } from '../context/AppContext';

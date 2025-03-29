@@ -128,7 +128,7 @@ const RegistrationForm = () => {
       login(user);
       
       // Redirect to profile completion
-      navigate('/profile');
+      navigate('/user-profile');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
       console.error('Registration error:', err);

@@ -46,6 +46,34 @@ export const useUser = () => {
   };
 };
 
+// UI hook for theme and language settings
+export const useUI = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useUI must be used within an AppContextProvider');
+  }
+  
+  const { 
+    theme, 
+    language, 
+    toggleTheme, 
+    changeLanguage,
+    toggleLanguage
+  } = context;
+  
+  // Function to set language for backward compatibility
+  const setLanguage = (lang) => changeLanguage(lang);
+  
+  return { 
+    theme, 
+    language, 
+    toggleTheme, 
+    setLanguage,
+    changeLanguage,
+    toggleLanguage
+  };
+};
+
 // Provider component
 export const AppContextProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -250,7 +278,7 @@ export const AppContextProvider = ({ children }) => {
     setUserRoles([]);
   };
   
-  // Theme toggle using our utility
+  // Toggle theme
   const toggleTheme = () => {
     const newTheme = toggleThemeUtil();
     setThemeState(newTheme);

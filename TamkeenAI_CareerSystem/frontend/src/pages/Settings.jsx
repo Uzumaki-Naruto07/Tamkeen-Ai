@@ -19,7 +19,7 @@ import {
   VpnKey, PrivacyTip, Translate, FormatColorFill, Dashboard,
   Bookmark, AccessTime, Business, Work, Description, Block
 } from '@mui/icons-material';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -474,7 +474,7 @@ const Settings = () => {
             <Button 
               size="small" 
               startIcon={<Dashboard />}
-              onClick={() => navigate('/profile')}
+              onClick={() => navigate('/user-profile')}
             >
               View Profile
             </Button>

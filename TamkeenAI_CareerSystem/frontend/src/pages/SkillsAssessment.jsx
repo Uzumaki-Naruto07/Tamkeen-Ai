@@ -23,10 +23,10 @@ import {
   CheckCircleOutline, RadioButtonUnchecked, LightbulbOutlined
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../components/AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import RadarChart from '../components/charts/RadarChart';
-import SkillChip from '../components/SkillChip';
+import SkillChip from '../components/common/SkillChip';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const SkillsAssessment = () => {
