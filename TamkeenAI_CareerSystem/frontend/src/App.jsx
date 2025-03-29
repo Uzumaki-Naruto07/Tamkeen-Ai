@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, startTransition } from 'react';
 import { 
   createBrowserRouter, 
   RouterProvider, 
@@ -25,11 +25,20 @@ import ArabicDashboard from './pages/ArabicDashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
-// Lazy-loaded page components
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const ResumeAnalysis = lazy(() => import('./pages/ResumeAnalysis'));
-const AdminPanel = lazy(() => import('./pages/AdminPanel'));
-const NotFound = lazy(() => import('./pages/NotFound'));
+// Lazy-loaded page components with error handling
+const lazyLoad = (importFn) => {
+  const LazyComponent = lazy(importFn);
+  return (props) => (
+    <Suspense fallback={<SuspenseFallback />}>
+      <LazyComponent {...props} />
+    </Suspense>
+  );
+};
+
+const ForgotPassword = lazyLoad(() => import('./pages/ForgotPassword'));
+const ResumeAnalysis = lazyLoad(() => import('./pages/ResumeAnalysis'));
+const AdminPanel = lazyLoad(() => import('./pages/AdminPanel'));
+const NotFound = lazyLoad(() => import('./pages/NotFound'));
 
 // Suspense fallback component
 const SuspenseFallback = () => (
@@ -42,9 +51,7 @@ const SuspenseFallback = () => (
 const AuthLayout = () => {
   return (
     <ErrorBoundary>
-      <Suspense fallback={<SuspenseFallback />}>
-        <Outlet />
-      </Suspense>
+      <Outlet />
     </ErrorBoundary>
   );
 };
@@ -54,9 +61,17 @@ const PublicRoute = ({ element }) => {
   return element;
 };
 
-// Protected route component
+// Protected route component that handles startTransition
 const ProtectedRoute = ({ element }) => {
-  return <RequireAuth>{element}</RequireAuth>;
+  const [ui, setUi] = React.useState(null);
+  
+  React.useEffect(() => {
+    startTransition(() => {
+      setUi(<RequireAuth>{element}</RequireAuth>);
+    });
+  }, [element]);
+  
+  return ui;
 };
 
 // Create router with routes

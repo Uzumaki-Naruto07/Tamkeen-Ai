@@ -181,6 +181,13 @@ const widgetMap = {
     component: LearningRoadmap,
     defaultSize: { xs: 12, md: 8 },
     defaultOrder: 12
+  },
+  topPerformers: {
+    id: 'topPerformers',
+    title: 'Top Performers',
+    component: LeaderboardWidget,
+    defaultSize: { xs: 12, md: 4 },
+    defaultOrder: 13
   }
 };
 
@@ -190,7 +197,9 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.05
+      staggerChildren: 0.05,
+      duration: 0.5,
+      ease: "easeOut"
     }
   }
 };
@@ -202,10 +211,38 @@ const itemVariants = {
     opacity: 1,
     transition: {
       type: 'spring',
-      damping: 15,
-      stiffness: 100
+      stiffness: 260,
+      damping: 20,
+      duration: 0.5
     }
   }
+};
+
+// Widget card styling - use this for all widget Paper components
+const widgetCardStyles = {
+  p: 2,
+  display: 'flex',
+  flexDirection: 'column',
+  borderRadius: 2.5,
+  position: 'relative',
+  overflow: 'hidden',
+  height: '100%',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  '&:hover': {
+    transform: 'translateY(-4px)',
+    boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
+  }
+};
+
+// Widget header styling
+const widgetHeaderStyles = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  mb: 2,
+  pb: 1.5,
+  borderBottom: '1px solid rgba(0,0,0,0.08)'
 };
 
 const Dashboard = () => {
@@ -851,7 +888,14 @@ const Dashboard = () => {
       topUsers: [],
       recentActivities: [],
       opportunities: { jobs: [], courses: [] },
-      learningRoadmap: { current_level: '', target_level: '', steps: [] }
+      learningRoadmap: { current_level: '', target_level: '', steps: [] },
+      topPerformers: [
+        { id: 1, name: 'Alex Johnson', points: 1250, badges: 8, avatar: '' },
+        { id: 2, name: 'Sam Martinez', points: 1150, badges: 7, avatar: '' },
+        { id: 3, name: 'Taylor McKenzie', points: 1050, badges: 6, avatar: '' },
+        { id: 4, name: 'Jordan Lee', points: 950, badges: 5, avatar: '' },
+        { id: 5, name: 'Casey Wilson', points: 900, badges: 6, avatar: '' }
+      ]
     };
     
     // Merge default data with actual data
@@ -895,6 +939,8 @@ const Dashboard = () => {
         return { opportunities: safeData.opportunities || defaultData.opportunities };
       case 'learningRoadmap':
         return { roadmap: safeData.learningRoadmap || defaultData.learningRoadmap };
+      case 'topPerformers':
+        return { users: safeData.topPerformers || defaultData.topPerformers };
       default:
         return {};
     }
@@ -948,47 +994,135 @@ const Dashboard = () => {
   }
   
   return (
-    <Container 
-      component={motion.div}
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-      maxWidth="xl" 
-      sx={{ mt: 1, mb: 4 }}
-    >
-      {/* Dashboard header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+    <Container maxWidth="xl" sx={{ mt: 3, mb: 5 }}>
+      <Box
+        sx={{
+          mb: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          pb: 2,
+          borderBottom: (theme) => `1px solid ${theme.palette.divider}`
+        }}
+      >
         <Box>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 1 }}>
+          <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
             Your Career Dashboard
-      </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Welcome back, {profile?.firstName || 'there'}! Here's your career progress at a glance.
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary" sx={{ mt: -1 }}>
+            Welcome back, {profile?.firstName || 'there'}! Your career journey awaits.
           </Typography>
         </Box>
         
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          {error && (
-            <Alert severity="error" sx={{ mr: 2 }}>{error}</Alert>
-          )}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button 
+            variant="outlined" 
+            color="secondary"
+            size="small"
+            onClick={resetDashboardLayout}
+            startIcon={<RefreshIcon />}
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              px: 2
+            }}
+          >
+            Reset Layout
+          </Button>
           
-          <Tooltip title="Reset layout">
-            <Button 
-              variant="outlined" 
-              size="small" 
-              onClick={resetDashboardLayout}
+          <Tooltip title="Refresh Dashboard">
+            <IconButton 
+              onClick={refreshDashboard} 
+              disabled={loading}
+              sx={{
+                backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                '&:hover': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.12)'
+                }
+              }}
             >
-              Reset Layout
-            </Button>
-          </Tooltip>
-          
-          <Tooltip title="Refresh dashboard">
-            <IconButton onClick={refreshDashboard} disabled={loading} sx={{ ml: 1 }}>
-              <RefreshIcon />
+              <RefreshIcon sx={{ 
+                animation: loading ? 'spin 1s linear infinite' : 'none',
+                '@keyframes spin': {
+                  '0%': { transform: 'rotate(0deg)' },
+                  '100%': { transform: 'rotate(360deg)' }
+                }
+              }} />
             </IconButton>
           </Tooltip>
         </Box>
       </Box>
+      
+      {/* Quick stats */}
+      <Paper sx={{ 
+        p: 2, 
+        mb: 3, 
+        borderRadius: 2,
+        background: 'linear-gradient(120deg, #1976d2 0%, #5e93d1 100%)',
+        color: 'white',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+      }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={6}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Avatar 
+                src={profile?.avatar} 
+                sx={{ 
+                  width: 64, 
+                  height: 64, 
+                  mr: 2, 
+                  border: '2px solid white',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                }}
+              >
+                {profile?.firstName?.charAt(0) || "T"}
+              </Avatar>
+              <Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {profile?.firstName ? `${profile?.firstName} ${profile?.lastName || ''}` : 'Tamkeen AI User'}
+                </Typography>
+                <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                  {dashboardData?.progress?.rank || 'Career Explorer'} - Level {dashboardData?.progress?.level || 1}
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Grid container spacing={2}>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" fontWeight="bold">
+                    {dashboardData?.progress?.xp || 0}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    XP Points
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" fontWeight="bold">
+                    {dashboardData?.progress?.completedTasks || 0}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Tasks Completed
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" fontWeight="bold">
+                    {dashboardData?.resumeScore?.latest_score || 0}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Resume Score
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Grid>
+        </Grid>
+      </Paper>
       
       {/* Widgets hidden notice */}
       {hiddenWidgets.length > 0 && (
@@ -1016,83 +1150,87 @@ const Dashboard = () => {
       <DragDropContext onDragEnd={handleDragEnd}>
         <Droppable droppableId="dashboard">
           {(provided) => (
-            <Grid 
-              container 
-              spacing={3}
+            <Box
               {...provided.droppableProps}
               ref={provided.innerRef}
+              component={motion.div}
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
             >
-              {visibleWidgets.map((widgetId, index) => {
-                const widget = widgetMap[widgetId];
-                if (!widget) return null;
-                
-                const WidgetComponent = widget.component;
-                const widgetProps = getWidgetProps(widgetId);
-                
-                return (
-                  <Draggable key={widgetId} draggableId={widgetId} index={index}>
-                    {(provided, snapshot) => (
-                      <Grid
-                        item
-                        xs={12}
-                        md={widget.defaultSize.md}
-                        {...provided.draggableProps}
-                        ref={provided.innerRef}
-                        component={motion.div}
-                        variants={itemVariants}
-                      >
-                        <Paper 
-                          sx={{ 
-                            height: '100%',
-                            position: 'relative',
-                            transition: 'box-shadow 0.3s',
-                            boxShadow: snapshot.isDragging ? 8 : 1
-                          }}
+              <Grid container spacing={3}>
+                {visibleWidgets.map((widgetId, index) => {
+                  const widget = widgetMap[widgetId];
+                  if (!widget) return null;
+                  
+                  const WidgetComponent = widget.component;
+                  const widgetProps = getWidgetProps(widgetId);
+                  
+                  return (
+                    <Draggable key={widgetId} draggableId={widgetId} index={index}>
+                      {(provided) => (
+                        <Grid
+                          item
+                          {...widget.defaultSize}
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          component={motion.div}
+                          variants={itemVariants}
                         >
-                          {/* Drag handle and widget controls */}
-                          <Box 
-                            sx={{ 
-                              position: 'absolute', 
-                              top: 0, 
-                              right: 0, 
-                              zIndex: 1,
-                              display: 'flex'
-                            }}
-                          >
-                            <IconButton 
-                              size="small" 
-                              onClick={() => toggleWidgetVisibility(widgetId)}
-                              sx={{ opacity: 0.6, '&:hover': { opacity: 1 } }}
-                            >
-                              <VisibilityOffIcon fontSize="small" />
-                            </IconButton>
-                            <Box 
-                              {...provided.dragHandleProps}
-                              sx={{ 
-                                cursor: 'grab', 
-                                display: 'flex', 
-                                alignItems: 'center',
-                                opacity: 0.6,
-                                '&:hover': { opacity: 1 }
-                              }}
-                            >
-                              <DragIndicatorIcon fontSize="small" />
+                          <Paper sx={widgetCardStyles}>
+                            <Box sx={widgetHeaderStyles}>
+                              <Typography variant="h6" fontWeight="bold">
+                                {widget.title}
+                              </Typography>
+                              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                <Tooltip title="Hide Widget">
+                                  <IconButton size="small" onClick={() => toggleWidgetVisibility(widgetId)}>
+                                    <VisibilityOffIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Drag to Reorder">
+                                  <Box {...provided.dragHandleProps}>
+                                    <DragIndicatorIcon color="action" />
+                                  </Box>
+                                </Tooltip>
+                              </Box>
                             </Box>
-                          </Box>
-                          
-                          {/* Widget content */}
-                          <WidgetComponent {...widgetProps} />
-                        </Paper>
-        </Grid>
-                    )}
-                  </Draggable>
-                );
-              })}
+                            
+                            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                              <WidgetComponent {...widgetProps} />
+                            </Box>
+                          </Paper>
+                        </Grid>
+                      )}
+                    </Draggable>
+                  );
+                })}
+              </Grid>
               {provided.placeholder}
-        </Grid>
+            </Box>
           )}
         </Droppable>
       </DragDropContext>
+      
+      {/* Quote section */}
+      <Paper 
+        sx={{ 
+          mt: 4, 
+          p: 3, 
+          textAlign: 'center', 
+          borderRadius: 2,
+          backgroundImage: 'linear-gradient(to right, rgba(25, 118, 210, 0.05), rgba(25, 118, 210, 0.2))',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <Typography variant="h5" fontWeight="bold" gutterBottom sx={{ fontStyle: 'italic' }}>
+          "We, as a people, are not satisfied with anything but first place." 🇦🇪
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary">
+          — H.H. Sheikh Mohammed bin Rashid Al Maktoum
+        </Typography>
+      </Paper>
       
       {/* Hidden widgets section */}
       {hiddenWidgets.length > 0 && (
@@ -1112,8 +1250,11 @@ const Dashboard = () => {
                     justifyContent: 'center',
                     alignItems: 'center',
                     cursor: 'pointer',
+                    borderRadius: 2,
+                    transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: 'action.hover'
+                      bgcolor: 'action.hover',
+                      transform: 'scale(1.02)'
                     }
                   }}
                   onClick={() => toggleWidgetVisibility(widgetId)}
@@ -1127,10 +1268,10 @@ const Dashboard = () => {
                     </Typography>
                   </CardContent>
                 </Card>
-        </Grid>
+              </Grid>
             ))}
-        </Grid>
-      </Box>
+          </Grid>
+        </Box>
       )}
       
       {/* Debug info - only shown in development */}
