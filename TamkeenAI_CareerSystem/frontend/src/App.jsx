@@ -1,4 +1,8 @@
 import React, { Suspense, lazy, startTransition } from 'react';
+
+// Import router flags before React Router
+import './reactRouterFlags.js';
+
 import { 
   createBrowserRouter, 
   RouterProvider, 
@@ -39,6 +43,10 @@ const ResumeAnalysis = lazyLoad(() => import('./pages/ResumeAnalysis'));
 const AdminPanel = lazyLoad(() => import('./pages/AdminPanel'));
 const UserProfile = lazyLoad(() => import('./pages/UserProfile'));
 const NotFound = lazyLoad(() => import('./pages/NotFound'));
+// Add JobSearch components
+const JobSearch = lazyLoad(() => import('./pages/JobSearch'));
+const JobSearchDashboard = lazyLoad(() => import('./pages/JobSearchDashboard'));
+const JobDetails = lazyLoad(() => import('./pages/JobDetails'));
 
 // Suspense fallback component
 const SuspenseFallback = () => (
@@ -98,6 +106,12 @@ const router = createBrowserRouter(
         <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
         <Route path="/resume-analysis" element={<ProtectedRoute element={<ResumeAnalysis />} />} />
         
+        {/* Add Job routes */}
+        <Route path="/jobs" element={<Navigate to="/job-search" replace />} />
+        <Route path="/job-search" element={<ProtectedRoute element={<JobSearch />} />} />
+        <Route path="/job-search-dashboard" element={<ProtectedRoute element={<JobSearchDashboard />} />} />
+        <Route path="/jobs/:jobId" element={<ProtectedRoute element={<JobDetails />} />} />
+        
         {/* Admin routes */}
         <Route path="/admin-panel" element={<ProtectedRoute element={<AdminPanel />} />} />
         
@@ -113,7 +127,17 @@ const router = createBrowserRouter(
         <Route path="*" element={<NotFound />} />
       </Route>
     </>
-  )
+  ),
+  {
+    future: {
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+      v7_fetcherPersist: true,
+      v7_normalizeFormMethod: true,
+      v7_partialHydration: true,
+      v7_skipActionErrorRevalidation: true
+    }
+  }
 );
 
 const App = () => {
@@ -124,7 +148,18 @@ const App = () => {
           <ThemeContextProvider>
             <CssBaseline />
             <AppContextProvider>
-              <RouterProvider router={router} fallbackElement={<SuspenseFallback />} />
+              <RouterProvider 
+                router={router} 
+                fallbackElement={<SuspenseFallback />}
+                future={{
+                  v7_startTransition: true,
+                  v7_relativeSplatPath: true,
+                  v7_fetcherPersist: true,
+                  v7_normalizeFormMethod: true,
+                  v7_partialHydration: true,
+                  v7_skipActionErrorRevalidation: true
+                }}
+              />
             </AppContextProvider>
           </ThemeContextProvider>
         </I18nextProvider>

@@ -981,34 +981,20 @@ export const jobsAPI = {
   },
   
   getSearchHistory: async (userId) => {
-    try {
-      // Return mock search history
-      return {
-        data: [
-          {
-            id: 1,
-            query: 'frontend developer',
-            filters: {
-              location: 'Remote',
-              jobType: ['Full-time']
-            },
-            timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-          },
-          {
-            id: 2,
-            query: 'react developer',
-            filters: {
-              location: 'New York, NY',
-              jobType: ['Full-time', 'Contract']
-            },
-            timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()
-          }
-        ]
-      };
-    } catch (error) {
-      console.error('Error fetching search history:', error);
-      throw error;
-    }
+    // Mock implementation for search history
+    return {
+      success: true,
+      data: []
+    };
+  },
+  
+  addSearchHistory: async (userId, searchData) => {
+    // Mock implementation for adding to search history
+    console.log('Adding to search history:', userId, searchData);
+    return {
+      success: true,
+      data: {}
+    };
   },
   
   getRecentJobs: async (page = 1, pageSize = 10) => {
@@ -1072,23 +1058,6 @@ export const jobsAPI = {
       };
     } catch (error) {
       console.error('Error searching jobs:', error);
-      throw error;
-    }
-  },
-  
-  addSearchHistory: async (userId, searchData) => {
-    try {
-      console.log('Adding search to history for user:', userId, searchData);
-      return {
-        success: true,
-        data: {
-          id: Math.floor(Math.random() * 1000),
-          ...searchData,
-          timestamp: new Date().toISOString()
-        }
-      };
-    } catch (error) {
-      console.error('Error adding search to history:', error);
       throw error;
     }
   },
@@ -1800,6 +1769,121 @@ function getEventColor(type) {
   }
 }
 
+// Store the last search params and timestamp to prevent duplicate calls
+let lastSearchParams = null;
+let lastSearchTime = 0;
+
+const jobEndpoints = {
+  searchJobs: async (params) => {
+    // Prevent duplicate searches in quick succession (within 1 second)
+    const currentTime = Date.now();
+    const paramString = JSON.stringify(params);
+    
+    if (lastSearchParams === paramString && currentTime - lastSearchTime < 1000) {
+      console.log('Preventing duplicate search');
+      // Return the same data without logging
+      return {
+        success: true,
+        data: {
+          jobs: getUAEMockJobs().filter(job => filterJobsByParams(job, params)),
+          total: getUAEMockJobs().filter(job => filterJobsByParams(job, params)).length
+        }
+      };
+    }
+    
+    // Update last search params and time
+    lastSearchParams = paramString;
+    lastSearchTime = currentTime;
+    
+    // Log only once with better formatting
+    console.log('Job search with UAE specific filters:', JSON.stringify(params, null, 2));
+    
+    // Filter the mock jobs based on the parameters
+    const filteredJobs = getUAEMockJobs().filter(job => filterJobsByParams(job, params));
+    
+    return {
+      success: true,
+      data: {
+        jobs: filteredJobs,
+        total: filteredJobs.length
+      }
+    };
+  },
+  getRecentJobs: async (page, pageSize) => {
+    // Mock implementation for recent jobs
+    return {
+      success: true,
+      data: {
+        jobs: getUAEMockJobs(),
+        total: 10
+      }
+    };
+  },
+  getIndustries: async () => {
+    // Mock implementation for industries
+    return {
+      success: true,
+      data: [
+        'Technology',
+        'Healthcare',
+        'Finance',
+        'Education',
+        'Manufacturing',
+        'Retail',
+        'Media',
+        'Consulting'
+      ]
+    };
+  },
+  getSkillsList: async () => {
+    // Mock implementation for skills list
+    return {
+      success: true,
+      data: [
+        'JavaScript',
+        'Python',
+        'React',
+        'Node.js',
+        'SQL',
+        'Machine Learning',
+        'Data Analysis',
+        'Project Management',
+        'Communication',
+        'Leadership'
+      ]
+    };
+  },
+  getSavedJobs: async (userId) => {
+    // Mock implementation for saved jobs
+    return {
+      success: true,
+      data: []
+    };
+  },
+  getSavedSearches: async (userId) => {
+    // Mock implementation for saved searches
+    return {
+      success: true,
+      data: []
+    };
+  },
+  getSearchHistory: async (userId) => {
+    // Mock implementation for search history
+    return {
+      success: true,
+      data: []
+    };
+  },
+  addSearchHistory: async (userId, searchData) => {
+    // Mock implementation for adding to search history
+    console.log('Adding to search history:', userId, searchData);
+    return {
+      success: true,
+      data: {}
+    };
+  }
+};
+
 // Create API endpoints object that exposes all API functions
 const apiEndpoints = {
   auth: authAPI,
@@ -1809,7 +1893,6 @@ const apiEndpoints = {
   user: userAPI,
   settings: settingsAPI,
   profiles: profilesAPI,
-  jobs: jobsAPI,
   dashboard: dashboardAPI,
   notifications: notificationsAPI,
   goals: goalsAPI,
@@ -1821,7 +1904,652 @@ const apiEndpoints = {
       const queryParams = new URLSearchParams(params).toString();
       return api.get(`${endpoints.ADMIN_ENDPOINTS.ANALYTICS_DASHBOARD}${queryParams ? `?${queryParams}` : ''}`);
     }
-  }
+  },
+  jobs: jobEndpoints
 };
 
 export default apiEndpoints;
+
+// Helper function to get UAE-specific mock jobs
+function getUAEMockJobs() {
+  return [
+    {
+      id: 'job-1',
+      title: 'Software Engineer',
+      company: 'Emirates Technology Solutions',
+      location: 'Dubai, UAE',
+      emirate: 'Dubai',
+      jobType: 'Full-time',
+      salaryRange: '15,000 - 25,000 AED/month',
+      salaryMin: 15000,
+      salaryMax: 25000,
+      salaryType: 'monthly',
+      description: 'Join our team to develop innovative solutions for the UAE market...',
+      requirements: ['3+ years of experience', 'Bachelor\'s degree', 'JavaScript/React expertise'],
+      benefits: ['Housing allowance', 'Health insurance', 'Annual flight tickets'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'private',
+      companyLocation: 'Dubai Internet City (Free Zone)',
+      postedDate: '2023-05-15',
+      deadline: '2023-06-15',
+      matchScore: 85,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-2',
+      title: 'Financial Analyst',
+      company: 'Abu Dhabi Investment Authority',
+      location: 'Abu Dhabi, UAE',
+      emirate: 'Abu Dhabi',
+      jobType: 'Full-time',
+      salaryRange: '18,000 - 30,000 AED/month',
+      salaryMin: 18000,
+      salaryMax: 30000,
+      salaryType: 'monthly',
+      description: 'Analyze investment opportunities across the MENA region...',
+      requirements: ['5+ years of experience', 'CFA designation', 'Arabic & English fluency'],
+      benefits: ['Housing allowance', 'Education allowance for children', 'Annual flight tickets'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'government',
+      companyLocation: 'Mainland',
+      postedDate: '2023-05-12',
+      deadline: '2023-06-12',
+      matchScore: 78,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-3',
+      title: 'Marketing Manager',
+      company: 'Etisalat',
+      location: 'Dubai, UAE',
+      emirate: 'Dubai',
+      jobType: 'Full-time',
+      salaryRange: '25,000 - 35,000 AED/month',
+      salaryMin: 25000,
+      salaryMax: 35000,
+      salaryType: 'monthly',
+      description: 'Lead marketing strategies for telecommunications products in the UAE market...',
+      requirements: ['7+ years of marketing experience', 'Master\'s degree preferred', 'Digital marketing expertise'],
+      benefits: ['Housing allowance', 'Health insurance', 'Annual flight tickets', 'Performance bonus'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'semi-government',
+      companyLocation: 'Mainland',
+      postedDate: '2023-05-10',
+      deadline: '2023-06-10',
+      matchScore: 92,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-4',
+      title: 'Civil Engineer',
+      company: 'EMAAR Properties',
+      location: 'Dubai, UAE',
+      emirate: 'Dubai',
+      jobType: 'Full-time',
+      salaryRange: '12,000 - 18,000 AED/month',
+      salaryMin: 12000,
+      salaryMax: 18000,
+      salaryType: 'monthly',
+      description: 'Work on prestigious construction projects across Dubai...',
+      requirements: ['3+ years of experience', 'Bachelor\'s in Civil Engineering', 'AutoCAD proficiency'],
+      benefits: ['Transportation allowance', 'Health insurance', 'Annual flight tickets'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'private',
+      companyLocation: 'Mainland',
+      postedDate: '2023-05-08',
+      deadline: '2023-06-08',
+      matchScore: 75,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-5',
+      title: 'HR Manager',
+      company: 'Emirates NBD',
+      location: 'Dubai, UAE',
+      emirate: 'Dubai',
+      jobType: 'Full-time',
+      salaryRange: '22,000 - 30,000 AED/month',
+      salaryMin: 22000,
+      salaryMax: 30000,
+      salaryType: 'monthly',
+      description: 'Oversee HR operations for one of the largest banking groups in the Middle East...',
+      requirements: ['8+ years of HR experience', 'CIPD qualification', 'Banking sector experience preferred'],
+      benefits: ['Housing allowance', 'Education allowance', 'Health insurance for family'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'private',
+      companyLocation: 'Mainland',
+      postedDate: '2023-05-05',
+      deadline: '2023-06-05',
+      matchScore: 82,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-6',
+      title: 'ESL Teacher',
+      company: 'GEMS Education',
+      location: 'Sharjah, UAE',
+      emirate: 'Sharjah',
+      jobType: 'Full-time',
+      salaryRange: '10,000 - 15,000 AED/month',
+      salaryMin: 10000,
+      salaryMax: 15000,
+      salaryType: 'monthly',
+      description: 'Teach English as a Second Language to primary school students...',
+      requirements: ['2+ years teaching experience', 'TEFL/TESOL certification', 'Bachelor\'s degree in Education'],
+      benefits: ['Shared accommodation', 'Health insurance', 'Annual flight tickets'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'private',
+      companyLocation: 'Mainland',
+      postedDate: '2023-05-03',
+      deadline: '2023-06-03',
+      matchScore: 70,
+      nationality: 'UK, US, Canada, Australia, New Zealand, Ireland, South Africa'
+    },
+    {
+      id: 'job-7',
+      title: 'Restaurant Manager',
+      company: 'Jumeirah Group',
+      location: 'Abu Dhabi, UAE',
+      emirate: 'Abu Dhabi',
+      jobType: 'Full-time',
+      salaryRange: '8,000 - 12,000 AED/month',
+      salaryMin: 8000,
+      salaryMax: 12000,
+      salaryType: 'monthly',
+      description: 'Manage operations of a luxury hotel restaurant...',
+      requirements: ['5+ years in hospitality', 'F&B management experience', 'Excellent customer service skills'],
+      benefits: ['Accommodation', 'Transportation', 'Meals on duty', 'Health insurance'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'private',
+      companyLocation: 'Mainland',
+      postedDate: '2023-04-30',
+      deadline: '2023-05-30',
+      matchScore: 68,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-8',
+      title: 'Legal Counsel',
+      company: 'Department of Economic Development',
+      location: 'Dubai, UAE',
+      emirate: 'Dubai',
+      jobType: 'Full-time',
+      salaryRange: '35,000 - 45,000 AED/month',
+      salaryMin: 35000,
+      salaryMax: 45000,
+      salaryType: 'monthly',
+      description: 'Provide legal advice on economic regulations and business licensing...',
+      requirements: ['8+ years legal experience', 'UAE legal knowledge', 'Arabic & English fluency', 'LLM preferred'],
+      benefits: ['Housing allowance', 'Education allowance', 'Government pension scheme'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'government',
+      companyLocation: 'Mainland',
+      postedDate: '2023-04-28',
+      deadline: '2023-05-28',
+      matchScore: 88,
+      nationality: 'UAE Nationals Only'
+    },
+    {
+      id: 'job-9',
+      title: 'E-commerce Specialist',
+      company: 'noon.com',
+      location: 'Dubai, UAE',
+      emirate: 'Dubai',
+      jobType: 'Full-time',
+      salaryRange: '10,000 - 15,000 AED/month',
+      salaryMin: 10000,
+      salaryMax: 15000,
+      salaryType: 'monthly',
+      description: 'Manage product listings and optimize sales for the region\'s leading e-commerce platform...',
+      requirements: ['2+ years e-commerce experience', 'Digital marketing skills', 'Data analytics knowledge'],
+      benefits: ['Health insurance', 'Transportation allowance', 'Performance bonus'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'private',
+      companyLocation: 'Dubai Media City (Free Zone)',
+      postedDate: '2023-04-25',
+      deadline: '2023-05-25',
+      matchScore: 76,
+      nationality: 'All Nationalities'
+    },
+    // New additional UAE-specific jobs with various filters
+    {
+      id: 'job-10',
+      title: 'Remote Web Developer',
+      company: 'Desert Tech Solutions',
+      location: 'Remote, UAE',
+      emirate: 'Any',
+      jobType: 'Full-time',
+      salaryRange: '15,000 - 22,000 AED/month',
+      salaryMin: 15000,
+      salaryMax: 22000,
+      salaryType: 'monthly',
+      description: 'Work remotely on web development projects for UAE-based clients...',
+      requirements: ['3+ years web development', 'React.js', 'Node.js', 'Arabic & English communication'],
+      benefits: ['Flexible hours', 'Health insurance', 'Annual bonus'],
+      visaStatus: 'Visit Visa Accepted',
+      sectorType: 'private',
+      companyLocation: 'Dubai Internet City (Free Zone)',
+      postedDate: '2023-05-20',
+      deadline: '2023-06-20',
+      matchScore: 83,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-11',
+      title: 'Part-time Graphic Designer',
+      company: 'Sharjah Media City',
+      location: 'Sharjah, UAE',
+      emirate: 'Sharjah',
+      jobType: 'Part-time',
+      salaryRange: '5,000 - 8,000 AED/month',
+      salaryMin: 5000,
+      salaryMax: 8000,
+      salaryType: 'monthly',
+      description: 'Create visual concepts for UAE brands and marketing campaigns...',
+      requirements: ['Adobe Creative Suite', 'Portfolio of work', 'Branding experience'],
+      benefits: ['Flexible schedule', 'Transportation allowance'],
+      visaStatus: 'Residence Visa Required',
+      sectorType: 'semi-government',
+      companyLocation: 'Sharjah Media City (Free Zone)',
+      postedDate: '2023-05-18',
+      deadline: '2023-06-18',
+      matchScore: 72,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-12',
+      title: 'Project Manager - Construction',
+      company: 'Aldar Properties',
+      location: 'Abu Dhabi, UAE',
+      emirate: 'Abu Dhabi',
+      jobType: 'Contract',
+      salaryRange: '25,000 - 35,000 AED/month',
+      salaryMin: 25000,
+      salaryMax: 35000,
+      salaryType: 'monthly',
+      description: 'Oversee construction projects in Abu Dhabi...',
+      requirements: ['PMP Certification', '7+ years experience', 'Civil Engineering degree'],
+      benefits: ['Project completion bonus', 'Housing allowance', 'Transportation allowance'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'private',
+      companyLocation: 'Mainland',
+      postedDate: '2023-05-16',
+      deadline: '2023-06-16',
+      matchScore: 80,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-13',
+      title: 'Sales Representative',
+      company: 'Al-Futtaim Group',
+      location: 'Ajman, UAE',
+      emirate: 'Ajman',
+      jobType: 'Full-time',
+      salaryRange: '8,000 - 15,000 AED/month',
+      salaryMin: 8000,
+      salaryMax: 15000,
+      salaryType: 'monthly',
+      description: 'Represent our retail brands across Ajman...',
+      requirements: ['Sales experience', 'Customer service skills', 'Arabic & English fluency'],
+      benefits: ['Commission structure', 'Health insurance', 'Transportation allowance'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'private',
+      companyLocation: 'Mainland',
+      postedDate: '2023-05-14',
+      deadline: '2023-06-14',
+      matchScore: 65,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-14',
+      title: 'Remote Customer Support Specialist',
+      company: 'Careem',
+      location: 'Remote, UAE',
+      emirate: 'Any',
+      jobType: 'Full-time',
+      salaryRange: '7,000 - 12,000 AED/month',
+      salaryMin: 7000,
+      salaryMax: 12000,
+      salaryType: 'monthly',
+      description: 'Provide customer support for our ride-hailing platform...',
+      requirements: ['Customer service experience', 'Problem-solving skills', 'Arabic & English fluency'],
+      benefits: ['Flexible hours', 'Health insurance', 'Careem credits'],
+      visaStatus: 'Any Visa Status',
+      sectorType: 'private',
+      companyLocation: 'Dubai Internet City (Free Zone)',
+      postedDate: '2023-05-13',
+      deadline: '2023-06-13',
+      matchScore: 70,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-15',
+      title: 'Petroleum Engineer',
+      company: 'ADNOC',
+      location: 'Abu Dhabi, UAE',
+      emirate: 'Abu Dhabi',
+      jobType: 'Full-time',
+      salaryRange: '30,000 - 45,000 AED/month',
+      salaryMin: 30000,
+      salaryMax: 45000,
+      salaryType: 'monthly',
+      description: 'Work on oil and gas extraction projects across the UAE...',
+      requirements: ['Petroleum Engineering degree', '5+ years experience', 'Knowledge of extraction methods'],
+      benefits: ['Housing allowance', 'Education allowance', 'Annual tickets', 'Transportation allowance', 'Health insurance for family'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'government',
+      companyLocation: 'Mainland',
+      postedDate: '2023-05-12',
+      deadline: '2023-06-12',
+      matchScore: 90,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-16',
+      title: 'Nurse Practitioner',
+      company: 'Cleveland Clinic Abu Dhabi',
+      location: 'Abu Dhabi, UAE',
+      emirate: 'Abu Dhabi',
+      jobType: 'Full-time',
+      salaryRange: '15,000 - 25,000 AED/month',
+      salaryMin: 15000,
+      salaryMax: 25000,
+      salaryType: 'monthly',
+      description: 'Provide nursing care in a world-class healthcare facility...',
+      requirements: ['Nursing degree', 'License to practice', '3+ years experience', 'English fluency'],
+      benefits: ['Housing allowance', 'Education allowance', 'Annual tickets', 'Health insurance for family'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'private',
+      companyLocation: 'Mainland',
+      postedDate: '2023-05-11',
+      deadline: '2023-06-11',
+      matchScore: 75,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-17',
+      title: 'UI/UX Designer',
+      company: 'Digital Oasis',
+      location: 'Sharjah, UAE',
+      emirate: 'Sharjah',
+      jobType: 'Full-time',
+      salaryRange: '12,000 - 18,000 AED/month',
+      salaryMin: 12000,
+      salaryMax: 18000,
+      salaryType: 'monthly',
+      description: 'Design user interfaces for mobile and web applications...',
+      requirements: ['Portfolio of UI/UX work', 'Figma proficiency', 'User testing experience'],
+      benefits: ['Flexible hours', 'Health insurance', 'Transportation allowance'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'private',
+      companyLocation: 'Sharjah Media City (Free Zone)',
+      postedDate: '2023-05-10',
+      deadline: '2023-06-10',
+      matchScore: 82,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-18',
+      title: 'Tour Guide',
+      company: 'Ras Al Khaimah Tourism',
+      location: 'Ras Al Khaimah, UAE',
+      emirate: 'Ras Al Khaimah',
+      jobType: 'Part-time',
+      salaryRange: '5,000 - 8,000 AED/month',
+      salaryMin: 5000,
+      salaryMax: 8000,
+      salaryType: 'monthly',
+      description: 'Lead tourists through popular attractions in Ras Al Khaimah...',
+      requirements: ['Tourism experience', 'Knowledge of UAE history', 'Multiple languages (English required)'],
+      benefits: ['Commission on bookings', 'Flexible schedule'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'government',
+      companyLocation: 'Mainland',
+      postedDate: '2023-05-09',
+      deadline: '2023-06-09',
+      matchScore: 68,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-19',
+      title: 'Data Scientist',
+      company: 'Fujairah Data Analytics',
+      location: 'Fujairah, UAE',
+      emirate: 'Fujairah',
+      jobType: 'Full-time',
+      salaryRange: '20,000 - 30,000 AED/month',
+      salaryMin: 20000,
+      salaryMax: 30000,
+      salaryType: 'monthly',
+      description: 'Analyze large datasets to derive insights for business decisions...',
+      requirements: ['Python', 'Machine Learning', 'Statistics background', 'Data visualization skills'],
+      benefits: ['Housing allowance', 'Health insurance', 'Annual flight tickets'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'private',
+      companyLocation: 'Mainland',
+      postedDate: '2023-05-08',
+      deadline: '2023-06-08',
+      matchScore: 85,
+      nationality: 'All Nationalities'
+    },
+    {
+      id: 'job-20',
+      title: 'Social Media Manager',
+      company: 'UAQ Marketing',
+      location: 'Umm Al Quwain, UAE',
+      emirate: 'Umm Al Quwain',
+      jobType: 'Full-time',
+      salaryRange: '10,000 - 15,000 AED/month',
+      salaryMin: 10000,
+      salaryMax: 15000,
+      salaryType: 'monthly',
+      description: 'Manage social media accounts for local and international brands...',
+      requirements: ['Social media experience', 'Content creation skills', 'Digital marketing knowledge'],
+      benefits: ['Health insurance', 'Transportation allowance'],
+      visaStatus: 'Employment Visa Provided',
+      sectorType: 'private',
+      companyLocation: 'Mainland',
+      postedDate: '2023-05-07',
+      deadline: '2023-06-07',
+      matchScore: 73,
+      nationality: 'All Nationalities'
+    }
+  ];
+}
+
+// Helper function to filter jobs based on search parameters
+function filterJobsByParams(job, params) {
+  // Title or keyword search
+  if (params.search && !job.title.toLowerCase().includes(params.search.toLowerCase()) && 
+      !job.company.toLowerCase().includes(params.search.toLowerCase())) {
+    return false;
+  }
+  
+  // Location search - more specific handling for UAE locations
+  if (params.location) {
+    // If searching for a specific emirate in location field
+    const emirates = ['Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman', 'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah'];
+    const searchedEmirate = emirates.find(emirate => 
+      params.location.toLowerCase().includes(emirate.toLowerCase())
+    );
+    
+    if (searchedEmirate && job.emirate !== searchedEmirate) {
+      return false;
+    } else if (!searchedEmirate && !job.location.toLowerCase().includes(params.location.toLowerCase())) {
+      return false;
+    }
+  }
+  
+  // Emirates filter
+  if (params.emirates && params.emirates.length > 0 && !params.emirates.includes(job.emirate)) {
+    return false;
+  }
+  
+  // Job Type filter - more precise matching
+  if (params.jobTypes && params.jobTypes.length > 0 && !params.jobTypes.includes(job.jobType)) {
+    return false;
+  }
+  
+  // Visa Status filter
+  if (params.visaStatus && params.visaStatus.length > 0 && !params.visaStatus.includes(job.visaStatus)) {
+    return false;
+  }
+  
+  // Experience Level filter
+  if (params.experience && params.experience.length > 0) {
+    const jobLevel = getExperienceLevelFromRequirements(job.requirements);
+    if (!params.experience.includes(jobLevel)) {
+      return false;
+    }
+  }
+  
+  // Salary Range filter
+  if (params.salary && params.salary.length === 2) {
+    const [minSalary, maxSalary] = params.salary;
+    
+    // Convert job salary to comparable format based on salary type
+    let jobMinSalary = job.salaryMin;
+    let jobMaxSalary = job.salaryMax;
+    
+    if (params.salaryType === 'annual' && job.salaryType === 'monthly') {
+      // Convert monthly to annual
+      jobMinSalary = job.salaryMin * 12;
+      jobMaxSalary = job.salaryMax * 12;
+    } else if (params.salaryType === 'monthly' && job.salaryType === 'annual') {
+      // Convert annual to monthly
+      jobMinSalary = job.salaryMin / 12;
+      jobMaxSalary = job.salaryMax / 12;
+    }
+    
+    // Check if the job's salary range overlaps with the filter range
+    if (jobMaxSalary < minSalary || jobMinSalary > maxSalary) {
+      return false;
+    }
+  }
+  
+  // Benefits filter - exact match for selected benefits
+  if (params.benefits && params.benefits.length > 0) {
+    // The job must have ALL selected benefits to match
+    if (!job.benefits || !params.benefits.every(benefit => 
+      job.benefits.some(jobBenefit => 
+        jobBenefit.toLowerCase().includes(benefit.toLowerCase())
+      )
+    )) {
+      return false;
+    }
+  }
+  
+  // Remote work filter
+  if (params.remote === true) {
+    if (!job.location.toLowerCase().includes('remote')) {
+      return false;
+    }
+  }
+  
+  // Date Posted filter
+  if (params.datePosted && params.datePosted !== 'any') {
+    const jobPostedDate = new Date(job.postedDate);
+    const currentDate = new Date();
+    
+    switch (params.datePosted) {
+      case 'today':
+        // Check if job was posted today
+        if (jobPostedDate.toDateString() !== currentDate.toDateString()) {
+          return false;
+        }
+        break;
+      case 'week':
+        // Check if job was posted within the last 7 days
+        const weekAgo = new Date(currentDate);
+        weekAgo.setDate(currentDate.getDate() - 7);
+        if (jobPostedDate < weekAgo) {
+          return false;
+        }
+        break;
+      case 'month':
+        // Check if job was posted within the last 30 days
+        const monthAgo = new Date(currentDate);
+        monthAgo.setDate(currentDate.getDate() - 30);
+        if (jobPostedDate < monthAgo) {
+          return false;
+        }
+        break;
+    }
+  }
+  
+  // Sector Type filter
+  if (params.sectorType && params.sectorType !== 'all' && job.sectorType !== params.sectorType) {
+    return false;
+  }
+  
+  // Company Location filter (mainland/freezone)
+  if (params.companyLocation && params.companyLocation !== 'all') {
+    if (params.companyLocation === 'freezone' && !job.companyLocation.toLowerCase().includes('free zone')) {
+      return false;
+    }
+    if (params.companyLocation === 'mainland' && !job.companyLocation.toLowerCase().includes('mainland')) {
+      return false;
+    }
+  }
+  
+  // Skills filter - improved matching
+  if (params.skills && params.skills.length > 0) {
+    // Check for any of the selected skills in job requirements
+    const jobRequirementsText = job.requirements ? job.requirements.join(' ').toLowerCase() : '';
+    const hasMatchingSkill = params.skills.some(skill => 
+      jobRequirementsText.includes(skill.toLowerCase())
+    );
+    
+    if (!hasMatchingSkill) {
+      return false;
+    }
+  }
+  
+  // Industry filter - improved matching
+  if (params.industries && params.industries.length > 0) {
+    // In a real app, we'd have an industry field for each job
+    // For our mock data, check company name, title and description
+    const jobText = `${job.company} ${job.title} ${job.description}`.toLowerCase();
+    const hasMatchingIndustry = params.industries.some(industry => 
+      jobText.includes(industry.toLowerCase())
+    );
+    
+    if (!hasMatchingIndustry) {
+      return false;
+    }
+  }
+  
+  // Job passed all filters
+  return true;
+}
+
+// Helper function to determine experience level from requirements
+function getExperienceLevelFromRequirements(requirements) {
+  if (!requirements || !Array.isArray(requirements)) {
+    return 'Entry level';
+  }
+  
+  // Join requirements into a string for easier searching
+  const reqString = requirements.join(' ').toLowerCase();
+  
+  if (reqString.includes('executive') || reqString.includes('c-level') || reqString.includes('ceo') || 
+      reqString.includes('cto') || reqString.includes('cfo') || reqString.includes('10+ years')) {
+    return 'Executive';
+  }
+  
+  if (reqString.includes('manager') || reqString.includes('head of') || reqString.includes('director') || 
+      reqString.includes('8+ years') || reqString.includes('7+ years')) {
+    return 'Manager';
+  }
+  
+  if (reqString.includes('senior') || reqString.includes('lead') || reqString.includes('5+ years') || 
+      reqString.includes('6+ years')) {
+    return 'Senior level';
+  }
+  
+  if (reqString.includes('3+ years') || reqString.includes('4+ years') || reqString.includes('mid')) {
+    return 'Mid level';
+  }
+  
+  return 'Entry level';
+}

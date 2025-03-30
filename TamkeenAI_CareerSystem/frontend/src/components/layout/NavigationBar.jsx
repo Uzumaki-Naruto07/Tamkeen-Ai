@@ -228,6 +228,15 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
   useEffect(() => {
     const findTabIndex = () => {
       const path = location.pathname;
+      
+      // Special handling for job-related routes
+      if (path === '/job-search' || path.startsWith('/job-search/') || 
+          path === '/jobs' || path.startsWith('/jobs/')) {
+        // This is the index for the Jobs tab
+        return navigationItems.findIndex(item => item.path === '/jobs');
+      }
+      
+      // Handle other routes normally
       const index = navigationItems.findIndex(item => 
         path === item.path || path.startsWith(`${item.path}/`)
       );
@@ -254,7 +263,13 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
   // Handle tab change
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
-    navigate(navigationItems[newValue].path);
+    
+    // Special case for Jobs tab - navigate to job-search
+    if (navigationItems[newValue].path === '/jobs') {
+      navigate('/job-search');
+    } else {
+      navigate(navigationItems[newValue].path);
+    }
   };
   
   // Handle profile menu
@@ -564,7 +579,14 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
                 <ListItem 
                   button 
                   key={item.path}
-                  onClick={() => navigate(item.path)}
+                  onClick={() => {
+                    // Special case for Jobs tab
+                    if (item.path === '/jobs') {
+                      navigate('/job-search');
+                    } else {
+                      navigate(item.path);
+                    }
+                  }}
                   selected={currentTab === index}
                 >
                   <ListItemIcon>

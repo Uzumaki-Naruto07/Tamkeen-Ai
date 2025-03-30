@@ -1,16 +1,10 @@
+import './reactRouterFlags.js';
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { startTransition } from 'react';
-
-// Fix for React Router warnings by setting future flags
-if (typeof window !== 'undefined') {
-  window.__reactRouterFutureFlags = {
-    v7_startTransition: true,
-    v7_relativeSplatPath: true 
-  };
-}
 
 // Error handler for the entire application
 const handleError = (error) => {
