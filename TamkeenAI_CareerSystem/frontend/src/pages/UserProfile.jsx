@@ -443,58 +443,50 @@ const UserProfile = () => {
         socialLinks: socialLinks
       });
       
-      // Mock success response for development mode
-      if (import.meta.env.DEV) {
-        await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API delay
-        console.log('DEV MODE: Profile update simulated successfully');
-        
-        // Update the userProfile state with new values
-        setUserProfile(prev => ({
-          ...prev,
+      // Prepare user profile data
+      const profileData = {
         ...profileFieldsEdited,
         visibility: profileVisibility,
-          socialLinks: socialLinks
-        }));
+        socialLinks: socialLinks
+      };
       
-        // Show success message
-        setError(null);
-        setSnackbarMessage('Profile updated successfully');
-        setSnackbarSeverity('success');
-        setSnackbarOpen(true);
-      setEditMode(false);
-        setSaving(false);
-        return;
+      // Add user ID if available
+      if (userProfile?.id) {
+        profileData.userId = userProfile.id;
+      } else if (userAccountProfile?.id) {
+        profileData.userId = userAccountProfile.id;
       }
       
-      // Real API call for production
-      const response = await api.put(
-        `${apiEndpoints.profiles.updateProfile(userAccountProfile.id)}`,
-        {
-          ...profileFieldsEdited,
-          visibility: profileVisibility,
-          socialLinks: socialLinks
-        }
-      );
+      const response = await apiEndpoints.profiles.updateProfile(profileData);
       
       console.log('Profile update response:', response);
       
-      if (response.status === 200 || response.status === 201) {
-        // Update the userProfile state with new values
-        setUserProfile(prev => ({
-          ...prev,
-          ...profileFieldsEdited,
-          visibility: profileVisibility,
-          socialLinks: socialLinks
-        }));
-        
-        // Show success message
-      setSnackbarMessage('Profile updated successfully');
-        setSnackbarSeverity('success');
-      setSnackbarOpen(true);
-        setEditMode(false);
-      } else {
-        throw new Error('Failed to update profile');
+      // Update the userProfile state with new values
+      setUserProfile(prev => ({
+        ...prev,
+        ...profileFieldsEdited,
+        visibility: profileVisibility,
+        socialLinks: socialLinks
+      }));
+      
+      // Update user context if available
+      if (updateUserProfile) {
+        try {
+          await updateUserProfile({
+            ...userAccountProfile,
+            fullName: `${profileFieldsEdited.firstName} ${profileFieldsEdited.lastName}`.trim(),
+            avatar: userProfile?.avatar || userAccountProfile?.avatar
+          });
+        } catch (err) {
+          console.warn("Couldn't sync profile with context", err);
+        }
       }
+      
+      // Show success message
+      setSnackbarMessage('Profile updated successfully');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+      setEditMode(false);
     } catch (err) {
       console.error('Error updating profile:', err);
       let errorMessage = 'Failed to update profile';
@@ -556,61 +548,16 @@ const UserProfile = () => {
       
       console.log('Uploading profile picture:', file.name);
       
-      // In development mode, skip the real API call and use the local preview
-      if (import.meta.env.DEV) {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        console.log('DEV MODE: Using local profile image preview');
-        
-        // Make sure the profileImage is a valid data URL
-        if (!profileImage || !profileImage.startsWith('data:')) {
-          throw new Error('Invalid image data');
-        }
-        
-        // Update the avatar URL in the userProfile state
-        setUserProfile(prev => ({
-          ...prev,
-          avatar: profileImage
-        }));
-        
-        // Also update the profileFieldsEdited state to include the new avatar
-        setProfileFieldsEdited(prev => ({
-          ...prev,
-          avatar: profileImage
-        }));
-        
-        // Update in the main app context if available
-        if (updateUserProfile) {
-          try {
-            // Create a copy of userAccountProfile with the updated avatar
-            const updatedProfile = {
-              ...(userAccountProfile || {}),
-              avatar: profileImage
-            };
-            
-            // Send the update to the context
-            await updateUserProfile(updatedProfile);
-            
-            console.log('DEV MODE: Profile avatar updated in context');
-          } catch (err) {
-            console.warn("DEV MODE: Couldn't sync avatar with context", err);
-          }
-        }
-        
-        setSnackbarSeverity('success');
-        setSnackbarMessage('Profile picture updated successfully');
-        setSnackbarOpen(true);
-        setPhotoDialogOpen(false);
-        setSaving(false);
-        return;
-      }
-      
-      // Real API call for production
+      // Create FormData object for the file upload
       const formData = new FormData();
       formData.append('avatar', file);
       
-      const userId = userAccountProfile?.id || userProfile?.id;
+      // Get the user ID from the appropriate source
+      const userId = userProfile?.id || userAccountProfile?.id;
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+      
       console.log('Uploading profile picture for user:', userId);
       
       const response = await apiEndpoints.profiles.uploadAvatar(userId, formData);
@@ -621,27 +568,34 @@ const UserProfile = () => {
       
       console.log('Profile picture upload response:', response);
       
-      // Update user profile with new avatar
+      // Get the avatar URL from the response
       const avatarUrl = response.data.avatarUrl;
       
+      // Update user profile state
       setUserProfile(prev => ({
         ...prev,
         avatar: avatarUrl
       }));
       
-      // Also update profileFieldsEdited state
+      // Update profile fields edited state
       setProfileFieldsEdited(prev => ({
         ...prev,
         avatar: avatarUrl
       }));
       
+      // Update in the main app context if available
       if (updateUserProfile) {
-        await updateUserProfile({
-          ...userAccountProfile,
-          avatar: avatarUrl
-        });
+        try {
+          await updateUserProfile({
+            ...userAccountProfile,
+            avatar: avatarUrl
+          });
+        } catch (err) {
+          console.warn("Couldn't sync avatar with context", err);
+        }
       }
       
+      // Show success message
       setSnackbarSeverity('success');
       setSnackbarMessage('Profile picture updated successfully');
       setSnackbarOpen(true);

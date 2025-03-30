@@ -284,10 +284,30 @@ export const jobAPI = {
 export const userAPI = {
   updateProfile: async (profileData) => {
     try {
-      const response = await api.put(endpoints.USER_ENDPOINTS.UPDATE_PROFILE, profileData);
+      // Log the update attempt
+      console.log('Updating profile for user:', profileData.userId, profileData);
+      
+      // In development mode, just return success with mock data
+      if (import.meta.env.DEV) {
+        console.log('DEV MODE: Using mock profile update');
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        return {
+          success: true,
+          data: {
+            ...profileData,
+            id: profileData.userId
+          }
+        };
+      }
+      
+      // Real API call for production
+      const response = await api.put('/api/users/profile', profileData);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error;
+      console.error('Error updating profile:', error);
+      throw error;
     }
   },
   
@@ -525,7 +545,7 @@ export const settingsAPI = {
       }
       
       // Real API call for production
-      const response = await api.post(`/profiles/${userId}/avatar`, formData, {
+      const response = await api.post(`/api/users/${userId}/avatar`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         }
@@ -746,7 +766,7 @@ export const profilesAPI = {
       }
       
       // Real API call for production
-      const response = await api.post(`/profiles/${userId}/avatar`, formData, {
+      const response = await api.post(`/api/users/${userId}/avatar`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         }
