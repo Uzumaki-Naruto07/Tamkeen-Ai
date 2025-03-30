@@ -545,7 +545,7 @@ export const settingsAPI = {
       }
       
       // Real API call for production
-      const response = await api.post(`/api/users/${userId}/avatar`, formData, {
+      const response = await api.post(`/users/${userId}/avatar`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         }
@@ -766,7 +766,7 @@ export const profilesAPI = {
       }
       
       // Real API call for production
-      const response = await api.post(`/api/users/${userId}/avatar`, formData, {
+      const response = await api.post(`/users/${userId}/avatar`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         }
