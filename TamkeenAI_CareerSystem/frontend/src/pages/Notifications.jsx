@@ -7,7 +7,8 @@ import {
   Switch, FormControlLabel, Tooltip, Checkbox,
   Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Select, FormControl, InputLabel,
-  Pagination, Snackbar
+  Pagination, Snackbar, Container, Card, CardContent,
+  Grid, Avatar
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon, Close, Delete,
@@ -19,7 +20,8 @@ import {
   Person, Message, Mail, FormatListBulleted, 
   Bookmark, Star, ArrowBack, CheckCircleOutline,
   DeleteOutline, DoNotDisturbAlt, Schedule, Business,
-  Description, Group, Article, Feedback, Public
+  Description, Group, Article, Feedback, Public,
+  DeleteSweep, CalendarToday, WorkOutline
 } from '@mui/icons-material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useUser } from '../context/AppContext';
@@ -27,6 +29,7 @@ import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useDebounce } from '../hooks/useDebounce';
+import { useTranslation } from 'react-i18next';
 
 const Notifications = () => {
   const [loading, setLoading] = useState(true);
@@ -64,6 +67,37 @@ const Notifications = () => {
   
   const navigate = useNavigate();
   const { profile } = useUser();
+  const { t } = useTranslation();
+  
+  const [standardNotifications, setStandardNotifications] = useState([
+    { 
+      id: 1, 
+      messageKey: 'notifications.newJobRecommendation', 
+      message: 'New job recommendation available', 
+      read: false,
+      date: new Date().toISOString(),
+      icon: <WorkOutline color="primary" />,
+      type: 'job'
+    },
+    { 
+      id: 2, 
+      messageKey: 'notifications.resumeUpdate', 
+      message: 'Your resume needs updating', 
+      read: false,
+      date: new Date(Date.now() - 86400000).toISOString(),
+      icon: <Description color="primary" />,
+      type: 'resume'
+    },
+    { 
+      id: 3, 
+      messageKey: 'notifications.skillGap', 
+      message: 'Skill gap detected in your profile', 
+      read: false,
+      date: new Date(Date.now() - 172800000).toISOString(),
+      icon: <School color="primary" />,
+      type: 'skill'
+    }
+  ]);
   
   // Load notifications
   useEffect(() => {
@@ -102,7 +136,16 @@ const Notifications = () => {
           });
         }
         
-        setNotifications(response.data || []);
+        // Load booking notifications from localStorage
+        const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+        
+        // Combine with standard notifications
+        const allNotifications = [...bookingNotifications, ...standardNotifications];
+        
+        // Sort by date (newest first)
+        allNotifications.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        setNotifications(allNotifications);
         setTotalNotifications(response.meta?.total || 0);
       } catch (err) {
         console.error('Error loading notifications:', err);
@@ -113,7 +156,7 @@ const Notifications = () => {
     };
     
     loadNotifications();
-  }, [profile, activeTab, page, pageSize, filters]);
+  }, [profile, activeTab, page, pageSize, filters, standardNotifications]);
   
   // Load notification settings
   useEffect(() => {
@@ -150,6 +193,8 @@ const Notifications = () => {
         return <Info color="warning" />;
       case 'alert':
         return <Warning color="error" />;
+      case 'booking_reminder':
+        return <CalendarToday color="primary" />;
       default:
         return <NotificationsIcon />;
     }
@@ -293,193 +338,171 @@ const Notifications = () => {
     setPage(1);
   };
   
+  const handleNotificationClick = (notification) => {
+    // Mark as read
+    const updatedNotifications = notifications.map(n => {
+      if (n.id === notification.id) {
+        return { ...n, read: true };
+      }
+      return n;
+    });
+    setNotifications(updatedNotifications);
+    
+    // Also update booking notifications in localStorage
+    if (notification.type === 'booking_reminder') {
+      const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+      const updatedBookingNotifications = bookingNotifications.map(n => {
+        if (n.id === notification.id) {
+          return { ...n, read: true };
+        }
+        return n;
+      });
+      localStorage.setItem('notifications', JSON.stringify(updatedBookingNotifications));
+    }
+    
+    // Navigate based on notification type
+    if (notification.type === 'booking_reminder') {
+      navigate('/my-bookings');
+    } else if (notification.type === 'job') {
+      navigate('/job-search');
+    } else if (notification.type === 'resume') {
+      navigate('/resume-builder');
+    } else if (notification.type === 'skill') {
+      navigate('/skill-builder');
+    }
+  };
+  
+  const renderNotificationIcon = (notification) => {
+    if (notification.type === 'booking_reminder') {
+      return <CalendarToday color="primary" />;
+    } else if (notification.icon) {
+      return notification.icon;
+    }
+    return <NotificationsIcon color="primary" />;
+  };
+  
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now - date;
+    
+    // Less than a day
+    if (diff < 86400000) {
+      const hours = Math.floor(diff / 3600000);
+      if (hours < 1) return 'Just now';
+      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    }
+    
+    // Less than a week
+    if (diff < 604800000) {
+      const days = Math.floor(diff / 86400000);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    }
+    
+    // Else show date
+    return date.toLocaleDateString();
+  };
+  
   return (
-    <Box sx={{ py: 3, px: 2 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Notifications
-      </Typography>
-      
-      <Paper sx={{ mb: 3 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2 }}>
-          <Tabs
-            value={activeTab}
-            onChange={(e, newValue) => {
-              setActiveTab(newValue);
-              setPage(1); // Reset to first page when changing tabs
-            }}
+    <Container maxWidth="md" sx={{ mt: 4, mb: 6 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          Notifications
+        </Typography>
+        <Box>
+          <Button 
+            onClick={handleMarkAllAsRead}
+            sx={{ mr: 1 }}
           >
-            <Tab 
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <NotificationsIcon sx={{ mr: 1 }} />
-                  All
-                </Box>
-              } 
-            />
-            <Tab 
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Badge 
-                    badgeContent={notifications.filter(n => !n.read).length} 
-                    color="error"
-                    sx={{ mr: 1 }}
-                  >
-                    <NotificationImportant />
-                  </Badge>
-                  Unread
-                </Box>
-              } 
-            />
-            <Tab 
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <CheckCircle sx={{ mr: 1 }} />
-                  Read
-                </Box>
-              } 
-            />
-          </Tabs>
-          
-          <Box>
-            <Tooltip title="Filter">
-              <IconButton onClick={(e) => setFilterMenuAnchorEl(e.currentTarget)}>
-                <FilterList />
-              </IconButton>
-            </Tooltip>
-            
-            <Tooltip title="Mark All as Read">
-              <IconButton onClick={handleMarkAllAsRead}>
-                <CheckCircleOutline />
-              </IconButton>
-            </Tooltip>
-            
-            <Tooltip title="Clear All">
-              <IconButton onClick={handleClearAll}>
-                <DeleteOutline />
-              </IconButton>
-            </Tooltip>
-            
-            <Tooltip title="Settings">
-              <IconButton onClick={() => setSettingsOpen(true)}>
-                <Settings />
-              </IconButton>
-            </Tooltip>
+            Mark all as read
+          </Button>
+          <Button 
+            startIcon={<DeleteSweep />}
+            onClick={handleClearAll}
+            color="error"
+          >
+            Clear all
+          </Button>
           </Box>
         </Box>
         
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <LoadingSpinner message="Loading notifications..." />
-          </Box>
-        ) : error ? (
-          <Alert severity="error" sx={{ m: 2 }}>
-            {error}
-          </Alert>
-        ) : notifications.length === 0 ? (
-          <Box sx={{ py: 4, textAlign: 'center' }}>
-            <NotificationsOff sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary">
+      {notifications.length === 0 ? (
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h6" gutterBottom>
               No notifications
             </Typography>
-            <Typography color="text.secondary" sx={{ mt: 1 }}>
-              {activeTab === 0 ? 
-                "You don't have any notifications yet." : 
-                activeTab === 1 ? 
-                "You don't have any unread notifications." : 
-                "You don't have any read notifications."}
+          <Typography variant="body1">
+            You don't have any notifications at the moment.
             </Typography>
-          </Box>
+        </Paper>
         ) : (
-          <>
-            <List sx={{ width: '100%' }}>
-              {notifications.map((notification, index) => (
-                <React.Fragment key={notification.id}>
-                  {index > 0 && <Divider component="li" />}
-                  <ListItem
+        <Grid container spacing={2}>
+          {notifications.map((notification) => (
+            <Grid item xs={12} key={notification.id}>
+              <Card 
                     sx={{
-                      bgcolor: notification.read ? 'transparent' : 'action.hover',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => {
-                      setSelectedNotification(notification);
-                      setNotificationDetailsOpen(true);
-                      
-                      // If it's unread, mark it as read
-                      if (!notification.read) {
-                        handleMarkAsRead(notification.id);
-                      }
-                    }}
-                  >
-                    <ListItemIcon>
-                      {getNotificationIcon(notification)}
-                    </ListItemIcon>
-                    
-                    <ListItemText
-                      primary={
-                        <Typography 
-                          variant="subtitle1" 
-                          sx={{ 
-                            fontWeight: notification.read ? 'normal' : 'bold',
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}
-                        >
+                  cursor: 'pointer',
+                  backgroundColor: notification.read ? 'inherit' : 'rgba(25, 118, 210, 0.05)',
+                  transition: 'background-color 0.2s',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.02)'
+                  }
+                }}
+              >
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', flex: 1 }}>
+                      <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                        {renderNotificationIcon(notification)}
+                      </Avatar>
+                      <Box sx={{ flex: 1 }} onClick={() => handleNotificationClick(notification)}>
+                        {notification.type === 'booking_reminder' ? (
+                          <>
+                            <Typography variant="subtitle1" sx={{ fontWeight: notification.read ? 'normal' : 'bold' }}>
                           {notification.title}
-                          {notification.priority === 'high' && (
-                            <Chip 
-                              label="Important" 
-                              color="error" 
-                              size="small" 
-                              sx={{ ml: 1 }}
-                            />
-                          )}
                         </Typography>
-                      }
-                      secondary={
-                        <Box>
-                          <Typography variant="body2" color="text.secondary" noWrap>
+                            <Typography variant="body2" paragraph>
                             {notification.message}
                           </Typography>
-                          <Typography 
-                            variant="caption" 
-                            color="text.secondary"
-                            sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}
-                          >
-                            <AccessTime fontSize="small" sx={{ mr: 0.5, fontSize: 14 }} />
-                            {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                          </>
+                        ) : (
+                          <Typography variant="body1" sx={{ fontWeight: notification.read ? 'normal' : 'bold' }}>
+                            {t(notification.messageKey, notification.message)}
+                          </Typography>
+                        )}
+                        <Typography variant="caption" color="text.secondary">
+                          {formatDate(notification.date)}
                           </Typography>
                         </Box>
-                      }
-                    />
-                    
-                    <ListItemSecondaryAction>
+                    </Box>
+                    <Box>
+                      {!notification.read && (
+                        <Chip 
+                          label="New" 
+                          color="primary" 
+                          size="small" 
+                          sx={{ mb: 1 }} 
+                        />
+                      )}
                       <IconButton 
-                        edge="end" 
+                        size="small" 
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedMenuId(notification.id);
                           setMenuAnchorEl(e.currentTarget);
                         }}
+                        sx={{ ml: 1 }}
                       >
-                        <MoreVert />
+                        <Delete fontSize="small" />
                       </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                </React.Fragment>
-              ))}
-            </List>
-            
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-              <Pagination 
-                count={Math.ceil(totalNotifications / pageSize)}
-                page={page}
-                onChange={(e, newPage) => setPage(newPage)}
-                color="primary"
-              />
             </Box>
-          </>
-        )}
-      </Paper>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
       
       {/* Notification Options Menu */}
       <Menu
@@ -945,7 +968,7 @@ const Notifications = () => {
         onClose={() => setSnackbarOpen(false)}
         message={snackbarMessage}
       />
-    </Box>
+    </Container>
   );
 };
 

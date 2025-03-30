@@ -48,6 +48,19 @@ const NotFound = lazyLoad(() => import('./pages/NotFound'));
 const JobSearch = lazyLoad(() => import('./pages/JobSearch'));
 const JobSearchDashboard = lazyLoad(() => import('./pages/JobSearchDashboard'));
 const JobDetails = lazyLoad(() => import('./pages/JobDetails'));
+// Add AI Coach components
+const AIInterviewCoach = lazyLoad(() => import('./pages/AIInterviewCoach'));
+const AllInterviewCoach = lazyLoad(() => import('./pages/AllInterviewCoach'));
+const CoachProfile = lazyLoad(() => import('./pages/CoachProfile'));
+const BookingConfirmation = lazyLoad(() => import('./pages/BookingConfirmation'));
+// Add MyBookings component
+const MyBookings = lazyLoad(() => import('./pages/MyBookings'));
+// Add Checkout component
+const Checkout = lazyLoad(() => import('./pages/Checkout'));
+// Add Notifications component
+const Notifications = lazyLoad(() => import('./pages/Notifications'));
+// Add Package Confirmation component
+const PackageConfirmation = lazyLoad(() => import('./pages/PackageConfirmation'));
 
 // Suspense fallback component
 const SuspenseFallback = () => (
@@ -127,6 +140,17 @@ const router = createBrowserRouter(
         
         {/* Admin routes */}
         <Route path="/admin-panel" element={<ProtectedRoute element={<AdminPanel />} />} />
+        
+        {/* AI Coach routes */}
+        <Route path="/ai-coach" element={<ProtectedRoute element={<AllInterviewCoach />} />} />
+        <Route path="/ai-coach/interview" element={<ProtectedRoute element={<AIInterviewCoach />} />} />
+        <Route path="/ai-coach/profile/:coachId" element={<ProtectedRoute element={<CoachProfile />} />} />
+        <Route path="/ai-coach/checkout/:coachId" element={<ProtectedRoute element={<Checkout />} />} />
+        <Route path="/ai-coach/checkout/package" element={<ProtectedRoute element={<Checkout />} />} />
+        <Route path="/ai-coach/booking/:coachId" element={<ProtectedRoute element={<BookingConfirmation />} />} />
+        <Route path="/ai-coach/package-confirmation" element={<ProtectedRoute element={<PackageConfirmation />} />} />
+        <Route path="/my-bookings" element={<ProtectedRoute element={<MyBookings />} />} />
+        <Route path="/notifications" element={<ProtectedRoute element={<Notifications />} />} />
         
         {/* User Profile routes */}
         <Route path="/user-profile" element={<ProtectedRoute element={<UserProfileWithErrorBoundary />} />} />

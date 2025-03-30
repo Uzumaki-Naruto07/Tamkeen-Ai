@@ -7,7 +7,7 @@ import {
   DialogContent, DialogActions, Tooltip, Grid,
   Accordion, AccordionSummary, AccordionDetails,
   Menu, MenuItem, InputAdornment, Tabs, Tab,
-  Snackbar, Badge, LinearProgress, Fab
+  Snackbar, Badge, LinearProgress, Fab, Container
 } from '@mui/material';
 import {
   Send, Psychology, QuestionAnswer, Save,
@@ -25,6 +25,128 @@ import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+
+// Mock data for interview coach simulation
+const mockInterviewData = {
+  conversations: [
+    {
+      id: "conv1",
+      title: "Interview Preparation - Software Engineer",
+      date: "2024-03-20T15:30:00Z",
+      messages: [
+        {
+          role: "assistant",
+          content: "Hello! I'm your AI Interview Coach. I can help you prepare for interviews by providing advice, answering questions, and simulating interview scenarios. How can I assist you today?",
+          timestamp: "2024-03-20T15:30:00Z"
+        }
+      ]
+    }
+  ],
+  topics: [
+    { id: "t1", name: "Behavioral Questions", count: 28 },
+    { id: "t2", name: "Technical Skills", count: 42 },
+    { id: "t3", name: "Situational Scenarios", count: 15 },
+    { id: "t4", name: "Communication", count: 19 },
+    { id: "t5", name: "Leadership & Teamwork", count: 23 }
+  ],
+  suggestedQuestions: [
+    "What are the most common interview questions for software engineers?",
+    "How should I prepare for behavioral interviews?",
+    "What's the best way to answer 'Tell me about yourself'?",
+    "How can I improve my communication during interviews?",
+    "What should I do if I don't know an answer?"
+  ]
+};
+
+// Add mock endpoints
+if (!apiEndpoints.interviews) {
+  apiEndpoints.interviews = {
+    createOrLoadConversation: async (userId) => {
+      return {
+        data: {
+          conversationId: "conv1",
+          messages: mockInterviewData.conversations[0].messages
+        }
+      };
+    },
+    getPreviousConversations: async (userId) => {
+      return {
+        data: mockInterviewData.conversations
+      };
+    },
+    getInterviewTopics: async () => {
+      return {
+        data: mockInterviewData.topics
+      };
+    },
+    getSuggestedQuestions: async (userId) => {
+      return {
+        data: mockInterviewData.suggestedQuestions
+      };
+    },
+    sendMessage: async (conversationId, message) => {
+      // Simulate AI response
+      const aiResponses = {
+        default: {
+          role: "assistant",
+          content: "I understand your question. To provide the best advice for interview preparation, I would recommend focusing on understanding the job description thoroughly, preparing specific examples from your experience, and practicing common interview questions relevant to your field.",
+          timestamp: new Date().toISOString()
+        }
+      };
+      
+      return {
+        data: aiResponses.default
+      };
+    },
+    loadConversation: async (convoId) => {
+      return {
+        data: {
+          messages: mockInterviewData.conversations[0].messages
+        }
+      };
+    },
+    createConversation: async (userId) => {
+      return {
+        data: {
+          conversationId: "new_conv",
+        }
+      };
+    },
+    getCategoryQuestions: async (categoryId) => {
+      const mockQuestions = [
+        "Tell me about a time you had to resolve a conflict in your team.",
+        "How do you handle tight deadlines and pressure?",
+        "Describe a situation where you failed and how you handled it.",
+        "What's your approach to working with difficult team members?"
+      ];
+      
+      return {
+        data: mockQuestions
+      };
+    },
+    createMockInterview: async (setupData) => {
+      return {
+        data: {
+          mockInterviewId: "mock1",
+          questions: [
+            "Tell me about yourself and your background.",
+            "Why are you interested in this role?",
+            "What are your greatest strengths and weaknesses?",
+            "Tell me about a challenging situation you faced at work.",
+            "Where do you see yourself in 5 years?"
+          ]
+        }
+      };
+    },
+    createMockInterviewSetup: async (mockInterviewId, setupData) => {
+      return {
+        data: {
+          success: true
+        }
+      };
+    }
+  };
+}
 
 const AIInterviewCoach = () => {
   const [loading, setLoading] = useState(true);
@@ -348,9 +470,120 @@ const AIInterviewCoach = () => {
   };
   
   return (
-    <Box>
-      {/* Rest of the component code remains unchanged */}
-    </Box>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      ) : (
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Typography variant="h4" component="h1" gutterBottom align="center">
+              AI Interview Coach
+            </Typography>
+            <Typography variant="subtitle1" color="textSecondary" align="center" sx={{ mb: 4 }}>
+              Practice interviews and get personalized feedback
+            </Typography>
+          </Grid>
+          
+          <Grid item xs={12} md={8}>
+            <Paper sx={{ p: 3, mb: 3, height: '60vh', display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ flex: 1, overflow: 'auto', mb: 2 }}>
+                {messages.map((message, index) => (
+                  <Box 
+                    key={index}
+                    sx={{ 
+                      display: 'flex', 
+                      justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+                      mb: 2 
+                    }}
+                  >
+                    <Paper 
+                      sx={{ 
+                        p: 2, 
+                        maxWidth: '80%',
+                        bgcolor: message.role === 'user' ? 'primary.light' : 'background.paper',
+                        color: message.role === 'user' ? 'primary.contrastText' : 'text.primary'
+                      }}
+                    >
+                      <Typography variant="body1">{message.content}</Typography>
+                    </Paper>
+                  </Box>
+                ))}
+                <div ref={chatEndRef} />
+              </Box>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <TextField
+                  fullWidth
+                  placeholder="Type your message here..."
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  disabled={isTyping}
+                  multiline
+                  maxRows={3}
+                  variant="outlined"
+                  sx={{ mr: 2 }}
+                />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={sendMessage}
+                  disabled={!inputMessage.trim() || isTyping}
+                  startIcon={<Send />}
+                >
+                  Send
+                </Button>
+              </Box>
+            </Paper>
+          </Grid>
+          
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Suggested Questions
+              </Typography>
+              <List>
+                {suggestedQuestions.map((question, index) => (
+                  <ListItem 
+                    key={index}
+                    button
+                    onClick={() => sendPredefinedQuestion(question)}
+                  >
+                    <ListItemText primary={question} />
+                  </ListItem>
+                ))}
+              </List>
+            </Paper>
+            
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Topics
+              </Typography>
+              <List>
+                {topicCategories.map((topic) => (
+                  <ListItem 
+                    key={topic.id}
+                    button
+                    onClick={() => loadCategoryQuestions(topic)}
+                  >
+                    <ListItemText 
+                      primary={topic.name} 
+                      secondary={`${topic.count} questions`} 
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </Paper>
+          </Grid>
+        </Grid>
+      )}
+    </Container>
   );
 };
 

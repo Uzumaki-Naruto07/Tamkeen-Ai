@@ -32,6 +32,7 @@ import { useTranslation } from 'react-i18next';
 import { useContext } from 'react';
 import { useTheme as useCustomTheme } from '../../contexts/ThemeContext';
 import LanguageIcon from '@mui/icons-material/Language';
+import CalendarToday from '@mui/icons-material/CalendarToday';
 
 // Icons
 import MenuIcon from '@mui/icons-material/Menu';
@@ -246,10 +247,45 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
     setCurrentTab(findTabIndex());
   }, [location]);
   
+  // Define mock notifications for the example
+  const getNotifications = () => {
+    // Standard mock notifications
+    const standardNotifications = [
+      { id: 1, messageKey: 'notifications.newJobRecommendation', message: 'New job recommendation', read: false },
+      { id: 2, messageKey: 'notifications.resumeUpdate', message: 'Your resume needs updating', read: false },
+      { id: 3, messageKey: 'notifications.skillGap', message: 'Skill gap detected', read: false }
+    ];
+    
+    // Get booking notifications from localStorage
+    const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+    
+    // Combine lists with booking notifications first
+    return [...bookingNotifications, ...standardNotifications];
+  };
+  
   // Calculate unread notifications count
   useEffect(() => {
-    // Mock implementation - in a real app you would fetch from the server
-    setUnreadCount(3);
+    // Load notifications from localStorage and update the counter
+    const loadNotifications = () => {
+      // Get booking notifications from localStorage
+      const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+      
+      // Count unread booking notifications
+      const unreadBookingCount = bookingNotifications.filter(n => !n.read).length;
+      
+      // Count standard notifications (3 by default)
+      const standardNotificationsCount = 3;
+      
+      // Set total unread count
+      setUnreadCount(unreadBookingCount + standardNotificationsCount);
+    };
+    
+    loadNotifications();
+    
+    // Set up interval to check for new notifications
+    const interval = setInterval(loadNotifications, 5000); // Check every 5 seconds
+    
+    return () => clearInterval(interval);
   }, []);
   
   // Toggle drawer
@@ -284,6 +320,13 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
   // Handle notifications menu
   const handleNotificationsMenuOpen = (event) => {
     setNotificationsMenuAnchor(event.currentTarget);
+    
+    // Mark booking notifications as read
+    const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+    if (bookingNotifications.length > 0) {
+      const updatedNotifications = bookingNotifications.map(n => ({ ...n, read: true }));
+      localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+    }
   };
   
   const handleNotificationsMenuClose = () => {
@@ -324,16 +367,49 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
   // Handle mark all notifications as read
   const handleMarkAllRead = () => {
     setUnreadCount(0);
-    // In a real app, you would update the notifications in the backend
+    
+    // Mark booking notifications as read in localStorage
+    const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+    if (bookingNotifications.length > 0) {
+      const updatedNotifications = bookingNotifications.map(n => ({ ...n, read: true }));
+      localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+    }
   };
   
-  // Define mock notifications for the example
-  const notifications = [
-    { id: 1, messageKey: 'notifications.newJobRecommendation', message: 'New job recommendation', read: false },
-    { id: 2, messageKey: 'notifications.resumeUpdate', message: 'Your resume needs updating', read: false },
-    { id: 3, messageKey: 'notifications.skillGap', message: 'Skill gap detected', read: false },
-    { id: 4, messageKey: 'notifications.mockInterview', message: 'Mock interview completed', read: true }
-  ];
+  // Handle notification click
+  const handleNotificationClick = (notification) => {
+    // For booking notifications, navigate to My Bookings
+    if (notification.type === 'booking_reminder') {
+      navigate('/my-bookings');
+    }
+    
+    // For other notifications, you can add specific handling here
+    // For example, for job recommendations, navigate to jobs page
+    if (notification.messageKey === 'notifications.newJobRecommendation') {
+      navigate('/job-search');
+    }
+    
+    handleNotificationsMenuClose();
+  };
+  
+  // Render notification content based on notification type
+  const renderNotificationContent = (notification) => {
+    // Handle booking reminders
+    if (notification.type === 'booking_reminder') {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+          <CalendarToday color="primary" sx={{ mr: 1, mt: 0.5 }} fontSize="small" />
+          <Box>
+            <Typography variant="subtitle2">{notification.title}</Typography>
+            <Typography variant="body2">{notification.message}</Typography>
+          </Box>
+        </Box>
+      );
+    }
+    
+    // Handle existing notification types with messageKey
+    return <Typography variant="body2">{t(notification.messageKey, notification.message)}</Typography>;
+  };
   
   return (
     <StyledAppBar position="sticky">
@@ -496,10 +572,12 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
           </Box>
           <Divider />
           <List sx={{ p: 0 }}>
-            {notifications.length > 0 ? (
-              notifications.map((notification) => (
+            {getNotifications().length > 0 ? (
+              getNotifications().map((notification) => (
                 <ListItem 
                   key={notification.id}
+                  button
+                  onClick={() => handleNotificationClick(notification)}
                   sx={{ 
                     backgroundColor: notification.read ? 'inherit' : 'rgba(25, 118, 210, 0.08)',
                     '&:hover': {
@@ -508,7 +586,7 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
                   }}
                 >
                   <ListItemText 
-                    primary={t(notification.messageKey, notification.message)}
+                    primary={renderNotificationContent(notification)}
                     secondary={notification.read ? t('notifications.read') : t('notifications.new')}
                   />
                 </ListItem>

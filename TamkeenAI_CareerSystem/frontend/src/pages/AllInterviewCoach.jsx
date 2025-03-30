@@ -29,6 +29,7 @@ import MessageIcon from '@mui/icons-material/Message';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PersonIcon from '@mui/icons-material/Person';
 import StarIcon from '@mui/icons-material/Star';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import { useNavigate } from 'react-router-dom';
 
 // Mock data for interview coaches
@@ -199,21 +200,29 @@ const AllInterviewCoach = () => {
   );
 
   const handleBookSession = (coachId) => {
-    // In a real app, this would navigate to a booking page or open a modal
-    console.log(`Booking session with coach ID: ${coachId}`);
-    // navigate(`/book-interview-coach/${coachId}`);
+    // Instead of going directly to checkout, navigate to the coach profile with availability tab
+    navigate(`/ai-coach/profile/${coachId}`, { state: { activeTab: 2 } }); // 2 is the index for the Availability tab
   };
 
   const handleViewProfile = (coachId) => {
-    // In a real app, this would navigate to the coach's profile page
+    // Navigate to coach profile page with coach ID
     console.log(`Viewing profile of coach ID: ${coachId}`);
-    // navigate(`/interview-coach/${coachId}`);
+    navigate(`/ai-coach/profile/${coachId}`);
   };
 
   const handlePurchasePackage = (packageId) => {
-    // In a real app, this would navigate to a checkout page
-    console.log(`Purchasing package ID: ${packageId}`);
-    // navigate(`/purchase-package/${packageId}`);
+    // Find the selected package
+    const selectedPackage = packages.find(pkg => pkg.id === packageId);
+    
+    // Navigate to checkout with package details
+    navigate('/ai-coach/checkout/package', {
+      state: {
+        packageDetails: {
+          ...selectedPackage,
+          price: selectedPackage.price * 3.67 // Convert to AED
+        }
+      }
+    });
   };
 
   return (
@@ -270,6 +279,7 @@ const AllInterviewCoach = () => {
           <Tab label="Coaching Packages" icon={<AssignmentIcon />} iconPosition="start" />
           <Tab label="AI Practice" icon={<MessageIcon />} iconPosition="start" />
           <Tab label="Mock Interviews" icon={<VideocamIcon />} iconPosition="start" />
+          <Tab label="Booking Confirmation" icon={<EventAvailableIcon />} iconPosition="start" />
         </Tabs>
       </Paper>
       
@@ -338,7 +348,7 @@ const AllInterviewCoach = () => {
                         </Typography>
                         
                         <Typography variant="body2" sx={{ mb: 1 }}>
-                          <strong>Rate:</strong> ${coach.hourlyRate}/hour
+                          <strong>Rate:</strong> AED {coach.hourlyRate * 3.67}/hour
                         </Typography>
                         
                         <Typography variant="body2" color="primary" sx={{ mb: 2 }}>
@@ -398,7 +408,7 @@ const AllInterviewCoach = () => {
                         
                         <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 2 }}>
                           <Typography variant="h4" component="span" color="primary">
-                            ${pkg.price}
+                            AED {pkg.price * 3.67}
                           </Typography>
                           <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
                             for {pkg.sessions} sessions
@@ -457,7 +467,7 @@ const AllInterviewCoach = () => {
               <Button 
                 variant="contained" 
                 size="large"
-                onClick={() => navigate('/mock-interview')}
+                onClick={() => navigate('/ai-coach/interview')}
                 startIcon={<MessageIcon />}
               >
                 Start AI Practice
@@ -468,18 +478,36 @@ const AllInterviewCoach = () => {
           {tabValue === 3 && (
             <Box sx={{ textAlign: 'center', py: 8 }}>
               <Typography variant="h5" gutterBottom>
-                Schedule Mock Interviews
+                Mock Interviews
               </Typography>
               <Typography variant="body1" paragraph>
-                Book a live mock interview session with one of our professional interviewers.
+                Practice with our structured mock interviews led by professional interviewers.
               </Typography>
               <Button 
                 variant="contained" 
                 size="large"
-                onClick={() => navigate('/mock-interview')}
                 startIcon={<VideocamIcon />}
               >
                 Schedule Mock Interview
+              </Button>
+            </Box>
+          )}
+          
+          {tabValue === 4 && (
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <Typography variant="h5" gutterBottom>
+                Booking Confirmation
+              </Typography>
+              <Typography variant="body1" paragraph>
+                View and manage your upcoming interview coaching sessions.
+              </Typography>
+              <Button 
+                variant="contained" 
+                size="large"
+                onClick={() => navigate('/my-bookings')}
+                startIcon={<EventAvailableIcon />}
+              >
+                My Bookings
               </Button>
             </Box>
           )}
