@@ -74,6 +74,109 @@ export const useUI = () => {
   };
 };
 
+// Add hooks for all the other contexts users might expect
+export const useAuth = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AppContextProvider');
+  }
+  
+  const { 
+    user, 
+    login, 
+    logout, 
+    register, 
+    error, 
+    loading, 
+    isAuthenticated 
+  } = context;
+  
+  return { 
+    user, 
+    login, 
+    logout, 
+    register, 
+    error, 
+    loading, 
+    isAuthenticated 
+  };
+};
+
+export const useResume = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useResume must be used within an AppContextProvider');
+  }
+  
+  // This is a simplified version of the useResume hook for compatibility
+  return { 
+    resume: context.profile?.resume || null,
+    resumeScore: context.profile?.resumeScore || null
+  };
+};
+
+export const useJob = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useJob must be used within an AppContextProvider');
+  }
+  
+  // This is a simplified version of the useJob hook for compatibility
+  return {
+    currentJob: null,
+    savedJobs: [],
+    appliedJobs: []
+  };
+};
+
+export const useDoc = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useDoc must be used within an AppContextProvider');
+  }
+  
+  // This is a simplified version of the useDoc hook for compatibility
+  return {
+    documents: [],
+    currentDocument: null
+  };
+};
+
+export const useAnalysis = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useAnalysis must be used within an AppContextProvider');
+  }
+  
+  // This is a simplified version of the useAnalysis hook for compatibility
+  return {
+    atsResults: null,
+    skillGapAnalysis: null,
+    marketInsights: null
+  };
+};
+
+export const useNotifications = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useNotifications must be used within an AppContextProvider');
+  }
+  
+  const { 
+    notifications, 
+    unreadCount,
+    fetchNotifications,
+    markNotificationAsRead 
+  } = context;
+  
+  return { 
+    notifications, 
+    unreadCount,
+    fetchNotifications,
+    markNotificationAsRead 
+  };
+};
+
 // Provider component
 export const AppContextProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -109,17 +212,24 @@ export const AppContextProvider = ({ children }) => {
             const mockUser = {
               id: mockUserId,
               email: mockUserId === '1' ? 'admin@tamkeen.ai' : 'user@tamkeen.ai',
-              name: mockUserId === '1' ? 'Admin User' : 'Regular User',
+              name: mockUserId === '1' ? 'Admin User' : 'Zayed',
+              firstName: mockUserId === '1' ? 'Admin' : 'Zayed',
+              lastName: mockUserId === '1' ? 'User' : '',
               roles: mockUserId === '1' ? ['admin', 'user'] : ['user'],
             };
             
             setUser(mockUser);
             setUserRoles(mockUser.roles);
             setProfile({
+              id: mockUserId,
+              userId: mockUserId,
               fullName: mockUser.name,
+              firstName: mockUser.firstName,
+              lastName: mockUser.lastName,
               bio: 'This is a mock profile for development purposes',
               skills: ['React', 'JavaScript', 'UI/UX'],
-              experience: '5 years'
+              experience: '5 years',
+              avatar: null // Don't auto-generate an avatar
             });
             setLoading(false);
             return;
@@ -183,25 +293,79 @@ export const AppContextProvider = ({ children }) => {
           updatedProfile.lastName = nameParts.slice(1).join(' ') || '';
         }
         
+        // Handle avatar URL validation
+        if (updatedProfile.hasOwnProperty('avatar')) {
+          // If avatar URL is invalid or contains placeholder values, set to null
+          if (!updatedProfile.avatar || 
+              typeof updatedProfile.avatar === 'string' && (
+                updatedProfile.avatar.includes('undefined') || 
+                updatedProfile.avatar === '/' || 
+                updatedProfile.avatar.startsWith('http://localhost:5001/api/undefined')
+              )) {
+            updatedProfile.avatar = null;
+          }
+          
+          // Log the avatar update to help with debugging
+          console.log('DEV MODE: Updating avatar in profile:', updatedProfile.avatar);
+        }
+        
+        // Ensure we have a valid userId
+        const userId = updatedProfile.id || updatedProfile.userId || 'mock-user-1';
+        updatedProfile.id = userId;
+        updatedProfile.userId = userId;
+        
+        // Save to localStorage for persistence
+        try {
+          // Get existing profile data to merge
+          const savedProfileJSON = localStorage.getItem(`profile_${userId}`);
+          let combinedProfile = updatedProfile;
+          
+          if (savedProfileJSON) {
+            try {
+              const savedProfile = JSON.parse(savedProfileJSON);
+              combinedProfile = {
+                ...savedProfile,
+                ...updatedProfile
+              };
+              
+              // Ensure avatar is correctly propagated
+              if (updatedProfile.hasOwnProperty('avatar')) {
+                combinedProfile.avatar = updatedProfile.avatar;
+              }
+              
+            } catch (e) {
+              console.warn('Failed to parse saved profile:', e);
+            }
+          }
+          
+          localStorage.setItem(`profile_${userId}`, JSON.stringify(combinedProfile));
+          console.log('DEV MODE: Saved updated profile to localStorage:', combinedProfile);
+        } catch (err) {
+          console.warn('Failed to save profile to localStorage:', err);
+        }
+        
         // If we don't have a profile yet, initialize a mock one
         if (!profile) {
           const mockProfile = {
-            id: profileData.id || profileData.userId || 'mock-user-1',
-            userId: profileData.id || profileData.userId || 'mock-user-1',
-            firstName: updatedProfile.firstName || 'Mock',
-            lastName: updatedProfile.lastName || 'User',
-            fullName: updatedProfile.fullName || 'Mock User',
-            bio: profileData.bio || 'This is a mock profile for development purposes',
-            skills: profileData.skills || ['React', 'JavaScript', 'UI/UX'],
-            experience: profileData.experience || '5 years',
-            avatar: profileData.avatar || 'https://randomuser.me/api/portraits/men/1.jpg'
+            id: userId,
+            userId: userId,
+            firstName: updatedProfile.firstName || 'Zayed',
+            lastName: updatedProfile.lastName || '',
+            fullName: updatedProfile.fullName || 'Zayed',
+            bio: updatedProfile.bio || 'This is a mock profile for development purposes',
+            skills: updatedProfile.skills || ['React', 'JavaScript', 'UI/UX'],
+            experience: updatedProfile.experience || '5 years',
+            avatar: updatedProfile.hasOwnProperty('avatar') ? updatedProfile.avatar : null
           };
           setProfile(mockProfile);
           
-          // Also update user state with the name
+          // Also update user state with the name and avatar
           setUser(prev => ({
             ...prev,
-            name: mockProfile.fullName
+            name: mockProfile.fullName,
+            firstName: mockProfile.firstName,
+            lastName: mockProfile.lastName,
+            avatar: mockProfile.avatar // Ensure avatar is updated in user object too
           }));
           
           return { success: true, data: { profile: mockProfile } };
@@ -213,13 +377,29 @@ export const AppContextProvider = ({ children }) => {
           ...updatedProfile
         };
         
+        // Ensure avatar is explicitly set if it was provided in the update
+        if (updatedProfile.hasOwnProperty('avatar')) {
+          mergedProfile.avatar = updatedProfile.avatar;
+        }
+        
         setProfile(mergedProfile);
         
-        // Also update user state with the name
-        setUser(prev => ({
-          ...prev,
-          name: mergedProfile.fullName
-        }));
+        // Also update user state with the name and avatar
+        setUser(prev => {
+          const updatedUser = {
+            ...prev,
+            name: mergedProfile.fullName,
+            firstName: mergedProfile.firstName,
+            lastName: mergedProfile.lastName
+          };
+          
+          // Only update the avatar if it was explicitly included in the update
+          if (updatedProfile.hasOwnProperty('avatar')) {
+            updatedUser.avatar = mergedProfile.avatar;
+          }
+          
+          return updatedUser;
+        });
         
         return { 
           success: true, 
@@ -231,7 +411,26 @@ export const AppContextProvider = ({ children }) => {
       
       // Real API call for production
       const response = await api.put(USER.UPDATE_PROFILE, profileData);
-      setProfile(response.data.data.profile);
+      const updatedProfile = response.data.data.profile;
+      setProfile(updatedProfile);
+      
+      // Also update user name and avatar in user object
+      setUser(prev => {
+        const updatedUser = {
+          ...prev,
+          name: updatedProfile.fullName,
+          firstName: updatedProfile.firstName,
+          lastName: updatedProfile.lastName
+        };
+        
+        // Only update avatar if it was part of the profile update
+        if (profileData.hasOwnProperty('avatar')) {
+          updatedUser.avatar = updatedProfile.avatar;
+        }
+        
+        return updatedUser;
+      });
+      
       return response.data.data;
     } catch (err) {
       console.error('Failed to update profile:', err);
@@ -241,10 +440,22 @@ export const AppContextProvider = ({ children }) => {
         console.log('DEV MODE: Returning successful response despite error');
         
         // Update the profile state with the new data anyway
-        setProfile(prevProfile => ({
-          ...prevProfile,
-          ...profileData
-        }));
+        setProfile(prevProfile => {
+          const updatedProfile = {
+            ...prevProfile,
+            ...profileData
+          };
+          
+          return updatedProfile;
+        });
+        
+        // Also update the user object for consistency
+        if (profileData.hasOwnProperty('avatar')) {
+          setUser(prevUser => ({
+            ...prevUser,
+            avatar: profileData.avatar
+          }));
+        }
         
         return { 
           success: true, 

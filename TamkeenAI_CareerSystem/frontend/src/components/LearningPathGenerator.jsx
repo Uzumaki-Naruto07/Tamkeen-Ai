@@ -58,7 +58,7 @@ import {
   BookmarkBorder,
   OpenInNew
 } from '@mui/icons-material';
-import { useUser, useDoc } from './AppContext';
+import { useUser, useDoc } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

@@ -73,7 +73,7 @@ import { schemeCategory10 } from 'd3-scale-chromatic';
 import Lottie from 'react-lottie';
 import * as animationData from '../assets/animations/sentiment-analysis.json';
 import apiEndpoints from '../utils/api';
-import { useDoc } from './AppContext';
+import { useDoc } from '../context/AppContext';
 import LoadingSpinner from './LoadingSpinner';
 
 // Register ChartJS components

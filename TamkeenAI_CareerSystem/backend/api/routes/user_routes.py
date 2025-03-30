@@ -10,12 +10,13 @@ import logging
 from typing import Dict, List, Any, Optional, Tuple, Union
 from datetime import datetime, timedelta
 
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, send_from_directory
 from flask_jwt_extended import (
     create_access_token, jwt_required, get_jwt_identity,
     create_refresh_token, get_jwt
 )
 from bson.objectid import ObjectId
+from werkzeug.utils import secure_filename
 
 # Import models
 from api.database.models import User, UserActivity, JobApplication
@@ -42,6 +43,10 @@ logger = logging.getLogger(__name__)
 
 # Create blueprint
 user_bp = Blueprint('user', __name__)
+
+# Create uploads directory if it doesn't exist
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../static/uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 @user_bp.route('/register', methods=['POST'])
@@ -578,4 +583,77 @@ def get_user_skill_gap(user_id):
     return {
         "top_missing_skills": ["Cloud Architecture", "Docker", "Kubernetes"],
         "gap_percentage": 25
-    } 
+    }
+
+
+@user_bp.route('/<user_id>/avatar', methods=['POST'])
+@jwt_required()
+def upload_avatar(user_id):
+    """Upload user profile avatar"""
+    try:
+        # Check permissions
+        current_user_id = get_jwt_identity()
+        if current_user_id != user_id and not is_admin():
+            return error_response("Permission denied", 403)
+        
+        if 'avatar' not in request.files:
+            return error_response("No avatar file uploaded", 400)
+        
+        file = request.files['avatar']
+        if file.filename == '':
+            return error_response("No file selected", 400)
+        
+        # Validate file type
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+        if not '.' in file.filename or file.filename.split('.')[-1].lower() not in allowed_extensions:
+            return error_response("Invalid file type", 400)
+        
+        # Generate secure filename with user ID to avoid conflicts
+        filename = f"{user_id}_{secure_filename(file.filename)}"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        
+        # Save the file
+        file.save(filepath)
+        
+        # Generate URL for the avatar
+        avatar_url = f"/api/static/uploads/{filename}"
+        
+        # Update user's profile with the new avatar URL
+        users = User.find_by_id(user_id)
+        if not users:
+            return error_response("User not found", 404)
+        
+        user = users[0]
+        
+        # Initialize profile if not exists
+        if not user.profile:
+            user.profile = {}
+        
+        # Update avatar URL
+        user.profile['avatar'] = avatar_url
+        user.save()
+        
+        # Log activity
+        activity = UserActivity(
+            user_id=user.id,
+            activity_type='update_avatar',
+            activity_data={
+                'avatar_url': avatar_url
+            }
+        )
+        activity.save()
+        
+        return api_response({
+            "avatarUrl": avatar_url
+        })
+    
+    except Exception as e:
+        logger.error(f"Error uploading avatar: {str(e)}")
+        return error_response("Failed to upload avatar", 500)
+
+
+# Serve static files
+@user_bp.route('/static/uploads/<filename>')
+def serve_avatar(filename):
+    """Serve uploaded avatar images"""
+    return send_from_directory(UPLOAD_FOLDER, filename) 

@@ -12,7 +12,7 @@ import {
   Save, Download, Preview, Refresh,
   AutoAwesome, Psychology, FormatQuote
 } from '@mui/icons-material';
-import { useUser, useResume, useJob } from './AppContext';
+import { useUser, useResume, useJob } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

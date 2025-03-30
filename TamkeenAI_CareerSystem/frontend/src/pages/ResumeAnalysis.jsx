@@ -17,7 +17,7 @@ import {
   Close, Compare
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useUser, useResume } from '../components/AppContext';
+import { useUser, useResume } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import WordCloudVisualizer from '../components/WordCloudVisualizer';

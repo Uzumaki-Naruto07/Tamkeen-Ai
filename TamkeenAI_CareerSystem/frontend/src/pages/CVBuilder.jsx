@@ -26,7 +26,7 @@ import {
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useNavigate } from 'react-router-dom';
-import { useUser, useResume } from '../components/AppContext';
+import { useUser, useResume } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer';

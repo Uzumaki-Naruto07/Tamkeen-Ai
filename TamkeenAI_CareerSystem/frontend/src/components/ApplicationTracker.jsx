@@ -63,7 +63,7 @@ import {
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { format, parseISO } from 'date-fns';
-import { useUser } from './AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

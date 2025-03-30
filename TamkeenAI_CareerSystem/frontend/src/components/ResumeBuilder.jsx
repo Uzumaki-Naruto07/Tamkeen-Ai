@@ -87,7 +87,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import ColorLensIcon from '@mui/icons-material/ColorLens';
-import { useUser } from './AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

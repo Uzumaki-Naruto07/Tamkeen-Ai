@@ -62,7 +62,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
-import { useUser } from './AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

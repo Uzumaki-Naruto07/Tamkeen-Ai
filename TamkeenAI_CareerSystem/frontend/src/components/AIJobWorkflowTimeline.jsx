@@ -11,7 +11,7 @@ import {
   Assessment, Handshake, ArrowForward,
   CheckCircle, Cancel, Info
 } from '@mui/icons-material';
-import { useUser, useJob } from './AppContext';
+import { useUser, useJob } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

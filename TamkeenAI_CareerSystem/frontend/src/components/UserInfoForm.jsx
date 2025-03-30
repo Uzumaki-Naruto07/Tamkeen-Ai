@@ -37,7 +37,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import { useUser } from './AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

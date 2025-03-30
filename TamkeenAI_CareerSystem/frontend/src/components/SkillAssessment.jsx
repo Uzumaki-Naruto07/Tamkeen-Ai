@@ -73,7 +73,7 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import { Chart } from 'react-chartjs-2';
-import { useUser } from './AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 import SpeechControl from './Speech/SpeechControl';

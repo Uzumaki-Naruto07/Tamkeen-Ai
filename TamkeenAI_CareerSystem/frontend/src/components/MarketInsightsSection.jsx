@@ -9,7 +9,7 @@ import {
   AttachMoney, School, BarChart
 } from '@mui/icons-material';
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
-import { useUser } from './AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

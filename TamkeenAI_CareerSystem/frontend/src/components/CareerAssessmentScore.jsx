@@ -25,7 +25,7 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import WarningIcon from '@mui/icons-material/Warning';
 import InfoIcon from '@mui/icons-material/Info';
-import { useUser } from './AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

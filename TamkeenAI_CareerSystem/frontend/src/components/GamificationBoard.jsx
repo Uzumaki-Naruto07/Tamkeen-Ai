@@ -68,7 +68,7 @@ import TwitterIcon from '@mui/icons-material/Twitter';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { useUser } from './AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

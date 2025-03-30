@@ -47,7 +47,7 @@ import SentimentVeryDissatisfiedIcon from '@mui/icons-material/SentimentVeryDiss
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
-import { useDoc, useJob } from './AppContext';
+import { useDoc, useJob } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

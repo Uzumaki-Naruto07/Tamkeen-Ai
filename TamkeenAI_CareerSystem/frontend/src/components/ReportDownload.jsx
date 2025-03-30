@@ -47,7 +47,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { Document, Page, pdfjs } from 'react-pdf';
 import LoadingSpinner from './LoadingSpinner';
-import { useUser } from './AppContext';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import PDFReportViewer from './PDFReportViewer';
 

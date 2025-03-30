@@ -64,7 +64,7 @@ import {
   Error as ErrorIcon
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { useUser, useResume } from './AppContext';
+import { useUser, useResume } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 
 // Import mock data

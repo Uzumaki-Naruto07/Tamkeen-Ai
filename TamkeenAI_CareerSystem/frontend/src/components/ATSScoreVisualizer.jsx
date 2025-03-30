@@ -29,7 +29,7 @@ import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import ReactWordcloud from 'react-wordcloud';
 import { ResponsiveContainer } from 'recharts';
-import { useResume, useJob } from './AppContext';
+import { useResume, useJob } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

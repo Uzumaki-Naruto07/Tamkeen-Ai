@@ -13,7 +13,7 @@ import {
   CloudQueue
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useUser, useResume, useJob } from '../components/AppContext';
+import { useUser, useResume, useJob } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import CoverLetterGenerator from '../components/CoverLetterGenerator';
 import CoverLetterAnalyzer from '../components/CoverLetterAnalyzer';

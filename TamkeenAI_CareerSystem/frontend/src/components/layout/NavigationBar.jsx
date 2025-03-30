@@ -55,6 +55,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 // Context
 import { useUser } from '../../context/AppContext';
 import logoSrc from '../../assets/images/logo.js';
+import { getConsistentAvatarUrl } from '../../utils/api';
 
 // Styled components
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
@@ -413,11 +414,11 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
                 src={user?.avatar || undefined} 
                 sx={{ width: 32, height: 32, mr: 1 }}
               >
-                {user?.firstName?.charAt(0) || "U"}
+                {user?.firstName?.charAt(0) || user?.name?.charAt(0) || "U"}
               </Avatar>
               {!isMobile && (
                 <Typography variant="body2">
-                  {user?.firstName || "User"}
+                  {user?.firstName || user?.name?.split(' ')[0] || "User"}
                 </Typography>
               )}
             </ProfileButton>

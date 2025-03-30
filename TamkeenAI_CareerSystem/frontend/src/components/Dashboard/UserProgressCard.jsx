@@ -36,6 +36,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../context/AppContext';
 import { mockDashboardData } from '../../utils/mockData/mockDataIndex';
 import { useTranslation } from 'react-i18next';
+import { getConsistentAvatarUrl } from '../../utils/api';
 
 // Icons
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
@@ -337,7 +338,7 @@ const UserProgressCard = ({ data, user, expanded = false }) => {
         <ProgressCardContent>
           <UserInfoBox>
             <Avatar 
-              src={userData.avatar} 
+              src={userData.avatar || undefined} 
               alt={userData.firstName || userData.fullName || userData.name || 'User'}
               sx={{ 
                 width: 56, 
@@ -351,7 +352,9 @@ const UserProgressCard = ({ data, user, expanded = false }) => {
                       ? theme.palette.silver.main
                       : theme.palette.bronze.main,
               }}
-            />
+            >
+              {userData.firstName?.charAt(0) || userData.fullName?.charAt(0) || userData.name?.charAt(0) || 'U'}
+            </Avatar>
             <Box>
               <WelcomeMessage variant="h6">
                 {getWelcomeMessage()}

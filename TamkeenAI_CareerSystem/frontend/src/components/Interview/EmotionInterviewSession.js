@@ -5,7 +5,7 @@ import {
   Alert, List, ListItem, ListItemText
 } from '@mui/material';
 import CameraFeed from '../EmotionDetection/CameraFeed';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../context/AppContext';
 import axios from 'axios';
 
 const EmotionInterviewSession = () => {

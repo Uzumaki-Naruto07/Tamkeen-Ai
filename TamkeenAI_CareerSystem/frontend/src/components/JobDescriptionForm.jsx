@@ -20,7 +20,7 @@ import FileUploadIcon from '@mui/icons-material/FileUpload';
 import LinkIcon from '@mui/icons-material/Link';
 import ContentPasteIcon from '@mui/icons-material/ContentPaste';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { useJob } from './AppContext';
+import { useJob } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

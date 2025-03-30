@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Paper, Typography, CircularProgress, useTheme } from '@mui/material';
 import { Radar } from 'react-chartjs-2';
-import { useResume, useJob } from './AppContext';
+import { useResume, useJob } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

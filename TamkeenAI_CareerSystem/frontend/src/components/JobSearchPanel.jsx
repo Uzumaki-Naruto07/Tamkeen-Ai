@@ -70,7 +70,7 @@ import PublicIcon from '@mui/icons-material/Public';
 import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
-import { useUser, useResume } from './AppContext';
+import { useUser, useResume } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

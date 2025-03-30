@@ -11,7 +11,7 @@ import {
   Download, Share, Analytics, Compare
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useUser, useResume } from '../components/AppContext';
+import { useUser, useResume } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import ResumeBuilder from '../components/ResumeBuilder';
 import ResumeAnalyzer from '../components/ResumeAnalyzer';

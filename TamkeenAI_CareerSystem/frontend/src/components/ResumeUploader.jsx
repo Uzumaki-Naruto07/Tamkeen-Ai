@@ -4,7 +4,7 @@ import {
   CircularProgress, Paper, IconButton
 } from '@mui/material';
 import { Upload, Delete, FileCopy } from '@mui/icons-material';
-import { useResume } from './AppContext';
+import { useResume } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

@@ -15,7 +15,7 @@ const api = axios.create({
 });
 
 // Helper function to get consistent avatar numbers from user IDs
-const getConsistentAvatarUrl = (userId) => {
+export const getConsistentAvatarUrl = (userId) => {
   // Helper function to hash a string to a number
   const hashString = (str) => {
     let hash = 0;
@@ -301,7 +301,8 @@ export const userAPI = {
         };
         
         // Keep the avatar if one exists, otherwise use a placeholder
-        if (!updatedProfile.avatar) {
+        if (!updatedProfile.avatar || updatedProfile.avatar.includes('undefined') || 
+            updatedProfile.avatar === '/' || updatedProfile.avatar.startsWith('http://localhost:5001/api/undefined')) {
           // Helper function to get a consistent avatar URL based on user ID
           const getConsistentAvatarUrl = (id) => {
             const num = id ? 
@@ -427,10 +428,16 @@ export const settingsAPI = {
   
   updateProfile: async (userId, profileData) => {
     try {
-      // Log the update attempt for debugging
+      // Log the update attempt
       console.log('Updating profile for user:', userId, profileData);
-      // Return success response
-      return { success: true };
+      // Return success with the same data but don't override existing avatar with placeholder
+      return {
+        success: true,
+        data: {
+          ...profileData,
+          id: userId
+        }
+      };
     } catch (error) {
       console.error('Error updating profile:', error);
       throw error;
@@ -550,7 +557,15 @@ export const settingsAPI = {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Get consistent avatar URL
+        // Get consistent avatar URL - always use randomuser.me to avoid ERR_NAME_NOT_RESOLVED
+        const getConsistentAvatarUrl = (id) => {
+          const num = id ? 
+            String(id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 70 : 32;
+          const isMale = num % 2 === 0;
+          const gender = isMale ? 'men' : 'women';
+          return `https://randomuser.me/api/portraits/${gender}/${num}.jpg`;
+        };
+        
         const avatarUrl = getConsistentAvatarUrl(userId);
         console.log(`DEV MODE: Generated mock avatar: ${avatarUrl}`);
         
@@ -562,7 +577,8 @@ export const settingsAPI = {
         };
       }
       
-      // Real API call for production
+      // Real API call for production - never append 'api' to beginning of route 
+      // since that's handled by the axios instance
       const response = await api.post(`/users/${userId}/avatar`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -595,18 +611,33 @@ export const profilesAPI = {
   getUserProfile: async (userId) => {
     try {
       // Use mock data since API endpoints are not available
+      if (import.meta.env.DEV) {
+        // Try to get profile from localStorage first for persistence
+        const savedProfile = localStorage.getItem(`profile_${userId}`);
+        if (savedProfile) {
+          try {
+            const parsedProfile = JSON.parse(savedProfile);
+            console.log('DEV MODE: Retrieved profile from localStorage:', parsedProfile);
+            return { data: parsedProfile };
+          } catch (e) {
+            console.warn('Failed to parse saved profile:', e);
+          }
+        }
+      }
+      
+      // Default mock data if no saved profile exists
       return {
         data: {
           id: userId,
-          firstName: 'John',
-          lastName: 'Doe',
-          username: 'johndoe',
+          firstName: 'Zayed',
+          lastName: '',
+          username: 'zayed',
           title: 'Frontend Developer',
           bio: 'Passionate developer with experience in React and modern frontend technologies.',
-          location: 'New York, NY',
-          phone: '+1 123-456-7890',
-          email: 'john.doe@example.com',
-          avatar: 'https://via.placeholder.com/150',
+          location: 'Abu Dhabi, UAE',
+          phone: '+971 50-123-4567',
+          email: 'zayed@example.com',
+          avatar: null, // Don't use placeholder images
           visibility: {
             isPublic: true,
             showEmail: false,
@@ -616,10 +647,10 @@ export const profilesAPI = {
             showSkills: true
           },
           socialLinks: {
-            linkedin: 'https://linkedin.com/in/johndoe',
-            github: 'https://github.com/johndoe',
-            twitter: 'https://twitter.com/johndoe',
-            portfolio: 'https://johndoe.com'
+            linkedin: 'https://linkedin.com/in/zayed',
+            github: 'https://github.com/zayed',
+            twitter: 'https://twitter.com/zayed',
+            portfolio: 'https://zayed.dev'
           }
         }
       };
@@ -684,23 +715,23 @@ export const profilesAPI = {
         data: [
           {
             id: 1,
-            institution: 'University of Technology',
+            institution: 'Khalifa University',
             degree: 'Bachelor of Computer Science',
             fieldOfStudy: 'Computer Science',
-            startDate: '2015-09-01',
-            endDate: '2019-06-30',
-            grade: '3.8 GPA',
-            description: 'Focused on web development and algorithms.'
+            startDate: '2016-09-01',
+            endDate: '2020-06-30',
+            grade: '3.7 GPA',
+            description: 'Focused on web development and artificial intelligence.'
           },
           {
             id: 2,
-            institution: 'Online Academy',
-            degree: 'Certification',
-            fieldOfStudy: 'Frontend Development',
+            institution: 'Udacity',
+            degree: 'Nanodegree',
+            fieldOfStudy: 'Frontend Web Development',
             startDate: '2020-01-15',
             endDate: '2020-04-30',
             grade: 'Pass with Distinction',
-            description: 'Intensive program on modern JavaScript frameworks.'
+            description: 'Intensive program on modern JavaScript frameworks and UI/UX design.'
           }
         ]
       };
@@ -717,21 +748,21 @@ export const profilesAPI = {
         data: [
           {
             id: 1,
-            company: 'Tech Solutions Inc.',
+            company: 'Abu Dhabi Digital Authority',
             title: 'Frontend Developer',
-            location: 'New York, NY',
-            startDate: '2019-08-01',
+            location: 'Abu Dhabi, UAE',
+            startDate: '2020-08-01',
             endDate: null, // Current job
-            description: 'Developing and maintaining web applications using React, Redux, and TypeScript.'
+            description: 'Developing and maintaining web applications using React, Redux, and TypeScript for government digital services.'
           },
           {
             id: 2,
-            company: 'Digital Agency',
+            company: 'Tamkeen Technologies',
             title: 'Junior Web Developer',
-            location: 'Boston, MA',
-            startDate: '2018-05-15',
-            endDate: '2019-07-31',
-            description: 'Worked on client websites using HTML, CSS, and JavaScript.'
+            location: 'Dubai, UAE',
+            startDate: '2019-05-15',
+            endDate: '2020-07-31',
+            description: 'Worked on client websites using HTML, CSS, and JavaScript frameworks.'
           }
         ]
       };
@@ -741,17 +772,30 @@ export const profilesAPI = {
     }
   },
   
-  updateProfile: async (userId, profileData) => {
+  updateProfile: async (profileData) => {
     try {
       // Log the update attempt
+      const userId = profileData.userId || profileData.id;
       console.log('Updating profile for user:', userId, profileData);
+      
+      // In development mode, save to localStorage for persistence
+      if (import.meta.env.DEV && userId) {
+        const updatedProfile = {
+          ...profileData,
+          id: userId
+        };
+        
+        // Save to localStorage for persistence
+        localStorage.setItem(`profile_${userId}`, JSON.stringify(updatedProfile));
+        console.log('DEV MODE: Saved profile to localStorage:', updatedProfile);
+      }
+      
       // Return success with the same data
       return {
         success: true,
         data: {
           ...profileData,
-          id: userId,
-          avatar: 'https://via.placeholder.com/150' // Keep the same avatar
+          id: userId
         }
       };
     } catch (error) {
@@ -771,7 +815,15 @@ export const profilesAPI = {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Get consistent avatar URL
+        // Get consistent avatar URL - always use randomuser.me to avoid ERR_NAME_NOT_RESOLVED
+        const getConsistentAvatarUrl = (id) => {
+          const num = id ? 
+            String(id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 70 : 32;
+          const isMale = num % 2 === 0;
+          const gender = isMale ? 'men' : 'women';
+          return `https://randomuser.me/api/portraits/${gender}/${num}.jpg`;
+        };
+        
         const avatarUrl = getConsistentAvatarUrl(userId);
         console.log(`DEV MODE: Generated mock avatar: ${avatarUrl}`);
         
@@ -783,7 +835,8 @@ export const profilesAPI = {
         };
       }
       
-      // Real API call for production
+      // Real API call for production - never append 'api' to beginning of route 
+      // since that's handled by the axios instance
       const response = await api.post(`/users/${userId}/avatar`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',

@@ -11,7 +11,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import apiEndpoints from '../utils/api';
-import { useAuth } from './AppContext';
+import { useAuth } from '../context/AppContext';
 import LoadingSpinner from './LoadingSpinner';
 
 const RegistrationForm = () => {

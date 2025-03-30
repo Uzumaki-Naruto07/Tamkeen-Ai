@@ -15,7 +15,7 @@ import {
   CalendarToday, Add, DoNotDisturb, BusinessCenter as Job,
   Description, FindInPage, AutoAwesome
 } from '@mui/icons-material';
-import { useUser, useResume, useJob } from '../components/AppContext';
+import { useUser, useResume, useJob } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import ApplicationTracker from '../components/ApplicationTracker';
 import JobMatchCalculator from '../components/JobMatchCalculator';

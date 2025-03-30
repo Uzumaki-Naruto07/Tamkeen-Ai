@@ -28,7 +28,7 @@ import {
   Settings,
   Check
 } from '@mui/icons-material';
-import { useResume, useJob } from './AppContext';
+import { useResume, useJob } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 
