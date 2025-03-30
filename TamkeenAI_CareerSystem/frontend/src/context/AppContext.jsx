@@ -170,32 +170,61 @@ export const AppContextProvider = ({ children }) => {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 800));
         
+        // Make sure we have a consistent format for name properties
+        let updatedProfile = { ...profileData };
+        
+        // Handle fullName, firstName, lastName consistency
+        if (profileData.firstName && profileData.lastName) {
+          updatedProfile.fullName = `${profileData.firstName} ${profileData.lastName}`.trim();
+        } else if (profileData.fullName && !profileData.firstName) {
+          // Extract firstName and lastName from fullName if provided
+          const nameParts = profileData.fullName.split(' ');
+          updatedProfile.firstName = nameParts[0] || '';
+          updatedProfile.lastName = nameParts.slice(1).join(' ') || '';
+        }
+        
         // If we don't have a profile yet, initialize a mock one
         if (!profile) {
           const mockProfile = {
-            id: profileData.id || 'mock-user-1',
-            fullName: profileData.fullName || 'Mock User',
+            id: profileData.id || profileData.userId || 'mock-user-1',
+            userId: profileData.id || profileData.userId || 'mock-user-1',
+            firstName: updatedProfile.firstName || 'Mock',
+            lastName: updatedProfile.lastName || 'User',
+            fullName: updatedProfile.fullName || 'Mock User',
             bio: profileData.bio || 'This is a mock profile for development purposes',
             skills: profileData.skills || ['React', 'JavaScript', 'UI/UX'],
             experience: profileData.experience || '5 years',
             avatar: profileData.avatar || 'https://randomuser.me/api/portraits/men/1.jpg'
           };
           setProfile(mockProfile);
+          
+          // Also update user state with the name
+          setUser(prev => ({
+            ...prev,
+            name: mockProfile.fullName
+          }));
+          
           return { success: true, data: { profile: mockProfile } };
         }
         
         // Update the profile state with the new data
-        const updatedProfile = {
+        const mergedProfile = {
           ...profile,
-          ...profileData
+          ...updatedProfile
         };
         
-        setProfile(updatedProfile);
+        setProfile(mergedProfile);
+        
+        // Also update user state with the name
+        setUser(prev => ({
+          ...prev,
+          name: mergedProfile.fullName
+        }));
         
         return { 
           success: true, 
           data: { 
-            profile: updatedProfile
+            profile: mergedProfile
           }
         };
       }

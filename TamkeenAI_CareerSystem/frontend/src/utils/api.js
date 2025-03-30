@@ -285,7 +285,7 @@ export const userAPI = {
   updateProfile: async (profileData) => {
     try {
       // Log the update attempt
-      console.log('Updating profile for user:', profileData.userId, profileData);
+      console.log('Updating profile for user:', profileData);
       
       // In development mode, just return success with mock data
       if (import.meta.env.DEV) {
@@ -293,12 +293,30 @@ export const userAPI = {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
         
+        // Ensure we have a consistent profile structure
+        const userId = profileData.userId || profileData.id || 'mock-user-1';
+        const updatedProfile = {
+          ...profileData,
+          id: userId
+        };
+        
+        // Keep the avatar if one exists, otherwise use a placeholder
+        if (!updatedProfile.avatar) {
+          // Helper function to get a consistent avatar URL based on user ID
+          const getConsistentAvatarUrl = (id) => {
+            const num = id ? 
+              String(id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 70 : 32;
+            const isMale = num % 2 === 0;
+            const gender = isMale ? 'men' : 'women';
+            return `https://randomuser.me/api/portraits/${gender}/${num}.jpg`;
+          };
+          
+          updatedProfile.avatar = getConsistentAvatarUrl(userId);
+        }
+        
         return {
           success: true,
-          data: {
-            ...profileData,
-            id: profileData.userId
-          }
+          data: updatedProfile
         };
       }
       

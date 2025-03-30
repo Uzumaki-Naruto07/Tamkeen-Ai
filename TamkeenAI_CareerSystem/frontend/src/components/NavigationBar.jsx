@@ -176,11 +176,11 @@ const NavigationBar = () => {
                   onClick={toggleProfile}
                 >
                   <span className="sr-only">Open user menu</span>
-                  {user?.profileImage ? (
+                  {user?.avatar ? (
                     <img
                       className="h-8 w-8 rounded-full"
-                      src={user.profileImage}
-                      alt={user.name || "User profile"}
+                      src={user.avatar}
+                      alt={user.name || user.fullName || "User profile"}
                     />
                   ) : (
                     <div className="h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center text-white">
@@ -188,7 +188,7 @@ const NavigationBar = () => {
                     </div>
                   )}
                   <span className="hidden ml-2 mr-1 text-gray-700 dark:text-gray-300 md:block">
-                    {user?.name || 'User'}
+                    {user?.name || user?.fullName || (user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : 'User')}
                   </span>
                   <FiChevronDown className={`transition-transform duration-200 ${isProfileOpen ? 'transform rotate-180' : ''}`} />
                 </button>

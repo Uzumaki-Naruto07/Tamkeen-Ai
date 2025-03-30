@@ -437,13 +437,7 @@ const UserProfile = () => {
     setError(null);
     
     try {
-      console.log('Updating profile with data:', {
-        ...profileFieldsEdited,
-        visibility: profileVisibility,
-        socialLinks: socialLinks
-      });
-      
-      // Prepare user profile data
+      // Create full profile data object with all necessary fields
       const profileData = {
         ...profileFieldsEdited,
         visibility: profileVisibility,
@@ -457,26 +451,39 @@ const UserProfile = () => {
         profileData.userId = userAccountProfile.id;
       }
       
-      const response = await apiEndpoints.profiles.updateProfile(profileData);
+      // Add the avatar if it exists
+      if (userProfile?.avatar) {
+        profileData.avatar = userProfile.avatar;
+      } else if (userAccountProfile?.avatar) {
+        profileData.avatar = userAccountProfile.avatar;
+      }
       
+      console.log('Updating profile with data:', profileData);
+      
+      // Send update to API
+      const response = await apiEndpoints.profiles.updateProfile(profileData);
       console.log('Profile update response:', response);
       
-      // Update the userProfile state with new values
+      // Update local userProfile state
+      const updatedProfile = response.data;
       setUserProfile(prev => ({
         ...prev,
-        ...profileFieldsEdited,
-        visibility: profileVisibility,
-        socialLinks: socialLinks
+        ...updatedProfile,
+        firstName: profileFieldsEdited.firstName,
+        lastName: profileFieldsEdited.lastName
       }));
       
-      // Update user context if available
+      // Update AppContext if available
       if (updateUserProfile) {
         try {
-          await updateUserProfile({
-            ...userAccountProfile,
+          // Ensure we're sending a complete profile update
+          const contextProfileUpdate = {
+            ...profileData,
             fullName: `${profileFieldsEdited.firstName} ${profileFieldsEdited.lastName}`.trim(),
-            avatar: userProfile?.avatar || userAccountProfile?.avatar
-          });
+            id: profileData.userId
+          };
+          
+          await updateUserProfile(contextProfileUpdate);
         } catch (err) {
           console.warn("Couldn't sync profile with context", err);
         }
@@ -553,7 +560,7 @@ const UserProfile = () => {
       formData.append('avatar', file);
       
       // Get the user ID from the appropriate source
-      const userId = userProfile?.id || userAccountProfile?.id;
+      const userId = userProfile?.id || userProfile?.userId || userAccountProfile?.id;
       if (!userId) {
         throw new Error('User ID not found');
       }
@@ -586,10 +593,23 @@ const UserProfile = () => {
       // Update in the main app context if available
       if (updateUserProfile) {
         try {
-          await updateUserProfile({
-            ...userAccountProfile,
+          // Create a complete context update 
+          const contextUpdate = {
+            id: userId,
+            userId: userId,
             avatar: avatarUrl
-          });
+          };
+          
+          // Add name fields if we have them
+          if (userProfile?.firstName && userProfile?.lastName) {
+            contextUpdate.firstName = userProfile.firstName;
+            contextUpdate.lastName = userProfile.lastName;
+            contextUpdate.fullName = `${userProfile.firstName} ${userProfile.lastName}`.trim();
+          } else if (userAccountProfile?.fullName) {
+            contextUpdate.fullName = userAccountProfile.fullName;
+          }
+          
+          await updateUserProfile(contextUpdate);
         } catch (err) {
           console.warn("Couldn't sync avatar with context", err);
         }

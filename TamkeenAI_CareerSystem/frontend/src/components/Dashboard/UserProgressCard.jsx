@@ -270,7 +270,14 @@ const UserProgressCard = ({ data, user, expanded = false }) => {
       greeting = 'Good evening';
     }
     
-    return `${greeting}, Zayed`;
+    // Get user's name with appropriate fallbacks
+    const userName = 
+      userData.firstName || 
+      (userData.fullName ? userData.fullName.split(' ')[0] : null) || 
+      (userData.name ? userData.name.split(' ')[0] : null) ||
+      'User';
+    
+    return `${greeting}, ${userName}`;
   };
   
   // Simulate gaining XP for demo purposes
@@ -331,8 +338,19 @@ const UserProgressCard = ({ data, user, expanded = false }) => {
           <UserInfoBox>
             <Avatar 
               src={userData.avatar} 
-              alt={userData.firstName || userData.name}
-              sx={{ width: 56, height: 56, mr: 2 }}
+              alt={userData.firstName || userData.fullName || userData.name || 'User'}
+              sx={{ 
+                width: 56, 
+                height: 56, 
+                mr: 2,
+                border: '2px solid',
+                borderColor: 
+                  userLevelData.level >= 10 
+                    ? theme.palette.gold.main
+                    : userLevelData.level >= 5
+                      ? theme.palette.silver.main
+                      : theme.palette.bronze.main,
+              }}
             />
             <Box>
               <WelcomeMessage variant="h6">
