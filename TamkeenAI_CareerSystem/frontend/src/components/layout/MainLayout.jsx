@@ -4,6 +4,8 @@ import { Box, useTheme as useMuiTheme } from '@mui/material';
 import NavigationBar from './NavigationBar';
 import { useUser } from '../../context/AppContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import ErrorBoundary from '../common/ErrorBoundary';
+import RouteErrorBoundary from '../common/RouteErrorBoundary';
 
 const MainLayout = () => {
   const muiTheme = useMuiTheme();
@@ -19,12 +21,14 @@ const MainLayout = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 2,
+          p: { xs: 2, md: 3 },
           mt: isAuthenticated ? 2 : 0,
           backgroundColor: muiTheme.palette.background.default,
         }}
       >
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </Box>
     </Box>
   );

@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
 import { api } from '../api/apiClient';
 import { AUTH, USER } from '../api/endpoints';
+import apiEndpoints from '../utils/api';
 import i18n from '../i18n';
 import { initializeTheme, setTheme, toggleTheme as toggleThemeUtil } from '../utils/themeToggle';
 
@@ -121,11 +122,19 @@ export const useJob = () => {
     throw new Error('useJob must be used within an AppContextProvider');
   }
   
-  // This is a simplified version of the useJob hook for compatibility
+  const { 
+    savedJobs,
+    setSavedJobs,
+    toggleSaveJob,
+    fetchSavedJobs,
+    isSavedJob
+  } = context;
+  
   return {
-    currentJob: null,
-    savedJobs: [],
-    appliedJobs: []
+    savedJobs,
+    toggleSaveJob,
+    fetchSavedJobs,
+    isSavedJob
   };
 };
 
@@ -190,6 +199,7 @@ export const AppContextProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [userRoles, setUserRoles] = useState([]);
   const [error, setError] = useState(null);
+  const [savedJobs, setSavedJobs] = useState([]);
   
   // Apply language changes
   useEffect(() => {
@@ -635,29 +645,129 @@ export const AppContextProvider = ({ children }) => {
     }
   };
   
+  // Fetch saved jobs
+  const fetchSavedJobs = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      // Check if API exists
+      if (apiEndpoints && apiEndpoints.jobs && apiEndpoints.jobs.getSavedJobs) {
+        const response = await apiEndpoints.jobs.getSavedJobs(user.id);
+        setSavedJobs(response.data || []);
+      } else {
+        // Use localStorage fallback in development
+        const savedJobsStr = localStorage.getItem(`savedJobs_${user.id}`);
+        if (savedJobsStr) {
+          try {
+            setSavedJobs(JSON.parse(savedJobsStr));
+          } catch (e) {
+            console.error('Error parsing saved jobs from localStorage:', e);
+            setSavedJobs([]);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch saved jobs:', err);
+    }
+  }, [user?.id]);
+
+  // Check if a job is saved
+  const isSavedJob = useCallback((jobId) => {
+    return savedJobs.some(job => job.id === jobId);
+  }, [savedJobs]);
+
+  // Toggle save/unsave job
+  const toggleSaveJob = useCallback(async (job) => {
+    if (!user?.id) return false;
+    
+    const isSaved = isSavedJob(job.id);
+    
+    try {
+      if (isSaved) {
+        // Remove job from saved jobs
+        if (apiEndpoints?.jobs?.unsaveJob) {
+          await apiEndpoints.jobs.unsaveJob(job.id, user.id);
+        }
+        
+        // Update state
+        const updatedJobs = savedJobs.filter(saved => saved.id !== job.id);
+        setSavedJobs(updatedJobs);
+        
+        // Update localStorage in dev mode
+        if (import.meta.env.DEV) {
+          localStorage.setItem(`savedJobs_${user.id}`, JSON.stringify(updatedJobs));
+        }
+        
+        return false;
+      } else {
+        // Add job to saved jobs
+        if (apiEndpoints?.jobs?.saveJob) {
+          await apiEndpoints.jobs.saveJob(job.id, user.id);
+        }
+        
+        // Update state
+        const updatedJobs = [...savedJobs, job];
+        setSavedJobs(updatedJobs);
+        
+        // Update localStorage in dev mode
+        if (import.meta.env.DEV) {
+          localStorage.setItem(`savedJobs_${user.id}`, JSON.stringify(updatedJobs));
+        }
+        
+        return true;
+      }
+    } catch (err) {
+      console.error('Error toggling job save:', err);
+      return isSaved;
+    }
+  }, [user?.id, savedJobs, isSavedJob]);
+
+  // Load saved jobs when user changes
+  useEffect(() => {
+    if (user?.id) {
+      fetchSavedJobs();
+    } else {
+      setSavedJobs([]);
+    }
+  }, [user?.id, fetchSavedJobs]);
+  
   const contextValue = {
     user,
     profile,
+    token,
     loading,
-    isLoggingIn,
+    error,
     theme,
     language,
     notifications,
     unreadCount,
-    isAuthenticated: !!user,
     userRoles,
-    error,
+    savedJobs,
+    
+    // Auth actions
     login,
-    register,
     logout,
+    register,
+    isAuthenticated: !!user,
+    
+    // Profile actions
+    fetchUserProfile,
+    updateUserProfile,
+    
+    // UI actions
     toggleTheme,
-    toggleLanguage,
     changeLanguage,
+    toggleLanguage,
+    
+    // Notification actions
     fetchNotifications,
     markNotificationAsRead,
-    updateUserProfile,
-    setError,
-    clearError: () => setError(null)
+    
+    // Job actions
+    fetchSavedJobs,
+    toggleSaveJob,
+    isSavedJob,
+    setSavedJobs
   };
   
   return (

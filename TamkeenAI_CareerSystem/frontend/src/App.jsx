@@ -16,6 +16,7 @@ import { AppContextProvider } from './context/AppContext';
 import { ThemeContextProvider } from './contexts/ThemeContext';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
 import RequireAuth from './components/auth/RequireAuth';
@@ -108,9 +109,21 @@ const router = createBrowserRouter(
         
         {/* Add Job routes */}
         <Route path="/jobs" element={<Navigate to="/job-search" replace />} />
-        <Route path="/job-search" element={<ProtectedRoute element={<JobSearch />} />} />
-        <Route path="/job-search-dashboard" element={<ProtectedRoute element={<JobSearchDashboard />} />} />
-        <Route path="/jobs/:jobId" element={<ProtectedRoute element={<JobDetails />} />} />
+        <Route 
+          path="/job-search" 
+          element={<ProtectedRoute element={<JobSearch />} />} 
+          errorElement={<RouteErrorBoundary />}
+        />
+        <Route 
+          path="/job-search-dashboard" 
+          element={<ProtectedRoute element={<JobSearchDashboard />} />} 
+          errorElement={<RouteErrorBoundary />}
+        />
+        <Route 
+          path="/jobs/:jobId" 
+          element={<ProtectedRoute element={<JobDetails />} />} 
+          errorElement={<RouteErrorBoundary />}
+        />
         
         {/* Admin routes */}
         <Route path="/admin-panel" element={<ProtectedRoute element={<AdminPanel />} />} />
@@ -124,7 +137,7 @@ const router = createBrowserRouter(
         <Route path="/profile/:username" element={<Navigate to={params => `/user-profile/${params.username}`} replace />} />
         
         {/* 404 - Not Found */}
-        <Route path="*" element={<NotFound />} />
+        <Route path="*" element={<NotFound />} errorElement={<RouteErrorBoundary />} />
       </Route>
     </>
   ),

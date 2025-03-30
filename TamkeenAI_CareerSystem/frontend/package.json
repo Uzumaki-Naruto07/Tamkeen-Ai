@@ -38,6 +38,7 @@
     "react-dom": "^18.2.0",
     "react-grid-layout": "^1.5.1",
     "react-i18next": "^15.4.1",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^6.11.1",
     "start": "^5.1.0",
     "stylis": "^4.3.6",

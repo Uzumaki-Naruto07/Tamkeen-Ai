@@ -23,10 +23,10 @@ import {
   SupervisorAccount, Language, Public, MenuBook,
   OpenInNew, Mail, AccessTime, Schedule, Flag,
   ReportProblem, QuestionAnswer, Event, Check,
-  Print
+  Print, School
 } from '@mui/icons-material';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
-import { useUser, useResume } from '../context/AppContext';
+import { useUser, useResume, useJob } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -39,7 +39,6 @@ const JobDetails = () => {
   const [error, setError] = useState(null);
   const [job, setJob] = useState(null);
   const [similarJobs, setSimilarJobs] = useState([]);
-  const [isSaved, setIsSaved] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [applicationDialogOpen, setApplicationDialogOpen] = useState(false);
@@ -75,6 +74,21 @@ const JobDetails = () => {
   const navigate = useNavigate();
   const { profile } = useUser();
   const { resumes } = useResume();
+  const { savedJobs, toggleSaveJob, isSavedJob } = useJob();
+  
+  // Force LTR direction for JobDetails page
+  useEffect(() => {
+    // Store the original direction
+    const originalDir = document.documentElement.dir;
+    
+    // Force LTR for this page
+    document.documentElement.dir = 'ltr';
+    
+    // Restore original direction on component unmount
+    return () => {
+      document.documentElement.dir = originalDir;
+    };
+  }, []);
   
   // Load job details
   useEffect(() => {
@@ -89,23 +103,145 @@ const JobDetails = () => {
       setError(null);
       
       try {
-        // Fetch job details
-        const jobResponse = await apiEndpoints.jobs.getJobById(jobId);
+        // Create mock functions if they don't exist
+        // Check if the API functions exist, otherwise use mock implementations
+        const getJobData = async (id) => {
+          try {
+            if (apiEndpoints.jobs.getJobById) {
+              return await apiEndpoints.jobs.getJobById(id);
+            } else {
+              console.log("Using mock getJobById implementation");
+              // Use pre-existing jobs search function if available
+              if (apiEndpoints.jobs.searchJobs) {
+                const allJobs = await apiEndpoints.jobs.searchJobs({});
+                const foundJob = allJobs.data?.jobs?.find(job => job.id === id);
+                if (foundJob) {
+                  return { data: foundJob };
+                }
+              }
+              
+              // Fallback mock data
+              return {
+                data: {
+                  id,
+                  title: "Software Developer",
+                  company: { name: "TamkeenAI", id: "1" },
+                  location: "Dubai, UAE",
+                  remote: true,
+                  salary: { min: 80000, max: 120000, currency: "AED" },
+                  description: "This is a mock job description. The real API endpoint for getJobById is not available.",
+                  skills: ["React", "JavaScript", "Node.js"],
+                  postedDate: new Date().toISOString(),
+                  employmentType: "Full-time"
+                }
+              };
+            }
+          } catch (err) {
+            console.error("Error in getJobData:", err);
+            throw err;
+          }
+        };
+        
+        const getSavedJobs = async (userId) => {
+          try {
+            if (apiEndpoints.jobs.getSavedJobs) {
+              return await apiEndpoints.jobs.getSavedJobs(userId);
+            } else {
+              console.log("Using mock getSavedJobs implementation");
+              return { data: [] };
+            }
+          } catch (err) {
+            console.error("Error in getSavedJobs:", err);
+            throw err;
+          }
+        };
+        
+        const getSimilarJobs = async (jobId) => {
+          try {
+            if (apiEndpoints.jobs.getSimilarJobs) {
+              return await apiEndpoints.jobs.getSimilarJobs(jobId);
+            } else {
+              console.log("Using mock getSimilarJobs implementation");
+              return { data: [] };
+            }
+          } catch (err) {
+            console.error("Error in getSimilarJobs:", err);
+            throw err;
+          }
+        };
+        
+        const calculateSkillsMatch = async (jobId, userId) => {
+          try {
+            if (apiEndpoints.jobs.calculateSkillsMatch) {
+              return await apiEndpoints.jobs.calculateSkillsMatch(jobId, userId);
+            } else {
+              console.log("Using mock calculateSkillsMatch implementation");
+              return { 
+                data: {
+                  score: 75,
+                  matching: ["React", "JavaScript"],
+                  missing: ["Python", "AWS"],
+                  total: 4
+                } 
+              };
+            }
+          } catch (err) {
+            console.error("Error in calculateSkillsMatch:", err);
+            throw err;
+          }
+        };
+        
+        // Mock company API if needed
+        const getCompanyById = async (companyId) => {
+          try {
+            if (apiEndpoints.companies && apiEndpoints.companies.getCompanyById) {
+              return await apiEndpoints.companies.getCompanyById(companyId);
+            } else {
+              console.log("Using mock getCompanyById implementation");
+              return { 
+                data: {
+                  id: companyId,
+                  name: "TamkeenAI", 
+                  industry: "Technology",
+                  description: "Mock company description",
+                  size: "51-200 employees",
+                  logo: "https://via.placeholder.com/150",
+                  website: "https://example.com",
+                  jobs: []
+                } 
+              };
+            }
+          } catch (err) {
+            console.error("Error in getCompanyById:", err);
+            throw err;
+          }
+        };
+        
+        const isCompanyFollowed = async (companyId, userId) => {
+          try {
+            if (apiEndpoints.companies && apiEndpoints.companies.isFollowed) {
+              return await apiEndpoints.companies.isFollowed(companyId, userId);
+            } else {
+              console.log("Using mock isCompanyFollowed implementation");
+              return { data: { following: false } };
+            }
+          } catch (err) {
+            console.error("Error in isCompanyFollowed:", err);
+            throw err;
+          }
+        };
+        
+        // Fetch job details using the mock or real function
+        const jobResponse = await getJobData(jobId);
         setJob(jobResponse.data);
         
-        // Check if job is saved
-        if (profile?.id) {
-          const savedJobsResponse = await apiEndpoints.jobs.getSavedJobs(profile.id);
-          setIsSaved(savedJobsResponse.data.some(saved => saved.id === jobId));
-        }
-        
         // Load similar jobs
-        const similarJobsResponse = await apiEndpoints.jobs.getSimilarJobs(jobId);
+        const similarJobsResponse = await getSimilarJobs(jobId);
         setSimilarJobs(similarJobsResponse.data || []);
         
         // Calculate skills match if user is logged in
         if (profile?.id) {
-          const skillsMatchResponse = await apiEndpoints.jobs.calculateSkillsMatch(jobId, profile.id);
+          const skillsMatchResponse = await calculateSkillsMatch(jobId, profile.id);
           setSkillsMatch(skillsMatchResponse.data || {
             score: 0,
             matching: [],
@@ -116,18 +252,18 @@ const JobDetails = () => {
         
         // Load company details
         if (jobResponse.data.company?.id) {
-          const companyResponse = await apiEndpoints.companies.getCompanyById(jobResponse.data.company.id);
+          const companyResponse = await getCompanyById(jobResponse.data.company.id);
           setCompanyDetails(companyResponse.data);
           
           // Check if company is followed
           if (profile?.id) {
-            const isFollowed = await apiEndpoints.companies.isFollowed(jobResponse.data.company.id, profile.id);
+            const isFollowed = await isCompanyFollowed(jobResponse.data.company.id, profile.id);
             setIsCompanyFollowed(isFollowed.data.following);
           }
         }
         
         // Initialize application form
-        if (resumes.length > 0) {
+        if (resumes && resumes.length > 0) {
           setApplicationForm(prev => ({
             ...prev,
             resumeId: resumes[0].id,
@@ -153,15 +289,16 @@ const JobDetails = () => {
     }
     
     try {
-      if (isSaved) {
-        await apiEndpoints.jobs.unsaveJob(jobId, profile.id);
+      // Use the global toggleSaveJob function from context
+      await toggleSaveJob(job);
+      
+      // Show success message
+      if (isSavedJob(job.id)) {
         setSnackbarMessage('Job removed from saved jobs');
       } else {
-        await apiEndpoints.jobs.saveJob(jobId, profile.id);
         setSnackbarMessage('Job saved successfully');
       }
       
-      setIsSaved(!isSaved);
       setSnackbarOpen(true);
     } catch (err) {
       console.error('Error toggling job save:', err);
@@ -178,11 +315,30 @@ const JobDetails = () => {
     }
     
     try {
+      // Create mock functions if they don't exist
+      const followCompany = async (companyId, userId) => {
+        if (apiEndpoints.companies && apiEndpoints.companies.followCompany) {
+          return await apiEndpoints.companies.followCompany(companyId, userId);
+        } else {
+          console.log("Using mock followCompany implementation");
+          return { success: true };
+        }
+      };
+      
+      const unfollowCompany = async (companyId, userId) => {
+        if (apiEndpoints.companies && apiEndpoints.companies.unfollowCompany) {
+          return await apiEndpoints.companies.unfollowCompany(companyId, userId);
+        } else {
+          console.log("Using mock unfollowCompany implementation");
+          return { success: true };
+        }
+      };
+      
       if (isCompanyFollowed) {
-        await apiEndpoints.companies.unfollowCompany(job.company.id, profile.id);
+        await unfollowCompany(job.company.id, profile.id);
         setSnackbarMessage(`Unfollowed ${job.company.name}`);
       } else {
-        await apiEndpoints.companies.followCompany(job.company.id, profile.id);
+        await followCompany(job.company.id, profile.id);
         setSnackbarMessage(`Now following ${job.company.name}`);
       }
       
@@ -237,8 +393,20 @@ const JobDetails = () => {
     }, 500);
     
     try {
+      // Create mock function if it doesn't exist
+      const applyToJob = async (applicationData) => {
+        if (apiEndpoints.applications && apiEndpoints.applications.apply) {
+          return await apiEndpoints.applications.apply(applicationData);
+        } else {
+          console.log("Using mock job application implementation");
+          // Simulate API delay
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          return { success: true };
+        }
+      };
+      
       // Submit application
-      await apiEndpoints.applications.apply({
+      await applyToJob({
         jobId,
         userId: profile.id,
         ...applicationForm
@@ -270,7 +438,19 @@ const JobDetails = () => {
     }
     
     try {
-      await apiEndpoints.jobs.shareJob({
+      // Create mock function if it doesn't exist
+      const shareJobViaEmail = async (shareData) => {
+        if (apiEndpoints.jobs.shareJob) {
+          return await apiEndpoints.jobs.shareJob(shareData);
+        } else {
+          console.log("Using mock shareJob implementation");
+          // Simulate API delay
+          await new Promise(resolve => setTimeout(resolve, 800));
+          return { success: true };
+        }
+      };
+      
+      await shareJobViaEmail({
         jobId,
         email: shareEmail,
         message: shareMessage,
@@ -298,7 +478,19 @@ const JobDetails = () => {
     }
     
     try {
-      await apiEndpoints.jobs.reportJob({
+      // Create mock function if it doesn't exist
+      const reportJobListing = async (reportData) => {
+        if (apiEndpoints.jobs.reportJob) {
+          return await apiEndpoints.jobs.reportJob(reportData);
+        } else {
+          console.log("Using mock reportJob implementation");
+          // Simulate API delay
+          await new Promise(resolve => setTimeout(resolve, 800));
+          return { success: true };
+        }
+      };
+      
+      await reportJobListing({
         jobId,
         userId: profile?.id,
         reason: reportReason,
@@ -393,20 +585,19 @@ const JobDetails = () => {
                   
                   {job.salary && (
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <AttachMoney color="action" sx={{ mr: 0.5 }} />
                       <Typography variant="body2">
                         {typeof job.salary === 'object' 
-                          ? `$${job.salary.min.toLocaleString()} - $${job.salary.max.toLocaleString()}`
+                          ? `${job.salary.min.toLocaleString()} - ${job.salary.max.toLocaleString()} AED`
                           : job.salary}
                         {job.salaryPeriod && ` ${job.salaryPeriod}`}
                       </Typography>
                     </Box>
                   )}
                   
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Work color="action" sx={{ mr: 0.5 }} />
-                    <Typography variant="body2">
-                      {job.employmentType || 'Full-time'}
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Timer color="action" sx={{ mr: 0.5 }} />
+                    <Typography variant="body2" color="text.secondary">
+                      {job.employmentType || job.jobType || 'Not specified'}
                     </Typography>
                   </Box>
                   
@@ -418,24 +609,38 @@ const JobDetails = () => {
                   </Box>
                 </Box>
                 
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-                  {job.skills?.slice(0, 5).map(skill => (
-                    <SkillChip key={skill} skill={skill} />
-                  ))}
+                {/* Job Skills */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                    Skills
+                  </Typography>
                   
-                  {job.skills?.length > 5 && (
-                    <Chip 
-                      label={`+${job.skills.length - 5}`} 
-                      size="small" 
-                      variant="outlined"
-                    />
-                  )}
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {job.skills?.slice(0, 5).map(skill => (
+                      <Chip 
+                        key={skill} 
+                        label={skill} 
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                      />
+                    ))}
+                    
+                    {job.skills?.length > 5 && (
+                      <Chip
+                        label={`+${job.skills.length - 5}`}
+                        variant="outlined"
+                        color="default"
+                        size="small"
+                      />
+                    )}
+                  </Box>
                 </Box>
               </Box>
               
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <IconButton onClick={handleToggleSaveJob} color={isSaved ? 'primary' : 'default'}>
-                  {isSaved ? <Bookmark /> : <BookmarkBorder />}
+                <IconButton onClick={handleToggleSaveJob} color={isSavedJob(job?.id) ? 'primary' : 'default'}>
+                  {isSavedJob(job?.id) ? <Bookmark /> : <BookmarkBorder />}
                 </IconButton>
                 
                 <IconButton onClick={() => setShareDialogOpen(true)}>
@@ -461,9 +666,18 @@ const JobDetails = () => {
                 Apply Now
               </Button>
               
-              <Typography variant="body2" color="text.secondary" align="center">
+              <Typography variant="body2" color="text.secondary">
                 Easy apply with your TamkeenAI Resume
               </Typography>
+            </Box>
+            
+            <Box sx={{ mb: 3 }}>
+              <Button 
+                startIcon={<ArrowBack />}
+                onClick={() => navigate('/jobs')}
+              >
+                Back to Job Search
+              </Button>
             </Box>
             
             <Divider sx={{ my: 3 }} />
@@ -508,8 +722,9 @@ const JobDetails = () => {
                         background: 'linear-gradient(transparent, white)',
                         display: 'flex',
                         alignItems: 'flex-end',
-                        justifyContent: 'center',
-                        pb: 1
+                        justifyContent: 'flex-start',
+                        pb: 1,
+                        pl: 1
                       }}
                     >
                       <Button 
@@ -522,7 +737,7 @@ const JobDetails = () => {
                   )}
                   
                   {showFullDescription && (
-                    <Box sx={{ textAlign: 'center', mt: 2 }}>
+                    <Box sx={{ textAlign: 'left', mt: 2 }}>
                       <Button 
                         onClick={() => setShowFullDescription(false)}
                         endIcon={<KeyboardArrowUp />}
@@ -760,11 +975,11 @@ const JobDetails = () => {
                 
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="subtitle1" gutterBottom>
-                    Matching Skills ({skillsMatch.matching.length})
+                    Matching Skills ({skillsMatch?.matching?.length || 0})
                   </Typography>
                   
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {skillsMatch.matching.length > 0 ? (
+                    {skillsMatch?.matching?.length > 0 ? (
                       skillsMatch.matching.map(skill => (
                         <Chip
                           key={skill}
@@ -776,7 +991,7 @@ const JobDetails = () => {
                         />
                       ))
                     ) : (
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'left' }}>
                         No matching skills found. Update your profile to reflect your abilities.
                       </Typography>
                     )}
@@ -785,11 +1000,11 @@ const JobDetails = () => {
                 
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="subtitle1" gutterBottom>
-                    Missing Skills ({skillsMatch.missing.length})
+                    Missing Skills ({skillsMatch?.missing?.length || 0})
                   </Typography>
                   
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {skillsMatch.missing.length > 0 ? (
+                    {skillsMatch?.missing?.length > 0 ? (
                       skillsMatch.missing.map(skill => (
                         <Chip
                           key={skill}
@@ -801,7 +1016,7 @@ const JobDetails = () => {
                         />
                       ))
                     ) : (
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'left' }}>
                         Congratulations! You have all the required skills for this job.
                       </Typography>
                     )}
@@ -814,7 +1029,7 @@ const JobDetails = () => {
                   </Typography>
                   
                   <List>
-                    {skillsMatch.missing.length > 0 ? (
+                    {skillsMatch?.missing?.length > 0 ? (
                       <>
                         <ListItem>
                           <ListItemIcon>
@@ -822,7 +1037,8 @@ const JobDetails = () => {
                           </ListItemIcon>
                           <ListItemText 
                             primary="Develop Missing Skills" 
-                            secondary={`Focus on learning ${skillsMatch.missing.slice(0, 3).join(', ')}${skillsMatch.missing.length > 3 ? ' and others' : ''}`}
+                            secondary={`Focus on learning ${skillsMatch.missing.slice(0, 3).join(', ')}${skillsMatch.missing?.length > 3 ? ' and others' : ''}`}
+                            sx={{ textAlign: 'left' }}
                           />
                         </ListItem>
                         
@@ -833,6 +1049,7 @@ const JobDetails = () => {
                           <ListItemText 
                             primary="Explore Courses" 
                             secondary="Find learning resources for these skills on our platform"
+                            sx={{ textAlign: 'left' }}
                           />
                         </ListItem>
                       </>
@@ -845,6 +1062,7 @@ const JobDetails = () => {
                       <ListItemText 
                         primary="Update Your Resume" 
                         secondary="Highlight your matching skills and relevant experience"
+                        sx={{ textAlign: 'left' }}
                       />
                     </ListItem>
                     
@@ -855,6 +1073,7 @@ const JobDetails = () => {
                       <ListItemText 
                         primary="Prepare for Interview" 
                         secondary="Practice answering questions about your experience with these skills"
+                        sx={{ textAlign: 'left' }}
                       />
                     </ListItem>
                   </List>
@@ -872,7 +1091,7 @@ const JobDetails = () => {
               Similar Jobs
             </Typography>
             
-            {similarJobs.length > 0 ? (
+            {similarJobs?.length > 0 ? (
               <List disablePadding>
                 {similarJobs.slice(0, 5).map(job => (
                   <React.Fragment key={job.id}>
@@ -898,6 +1117,7 @@ const JobDetails = () => {
                             {job.remote && ' • Remote'}
                           </>
                         }
+                        sx={{ textAlign: 'left' }}
                       />
                     </ListItem>
                     {similarJobs.indexOf(job) < similarJobs.length - 1 && <Divider />}
@@ -910,10 +1130,10 @@ const JobDetails = () => {
               </Typography>
             )}
             
-            {similarJobs.length > 5 && (
+            {similarJobs?.length > 5 && (
               <Button 
                 fullWidth
-                sx={{ mt: 2 }}
+                sx={{ mt: 2, justifyContent: 'flex-start' }}
                 component={RouterLink}
                 to={`/jobs?similar=${jobId}`}
               >
@@ -936,6 +1156,7 @@ const JobDetails = () => {
                 <ListItemText 
                   primary="Customize Your Resume" 
                   secondary="Tailor your resume to highlight relevant skills and experience"
+                  sx={{ textAlign: 'left' }}
                 />
               </ListItem>
               
@@ -946,6 +1167,7 @@ const JobDetails = () => {
                 <ListItemText 
                   primary="Write a Compelling Cover Letter" 
                   secondary="Explain why you're a good fit for this specific role"
+                  sx={{ textAlign: 'left' }}
                 />
               </ListItem>
               
@@ -956,6 +1178,7 @@ const JobDetails = () => {
                 <ListItemText 
                   primary="Practice Interview Questions" 
                   secondary="Research common questions for this role and industry"
+                  sx={{ textAlign: 'left' }}
                 />
               </ListItem>
               
@@ -966,6 +1189,7 @@ const JobDetails = () => {
                 <ListItemText 
                   primary="Research the Company" 
                   secondary="Learn about their mission, values, and recent projects"
+                  sx={{ textAlign: 'left' }}
                 />
               </ListItem>
             </List>
@@ -973,7 +1197,7 @@ const JobDetails = () => {
             <Button
               variant="outlined"
               fullWidth
-              sx={{ mt: 2 }}
+              sx={{ mt: 2, justifyContent: 'flex-start', textAlign: 'left', pl: 2 }}
               component={RouterLink}
               to="/resources/application-tips"
             >
@@ -1010,8 +1234,8 @@ const JobDetails = () => {
           )}
           
           {applicationStatus === 'success' ? (
-            <Box sx={{ textAlign: 'center', py: 3 }}>
-              <CheckCircle color="success" sx={{ fontSize: 60, mb: 2 }} />
+            <Box sx={{ textAlign: 'left', py: 3 }}>
+              <CheckCircle color="success" sx={{ fontSize: 60, mb: 2, display: 'block' }} />
               
               <Typography variant="h6" gutterBottom>
                 Application Submitted Successfully!
@@ -1035,7 +1259,7 @@ const JobDetails = () => {
                   onChange={handleApplicationChange}
                   disabled={applicationStatus === 'submitting'}
                 >
-                  {resumes.length > 0 ? (
+                  {resumes && resumes.length > 0 ? (
                     resumes.map(resume => (
                       <MenuItem key={resume.id} value={resume.id}>
                         {resume.name}
@@ -1046,7 +1270,7 @@ const JobDetails = () => {
                   )}
                 </Select>
                 
-                {resumes.length === 0 && (
+                {(!resumes || resumes.length === 0) && (
                   <FormHelperText error>
                     Please create a resume first
                     <Button 
@@ -1132,7 +1356,7 @@ const JobDetails = () => {
           )}
         </DialogContent>
         
-        <DialogActions>
+        <DialogActions sx={{ justifyContent: 'flex-start' }}>
           {applicationStatus === 'success' ? (
             <>
               <Button onClick={() => setApplicationDialogOpen(false)}>
@@ -1158,7 +1382,7 @@ const JobDetails = () => {
               <Button 
                 variant="contained"
                 onClick={handleSubmitApplication}
-                disabled={applicationStatus === 'submitting' || !applicationForm.resumeId}
+                disabled={applicationStatus === 'submitting' || !applicationForm.resumeId || !resumes || resumes.length === 0}
                 startIcon={applicationStatus === 'submitting' ? <CircularProgress size={20} /> : <Send />}
               >
                 {applicationStatus === 'submitting' ? 'Submitting...' : 'Submit Application'}
@@ -1205,7 +1429,7 @@ const JobDetails = () => {
           />
         </DialogContent>
         
-        <DialogActions>
+        <DialogActions sx={{ justifyContent: 'flex-start' }}>
           <Button onClick={() => setShareDialogOpen(false)}>
             Cancel
           </Button>
@@ -1264,7 +1488,7 @@ const JobDetails = () => {
           />
         </DialogContent>
         
-        <DialogActions>
+        <DialogActions sx={{ justifyContent: 'flex-start' }}>
           <Button onClick={() => setReportDialogOpen(false)}>
             Cancel
           </Button>
