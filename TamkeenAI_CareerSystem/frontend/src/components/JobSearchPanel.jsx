@@ -40,13 +40,13 @@ import {
   Tab,
   useMediaQuery,
   useTheme,
-  Menu
+  Menu,
+  SvgIcon
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import WorkIcon from '@mui/icons-material/Work';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import BusinessIcon from '@mui/icons-material/Business';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -73,6 +73,12 @@ import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
 import { useUser, useResume } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
+
+const AEDIcon = (props) => (
+  <SvgIcon {...props}>
+    <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="12" fontWeight="bold">AED</text>
+  </SvgIcon>
+);
 
 const JobSearchPanel = ({
   initialJobs = [],
@@ -443,10 +449,10 @@ const JobSearchPanel = ({
                     </Typography>
                   </Box>
                   
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <AttachMoneyIcon fontSize="small" color="action" sx={{ mr: 0.5 }} />
-                    <Typography variant="body2">
-                      {formatSalary(job.salaryMin, job.salaryMax)}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <AEDIcon fontSize="small" color="action" sx={{ mr: 0.5 }} />
+                    <Typography variant="body2" color="text.secondary">
+                      {job.salaryRange}
                     </Typography>
                   </Box>
                 </Box>
@@ -675,7 +681,7 @@ const JobSearchPanel = ({
                     
                     <ListItem disablePadding sx={{ py: 1 }}>
                       <ListItemIcon sx={{ minWidth: 30 }}>
-                        <AttachMoneyIcon fontSize="small" />
+                        <AEDIcon fontSize="small" />
                       </ListItemIcon>
                       <ListItemText 
                         primary="Salary" 

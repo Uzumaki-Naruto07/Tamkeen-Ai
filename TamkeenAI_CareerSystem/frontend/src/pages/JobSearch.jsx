@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Box, Paper, Typography, TextField, Button, Divider,
   Grid, Card, CardContent, CardActions, IconButton,
@@ -28,21 +28,306 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
 import { useUser, useJob } from '../context/AppContext';
-import apiEndpoints from '../utils/api';
+import { JOB_ENDPOINTS } from '../utils/endpoints';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { format } from 'date-fns';
 import { useDebounce } from '../hooks/useDebounce';
+import axios from 'axios';
+import { SvgIcon } from '@mui/material';
+
+const AEDIcon = (props) => (
+  <SvgIcon {...props}>
+    <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="12" fontWeight="bold">AED</text>
+  </SvgIcon>
+);
 
 const JobSearch = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
-  const [jobs, setJobs] = useState([]);
-  const [totalJobs, setTotalJobs] = useState(0);
+  const [jobs, setJobs] = useState([
+    {
+      id: 1,
+      title: "Senior Software Engineer",
+      company: "Tech Solutions UAE",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "25,000 - 35,000 AED/month",
+      postedDate: "2 days ago",
+      companyLogo: "https://logo.clearbit.com/microsoft.com",
+      matchScore: 85,
+      requiredSkills: ["React", "Node.js", "TypeScript", "AWS"],
+      description: "Looking for an experienced software engineer to join our growing team.",
+      applicationStatus: "open"
+    },
+    {
+      id: 2,
+      title: "Marketing Manager",
+      company: "Global Marketing LLC",
+      location: "Abu Dhabi, UAE",
+      jobType: "Full-time",
+      salaryRange: "20,000 - 30,000 AED/month",
+      postedDate: "1 week ago",
+      matchScore: 75,
+      requiredSkills: ["Digital Marketing", "Social Media", "Content Strategy"],
+      description: "Join our dynamic marketing team in Abu Dhabi.",
+      applicationStatus: "open"
+    },
+    {
+      id: 3,
+      title: "Financial Analyst",
+      company: "Emirates Investment Bank",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "18,000 - 25,000 AED/month",
+      postedDate: "3 days ago",
+      companyLogo: "https://logo.clearbit.com/emiratesbank.ae",
+      matchScore: 90,
+      requiredSkills: ["Financial Modeling", "Excel", "PowerBI"],
+      description: "Seeking a skilled financial analyst for our investment team.",
+      applicationStatus: "open"
+    },
+    {
+      id: 4,
+      title: "HR Manager",
+      company: "Al Futtaim Group",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "22,000 - 28,000 AED/month",
+      postedDate: "1 day ago",
+      matchScore: 80,
+      requiredSkills: ["HR Management", "Recruitment", "Employee Relations"],
+      description: "Leading HR initiatives for a major retail group.",
+      applicationStatus: "open"
+    },
+    {
+      id: 5,
+      title: "Project Manager",
+      company: "EMAAR Properties",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "30,000 - 40,000 AED/month",
+      postedDate: "5 days ago",
+      companyLogo: "https://logo.clearbit.com/emaar.com",
+      matchScore: 85,
+      requiredSkills: ["Project Management", "Construction", "Stakeholder Management"],
+      description: "Managing large-scale real estate development projects.",
+      applicationStatus: "open"
+    },
+    {
+      id: 6,
+      title: "Data Scientist",
+      company: "Etisalat Digital",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "28,000 - 38,000 AED/month",
+      postedDate: "Just now",
+      companyLogo: "https://logo.clearbit.com/etisalat.ae",
+      matchScore: 88,
+      requiredSkills: ["Python", "Machine Learning", "SQL", "Deep Learning"],
+      description: "Join our AI team to build next-generation solutions.",
+      applicationStatus: "open"
+    },
+    {
+      id: 7,
+      title: "Sales Director",
+      company: "Jumeirah Group",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "35,000 - 45,000 AED/month",
+      postedDate: "2 hours ago",
+      companyLogo: "https://logo.clearbit.com/jumeirah.com",
+      matchScore: 82,
+      requiredSkills: ["Sales Strategy", "Team Leadership", "Hospitality"],
+      description: "Lead our sales team in the luxury hospitality sector.",
+      applicationStatus: "open"
+    },
+    {
+      id: 8,
+      title: "Civil Engineer",
+      company: "AECOM Middle East",
+      location: "Abu Dhabi, UAE",
+      jobType: "Full-time",
+      salaryRange: "23,000 - 33,000 AED/month",
+      postedDate: "3 hours ago",
+      matchScore: 79,
+      requiredSkills: ["AutoCAD", "Construction Management", "Project Planning"],
+      description: "Join our infrastructure development projects.",
+      applicationStatus: "open"
+    },
+    {
+      id: 9,
+      title: "Digital Marketing Specialist",
+      company: "Noon.com",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "15,000 - 25,000 AED/month",
+      postedDate: "4 hours ago",
+      companyLogo: "https://logo.clearbit.com/noon.com",
+      matchScore: 92,
+      requiredSkills: ["SEO", "SEM", "Social Media Marketing", "Content Creation"],
+      description: "Drive our digital marketing initiatives.",
+      applicationStatus: "open"
+    },
+    {
+      id: 10,
+      title: "Operations Manager",
+      company: "DP World",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "25,000 - 35,000 AED/month",
+      postedDate: "5 hours ago",
+      companyLogo: "https://logo.clearbit.com/dpworld.com",
+      matchScore: 87,
+      requiredSkills: ["Operations Management", "Supply Chain", "Team Leadership"],
+      description: "Manage port operations and logistics.",
+      applicationStatus: "open"
+    },
+    {
+      id: 11,
+      title: "Frontend Developer",
+      company: "Careem",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "20,000 - 30,000 AED/month",
+      postedDate: "6 hours ago",
+      companyLogo: "https://logo.clearbit.com/careem.com",
+      matchScore: 89,
+      requiredSkills: ["React", "Vue.js", "JavaScript", "CSS3"],
+      description: "Build amazing user experiences for our mobile apps.",
+      applicationStatus: "open"
+    },
+    {
+      id: 12,
+      title: "Business Development Manager",
+      company: "Majid Al Futtaim",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "28,000 - 38,000 AED/month",
+      postedDate: "7 hours ago",
+      companyLogo: "https://logo.clearbit.com/majidalfuttaim.com",
+      matchScore: 84,
+      requiredSkills: ["Business Development", "Sales", "Retail", "Strategy"],
+      description: "Drive business growth in our retail division.",
+      applicationStatus: "open"
+    },
+    {
+      id: 13,
+      title: "Arabic Content Writer",
+      company: "MBC Group",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "15,000 - 22,000 AED/month",
+      postedDate: "8 hours ago",
+      companyLogo: "https://logo.clearbit.com/mbc.net",
+      matchScore: 91,
+      requiredSkills: ["Arabic Writing", "Content Creation", "SEO", "Social Media"],
+      description: "Create engaging Arabic content for our digital platforms.",
+      applicationStatus: "open"
+    },
+    {
+      id: 14,
+      title: "Mechanical Engineer",
+      company: "ADNOC",
+      location: "Abu Dhabi, UAE",
+      jobType: "Full-time",
+      salaryRange: "25,000 - 35,000 AED/month",
+      postedDate: "9 hours ago",
+      companyLogo: "https://logo.clearbit.com/adnoc.ae",
+      matchScore: 86,
+      requiredSkills: ["Mechanical Engineering", "AutoCAD", "Project Management"],
+      description: "Join our oil and gas engineering team.",
+      applicationStatus: "open"
+    },
+    {
+      id: 15,
+      title: "Legal Counsel",
+      company: "Emirates NBD",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "35,000 - 45,000 AED/month",
+      postedDate: "10 hours ago",
+      companyLogo: "https://logo.clearbit.com/emiratesnbd.com",
+      matchScore: 88,
+      requiredSkills: ["Corporate Law", "Banking Law", "Contract Management"],
+      description: "Handle legal matters for our banking operations.",
+      applicationStatus: "open"
+    },
+    {
+      id: 16,
+      title: "UI/UX Designer",
+      company: "Dubizzle",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "18,000 - 28,000 AED/month",
+      postedDate: "11 hours ago",
+      companyLogo: "https://logo.clearbit.com/dubizzle.com",
+      matchScore: 93,
+      requiredSkills: ["Figma", "Adobe XD", "User Research", "Prototyping"],
+      description: "Design intuitive user experiences for our platforms.",
+      applicationStatus: "open"
+    },
+    {
+      id: 17,
+      title: "Supply Chain Manager",
+      company: "Amazon UAE",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "30,000 - 40,000 AED/month",
+      postedDate: "12 hours ago",
+      companyLogo: "https://logo.clearbit.com/amazon.com",
+      matchScore: 85,
+      requiredSkills: ["Supply Chain", "Logistics", "Inventory Management"],
+      description: "Optimize our regional supply chain operations.",
+      applicationStatus: "open"
+    },
+    {
+      id: 18,
+      title: "Healthcare Administrator",
+      company: "Cleveland Clinic Abu Dhabi",
+      location: "Abu Dhabi, UAE",
+      jobType: "Full-time",
+      salaryRange: "22,000 - 32,000 AED/month",
+      postedDate: "13 hours ago",
+      companyLogo: "https://logo.clearbit.com/clevelandclinicabudhabi.ae",
+      matchScore: 87,
+      requiredSkills: ["Healthcare Administration", "Patient Care", "Medical Records"],
+      description: "Manage healthcare operations in our facility.",
+      applicationStatus: "open"
+    },
+    {
+      id: 19,
+      title: "Cybersecurity Analyst",
+      company: "Dubai Electronic Security Center",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "25,000 - 35,000 AED/month",
+      postedDate: "14 hours ago",
+      matchScore: 90,
+      requiredSkills: ["Information Security", "Network Security", "Threat Analysis"],
+      description: "Protect digital assets and infrastructure.",
+      applicationStatus: "open"
+    },
+    {
+      id: 20,
+      title: "Hotel Manager",
+      company: "Address Hotels + Resorts",
+      location: "Dubai, UAE",
+      jobType: "Full-time",
+      salaryRange: "28,000 - 38,000 AED/month",
+      postedDate: "15 hours ago",
+      companyLogo: "https://logo.clearbit.com/addresshotels.com",
+      matchScore: 86,
+      requiredSkills: ["Hospitality Management", "Customer Service", "Team Leadership"],
+      description: "Lead operations at our luxury hotel property.",
+      applicationStatus: "open"
+    }
+  ]);
+  const [totalJobs, setTotalJobs] = useState(20);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(5);
   const [searchTerm, setSearchTerm] = useState('');
   const [locationSearch, setLocationSearch] = useState('');
   const [filters, setFilters] = useState({
@@ -75,7 +360,7 @@ const JobSearch = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [skillsList, setSkillsList] = useState([]);
   const [industryList, setIndustryList] = useState([]);
-  const [activeTab, setActiveTab] = useState("jobs");
+  const [activeTab, setActiveTab] = useState(0);
   const [skillsInputValue, setSkillsInputValue] = useState('');
   const [suggestedSkills, setSuggestedSkills] = useState([]);
   const [showSkillsSuggestions, setShowSkillsSuggestions] = useState(false);
@@ -100,7 +385,7 @@ const JobSearch = () => {
   const navigate = useNavigate();
   const routerLocation = useRouterLocation();
   const { profile } = useUser();
-  const { savedJobs: globalSavedJobs, toggleSaveJob, isSavedJob } = useJob();
+  const { savedJobs, toggleSaveJob, isSavedJob } = useJob();
   const skillsInputRef = useRef(null);
   
   // Extract query params on initial load
@@ -118,88 +403,75 @@ const JobSearch = () => {
     // TODO: Extract more filter params if needed
   }, [routerLocation.search]);
   
-  // Initialize data
+  // Fetch initial data
   useEffect(() => {
-    const initData = async () => {
+    let isMounted = true;
+    
+    const fetchInitialData = async () => {
       try {
-        // Set initial loading state
-        setLoading(true);
-        console.log("JobSearch: Starting to load initial data");
+        if (!profile?.id) {
+          setLoading(false);
+          return;
+        }
         
-        // Create mock implementations for API functions if they don't exist
-        const getIndustries = async () => {
-          if (apiEndpoints.jobs && apiEndpoints.jobs.getIndustries) {
-            return await apiEndpoints.jobs.getIndustries();
-          } else {
-            console.log("Using mock getIndustries implementation");
-            return { 
-              data: ["Technology", "Healthcare", "Finance", "Education", "Retail", "Manufacturing", 
-                     "Hospitality", "Construction", "Media", "Transportation"] 
-            };
+        if (loading) {
+          setLoading(true);
+          setError(null);
+          
+          try {
+            // Fetch filter options without triggering searches
+            const [industriesRes, skillsRes, savedJobsRes, savedSearchesRes, searchHistoryRes] = await Promise.all([
+              axios.post(JOB_ENDPOINTS.GET_INDUSTRIES),
+              axios.post(JOB_ENDPOINTS.GET_SKILLS),
+              axios.post(JOB_ENDPOINTS.GET_SAVED),
+              axios.post(JOB_ENDPOINTS.GET_SAVED_SEARCHES),
+              axios.post(JOB_ENDPOINTS.GET_SEARCH_HISTORY)
+            ]);
+            
+            // Only update state if component is still mounted
+            if (isMounted) {
+              // Handle responses with mock data fallback
+              setIndustryList(industriesRes?.data?.industries || []);
+              setSkillsList(skillsRes?.data?.skills || []);
+              setSavedSearches(savedSearchesRes?.data?.searches || []);
+              setSearchHistory(searchHistoryRes?.data?.history || []);
+              
+              // Load recent jobs only once on initial load
+              const recentJobsRes = await axios.post(JOB_ENDPOINTS.GET_RECENT);
+              setJobs(recentJobsRes?.data?.jobs || []);
+              setTotalJobs(recentJobsRes?.data?.total || 0);
+              setLoading(false);
+            }
+          } catch (err) {
+            if (isMounted) {
+              console.error('Error fetching initial job search data:', err);
+              setIndustryList([]);
+              setSkillsList([]);
+              setSavedSearches([]);
+              setSearchHistory([]);
+              setJobs([]);
+              setTotalJobs(0);
+              setError('Failed to load job search data');
+              setLoading(false);
+            }
           }
-        };
-        
-        const getSkills = async () => {
-          if (apiEndpoints.jobs && apiEndpoints.jobs.getSkills) {
-            return await apiEndpoints.jobs.getSkills();
-          } else {
-            console.log("Using mock getSkills implementation");
-            return { 
-              data: ["JavaScript", "React", "Node.js", "Python", "Java", "SQL", "AWS", 
-                     "Docker", "DevOps", "UI/UX", "Project Management", "Agile", "Marketing",
-                     "Data Analysis", "Machine Learning", "Communication", "Leadership"] 
-            };
-          }
-        };
-        
-        const getSavedSearches = async (userId) => {
-          if (apiEndpoints.jobs && apiEndpoints.jobs.getSavedSearches) {
-            return await apiEndpoints.jobs.getSavedSearches(userId);
-          } else {
-            console.log("Using mock getSavedSearches implementation");
-            return { data: [] };
-          }
-        };
-        
-        const getSearchHistory = async (userId) => {
-          if (apiEndpoints.jobs && apiEndpoints.jobs.getSearchHistory) {
-            return await apiEndpoints.jobs.getSearchHistory(userId);
-          } else {
-            console.log("Using mock getSearchHistory implementation");
-            return { data: [] };
-          }
-        };
-        
-        // Load common data like industries, skills using the mock or real functions
-        const [industriesRes, skillsRes, savedSearchesRes, searchHistoryRes] = await Promise.all([
-          getIndustries(),
-          getSkills(),
-          getSavedSearches(profile?.id || ''),
-          getSearchHistory(profile?.id || ''),
-        ]);
-        
-        setIndustryList(industriesRes.data || []);
-        setSkillsList(skillsRes.data || []);
-        setSavedSearches(savedSearchesRes.data || []);
-        setSearchHistory(searchHistoryRes.data || []);
-        
-        // Note: savedJobs is now managed by AppContext
-        
-        // Initial search to show some jobs
-        console.log("JobSearch: Initial data loaded, triggering initial search");
-        setTimeout(() => {
-          searchJobs();
-        }, 300);
-      } catch (error) {
-        console.error('Error fetching initial data:', error);
-        setError('Failed to load initial data. Please try again later.');
-      } finally {
-        setLoading(false);
+        }
+      } catch (outerError) {
+        console.error('Error in fetchInitialData:', outerError);
+        if (isMounted) {
+          setError('An error occurred loading the jobs page');
+          setLoading(false);
+        }
       }
     };
     
-    initData();
-  }, [profile?.id]);
+    fetchInitialData();
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
+  }, [profile?.id, loading, page, pageSize]);
   
   // Perform search when search term, location, page, or filters change
   useEffect(() => {
@@ -253,10 +525,8 @@ const JobSearch = () => {
       return;
     }
     
-    console.log("JobSearch: Starting search");
     setSearching(true);
     setError(null);
-    setLoading(true);
     
     try {
       // Safely get all filter values with fallbacks
@@ -275,57 +545,8 @@ const JobSearch = () => {
       const companyLocation = filters?.companyLocation || 'all';
       const salaryType = filters?.salaryType || 'annual';
       
-      // Create mock searchJobs implementation if it doesn't exist
-      const searchJobsImpl = async (params) => {
-        if (apiEndpoints.jobs && apiEndpoints.jobs.searchJobs) {
-          return await apiEndpoints.jobs.searchJobs(params);
-        } else {
-          console.log("Using mock searchJobs implementation");
-          // Mock data - generate different jobs based on search params
-          const mockJobs = Array(10).fill(0).map((_, index) => ({
-            id: `job-${index}-${Date.now()}`,
-            title: params.search 
-              ? `${params.search} Developer`
-              : ["Software Engineer", "Product Manager", "UX Designer", "Data Scientist", "DevOps Engineer"][Math.floor(Math.random() * 5)],
-            company: {
-              id: `company-${index}`,
-              name: ["TamkeenAI", "Tech Solutions", "Digital Innovators", "Future Systems", "Smart Solutions"][Math.floor(Math.random() * 5)],
-              logo: `https://via.placeholder.com/50?text=${index + 1}`
-            },
-            location: params.location || "Dubai, UAE",
-            remote: params.remote || Math.random() > 0.5,
-            salary: {
-              min: 50000 + (index * 10000),
-              max: 120000 + (index * 15000),
-              currency: "AED" // Explicitly use AED
-            },
-            postedDate: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString(),
-            employmentType: params.jobTypes?.length > 0 
-              ? params.jobTypes[Math.floor(Math.random() * params.jobTypes.length)] 
-              : ["Full-time", "Part-time", "Contract", "Freelance"][Math.floor(Math.random() * 4)],
-            skills: params.skills?.length > 0 
-              ? [...params.skills]
-              : ["JavaScript", "React", "Node.js", "Python", "AWS"].slice(0, 3 + Math.floor(Math.random() * 3)),
-            description: "This is a mock job description generated for testing purposes.",
-            jobType: ["Full-time", "Part-time", "Contract", "Freelance"][Math.floor(Math.random() * 4)],
-            salaryRange: `${(50 + index * 10)}-${(80 + index * 15)}k AED`, // Ensure AED format
-            matchScore: Math.floor(60 + Math.random() * 30),
-            postedDate: `${Math.floor(1 + Math.random() * 30)} days ago`
-          }));
-          
-          console.log("Generated mock jobs:", mockJobs.length);
-          
-          return {
-            data: {
-              jobs: mockJobs,
-              total: mockJobs.length // Use exact count to avoid pagination issues
-            }
-          };
-        }
-      };
-      
       // Call the API with safe values
-      const response = await searchJobsImpl({
+      const response = await axios.post(JOB_ENDPOINTS.SEARCH, {
         search: debouncedSearchTerm || '',
         location: debouncedLocation || '',
         page: page || 1,
@@ -348,7 +569,6 @@ const JobSearch = () => {
       });
       
       if (response?.data) {
-        console.log("JobSearch: Got response with jobs:", response.data.jobs?.length);
       setJobs(response.data.jobs || []);
       setTotalJobs(response.data.total || 0);
       }
@@ -356,19 +576,7 @@ const JobSearch = () => {
       // Add to search history if this is a new search and we have search terms
       if (profile?.id && (debouncedSearchTerm || debouncedLocation)) {
         try {
-          // Create mock addSearchHistory function if it doesn't exist
-          const addSearchHistoryImpl = async (userId, searchData) => {
-            if (apiEndpoints.jobs && apiEndpoints.jobs.addSearchHistory) {
-              return await apiEndpoints.jobs.addSearchHistory(userId, searchData);
-            } else {
-              console.log("Using mock addSearchHistory implementation");
-              // Simply log the search history and return success
-              console.log("Would add to search history:", searchData);
-              return { success: true };
-            }
-          };
-          
-          await addSearchHistoryImpl(profile.id, {
+        await axios.post(JOB_ENDPOINTS.ADD_SEARCH_HISTORY, {
             search: debouncedSearchTerm || '',
             location: debouncedLocation || '',
             jobTypes,
@@ -398,9 +606,7 @@ const JobSearch = () => {
     } finally {
       // Small delay before allowing another search to prevent rapid-fire searches
       setTimeout(() => {
-      setSearching(false);
-        setLoading(false);
-        console.log("JobSearch: Search completed, loading set to false");
+        setSearching(false);
       }, 300);
     }
   };
@@ -436,10 +642,23 @@ const JobSearch = () => {
     return sortOptions[sortKey] || 'Relevance';
   };
 
-  // Handle job saving
+  // Handler for saving a job
   const handleSaveJob = async (job) => {
-    // Use the global context function
-    await toggleSaveJob(job);
+    if (!profile?.id) {
+      setSnackbarMessage('Please login to save jobs');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    try {
+      await toggleSaveJob(job);
+      setSnackbarMessage(isSavedJob(job.id) ? 'Job removed from saved jobs' : 'Job saved successfully');
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error('Error saving/unsaving job:', error);
+      setSnackbarMessage('Failed to save job. Please try again.');
+      setSnackbarOpen(true);
+    }
   };
 
   // Function to handle adding a skill directly
@@ -1269,14 +1488,14 @@ const JobSearch = () => {
           <Box sx={{ flexGrow: 1 }}></Box>
           
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Button
+            <Button
               variant="outlined"
               size="small"
               startIcon={<SaveAlt />}
               onClick={handleSaveSearch}
             >
               Save Search
-              </Button>
+            </Button>
             
             <Button
               variant="outlined"
@@ -1309,31 +1528,8 @@ const JobSearch = () => {
   const renderSearchResults = () => {
     if (loading) {
       return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4 }}>
-          <CircularProgress size={60} thickness={4} sx={{ mb: 2 }} />
-          <Typography variant="h6">Loading jobs...</Typography>
-          <Typography variant="body2" color="text.secondary">Please wait while we fetch job listings</Typography>
-        </Box>
-      );
-    }
-    
-    if (error) {
-      return (
-        <Box sx={{ p: 4 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            onClick={() => {
-              setError(null);
-              searchJobs();
-            }}
-            startIcon={<Refresh />}
-          >
-            Try Again
-          </Button>
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress />
         </Box>
       );
     }
@@ -1348,19 +1544,16 @@ const JobSearch = () => {
           textColor="primary"
         >
           <Tab 
-            value="jobs"
             label="Job Search" 
             icon={<Search fontSize="small" />} 
             iconPosition="start"
           />
           <Tab 
-            value="savedJobs"
-            label={`Saved Jobs (${globalSavedJobs.length})`} 
+            label={`Saved Jobs (${savedJobs.length})`} 
             icon={<Bookmark fontSize="small" />} 
             iconPosition="start"
           />
           <Tab 
-            value="searchHistory"
             label="Search History" 
             icon={<History fontSize="small" />} 
             iconPosition="start"
@@ -1370,7 +1563,7 @@ const JobSearch = () => {
     );
 
     // Job Search Tab
-    if (activeTab === "jobs") {
+    if (activeTab === 0) {
     if (jobs.length === 0) {
       return (
           <>
@@ -1385,12 +1578,9 @@ const JobSearch = () => {
                 color="primary"
                 startIcon={<Refresh />}
                 sx={{ mt: 2 }}
-                onClick={() => {
-                  handleClearFilters();
-                  searchJobs();
-                }}
+                onClick={handleClearFilters}
               >
-                Reset Filters and Search Again
+                Reset All Filters
               </Button>
         </Box>
           </>
@@ -1432,12 +1622,12 @@ const JobSearch = () => {
                     {job.companyLogo ? (
                       <Avatar 
                         src={job.companyLogo} 
-                        alt={typeof job.company === 'string' ? job.company : job.company?.name || 'Company Logo'}
+                        alt={job.company}
                           sx={{ width: 50, height: 50 }}
                       />
                     ) : (
                         <Avatar sx={{ width: 50, height: 50, bgcolor: 'primary.main' }}>
-                        {typeof job.company === 'string' ? job.company.charAt(0) : job.company?.name?.charAt(0) || "J"}
+                        {job.company?.charAt(0) || "J"}
                       </Avatar>
                     )}
                   </Box>
@@ -1449,7 +1639,7 @@ const JobSearch = () => {
                       {job.title}
                     </Typography>
                           <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
-                      {typeof job.company === 'string' ? job.company : job.company?.name || 'Unknown Company'}
+                      {job.company}
                     </Typography>
                         </Box>
                         
@@ -1462,7 +1652,7 @@ const JobSearch = () => {
                             size="small"
                             sx={{ mr: 0.5 }}
                           >
-                            {isSavedJob(job.id) ? (
+                            {savedJobs.some(saved => saved.id === job.id) ? (
                               <Bookmark color="primary" />
                             ) : (
                               <BookmarkBorder />
@@ -1501,6 +1691,7 @@ const JobSearch = () => {
                           size="small"
                             label={job.salaryRange}
                           variant="outlined"
+                            icon={<AEDIcon fontSize="small" />}
                             sx={{ fontSize: '0.7rem', height: 22 }}
                           />
                         )}
@@ -1638,17 +1829,17 @@ const JobSearch = () => {
     }
     
     // Saved Jobs Tab
-    if (activeTab === "savedJobs") {
+    if (activeTab === 1) {
       return (
         <>
           {renderTabs()}
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle1">
-              {globalSavedJobs.length} saved jobs
+              {savedJobs.length} saved jobs
             </Typography>
           </Box>
           
-          {globalSavedJobs.length === 0 ? (
+          {savedJobs.length === 0 ? (
             <Box sx={{ textAlign: 'center', p: 4 }}>
               <Typography variant="h6" gutterBottom>No saved jobs</Typography>
               <Typography variant="body2" color="text.secondary">
@@ -1657,112 +1848,111 @@ const JobSearch = () => {
             </Box>
           ) : (
             <List>
-              {globalSavedJobs.map((job) => (
-                <ListItem 
-                  alignItems="flex-start"
-                  sx={{ 
-                    cursor: 'pointer',
-                    '&:hover': { 
-                      bgcolor: 'action.hover' 
-                    },
-                    p: 1.5,
-                    borderBottom: '1px solid',
-                    borderColor: 'divider'
-                  }}
-                  onClick={() => navigate(`/jobs/${job.id}`)}
-                >
-                  <Box sx={{ display: 'flex', width: '100%' }}>
-                    <Box sx={{ 
-                      minWidth: 56, 
-                      mr: 2,
-                      display: 'flex',
-                      alignItems: 'flex-start'
-                    }}>
-                      {job.companyLogo ? (
-                        <Avatar 
-                          src={job.companyLogo} 
-                          alt={typeof job.company === 'string' ? job.company : job.company?.name || 'Company Logo'}
-                          sx={{ width: 50, height: 50 }}
-                        />
-                      ) : (
-                        <Avatar sx={{ width: 50, height: 50, bgcolor: 'primary.main' }}>
-                          {typeof job.company === 'string' ? job.company.charAt(0) : job.company?.name?.charAt(0) || "J"}
-                        </Avatar>
+              {savedJobs.map((job) => (
+                <React.Fragment key={job.id}>
+                  <ListItem 
+                    alignItems="flex-start"
+                    sx={{ 
+                      cursor: 'pointer',
+                      '&:hover': { 
+                        bgcolor: 'action.hover' 
+                      },
+                      p: 1.5,
+                      borderBottom: '1px solid',
+                      borderColor: 'divider'
+                    }}
+                    onClick={() => navigate(`/jobs/${job.id}`)}
+                  >
+                    <Box sx={{ display: 'flex', width: '100%' }}>
+                      <Box sx={{ 
+                        minWidth: 56, 
+                        mr: 2,
+                        display: 'flex',
+                        alignItems: 'flex-start'
+                      }}>
+                        {job.companyLogo ? (
+                          <Avatar 
+                            src={job.companyLogo} 
+                            alt={job.company}
+                            sx={{ width: 50, height: 50 }}
+                          />
+                        ) : (
+                          <Avatar sx={{ width: 50, height: 50, bgcolor: 'primary.main' }}>
+                            {job.company?.charAt(0) || "J"}
+                          </Avatar>
                       )}
                     </Box>
                       
-                    <Box sx={{ flexGrow: 1, width: 'calc(100% - 76px)' }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                        <Box sx={{ pr: 8 }}>
-                          <Typography variant="h6" component="div" sx={{ fontSize: '1.1rem', lineHeight: 1.3 }}>
-                            {job.title}
-                          </Typography>
-                          <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
-                            {typeof job.company === 'string' ? job.company : job.company?.name || 'Unknown Company'}
-                          </Typography>
+                      <Box sx={{ flexGrow: 1, width: 'calc(100% - 76px)' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                          <Box sx={{ pr: 8 }}>
+                            <Typography variant="h6" component="div" sx={{ fontSize: '1.1rem', lineHeight: 1.3 }}>
+                              {job.title}
+                            </Typography>
+                            <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
+                              {job.company}
+                            </Typography>
                   </Box>
                   
-                        <Box sx={{ display: 'flex' }}>
+                          <Box sx={{ display: 'flex' }}>
                     <IconButton
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSaveJob(job);
                       }}
-                            size="small"
-                            sx={{ mr: 0.5 }}
+                              size="small"
+                              sx={{ mr: 0.5 }}
                     >
-                            {isSavedJob(job.id) ? (
                         <Bookmark color="primary" />
-                      ) : (
-                        <BookmarkBorder />
-                      )}
                     </IconButton>
+                          </Box>
                         </Box>
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.75, mt: 0.5 }}>
-                        <LocationOn fontSize="small" color="action" sx={{ mr: 0.5 }} />
-                        <Typography variant="body2" color="text.secondary">
-                          {job.location}
-                        </Typography>
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 0.75 }}>
-                        <Chip
-                          size="small"
-                          label={job.jobType}
-                          variant="outlined"
-                          sx={{ fontSize: '0.7rem', height: 22 }}
-                        />
-                      
-                        {job.salaryRange && (
+                        
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.75, mt: 0.5 }}>
+                          <LocationOn fontSize="small" color="action" sx={{ mr: 0.5 }} />
+                          <Typography variant="body2" color="text.secondary">
+                            {job.location}
+                          </Typography>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 0.75 }}>
                           <Chip
                             size="small"
-                            label={job.salaryRange}
+                            label={job.jobType}
                             variant="outlined"
                             sx={{ fontSize: '0.7rem', height: 22 }}
                           />
-                        )}
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                        <Button
-                          variant="contained"
-                          color="success"
-                          size="small"
-                          startIcon={<SendOutlined fontSize="small" />}
+                        
+                          {job.salaryRange && (
+                            <Chip
+                              size="small"
+                              label={job.salaryRange}
+                              variant="outlined"
+                              icon={<AEDIcon fontSize="small" />}
+                              sx={{ fontSize: '0.7rem', height: 22 }}
+                            />
+                          )}
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                          <Button
+                            variant="contained"
+                            color="success"
+                            size="small"
+                            startIcon={<SendOutlined fontSize="small" />}
                       onClick={(e) => {
                         e.stopPropagation();
-                            handleAutoApply(job);
+                              handleAutoApply(job);
                       }}
-                          sx={{ fontSize: '0.7rem', py: 0.25, px: 1 }}
+                            sx={{ fontSize: '0.7rem', py: 0.25, px: 1 }}
                     >
-                          AI Apply
-                        </Button>
-                      </Box>
+                            AI Apply
+                          </Button>
+                        </Box>
                   </Box>
                 </Box>
               </ListItem>
+            </React.Fragment>
           ))}
         </List>
           )}
@@ -1771,7 +1961,7 @@ const JobSearch = () => {
     }
     
     // Search History Tab
-    if (activeTab === "searchHistory") {
+    if (activeTab === 2) {
       return (
         <>
           {renderTabs()}
@@ -1798,7 +1988,7 @@ const JobSearch = () => {
                     // Restore search
                     setSearchTerm(search.search || '');
                     setLocationSearch(search.location || '');
-                    setActiveTab("jobs");
+                    setActiveTab(0);
                     // Apply filters if available
                     if (search.filters) {
                       setFilters(search.filters);
@@ -1920,11 +2110,11 @@ const JobSearch = () => {
     if (!currentSharedJob || !shareEmail) return;
     
     try {
-      await apiEndpoints.jobs.shareJobViaEmail({
+      await axios.post(JOB_ENDPOINTS.SHARE_JOB, {
         jobId: currentSharedJob.id,
         email: shareEmail,
         sender: profile?.id,
-        message: `Check out this job: ${currentSharedJob.title} at ${typeof currentSharedJob.company === 'string' ? currentSharedJob.company : currentSharedJob.company?.name || 'the company'}`
+        message: `Check out this job: ${currentSharedJob.title} at ${currentSharedJob.company}`
       });
       
       setSnackbarMessage(`Job shared with ${shareEmail}`);
@@ -1941,119 +2131,23 @@ const JobSearch = () => {
   // Handle getting AI job suggestions
   const handleGetAiSuggestions = async () => {
     try {
-      // Set loading state
-      setSuggestedJobs([]);
+      setLoading(true);
+      setError(null);
       
-      // Create mock getRecommendedJobs implementation if it doesn't exist
-      const getRecommendedJobs = async (userId) => {
-        if (apiEndpoints.jobs && apiEndpoints.jobs.getRecommendedJobs) {
-          return await apiEndpoints.jobs.getRecommendedJobs(userId);
-        } else {
-          console.log("Using mock getRecommendedJobs implementation");
-          // Generate mock recommended jobs
-          const mockRecommendedJobs = Array(5).fill(0).map((_, index) => ({
-            id: `rec-job-${index}-${Date.now()}`,
-            title: ["AI Engineer", "Frontend Developer", "Full Stack Developer", "DevOps Specialist", "Data Scientist"][index],
-            company: {
-              id: `company-${index}`,
-              name: ["TamkeenAI", "Tech Solutions", "Digital Innovators", "Future Systems", "Smart Solutions"][index],
-              logo: `https://via.placeholder.com/50?text=${index + 1}`
-            },
-            location: "Dubai, UAE",
-            remote: index % 2 === 0,
-            salary: {
-              min: 80000 + (index * 10000),
-              max: 150000 + (index * 15000),
-              currency: "AED"
-            },
-            matchScore: 85 - (index * 5), // Changed from 'match' to 'matchScore'
-            postedDate: new Date(Date.now() - (index * 2) * 24 * 60 * 60 * 1000).toISOString(),
-            employmentType: ["Full-time", "Part-time", "Contract", "Freelance", "Full-time"][index],
-            skills: ["JavaScript", "React", "Node.js", "Python", "AWS"].slice(0, 3 + Math.floor(Math.random() * 3)),
-            description: "This is a mock AI-recommended job description generated for testing purposes.",
-            salaryRange: `${(80 + index * 10)}-${(150 + index * 15)}k AED`, // Added salary range in AED
-          }));
-          
-          return { data: mockRecommendedJobs };
-        }
-      };
+      const response = await axios.post(JOB_ENDPOINTS.RECOMMEND);
       
-      // If there's a user profile, get suggestions based on their profile
-      if (profile?.id) {
-        const response = await getRecommendedJobs(profile.id);
-        if (response.data) {
-          setSuggestedJobs(response.data);
-        }
+      if (response.data?.jobs) {
+        setJobs(response.data.jobs);
+        setTotalJobs(response.data.total || response.data.jobs.length);
+        setCurrentPage(1);
       } else {
-        // Otherwise use current search criteria and filters through the mock searchJobs function we created earlier
-        const searchJobsImpl = async (params) => {
-          if (apiEndpoints.jobs && apiEndpoints.jobs.searchJobs) {
-            return await apiEndpoints.jobs.searchJobs(params);
-          } else {
-            console.log("Using mock searchJobs implementation for suggestions");
-            // Generate different mock jobs for AI suggestions with proper AED formatting
-            const mockJobs = Array(5).fill(0).map((_, index) => ({
-              id: `sugg-job-${index}-${Date.now()}`,
-              title: params.search 
-                ? `${params.search} Specialist`
-                : ["Product Designer", "Marketing Manager", "Content Writer", "UI/UX Designer", "Software Architect"][index],
-              company: {
-                id: `company-${index}`,
-                name: ["TamkeenAI", "Tech Solutions", "Digital Innovators", "Future Systems", "Smart Solutions"][index],
-                logo: `https://via.placeholder.com/50?text=${index + 1}`
-              },
-              location: params.location || "Dubai, UAE",
-              remote: params.remote || index % 2 === 0,
-              salary: {
-                min: 70000 + (index * 10000),
-                max: 140000 + (index * 15000),
-                currency: "AED" // Ensure using AED
-              },
-              matchScore: 90 - (index * 7), // Ensure using matchScore property
-              postedDate: new Date(Date.now() - (index * 3) * 24 * 60 * 60 * 1000).toISOString(),
-              employmentType: ["Full-time", "Part-time", "Contract", "Freelance", "Full-time"][index],
-              skills: ["JavaScript", "React", "Node.js", "Python", "AWS"].slice(0, 3 + Math.floor(Math.random() * 3)),
-              description: "This is a mock job suggestion generated for testing purposes.",
-              salaryRange: `${(70 + index * 10)}-${(140 + index * 15)}k AED` // Ensure AED format
-            }));
-            
-            return {
-              data: {
-                jobs: mockJobs,
-                total: 22
-              }
-            };
-          }
-        };
-        
-        const suggestionsResponse = await searchJobsImpl({
-          search: searchTerm,
-          location: locationSearch,
-          page: 1,
-          pageSize: 10,
-          sortBy: 'relevance',
-          jobTypes: filters.jobTypes,
-          experience: filters.experience,
-          salary: filters.salary,
-          remote: filters.remote,
-          datePosted: filters.datePosted,
-          industries: filters.industries,
-          skills: filters.skills,
-          emirates: filters.emirates,
-          visaStatus: filters.visaStatus,
-          sectorType: filters.sectorType,
-          companyLocation: filters.companyLocation,
-          benefits: filters.benefits
-        });
-        
-        if (suggestionsResponse.data?.jobs) {
-          setSuggestedJobs(suggestionsResponse.data.jobs);
-        }
+        setError('No job suggestions available at the moment.');
       }
-    } catch (error) {
-      console.error("Failed to get job suggestions:", error);
-      setSnackbarMessage('Failed to get job suggestions. Please try again.');
-      setSnackbarOpen(true);
+    } catch (err) {
+      console.error('Failed to get job suggestions:', err);
+      setError('Failed to get AI job suggestions. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -2079,20 +2173,8 @@ const JobSearch = () => {
     };
     
     try {
-      // Create mock addSearchHistory function if it doesn't exist
-      const addSearchHistory = async (userId, searchData) => {
-        if (apiEndpoints.jobs && apiEndpoints.jobs.addSearchHistory) {
-          return await apiEndpoints.jobs.addSearchHistory(userId, searchData);
-        } else {
-          console.log("Using mock addSearchHistory implementation");
-          // Simply log the search history and return success
-          console.log("Would add to search history:", searchData);
-          return { success: true };
-        }
-      };
-      
-      // Add to search history with API call
-      addSearchHistory(profile.id, searchToSave);
+      // Add to search history with API call - use addSearchHistory instead
+      axios.post(JOB_ENDPOINTS.ADD_SEARCH_HISTORY, searchToSave);
       
       // Add to local state
       setSearchHistory([searchToSave, ...searchHistory]);
@@ -2120,31 +2202,13 @@ const JobSearch = () => {
       setSnackbarMessage('AI is preparing your application...');
       setSnackbarOpen(true);
       
-      // Create mock applyToJob implementation if it doesn't exist
-      const applyToJob = async (applicationData) => {
-        if (apiEndpoints.jobs && apiEndpoints.jobs.applyToJob) {
-          return await apiEndpoints.jobs.applyToJob(applicationData);
-        } else {
-          console.log("Using mock applyToJob implementation");
-          // Simulate API delay
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          return { 
-            data: { 
-              success: true,
-              message: "Application submitted successfully",
-              applicationId: `app-${Date.now()}`
-            } 
-          };
-        }
-      };
-      
       // Use the existing API method - regular job application endpoint
-      const response = await applyToJob({
+      const response = await axios.post(JOB_ENDPOINTS.APPLY, {
         jobId: job.id,
         userId: profile.id,
         automate: true, // Indicate this is an AI-automated application
-        coverLetter: `AI-generated application for ${job.title} at ${job.company?.name || 'the company'}`, 
-        resumeId: profile.resumeId || 'default-resume'
+        coverLetter: `AI-generated application for ${job.title} at ${job.company}`, 
+        resumeId: profile.resumeId
       });
       
       if (response?.data?.success) {
@@ -2167,26 +2231,6 @@ const JobSearch = () => {
       setSnackbarOpen(true);
     }
   };
-
-  // Add a separate effect for initial search when component mounts
-  useEffect(() => {
-    // Only run once when component mounts
-    console.log("JobSearch: Component mounted, trigger initial search");
-    
-    const runInitialSearch = async () => {
-      // Only run if no search is in progress and we have no jobs loaded yet
-      if (!searching && jobs.length === 0) {
-        await searchJobs();
-      }
-    };
-    
-    // Short delay to ensure other effects have completed
-    const timer = setTimeout(() => {
-      runInitialSearch();
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, []); // Empty dependency array means it only runs once on mount
 
   return (
     <Box sx={{ py: 2, px: { xs: 2, md: 3 } }}>
@@ -2285,31 +2329,31 @@ const JobSearch = () => {
             onClick={(event) => setSortMenuAnchorEl(event.currentTarget)}
           >
             Sort: {getSortLabel()}
-                </Button>
-                
-                <Button 
-                  variant="contained"
+          </Button>
+          
+          <Button
+            variant="contained"
             color="success"
             size="small"
             startIcon={<Psychology />}
-                  onClick={() => {
+            onClick={() => {
               setShowAIJobSuggestions(true);
               handleGetAiSuggestions(); 
-                  }}
-                >
+            }}
+          >
             AI Job Suggestions
-                </Button>
-              </Box>
-            </Box>
+          </Button>
+        </Box>
+      </Box>
       
       <Grid container spacing={3}>
         {/* Filters section - left column */}
         <Grid item xs={12} md={3}>
           <Paper sx={{ p: 2, mb: { xs: 2, md: 0 } }}>
-            {renderFilters()}
+              {renderFilters()}
           </Paper>
-          </Grid>
-        
+        </Grid>
+          
         {/* Job listings - right column */}
         <Grid item xs={12} md={9}>
           <Paper sx={{ p: 2 }}>
@@ -2340,13 +2384,13 @@ const JobSearch = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShareJobDialogOpen(false)}>Cancel</Button>
-          <Button 
-            variant="contained"
+                <Button 
+                  variant="contained"
             onClick={handleEmailShare}
             disabled={!shareEmail}
           >
             Send
-          </Button>
+                </Button>
         </DialogActions>
       </Dialog>
       
@@ -2361,7 +2405,7 @@ const JobSearch = () => {
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Psychology sx={{ mr: 1, color: 'success.main' }} />
             Personalized Job Recommendations
-        </Box>
+          </Box>
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" paragraph>
@@ -2388,10 +2432,10 @@ const JobSearch = () => {
                 >
                   <ListItemAvatar>
                     {job.companyLogo ? (
-                      <Avatar src={job.companyLogo} alt={typeof job.company === 'string' ? job.company : job.company?.name || 'Company Logo'} />
+                      <Avatar src={job.companyLogo} alt={job.company} />
                     ) : (
                       <Avatar sx={{ bgcolor: 'primary.main' }}>
-                        {typeof job.company === 'string' ? job.company.charAt(0) : job.company?.name?.charAt(0) || "J"}
+                        {job.company?.charAt(0) || "J"}
                       </Avatar>
                     )}
                   </ListItemAvatar>
@@ -2409,7 +2453,7 @@ const JobSearch = () => {
                     secondary={
                       <>
                         <Typography variant="body2" component="span" color="text.primary">
-                          {job.company?.name || 'Unknown Company'}
+                          {job.company}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
                           <LocationOn fontSize="small" color="action" sx={{ mr: 0.5 }} />

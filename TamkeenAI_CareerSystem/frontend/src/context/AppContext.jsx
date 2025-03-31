@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
 import { api } from '../api/apiClient';
 import { AUTH, USER } from '../api/endpoints';
-import apiEndpoints from '../utils/api';
+import { jobEndpoints } from '../utils/endpoints';
 import i18n from '../i18n';
 import { initializeTheme, setTheme, toggleTheme as toggleThemeUtil } from '../utils/themeToggle';
 
@@ -129,14 +129,24 @@ export const useJob = () => {
     setSavedJobs,
     toggleSaveJob,
     fetchSavedJobs,
-    isSavedJob
+    isSavedJob,
+    removeSavedJob
   } = context;
   
   return {
     savedJobs,
+    setSavedJobs,
     toggleSaveJob,
     fetchSavedJobs,
-    isSavedJob
+    isSavedJob,
+    removeSavedJob,
+    // Compute derived data
+    jobCount: savedJobs?.length || 0,
+    hasSavedJobs: (savedJobs?.length || 0) > 0,
+    // Helper functions
+    getSavedJobsCount: () => savedJobs?.length || 0,
+    getSavedJobById: (jobId) => savedJobs?.find(job => job.id === jobId) || null,
+    getRecentlySavedJobs: (limit = 5) => savedJobs?.slice(0, limit) || []
   };
 };
 
@@ -203,6 +213,95 @@ export const AppContextProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [savedJobs, setSavedJobs] = useState([]);
   const [currentResume, setCurrentResume] = useState(null);
+  
+  // Initialize saved jobs from localStorage if available
+  useEffect(() => {
+    const storedSavedJobs = localStorage.getItem('savedJobs');
+    if (storedSavedJobs) {
+      try {
+        setSavedJobs(JSON.parse(storedSavedJobs));
+      } catch (e) {
+        console.error('Failed to parse saved jobs from localStorage:', e);
+        // Initialize with empty array if parsing fails
+        setSavedJobs([]);
+      }
+    }
+  }, []);
+
+  // Persist saved jobs to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('savedJobs', JSON.stringify(savedJobs));
+  }, [savedJobs]);
+  
+  // Job management functions
+  const toggleSaveJob = useCallback((job) => {
+    setSavedJobs(prevSavedJobs => {
+      const jobIndex = prevSavedJobs.findIndex(savedJob => savedJob.id === job.id);
+      
+      if (jobIndex !== -1) {
+        // If job is already saved, remove it
+        return prevSavedJobs.filter(savedJob => savedJob.id !== job.id);
+      } else {
+        // Otherwise add it to saved jobs
+        return [...prevSavedJobs, { 
+          ...job,
+          savedAt: new Date().toISOString() 
+        }];
+      }
+    });
+  }, []);
+  
+  const isSavedJob = useCallback((jobId) => {
+    return savedJobs.some(job => job.id === jobId);
+  }, [savedJobs]);
+  
+  const fetchSavedJobs = useCallback(async () => {
+    try {
+      // Try to fetch from API if user is authenticated
+      if (user && user.id) {
+        try {
+          const response = await jobEndpoints.jobs.getSavedJobs(user.id);
+          if (response && response.success && response.data) {
+            setSavedJobs(response.data);
+            return response.data;
+          }
+        } catch (error) {
+          console.log('Error fetching saved jobs from API, using local storage instead:', error);
+          // If API fails, we'll use what we have in local state
+        }
+      }
+      
+      // If no user or API failed, return local state
+      return savedJobs;
+    } catch (error) {
+      console.error('Error in fetchSavedJobs:', error);
+      return savedJobs;
+    }
+  }, [user, savedJobs]);
+  
+  const removeSavedJob = useCallback(async (jobId) => {
+    try {
+      // Try to remove from API if user is authenticated
+      if (user && user.id) {
+        try {
+          await jobEndpoints.jobs.unsaveJob(jobId);
+        } catch (error) {
+          console.log('Error removing job from API:', error);
+          // Continue with local removal even if API fails
+        }
+      }
+      
+      // Always update local state
+      setSavedJobs(prevSavedJobs => 
+        prevSavedJobs.filter(job => job.id !== jobId)
+      );
+      
+      return true;
+    } catch (error) {
+      console.error('Error in removeSavedJob:', error);
+      return false;
+    }
+  }, [user]);
   
   // Apply language changes
   useEffect(() => {
@@ -648,131 +747,50 @@ export const AppContextProvider = ({ children }) => {
     }
   };
   
-  // Fetch saved jobs
-  const fetchSavedJobs = useCallback(async () => {
-    if (!user?.id) return;
-    
-    try {
-      // Check if API exists
-      if (apiEndpoints && apiEndpoints.jobs && apiEndpoints.jobs.getSavedJobs) {
-        const response = await apiEndpoints.jobs.getSavedJobs(user.id);
-        setSavedJobs(response.data || []);
-      } else {
-        // Use localStorage fallback in development
-        const savedJobsStr = localStorage.getItem(`savedJobs_${user.id}`);
-        if (savedJobsStr) {
-          try {
-            setSavedJobs(JSON.parse(savedJobsStr));
-          } catch (e) {
-            console.error('Error parsing saved jobs from localStorage:', e);
-            setSavedJobs([]);
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch saved jobs:', err);
-    }
-  }, [user?.id]);
-
-  // Check if a job is saved
-  const isSavedJob = useCallback((jobId) => {
-    return savedJobs.some(job => job.id === jobId);
-  }, [savedJobs]);
-
-  // Toggle save/unsave job
-  const toggleSaveJob = useCallback(async (job) => {
-    if (!user?.id) return false;
-    
-    const isSaved = isSavedJob(job.id);
-    
-    try {
-      if (isSaved) {
-        // Remove job from saved jobs
-        if (apiEndpoints?.jobs?.unsaveJob) {
-          await apiEndpoints.jobs.unsaveJob(job.id, user.id);
-        }
-        
-        // Update state
-        const updatedJobs = savedJobs.filter(saved => saved.id !== job.id);
-        setSavedJobs(updatedJobs);
-        
-        // Update localStorage in dev mode
-        if (import.meta.env.DEV) {
-          localStorage.setItem(`savedJobs_${user.id}`, JSON.stringify(updatedJobs));
-        }
-        
-        return false;
-      } else {
-        // Add job to saved jobs
-        if (apiEndpoints?.jobs?.saveJob) {
-          await apiEndpoints.jobs.saveJob(job.id, user.id);
-        }
-        
-        // Update state
-        const updatedJobs = [...savedJobs, job];
-        setSavedJobs(updatedJobs);
-        
-        // Update localStorage in dev mode
-        if (import.meta.env.DEV) {
-          localStorage.setItem(`savedJobs_${user.id}`, JSON.stringify(updatedJobs));
-        }
-        
-        return true;
-      }
-    } catch (err) {
-      console.error('Error toggling job save:', err);
-      return isSaved;
-    }
-  }, [user?.id, savedJobs, isSavedJob]);
-
-  // Load saved jobs when user changes
-  useEffect(() => {
-    if (user?.id) {
-      fetchSavedJobs();
-    } else {
-      setSavedJobs([]);
-    }
-  }, [user?.id, fetchSavedJobs]);
-  
   const contextValue = {
+    // Auth
     user,
-    profile,
+    isAuthenticated: !!user,
+    isLoggingIn,
     token,
-    loading,
-    error,
-    theme,
-    language,
-    notifications,
-    unreadCount,
-    userRoles,
-    savedJobs,
-    currentResume,
-    
-    // Auth actions
     login,
     logout,
     register,
-    isAuthenticated: !!user,
+    loading,
+    error,
     
-    // Profile actions
-    fetchUserProfile,
+    // User profile
+    profile,
     updateUserProfile,
     
-    // UI actions
+    // UI preferences
+    theme,
+    language,
     toggleTheme,
     changeLanguage,
     toggleLanguage,
     
-    // Notification actions
+    // Notifications
+    notifications,
+    unreadCount,
     fetchNotifications,
     markNotificationAsRead,
     
-    // Job actions
-    fetchSavedJobs,
-    toggleSaveJob,
-    isSavedJob,
+    // Role management
+    userRoles,
+    hasRole: (role) => userRoles.includes(role),
+    
+    // Job management
+    savedJobs,
     setSavedJobs,
-    setCurrentResume
+    toggleSaveJob,
+    fetchSavedJobs,
+    isSavedJob,
+    removeSavedJob,
+    
+    // Resume management
+    currentResume,
+    setCurrentResume,
   };
   
   return (

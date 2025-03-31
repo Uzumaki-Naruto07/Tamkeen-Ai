@@ -43,6 +43,11 @@ export const JOB_ENDPOINTS = {
   UNSAVE: (id) => `${API_BASE_URL}/job/${id}/unsave`,
   GET_SAVED: `${API_BASE_URL}/job/saved`,
   JOB_TITLES: `${API_BASE_URL}/jobs/titles`,
+  GET_INDUSTRIES: `${API_BASE_URL}/job/industries`,
+  GET_SKILLS: `${API_BASE_URL}/job/skills`,
+  GET_RECENT: `${API_BASE_URL}/job/recent`,
+  GET_SAVED_SEARCHES: `${API_BASE_URL}/job/saved-searches`,
+  GET_SEARCH_HISTORY: `${API_BASE_URL}/job/search-history`,
   // Job application endpoints
   GET_APPLICATIONS: `${API_BASE_URL}/job-application/history`,
   APPLY: `${API_BASE_URL}/job-application/apply`,
@@ -86,12 +91,453 @@ export const SKILLS_ENDPOINTS = {
   GET_JOB_TITLES: `${API_BASE_URL}/jobs/titles`,
 };
 
+// Add mock data for UAE jobs
+const getUAEMockJobs = () => [
+  {
+    id: 'job-1',
+    title: 'Software Engineer',
+    company: 'Emirates Technology Solutions',
+    location: 'Dubai, UAE',
+    emirate: 'Dubai',
+    jobType: 'Full-time',
+    salaryRange: '15,000 - 25,000 AED/month',
+    salaryMin: 15000,
+    salaryMax: 25000,
+    salaryType: 'monthly',
+    description: 'Join our team to develop innovative solutions for the UAE market...',
+    requirements: ['3+ years of experience', 'Bachelor\'s degree', 'JavaScript/React expertise'],
+    benefits: ['Housing allowance', 'Health insurance', 'Annual flight tickets'],
+    visaStatus: 'Employment Visa Provided',
+    sectorType: 'private',
+    companyLocation: 'Dubai Internet City (Free Zone)',
+    postedDate: '2023-05-15',
+    deadline: '2023-06-15',
+    matchScore: 85,
+    nationality: 'All Nationalities'
+  },
+  {
+    id: 'job-2',
+    title: 'Financial Analyst',
+    company: 'Abu Dhabi Investment Authority',
+    location: 'Abu Dhabi, UAE',
+    emirate: 'Abu Dhabi',
+    jobType: 'Full-time',
+    salaryRange: '18,000 - 30,000 AED/month',
+    salaryMin: 18000,
+    salaryMax: 30000,
+    salaryType: 'monthly',
+    description: 'Analyze investment opportunities across the MENA region...',
+    requirements: ['5+ years of experience', 'CFA designation', 'Arabic & English fluency'],
+    benefits: ['Housing allowance', 'Education allowance for children', 'Annual flight tickets'],
+    visaStatus: 'Employment Visa Provided',
+    sectorType: 'government',
+    companyLocation: 'Mainland',
+    postedDate: '2023-05-12',
+    deadline: '2023-06-12',
+    matchScore: 78,
+    nationality: 'All Nationalities'
+  },
+  {
+    id: 'job-3',
+    title: 'Marketing Manager',
+    company: 'Etisalat',
+    location: 'Dubai, UAE',
+    emirate: 'Dubai',
+    jobType: 'Full-time',
+    salaryRange: '25,000 - 35,000 AED/month',
+    salaryMin: 25000,
+    salaryMax: 35000,
+    salaryType: 'monthly',
+    description: 'Lead marketing strategies for telecommunications products in the UAE market...',
+    requirements: ['7+ years of marketing experience', 'Master\'s degree preferred', 'Digital marketing expertise'],
+    benefits: ['Housing allowance', 'Health insurance', 'Annual flight tickets', 'Performance bonus'],
+    visaStatus: 'Employment Visa Provided',
+    sectorType: 'semi-government',
+    companyLocation: 'Mainland',
+    postedDate: '2023-05-10',
+    deadline: '2023-06-10',
+    matchScore: 92,
+    nationality: 'All Nationalities'
+  },
+  // Add more jobs...
+  {
+    id: 'job-15',
+    title: 'Petroleum Engineer',
+    company: 'ADNOC',
+    location: 'Abu Dhabi, UAE',
+    emirate: 'Abu Dhabi',
+    jobType: 'Full-time',
+    salaryRange: '30,000 - 45,000 AED/month',
+    salaryMin: 30000,
+    salaryMax: 45000,
+    salaryType: 'monthly',
+    description: 'Work on oil and gas extraction projects across the UAE...',
+    requirements: ['Petroleum Engineering degree', '5+ years experience', 'Knowledge of extraction methods'],
+    benefits: ['Housing allowance', 'Education allowance', 'Annual tickets', 'Transportation allowance', 'Health insurance for family'],
+    visaStatus: 'Employment Visa Provided',
+    sectorType: 'government',
+    companyLocation: 'Mainland',
+    postedDate: '2023-05-12',
+    deadline: '2023-06-12',
+    matchScore: 90,
+    nationality: 'All Nationalities'
+  },
+  {
+    id: 'job-16',
+    title: 'UI/UX Designer',
+    company: 'Digital Oasis',
+    location: 'Sharjah, UAE',
+    emirate: 'Sharjah',
+    jobType: 'Full-time',
+    salaryRange: '12,000 - 18,000 AED/month',
+    salaryMin: 12000,
+    salaryMax: 18000,
+    salaryType: 'monthly',
+    description: 'Design user interfaces for mobile and web applications...',
+    requirements: ['Portfolio of UI/UX work', 'Figma proficiency', 'User testing experience'],
+    benefits: ['Flexible hours', 'Health insurance', 'Transportation allowance'],
+    visaStatus: 'Employment Visa Provided',
+    sectorType: 'private',
+    companyLocation: 'Sharjah Media City (Free Zone)',
+    postedDate: '2023-05-10',
+    deadline: '2023-06-10',
+    matchScore: 82,
+    nationality: 'All Nationalities'
+  }
+];
+
+// Add helper function to filter jobs
+const filterJobsByParams = (job, params) => {
+  // Title or keyword search
+  if (params.search && !job.title.toLowerCase().includes(params.search.toLowerCase()) && 
+      !job.company.toLowerCase().includes(params.search.toLowerCase())) {
+    return false;
+  }
+  
+  // Location search - more specific handling for UAE locations
+  if (params.location) {
+    const emirates = ['Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman', 'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah'];
+    const searchedEmirate = emirates.find(emirate => 
+      params.location.toLowerCase().includes(emirate.toLowerCase())
+    );
+    
+    if (searchedEmirate && job.emirate !== searchedEmirate) {
+      return false;
+    } else if (!searchedEmirate && !job.location.toLowerCase().includes(params.location.toLowerCase())) {
+      return false;
+    }
+  }
+  
+  // Emirates filter
+  if (params.emirates && params.emirates.length > 0 && !params.emirates.includes(job.emirate)) {
+    return false;
+  }
+  
+  // Job Type filter
+  if (params.jobTypes && params.jobTypes.length > 0 && !params.jobTypes.includes(job.jobType)) {
+    return false;
+  }
+  
+  // Visa Status filter
+  if (params.visaStatus && params.visaStatus.length > 0 && !params.visaStatus.includes(job.visaStatus)) {
+    return false;
+  }
+  
+  // Experience Level filter
+  if (params.experience && params.experience.length > 0) {
+    const jobLevel = getExperienceLevelFromRequirements(job.requirements);
+    if (!params.experience.includes(jobLevel)) {
+      return false;
+    }
+  }
+  
+  // Salary Range filter
+  if (params.salary && params.salary.length === 2) {
+    const [minSalary, maxSalary] = params.salary;
+    
+    // Convert job salary to comparable format based on salary type
+    let jobMinSalary = job.salaryMin;
+    let jobMaxSalary = job.salaryMax;
+    
+    if (params.salaryType === 'annual' && job.salaryType === 'monthly') {
+      jobMinSalary = job.salaryMin * 12;
+      jobMaxSalary = job.salaryMax * 12;
+    } else if (params.salaryType === 'monthly' && job.salaryType === 'annual') {
+      jobMinSalary = job.salaryMin / 12;
+      jobMaxSalary = job.salaryMax / 12;
+    }
+    
+    if (jobMaxSalary < minSalary || jobMinSalary > maxSalary) {
+      return false;
+    }
+  }
+  
+  // Benefits filter
+  if (params.benefits && params.benefits.length > 0) {
+    if (!job.benefits || !params.benefits.every(benefit => 
+      job.benefits.some(jobBenefit => 
+        jobBenefit.toLowerCase().includes(benefit.toLowerCase())
+      )
+    )) {
+      return false;
+    }
+  }
+  
+  // Remote work filter
+  if (params.remote === true && !job.location.toLowerCase().includes('remote')) {
+    return false;
+  }
+  
+  // Date Posted filter
+  if (params.datePosted && params.datePosted !== 'any') {
+    const jobPostedDate = new Date(job.postedDate);
+    const currentDate = new Date();
+    
+    switch (params.datePosted) {
+      case 'today':
+        if (jobPostedDate.toDateString() !== currentDate.toDateString()) {
+          return false;
+        }
+        break;
+      case 'week':
+        const weekAgo = new Date(currentDate);
+        weekAgo.setDate(currentDate.getDate() - 7);
+        if (jobPostedDate < weekAgo) {
+          return false;
+        }
+        break;
+      case 'month':
+        const monthAgo = new Date(currentDate);
+        monthAgo.setDate(currentDate.getDate() - 30);
+        if (jobPostedDate < monthAgo) {
+          return false;
+        }
+        break;
+    }
+  }
+  
+  // Sector Type filter
+  if (params.sectorType && params.sectorType !== 'all' && job.sectorType !== params.sectorType) {
+    return false;
+  }
+  
+  // Company Location filter (mainland/freezone)
+  if (params.companyLocation && params.companyLocation !== 'all') {
+    if (params.companyLocation === 'freezone' && !job.companyLocation.toLowerCase().includes('free zone')) {
+      return false;
+    }
+    if (params.companyLocation === 'mainland' && !job.companyLocation.toLowerCase().includes('mainland')) {
+      return false;
+    }
+  }
+  
+  // Skills filter
+  if (params.skills && params.skills.length > 0) {
+    const jobRequirementsText = job.requirements ? job.requirements.join(' ').toLowerCase() : '';
+    const hasMatchingSkill = params.skills.some(skill => 
+      jobRequirementsText.includes(skill.toLowerCase())
+    );
+    
+    if (!hasMatchingSkill) {
+      return false;
+    }
+  }
+  
+  // Industry filter
+  if (params.industries && params.industries.length > 0) {
+    const jobText = `${job.company} ${job.title} ${job.description}`.toLowerCase();
+    const hasMatchingIndustry = params.industries.some(industry => 
+      jobText.includes(industry.toLowerCase())
+    );
+    
+    if (!hasMatchingIndustry) {
+      return false;
+    }
+  }
+  
+  return true;
+};
+
+// Helper function to determine experience level from requirements
+function getExperienceLevelFromRequirements(requirements) {
+  if (!requirements || !Array.isArray(requirements)) {
+    return 'Entry level';
+  }
+  
+  const reqString = requirements.join(' ').toLowerCase();
+  
+  if (reqString.includes('executive') || reqString.includes('c-level') || reqString.includes('ceo') || 
+      reqString.includes('cto') || reqString.includes('cfo') || reqString.includes('10+ years')) {
+    return 'Executive';
+  }
+  
+  if (reqString.includes('manager') || reqString.includes('head of') || reqString.includes('director') || 
+      reqString.includes('8+ years') || reqString.includes('7+ years')) {
+    return 'Manager';
+  }
+  
+  if (reqString.includes('senior') || reqString.includes('lead') || reqString.includes('5+ years') || 
+      reqString.includes('6+ years')) {
+    return 'Senior level';
+  }
+  
+  if (reqString.includes('3+ years') || reqString.includes('4+ years') || reqString.includes('mid')) {
+    return 'Mid level';
+  }
+  
+  return 'Entry level';
+}
+
+// Add job endpoints with functions
+export const jobEndpoints = {
+  jobs: {
+    searchJobs: async (params) => {
+      const filteredJobs = getUAEMockJobs().filter(job => filterJobsByParams(job, params));
+      return {
+        success: true,
+        data: {
+          jobs: filteredJobs,
+          total: filteredJobs.length
+        }
+      };
+    },
+    
+    getRecentJobs: async () => ({
+      success: true,
+      data: {
+        jobs: getUAEMockJobs(),
+        total: getUAEMockJobs().length
+      }
+    }),
+    
+    getIndustries: async () => ({
+      success: true,
+      data: {
+        industries: [
+          'Oil & Gas',
+          'Banking & Finance',
+          'Real Estate',
+          'Construction',
+          'Technology',
+          'Healthcare',
+          'Education',
+          'Tourism & Hospitality',
+          'Retail',
+          'Media',
+          'Logistics',
+          'Government',
+          'Telecommunications'
+        ]
+      }
+    }),
+    
+    getSkillsList: async () => ({
+      success: true,
+      data: {
+        skills: [
+          'JavaScript',
+          'Python',
+          'React',
+          'Node.js',
+          'SQL',
+          'Machine Learning',
+          'Data Analysis',
+          'Project Management',
+          'Communication',
+          'Leadership',
+          'Arabic',
+          'English'
+        ]
+      }
+    }),
+
+    getSavedJobs: async (userId) => ({
+      success: true,
+      data: []
+    }),
+
+    unsaveJob: async (jobId) => ({
+      success: true,
+      data: { message: 'Job unsaved successfully' }
+    }),
+
+    saveJob: async (jobId) => ({
+      success: true,
+      data: { message: 'Job saved successfully' }
+    }),
+
+    getJobById: async (jobId) => {
+      const job = getUAEMockJobs().find(j => j.id === jobId);
+      return {
+        success: true,
+        data: job || null
+      };
+    }
+  }
+};
+
 // Export all endpoints
 export const apiEndpoints = {
   auth: AUTH_ENDPOINTS,
   user: USER_ENDPOINTS,
   dashboard: DASHBOARD_ENDPOINTS,
-  jobs: JOB_ENDPOINTS,
+  jobs: {
+    search: (params) => ({
+      url: JOB_ENDPOINTS.SEARCH,
+      method: 'post',
+      data: params
+    }),
+    getById: (id) => ({
+      url: JOB_ENDPOINTS.GET_BY_ID(id),
+      method: 'get'
+    }),
+    saveJob: (id) => ({
+      url: JOB_ENDPOINTS.SAVE(id),
+      method: 'post'
+    }),
+    unsaveJob: (id) => ({
+      url: JOB_ENDPOINTS.UNSAVE(id),
+      method: 'post'
+    }),
+    getSavedJobs: () => ({
+      url: JOB_ENDPOINTS.GET_SAVED,
+      method: 'get'
+    }),
+    getIndustries: () => ({
+      url: JOB_ENDPOINTS.GET_INDUSTRIES,
+      method: 'get',
+      data: { mock: true }
+    }),
+    getSkillsList: () => ({
+      url: JOB_ENDPOINTS.GET_SKILLS,
+      method: 'get',
+      data: { mock: true }
+    }),
+    getRecentJobs: (page, pageSize) => ({
+      url: JOB_ENDPOINTS.GET_RECENT,
+      method: 'get',
+      params: { page, pageSize },
+      data: { mock: true }
+    }),
+    getSavedSearches: (userId) => ({
+      url: JOB_ENDPOINTS.GET_SAVED_SEARCHES,
+      method: 'get',
+      params: { userId },
+      data: { mock: true }
+    }),
+    getSearchHistory: (userId) => ({
+      url: JOB_ENDPOINTS.GET_SEARCH_HISTORY,
+      method: 'get',
+      params: { userId },
+      data: { mock: true }
+    }),
+    getRecommendedJobs: (userId) => ({
+      url: JOB_ENDPOINTS.RECOMMEND,
+      method: 'get',
+      params: { userId },
+      data: { mock: true }
+    })
+  },
   system: SYSTEM_ENDPOINTS,
   resumes: {
     getUserResumes: (userId) => ({

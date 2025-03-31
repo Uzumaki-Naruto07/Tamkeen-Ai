@@ -1,301 +1,470 @@
 /**
- * Mock data to simulate API responses during development
+ * Mock Data Index
+ * This file centralizes all mock data for the application,
+ * making it easier to import and use mock data throughout the app.
  */
 
-export const mockDashboardData = {
-  userProgress: {
-    careerLevel: "Senior Developer",
-    levelProgress: 75,
-    nextMilestone: "Team Lead",
-    achievementsEarned: 42,
-    totalSkills: 87,
-    masteredSkills: 52
+// Import all mock data
+import jobApplicationsMock, { 
+  getJobApplicationsByUserId, 
+  getJobApplicationById,
+  getJobApplicationsByStatus 
+} from './jobApplicationMock';
+
+// Import mock job data - use named imports from jobsData.js
+import mockJobsData, { 
+  mockJobs,
+  mockJobCategories,
+  mockIndustries,
+  mockSkills
+} from '../mockData/jobsData';
+
+// User-related mocks
+const mockUsers = [
+  {
+    id: 'user-1',
+    name: 'Zayed Al Nahyan',
+    email: 'zayed@tamkeen.ai',
+    role: 'user',
+    avatar: null,
+    joined: '2023-01-15T08:00:00Z'
   },
-  resumeScore: {
-    currentScore: 78,
-    previousScore: 65,
-    industryAverage: 70,
-    sections: [
-      { name: "Professional Summary", score: 85 },
-      { name: "Work Experience", score: 90 },
-      { name: "Skills", score: 75 },
-      { name: "Education", score: 95 },
-      { name: "Projects", score: 65 }
-    ],
-    history: [
-      { date: "2023-01-15", score: 60 },
-      { date: "2023-02-15", score: 65 },
-      { date: "2023-03-15", score: 68 },
-      { date: "2023-04-15", score: 72 },
-      { date: "2023-05-15", score: 78 }
-    ]
-  },
-  skillGap: {
-    currentRole: "Senior Frontend Developer",
-    targetRole: "Frontend Team Lead",
-    skills: [
-      { name: "React", current: 90, required: 85 },
-      { name: "TypeScript", current: 80, required: 85 },
-      { name: "System Design", current: 65, required: 85 },
-      { name: "Team Management", current: 60, required: 80 },
-      { name: "Code Reviews", current: 75, required: 90 },
-      { name: "Testing", current: 70, required: 75 }
-    ]
-  },
-  aiRecommendation: [
-    {
-      type: "skill",
-      title: "Improve System Design Skills",
-      description: "Your system design skills need improvement for your target role.",
-      action: "Take our advanced system design course",
-      priority: "high"
-    },
-    {
-      type: "resume",
-      title: "Highlight Leadership Experience",
-      description: "Team Lead roles require more emphasis on leadership.",
-      action: "Update your resume's work experience section",
-      priority: "medium"
-    },
-    {
-      type: "networking",
-      title: "Connect with Team Leads",
-      description: "Build your network with people in your target role.",
-      action: "Attend our upcoming networking event",
-      priority: "medium"
-    }
-  ],
-  careerJourney: {
-    milestones: [
+  {
+    id: 'admin-1',
+    name: 'Admin User',
+    email: 'admin@tamkeen.ai',
+    role: 'admin',
+    avatar: null,
+    joined: '2022-12-01T08:00:00Z'
+  }
+];
+
+// Resume mocks
+const mockResumes = [
+  {
+    id: 'resume-1',
+    userId: 'user-1',
+    name: 'Tech Resume 2023',
+    createdAt: '2023-01-20T10:15:00Z',
+    updatedAt: '2023-03-10T14:30:00Z',
+    score: 85,
+    skills: ['React', 'JavaScript', 'TypeScript', 'Node.js', 'HTML/CSS'],
+    experience: [
       {
-        title: "Junior Developer",
-        date: "2018-06",
-        description: "Started career as a Junior Developer at XYZ Corp",
-        achievements: ["Learned React basics", "Built first production feature"]
+        title: 'Senior Frontend Developer',
+        company: 'TechCorp UAE',
+        location: 'Dubai, UAE',
+        startDate: '2021-06-01T00:00:00Z',
+        endDate: null,
+        current: true,
+        description: 'Leading frontend development team and architecting React applications'
       },
       {
-        title: "Mid-level Developer",
-        date: "2020-03",
-        description: "Promoted to Mid-level Developer",
-        achievements: ["Led small feature team", "Implemented CI/CD pipeline"]
-      },
-      {
-        title: "Senior Developer",
-        date: "2022-01",
-        description: "Promoted to Senior Developer",
-        achievements: ["Architecture design", "Mentored junior developers"]
+        title: 'Frontend Developer',
+        company: 'Digital Solutions LLC',
+        location: 'Abu Dhabi, UAE',
+        startDate: '2019-03-01T00:00:00Z',
+        endDate: '2021-05-31T00:00:00Z',
+        current: false,
+        description: 'Developed responsive web applications using React and Redux'
       }
     ],
-    nextMilestones: [
+    education: [
       {
-        title: "Team Lead",
-        estimatedDate: "2024-01",
-        requirements: ["Team management experience", "Advanced system design", "Project planning"],
-        readiness: 68
+        degree: 'Bachelor of Science in Computer Science',
+        institution: 'UAE University',
+        location: 'Al Ain, UAE',
+        graduationDate: '2019-05-15T00:00:00Z'
       }
     ]
   },
-  jobRecommendations: [
-    {
-      id: "job1",
-      title: "Frontend Team Lead",
-      company: "ABC Tech",
-      location: "Dubai, UAE",
-      salary: "AED 25,000 - 30,000",
-      matchScore: 85,
-      postedDate: "2023-05-10"
-    },
-    {
-      id: "job2",
-      title: "Senior React Developer",
-      company: "Global Systems",
-      location: "Abu Dhabi, UAE",
-      salary: "AED 22,000 - 28,000",
-      matchScore: 92,
-      postedDate: "2023-05-12"
-    },
-    {
-      id: "job3",
-      title: "Frontend Architect",
-      company: "Future Technologies",
-      location: "Dubai, UAE",
-      salary: "AED 28,000 - 35,000",
-      matchScore: 78,
-      postedDate: "2023-05-08"
-    }
-  ],
-  learningPaths: [
-    {
-      id: "path1",
-      title: "Team Leadership Mastery",
-      description: "Essential skills for technical team leads",
-      duration: "8 weeks",
-      progress: 25,
-      skills: ["Team Management", "Project Planning", "Performance Reviews"]
-    },
-    {
-      id: "path2",
-      title: "Advanced System Design",
-      description: "Learn to design scalable systems",
-      duration: "6 weeks",
-      progress: 10,
-      skills: ["System Architecture", "Scalability", "Performance Optimization"]
-    }
-  ],
-  insights: {
-    marketTrends: [
+  {
+    id: 'resume-2',
+    userId: 'user-1',
+    name: 'Design Resume 2023',
+    createdAt: '2023-02-05T09:20:00Z',
+    updatedAt: '2023-02-05T09:20:00Z',
+    score: 78,
+    skills: ['UI/UX Design', 'Figma', 'Adobe XD', 'User Research', 'Wireframing'],
+    experience: [
       {
-        skill: "React",
-        demand: "High",
-        growth: 15,
-        averageSalary: "AED 20,000"
-      },
-      {
-        skill: "TypeScript",
-        demand: "High",
-        growth: 28,
-        averageSalary: "AED 22,000"
-      },
-      {
-        skill: "Next.js",
-        demand: "Growing",
-        growth: 45,
-        averageSalary: "AED 23,000"
+        title: 'UX/UI Designer',
+        company: 'Creative Agency Dubai',
+        location: 'Dubai, UAE',
+        startDate: '2020-08-01T00:00:00Z',
+        endDate: null,
+        current: true,
+        description: 'Designing user interfaces for web and mobile applications'
       }
     ],
-    careerInsights: [
+    education: [
       {
-        role: "Frontend Team Lead",
-        openings: 24,
-        competition: "Medium",
-        growthRate: 18
-      },
-      {
-        role: "Frontend Architect",
-        openings: 15,
-        competition: "High",
-        growthRate: 12
-      }
-    ]
-  },
-  careerProgress: {
-    level: 8,
-    title: "Senior Developer",
-    xp: 7850,
-    nextLevelXp: 10000,
-    badges: [
-      {
-        name: "React Master",
-        icon: "react",
-        dateEarned: "2023-01-15",
-        description: "Achieved mastery in React development"
-      },
-      {
-        name: "Git Guru",
-        icon: "git",
-        dateEarned: "2022-11-10",
-        description: "Demonstrated advanced Git skills"
-      },
-      {
-        name: "Mentor",
-        icon: "mentor",
-        dateEarned: "2023-03-22",
-        description: "Mentored 5 junior developers"
-      }
-    ],
-    achievements: [
-      {
-        name: "Project Lead",
-        points: 500,
-        dateEarned: "2023-02-10",
-        description: "Successfully led a project team"
-      },
-      {
-        name: "Problem Solver",
-        points: 350,
-        dateEarned: "2023-04-05",
-        description: "Resolved 50 critical bugs"
-      }
-    ]
-  },
-  recentActivities: [
-    {
-      type: "Resume Update",
-      description: "Updated your resume skills section",
-      timestamp: "2023-05-15T14:30:00",
-      impact: "+5 resume score"
-    },
-    {
-      type: "Course Completion",
-      description: "Completed 'Advanced TypeScript' course",
-      timestamp: "2023-05-14T10:15:00",
-      impact: "+1 Skill, +100 XP"
-    },
-    {
-      type: "Job Application",
-      description: "Applied to 'Senior Frontend Developer' at XYZ Corp",
-      timestamp: "2023-05-12T09:45:00",
-      impact: "+1 Application"
-    },
-    {
-      type: "Assessment",
-      description: "Completed the React proficiency assessment",
-      timestamp: "2023-05-10T16:20:00",
-      impact: "+200 XP, 'React Master' badge"
-    }
-  ],
-  careerPrediction: {
-    currentRole: "Senior Developer",
-    potentialPaths: [
-      {
-        title: "Team Lead",
-        probability: 0.85,
-        timeframe: "1-2 years",
-        keyRequirements: ["Team Management", "Project Planning", "Technical Leadership"]
-      },
-      {
-        title: "Frontend Architect",
-        probability: 0.65,
-        timeframe: "2-3 years",
-        keyRequirements: ["System Design", "Performance Optimization", "Cross-platform Expertise"]
-      },
-      {
-        title: "Engineering Manager",
-        probability: 0.40,
-        timeframe: "3-5 years",
-        keyRequirements: ["People Management", "Process Improvement", "Strategic Planning"]
-      }
-    ],
-    recommendations: [
-      "Focus on team leadership opportunities",
-      "Take on more system design responsibilities",
-      "Develop mentorship experience"
-    ]
-  },
-  leaderboardPosition: {
-    rank: 12,
-    totalUsers: 156,
-    percentile: 92,
-    category: "Frontend Development",
-    topUsers: [
-      {
-        name: "Ahmed K.",
-        points: 9850,
-        badges: 48,
-        level: 12
-      },
-      {
-        name: "Fatima S.",
-        points: 9650,
-        badges: 45,
-        level: 11
-      },
-      {
-        name: "Mohammed A.",
-        points: 9400,
-        badges: 42,
-        level: 11
+        degree: 'Bachelor of Fine Arts in Design',
+        institution: 'American University of Sharjah',
+        location: 'Sharjah, UAE',
+        graduationDate: '2020-06-10T00:00:00Z'
       }
     ]
   }
-}; 
+];
+
+// Companies mock data
+const mockCompanies = [
+  {
+    id: 'company-1',
+    name: 'TechCorp UAE',
+    logo: 'https://via.placeholder.com/150?text=TechCorp',
+    location: 'Dubai, UAE',
+    industry: 'Technology',
+    size: '500-1000',
+    website: 'https://techcorp-uae.example.com',
+    description: 'Leading technology company in the UAE focusing on digital transformation',
+    founded: 2010,
+    benefits: ['Health Insurance', 'Flexible Hours', 'Remote Work Options', 'Career Growth']
+  },
+  {
+    id: 'company-2',
+    name: 'Financial Solutions DMCC',
+    logo: 'https://via.placeholder.com/150?text=FinSol',
+    location: 'Dubai, UAE',
+    industry: 'Finance',
+    size: '100-500',
+    website: 'https://financial-solutions.example.com',
+    description: 'Financial technology solutions provider serving the MENA region',
+    founded: 2015,
+    benefits: ['Competitive Salary', 'Annual Bonus', 'Education Assistance', 'Health Insurance']
+  },
+  {
+    id: 'company-3',
+    name: 'Global Healthcare Dubai',
+    logo: 'https://via.placeholder.com/150?text=GHD',
+    location: 'Dubai, UAE',
+    industry: 'Healthcare',
+    size: '1000+',
+    website: 'https://global-healthcare.example.com',
+    description: 'International healthcare provider with cutting-edge medical technology',
+    founded: 2005,
+    benefits: ['Health Insurance', 'Life Insurance', 'Retirement Plan', 'Wellness Programs']
+  },
+  {
+    id: 'company-4',
+    name: 'Emirates Digital Solutions',
+    logo: 'https://via.placeholder.com/150?text=EDS',
+    location: 'Dubai, UAE',
+    industry: 'Technology',
+    size: '100-500',
+    website: 'https://emirates-digital.example.com',
+    description: 'Digital transformation consultancy for government and private sectors',
+    founded: 2014,
+    benefits: ['Competitive Salary', 'Flexible Hours', 'Training Programs', 'Health Insurance']
+  },
+  {
+    id: 'company-5',
+    name: 'Abu Dhabi Smart City',
+    logo: 'https://via.placeholder.com/150?text=ADSC',
+    location: 'Abu Dhabi, UAE',
+    industry: 'Government',
+    size: '500-1000',
+    website: 'https://abudhabi-smartcity.example.com',
+    description: 'Smart city initiative driving innovation in urban development',
+    founded: 2018,
+    benefits: ['Government Benefits', 'Housing Allowance', 'Transportation Allowance', 'Educational Support']
+  }
+];
+
+// Analytics mock data
+const mockAnalytics = {
+  jobMarket: {
+    totalJobs: 2500,
+    newJobsLastWeek: 320,
+    growthRate: 15,
+    topIndustries: [
+      { name: 'Technology', percentage: 35 },
+      { name: 'Finance', percentage: 22 },
+      { name: 'Healthcare', percentage: 18 },
+      { name: 'Retail', percentage: 12 },
+      { name: 'Education', percentage: 8 }
+    ],
+    demandSkills: [
+      { name: 'React', growth: 45 },
+      { name: 'TypeScript', growth: 38 },
+      { name: 'Node.js', growth: 32 },
+      { name: 'Data Science', growth: 28 },
+      { name: 'Cloud Computing', growth: 25 }
+    ],
+    salaryRanges: {
+      technology: { min: 12000, max: 35000, average: 22000, currency: 'AED' },
+      finance: { min: 15000, max: 40000, average: 25000, currency: 'AED' },
+      healthcare: { min: 10000, max: 30000, average: 18000, currency: 'AED' }
+    }
+  },
+  userProgress: {
+    profileCompletion: 85,
+    applicationSuccess: 65,
+    interviewRate: 42,
+    skillGrowth: [
+      { skill: 'React', growth: 15 },
+      { skill: 'TypeScript', growth: 20 },
+      { skill: 'Leadership', growth: 8 }
+    ],
+    activeDays: [
+      { date: '2023-03-01', activity: 10 },
+      { date: '2023-03-02', activity: 5 },
+      { date: '2023-03-03', activity: 8 },
+      { date: '2023-03-04', activity: 12 },
+      { date: '2023-03-05', activity: 7 }
+    ]
+  }
+};
+
+// ATS analysis mock data
+const atsAnalysis = {
+  overall_score: 75,
+  matched_keywords: ["react", "javascript", "frontend", "ui", "css"],
+  missing_keywords: ["typescript", "graphql", "aws", "testing"],
+  sections: {
+    summary: {
+      score: 7,
+      feedback: "Good summary highlighting your experience"
+    },
+    experience: {
+      score: 8,
+      feedback: "Strong experience section with relevant roles"
+    },
+    education: {
+      score: 6,
+      feedback: "Education section meets requirements"
+    },
+    skills: {
+      score: 7,
+      feedback: "Good skills match, add more relevant technologies"
+    }
+  },
+  strengths: [
+    "Strong emphasis on frontend development skills",
+    "Clear demonstration of project experience",
+    "Well-structured resume format"
+  ],
+  weaknesses: [
+    "Missing some key technologies mentioned in job description",
+    "Limited quantification of achievements"
+  ],
+  suggestions: [
+    {
+      title: "Add missing keywords",
+      description: "Include TypeScript, GraphQL and AWS in your skills section",
+      type: "keywords"
+    },
+    {
+      title: "Quantify your achievements",
+      description: "Add metrics and specific outcomes to your work experiences",
+      type: "section"
+    },
+    {
+      title: "Enhance your summary",
+      description: "Tailor your summary to better match this specific role",
+      type: "section"
+    }
+  ],
+  ai_suggestions: [
+    {
+      title: "Add testing experience",
+      description: "Include your experience with Jest, React Testing Library or other testing frameworks the job requires"
+    },
+    {
+      title: "Highlight collaborative work",
+      description: "Emphasize your experience working in agile teams and your collaboration skills"
+    },
+    {
+      title: "Show problem-solving skills",
+      description: "Add specific examples of how you've solved complex front-end challenges"
+    }
+  ]
+};
+
+// ATS analysis with visuals mock data
+const atsAnalysisWithVisuals = {
+  ...atsAnalysis,
+  visualizations: {
+    keyword_cloud: {
+      type: "wordCloud",
+      data: [
+        { text: "React", value: 25 },
+        { text: "JavaScript", value: 20 },
+        { text: "CSS", value: 15 },
+        { text: "HTML", value: 15 },
+        { text: "UI/UX", value: 10 },
+        { text: "Frontend", value: 18 },
+        { text: "Responsive", value: 8 }
+      ]
+    },
+    score_breakdown: {
+      type: "radar",
+      data: {
+        labels: ["Keywords", "Experience", "Education", "Skills", "Format"],
+        datasets: [
+          {
+            label: "Your Resume",
+            data: [75, 80, 60, 70, 85]
+          },
+          {
+            label: "Target Score",
+            data: [90, 80, 70, 90, 85]
+          }
+        ]
+      }
+    }
+  }
+};
+
+// ATS history mock data
+const atsHistory = [
+  {
+    id: 1,
+    job_title: "Senior Frontend Developer",
+    score: 75,
+    assessment: "Good match with some improvements needed",
+    created_at: "2023-05-15T10:30:00Z",
+    resume_filename: "tech_resume_2023.pdf"
+  },
+  {
+    id: 2,
+    job_title: "React Developer",
+    score: 82,
+    assessment: "Strong match with the job requirements",
+    created_at: "2023-04-20T14:15:00Z",
+    resume_filename: "tech_resume_2023.pdf"
+  },
+  {
+    id: 3,
+    job_title: "UI/UX Developer",
+    score: 68,
+    assessment: "Moderate match, missing key design skills",
+    created_at: "2023-03-10T09:45:00Z",
+    resume_filename: "design_resume_2023.pdf"
+  }
+];
+
+// Resume parsing result mock
+const resumeParseResult = {
+  name: "Zayed Al Nahyan",
+  email: "zayed@tamkeen.ai",
+  phone: "+971 50 123 4567",
+  location: "Dubai, UAE",
+  summary: "Experienced frontend developer with expertise in React, JavaScript, and modern web technologies.",
+  skills: ["React", "JavaScript", "TypeScript", "Node.js", "HTML/CSS", "UI/UX", "Responsive Design"],
+  experience: [
+    {
+      title: "Senior Frontend Developer",
+      company: "TechCorp UAE",
+      location: "Dubai, UAE",
+      startDate: "2021-06",
+      endDate: "Present",
+      description: "Leading frontend development team and architecting React applications for enterprise clients."
+    },
+    {
+      title: "Frontend Developer",
+      company: "Digital Solutions LLC",
+      location: "Abu Dhabi, UAE",
+      startDate: "2019-03",
+      endDate: "2021-05",
+      description: "Developed responsive web applications using React and Redux for government and private sector clients."
+    }
+  ],
+  education: [
+    {
+      degree: "Bachelor of Science in Computer Science",
+      institution: "UAE University",
+      location: "Al Ain, UAE",
+      graduationDate: "2019-05"
+    }
+  ]
+};
+
+// Resume versions mock data
+const resumeVersions = [
+  {
+    id: "v1",
+    name: "Initial Version",
+    date: "2023-01-20T10:15:00Z"
+  },
+  {
+    id: "v2",
+    name: "Updated Skills",
+    date: "2023-02-15T14:30:00Z"
+  },
+  {
+    id: "v3",
+    name: "After ATS Optimization",
+    date: "2023-03-10T09:20:00Z"
+  }
+];
+
+// User resume versions mock data
+const userResumes = [
+  {
+    id: "resume-1",
+    userId: "user-1",
+    name: "Tech Resume 2023",
+    createdAt: "2023-01-20T10:15:00Z",
+    updatedAt: "2023-03-10T14:30:00Z",
+    preview: "https://via.placeholder.com/250x350?text=Resume+Preview",
+    versions: resumeVersions
+  },
+  {
+    id: "resume-2",
+    userId: "user-1",
+    name: "Design Resume 2023",
+    createdAt: "2023-02-05T09:20:00Z",
+    updatedAt: "2023-02-05T09:20:00Z",
+    preview: "https://via.placeholder.com/250x350?text=Design+Resume",
+    versions: resumeVersions.slice(0, 1)
+  }
+];
+
+// Export individual mock data
+export {
+  jobApplicationsMock,
+  getJobApplicationsByUserId,
+  getJobApplicationById,
+  getJobApplicationsByStatus,
+  mockJobs,
+  mockJobCategories,
+  mockIndustries,
+  mockSkills,
+  mockUsers,
+  mockResumes,
+  mockCompanies,
+  mockAnalytics,
+  atsAnalysis,
+  atsAnalysisWithVisuals,
+  atsHistory,
+  resumeParseResult,
+  userResumes,
+  resumeVersions
+};
+
+// Export all mock data as a single object
+const mockData = {
+  applications: jobApplicationsMock,
+  jobs: mockJobs,
+  jobCategories: mockJobCategories,
+  industries: mockIndustries,
+  skills: mockSkills,
+  users: mockUsers,
+  resumes: mockResumes,
+  companies: mockCompanies,
+  analytics: mockAnalytics,
+  atsAnalysis,
+  atsAnalysisWithVisuals,
+  atsHistory,
+  resumeParseResult,
+  userResumes,
+  resumeVersions,
+  // Helper functions
+  getJobApplicationsByUserId,
+  getJobApplicationById,
+  getJobApplicationsByStatus
+};
+
+export default mockData; 

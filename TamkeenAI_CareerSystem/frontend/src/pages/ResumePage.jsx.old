@@ -1,0 +1,92 @@
+chunk-SRNDHWC2.js?v=3a09ec6e:21609 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+main.jsx:50 React application rendering started
+api.js:44 Backend availability check: CONNECTED
+resumePage:153 Browser compatibility check completed
+ResumePage.jsx:1 
+            
+            
+           Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+chunk-OU5AQDZK.js?v=3a09ec6e:903 Uncaught TypeError: Failed to fetch dynamically imported module: http://localhost:3000/src/pages/ResumePage.jsx?t=1743419008274
+chunk-OU5AQDZK.js?v=3a09ec6e:903 Uncaught TypeError: Failed to fetch dynamically imported module: http://localhost:3000/src/pages/ResumePage.jsx?t=1743419008274
+chunk-SRNDHWC2.js?v=3a09ec6e:14080 The above error occurred in one of your React components:
+
+    at Lazy
+    at Suspense
+    at RequireAuth (http://localhost:3000/src/components/auth/RequireAuth.jsx?t=1743417026357:22:24)
+    at ProtectedRoute (http://localhost:3000/src/App.jsx?t=1743419008274:137:27)
+    at RenderedRoute (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:4089:5)
+    at Outlet (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:4495:26)
+    at ErrorBoundary (http://localhost:3000/src/components/common/ErrorBoundary.jsx:8:5)
+    at main
+    at http://localhost:3000/node_modules/.vite/deps/chunk-EAIETUW3.js?v=3a09ec6e:474:49
+    at Box3 (http://localhost:3000/node_modules/.vite/deps/chunk-QAPL3BGO.js?v=3a09ec6e:400:19)
+    at div
+    at http://localhost:3000/node_modules/.vite/deps/chunk-EAIETUW3.js?v=3a09ec6e:474:49
+    at Box3 (http://localhost:3000/node_modules/.vite/deps/chunk-QAPL3BGO.js?v=3a09ec6e:400:19)
+    at MainLayout (http://localhost:3000/src/components/layout/MainLayout.jsx?t=1743417026357:28:20)
+    at RenderedRoute (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:4089:5)
+    at RenderErrorBoundary (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:4049:5)
+    at DataRoutes (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:5240:5)
+    at Router (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:4502:15)
+    at RouterProvider (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:5054:5)
+    at AppContextProvider (http://localhost:3000/src/context/AppContext.jsx?t=1743417026357:203:38)
+    at DefaultPropsProvider (http://localhost:3000/node_modules/.vite/deps/chunk-HKNO5R53.js?v=3a09ec6e:3283:3)
+    at RtlProvider (http://localhost:3000/node_modules/.vite/deps/chunk-QAPL3BGO.js?v=3a09ec6e:1139:5)
+    at ThemeProvider (http://localhost:3000/node_modules/.vite/deps/chunk-QAPL3BGO.js?v=3a09ec6e:1089:5)
+    at ThemeProvider2 (http://localhost:3000/node_modules/.vite/deps/chunk-QAPL3BGO.js?v=3a09ec6e:1179:5)
+    at ThemeProvider (http://localhost:3000/node_modules/.vite/deps/chunk-YMSYNP6W.js?v=3a09ec6e:333:12)
+    at ThemeContextProvider (http://localhost:3000/src/contexts/ThemeContext.jsx:36:40)
+    at I18nextProvider (http://localhost:3000/node_modules/.vite/deps/react-i18next.js?v=3a09ec6e:781:3)
+    at ErrorBoundary (http://localhost:3000/src/components/common/ErrorBoundary.jsx:8:5)
+    at App
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.
+logCapturedError @ chunk-SRNDHWC2.js?v=3a09ec6e:14080
+ErrorBoundary.jsx:19 Error caught by ErrorBoundary: TypeError: Failed to fetch dynamically imported module: http://localhost:3000/src/pages/ResumePage.jsx?t=1743419008274 Object
+componentDidCatch @ ErrorBoundary.jsx:19
+chunk-SRNDHWC2.js?v=3a09ec6e:21609 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+main.jsx:50 React application rendering started
+api.js:44 Backend availability check: CONNECTED
+resumePage:153 Browser compatibility check completed
+ResumePage.jsx:1 
+            
+            
+           Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+chunk-OU5AQDZK.js?v=3a09ec6e:903 Uncaught TypeError: Failed to fetch dynamically imported module: http://localhost:3000/src/pages/ResumePage.jsx?t=1743419008274
+chunk-OU5AQDZK.js?v=3a09ec6e:903 Uncaught TypeError: Failed to fetch dynamically imported module: http://localhost:3000/src/pages/ResumePage.jsx?t=1743419008274
+chunk-SRNDHWC2.js?v=3a09ec6e:14080 The above error occurred in one of your React components:
+
+    at Lazy
+    at Suspense
+    at RequireAuth (http://localhost:3000/src/components/auth/RequireAuth.jsx?t=1743417026357:22:24)
+    at ProtectedRoute (http://localhost:3000/src/App.jsx?t=1743419008274:137:27)
+    at RenderedRoute (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:4089:5)
+    at Outlet (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:4495:26)
+    at ErrorBoundary (http://localhost:3000/src/components/common/ErrorBoundary.jsx:8:5)
+    at main
+    at http://localhost:3000/node_modules/.vite/deps/chunk-EAIETUW3.js?v=3a09ec6e:474:49
+    at Box3 (http://localhost:3000/node_modules/.vite/deps/chunk-QAPL3BGO.js?v=3a09ec6e:400:19)
+    at div
+    at http://localhost:3000/node_modules/.vite/deps/chunk-EAIETUW3.js?v=3a09ec6e:474:49
+    at Box3 (http://localhost:3000/node_modules/.vite/deps/chunk-QAPL3BGO.js?v=3a09ec6e:400:19)
+    at MainLayout (http://localhost:3000/src/components/layout/MainLayout.jsx?t=1743417026357:28:20)
+    at RenderedRoute (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:4089:5)
+    at RenderErrorBoundary (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:4049:5)
+    at DataRoutes (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:5240:5)
+    at Router (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:4502:15)
+    at RouterProvider (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=3a09ec6e:5054:5)
+    at AppContextProvider (http://localhost:3000/src/context/AppContext.jsx?t=1743417026357:203:38)
+    at DefaultPropsProvider (http://localhost:3000/node_modules/.vite/deps/chunk-HKNO5R53.js?v=3a09ec6e:3283:3)
+    at RtlProvider (http://localhost:3000/node_modules/.vite/deps/chunk-QAPL3BGO.js?v=3a09ec6e:1139:5)
+    at ThemeProvider (http://localhost:3000/node_modules/.vite/deps/chunk-QAPL3BGO.js?v=3a09ec6e:1089:5)
+    at ThemeProvider2 (http://localhost:3000/node_modules/.vite/deps/chunk-QAPL3BGO.js?v=3a09ec6e:1179:5)
+    at ThemeProvider (http://localhost:3000/node_modules/.vite/deps/chunk-YMSYNP6W.js?v=3a09ec6e:333:12)
+    at ThemeContextProvider (http://localhost:3000/src/contexts/ThemeContext.jsx:36:40)
+    at I18nextProvider (http://localhost:3000/node_modules/.vite/deps/react-i18next.js?v=3a09ec6e:781:3)
+    at ErrorBoundary (http://localhost:3000/src/components/common/ErrorBoundary.jsx:8:5)
+    at App
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.
+logCapturedError @ chunk-SRNDHWC2.js?v=3a09ec6e:14080
+ErrorBoundary.jsx:19 Error caught by ErrorBoundary: TypeError: Failed to fetch dynamically imported module: http://localhost:3000/src/pages/ResumePage.jsx?t=1743419008274 Object
+componentDidCatch @ ErrorBoundary.jsx:19

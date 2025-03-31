@@ -1,4 +1,5 @@
 import axios from 'axios';
+import withMockFallback, { isBackendUnavailable } from '../utils/mockFallback';
 
 // Environment detection
 const isDevelopment = import.meta.env.DEV;

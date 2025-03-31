@@ -20,6 +20,9 @@ import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
 import RequireAuth from './components/auth/RequireAuth';
+// Import ToastContainer
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Layout component
 import MainLayout from './components/layout/MainLayout';
@@ -48,6 +51,7 @@ const NotFound = lazyLoad(() => import('./pages/NotFound'));
 const JobSearch = lazyLoad(() => import('./pages/JobSearch'));
 const JobSearchDashboard = lazyLoad(() => import('./pages/JobSearchDashboard'));
 const JobDetails = lazyLoad(() => import('./pages/JobDetails'));
+const SavedJobs = lazyLoad(() => import('./pages/SavedJobs'));
 // Add AI Coach components
 const AIInterviewCoach = lazyLoad(() => import('./pages/AIInterviewCoach'));
 const AllInterviewCoach = lazyLoad(() => import('./pages/AllInterviewCoach'));
@@ -149,6 +153,11 @@ const router = createBrowserRouter(
           element={<ProtectedRoute element={<JobDetails />} />} 
           errorElement={<RouteErrorBoundary />}
         />
+        <Route 
+          path="/saved-jobs" 
+          element={<ProtectedRoute element={<SavedJobs />} />} 
+          errorElement={<RouteErrorBoundary />}
+        />
         
         {/* Admin routes */}
         <Route path="/admin-panel" element={<ProtectedRoute element={<AdminPanel />} />} />
@@ -197,6 +206,18 @@ const App = () => {
           <ThemeContextProvider>
             <CssBaseline />
             <AppContextProvider>
+              {/* Add Toast container for notifications */}
+              <ToastContainer 
+                position="top-right"
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+              />
               <RouterProvider 
                 router={router} 
                 fallback={<SuspenseFallback />}

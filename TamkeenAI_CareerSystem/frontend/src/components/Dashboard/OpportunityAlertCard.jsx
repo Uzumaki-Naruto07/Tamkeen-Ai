@@ -12,7 +12,8 @@ import {
   Divider,
   Tooltip,
   Stack,
-  Link
+  Link,
+  SvgIcon
 } from '@mui/material';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
@@ -20,7 +21,6 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LaunchIcon from '@mui/icons-material/Launch';
 import WorkIcon from '@mui/icons-material/Work';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import FlagIcon from '@mui/icons-material/Flag';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import CloseIcon from '@mui/icons-material/Close';
@@ -64,6 +64,13 @@ const getMatchLevel = (matchPercentage) => {
   if (matchPercentage >= 60) return 'primary';
   return 'default';
 };
+
+// Add the AEDIcon component
+const AEDIcon = (props) => (
+  <SvgIcon {...props}>
+    <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="12" fontWeight="bold">AED</text>
+  </SvgIcon>
+);
 
 const OpportunityAlertCard = ({ opportunity, onSave, onApply, onDismiss }) => {
   // Handle the case where opportunity is undefined
@@ -201,8 +208,10 @@ const OpportunityAlertCard = ({ opportunity, onSave, onApply, onDismiss }) => {
           
           {salary && (
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <AttachMoneyIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
-              <Typography variant="body2">{salary}</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                <AEDIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
+                {salary}
+              </Typography>
             </Box>
           )}
           

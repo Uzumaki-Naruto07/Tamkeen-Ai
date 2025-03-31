@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import {
   Box, Paper, Typography, TextField, Button, Divider,
   Link, Alert, CircularProgress, IconButton, Stepper,
@@ -14,7 +15,7 @@ import {
 } from '@mui/icons-material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/AppContext';
-import apiEndpoints from '../utils/api';
+import { AUTH_ENDPOINTS } from '../utils/endpoints';
 import logoImage from '../assets/logo.png';
 import { useAppContext } from '../context/AppContext';
 
@@ -157,7 +158,7 @@ const Register = () => {
     setError(null);
     
     try {
-      const response = await apiEndpoints.auth.register(formData);
+      const response = await axios.post(AUTH_ENDPOINTS.REGISTER, formData);
       
       setRegistrationSuccess(true);
       
@@ -205,7 +206,7 @@ const Register = () => {
     
     try {
       // Redirect to OAuth provider
-      window.location.href = apiEndpoints.auth.socialRegisterUrl(provider);
+      window.location.href = `${AUTH_ENDPOINTS.REGISTER}/${provider}`;
     } catch (err) {
       setError(`${provider} registration failed. Please try again.`);
       setLoading(false);
