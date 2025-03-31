@@ -26,7 +26,7 @@ import {
   CheckCircleOutline, RemoveCircleOutline, NavigateNext, NavigateBefore,
   ArticleOutlined, CategoryOutlined, Add, SaveAlt
 } from '@mui/icons-material';
-import { useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
+import { useNavigate, useLocation as useRouterLocation, Link } from 'react-router-dom';
 import { useUser, useJob } from '../context/AppContext';
 import { JOB_ENDPOINTS } from '../utils/endpoints';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -34,6 +34,7 @@ import { format } from 'date-fns';
 import { useDebounce } from '../hooks/useDebounce';
 import axios from 'axios';
 import { SvgIcon } from '@mui/material';
+import { LinkedIn as LinkedInIcon } from '@mui/icons-material';
 
 const AEDIcon = (props) => (
   <SvgIcon {...props}>
@@ -1507,6 +1508,17 @@ const JobSearch = () => {
             </Button>
             
             <Button
+              component={Link}
+              to="/automation-linkedin"
+              variant="contained"
+              color="primary"
+              size="small"
+              startIcon={<LinkedInIcon />}
+            >
+              LinkedIn Automation
+            </Button>
+            
+            <Button
               variant="contained"
               color="success"
               size="small"
@@ -2329,6 +2341,17 @@ const JobSearch = () => {
             onClick={(event) => setSortMenuAnchorEl(event.currentTarget)}
           >
             Sort: {getSortLabel()}
+          </Button>
+          
+          <Button
+            component={Link}
+            to="/automation-linkedin"
+            variant="contained"
+            color="primary"
+            size="small"
+            startIcon={<LinkedInIcon />}
+          >
+            LinkedIn Automation
           </Button>
           
           <Button

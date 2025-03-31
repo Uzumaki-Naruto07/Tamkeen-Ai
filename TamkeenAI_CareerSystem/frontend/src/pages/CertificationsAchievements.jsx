@@ -46,20 +46,40 @@ const CertificationsAchievements = () => {
       try {
         setLoading(true);
         // Fetch certifications
-        const certsResponse = await apiEndpoints.user.getCertifications(user.id);
-        setCertifications(certsResponse.data || []);
+        try {
+          const certsResponse = await apiEndpoints.user.getCertifications(user.id);
+          setCertifications(certsResponse?.data || []);
+        } catch (err) {
+          console.log('Certifications API not available, using empty list');
+          setCertifications([]);
+        }
         
         // Fetch achievements
-        const achieveResponse = await apiEndpoints.user.getAchievements(user.id);
-        setAchievements(achieveResponse.data || []);
+        try {
+          const achieveResponse = await apiEndpoints.user.getAchievements(user.id);
+          setAchievements(achieveResponse?.data || []);
+        } catch (err) {
+          console.log('Achievements API not available, using empty list');
+          setAchievements([]);
+        }
         
         // Fetch badges
-        const badgesResponse = await apiEndpoints.user.getBadges(user.id);
-        setBadges(badgesResponse.data || []);
+        try {
+          const badgesResponse = await apiEndpoints.user.getBadges(user.id);
+          setBadges(badgesResponse?.data || []);
+        } catch (err) {
+          console.log('Badges API not available, using empty list');
+          setBadges([]);
+        }
 
         // Fetch skill chart
-        const skillsResponse = await apiEndpoints.skills.getTopSkills(user.id);
-        setSkillChart(skillsResponse.data || []);
+        try {
+          const skillsResponse = await apiEndpoints.skills.getTopSkills(user.id);
+          setSkillChart(skillsResponse?.data || []);
+        } catch (err) {
+          console.log('Skills API not available, using empty list');
+          setSkillChart([]);
+        }
         
         setLoading(false);
       } catch (err) {
@@ -76,29 +96,33 @@ const CertificationsAchievements = () => {
   useEffect(() => {
     const checkResumeExtraction = async () => {
       try {
-        const resumeData = await apiEndpoints.resume.getLatest(user.id);
-        if (resumeData.data?.certifications?.length > 0) {
-          // Add any certifications from resume that aren't already in our list
-          const existingTitles = certifications.map(c => c.title.toLowerCase());
-          const newCerts = resumeData.data.certifications.filter(
-            cert => !existingTitles.includes(cert.title.toLowerCase())
-          );
-          
-          if (newCerts.length > 0) {
-            setCertifications(prev => [...prev, ...newCerts]);
+        try {
+          const resumeData = await apiEndpoints.resume.getLatest(user.id);
+          if (resumeData?.data?.certifications?.length > 0) {
+            // Add any certifications from resume that aren't already in our list
+            const existingTitles = certifications.map(c => c.title.toLowerCase());
+            const newCerts = resumeData.data.certifications.filter(
+              cert => !existingTitles.includes(cert.title.toLowerCase())
+            );
+            
+            if (newCerts.length > 0) {
+              setCertifications(prev => [...prev, ...newCerts]);
+            }
           }
-        }
 
-        if (resumeData.data?.achievements?.length > 0) {
-          // Add any achievements from resume that aren't already in our list
-          const existingTitles = achievements.map(a => a.title.toLowerCase());
-          const newAchievements = resumeData.data.achievements.filter(
-            achieve => !existingTitles.includes(achieve.title.toLowerCase())
-          );
-          
-          if (newAchievements.length > 0) {
-            setAchievements(prev => [...prev, ...newAchievements]);
+          if (resumeData?.data?.achievements?.length > 0) {
+            // Add any achievements from resume that aren't already in our list
+            const existingTitles = achievements.map(a => a.title.toLowerCase());
+            const newAchievements = resumeData.data.achievements.filter(
+              achieve => !existingTitles.includes(achieve.title.toLowerCase())
+            );
+            
+            if (newAchievements.length > 0) {
+              setAchievements(prev => [...prev, ...newAchievements]);
+            }
           }
+        } catch (err) {
+          console.log('Resume extraction API not available');
         }
       } catch (err) {
         console.error('Error checking resume data:', err);

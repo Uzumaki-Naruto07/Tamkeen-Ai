@@ -156,11 +156,59 @@ export default {
     getHistory: (resumeId) => api.get(`${endpoints.RESUME_ENDPOINTS.GET_BY_ID(resumeId)}/history`),
     createResume: (data) => api.post(endpoints.RESUME_ENDPOINTS.CREATE_RESUME, data),
     updateResume: (id, data) => api.put(endpoints.RESUME_ENDPOINTS.UPDATE_RESUME(id), data),
-    deleteResume: (id) => api.delete(endpoints.RESUME_ENDPOINTS.DELETE(id))
+    deleteResume: (id) => api.delete(endpoints.RESUME_ENDPOINTS.DELETE(id)),
+    getLatest: (userId) => api.get(`${endpoints.RESUME_ENDPOINTS.GET_USER_RESUMES(userId)}/latest`)
   },
   jobs: {
     getSavedJobs: () => api.get(endpoints.JOB_ENDPOINTS.GET_SAVED),
     saveJob: (id) => api.post(endpoints.JOB_ENDPOINTS.SAVE(id)),
     unsaveJob: (id) => api.delete(endpoints.JOB_ENDPOINTS.UNSAVE(id))
+  },
+  user: {
+    getCertifications: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/certifications/${userId}`),
+    getAchievements: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/achievements/${userId}`),
+    getBadges: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/badges/${userId}`),
+    addCertification: (userId, data) => api.post(`${endpoints.USER_ENDPOINTS.PROFILE}/certifications/${userId}`, data),
+    addAchievement: (userId, data) => api.post(`${endpoints.USER_ENDPOINTS.PROFILE}/achievements/${userId}`, data)
+  },
+  settings: {
+    getNotificationSettings: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/settings/notifications/${userId}`),
+    getAppearanceSettings: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/settings/appearance/${userId}`),
+    getPrivacySettings: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/settings/privacy/${userId}`),
+    getDataSettings: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/settings/data/${userId}`),
+    updateProfile: (userId, data) => api.put(`${endpoints.USER_ENDPOINTS.PROFILE}/${userId}`, data),
+    changePassword: (userId, data) => api.post(`${endpoints.USER_ENDPOINTS.PROFILE}/password/${userId}`, data),
+    updateNotificationSettings: (userId, data) => api.put(`${endpoints.USER_ENDPOINTS.PROFILE}/settings/notifications/${userId}`, data),
+    updateAppearanceSettings: (userId, data) => api.put(`${endpoints.USER_ENDPOINTS.PROFILE}/settings/appearance/${userId}`, data),
+    updatePrivacySettings: (userId, data) => api.put(`${endpoints.USER_ENDPOINTS.PROFILE}/settings/privacy/${userId}`, data),
+    updateDataSettings: (userId, data) => api.put(`${endpoints.USER_ENDPOINTS.PROFILE}/settings/data/${userId}`, data)
+  },
+  skills: {
+    getTopSkills: (userId) => api.get(`${endpoints.SKILLS_ENDPOINTS.GET_USER_SKILLS(userId)}/top`)
+  },
+  profiles: {
+    getUserProfile: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/${userId}`),
+    updateProfile: (profileData) => api.put(`${endpoints.USER_ENDPOINTS.PROFILE}/${profileData.id}`, profileData),
+    getAchievements: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/achievements/${userId}`),
+    getSkills: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/skills/${userId}`),
+    getEducation: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/education/${userId}`),
+    getExperience: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/experience/${userId}`),
+    addEducation: (userId, data) => api.post(`${endpoints.USER_ENDPOINTS.PROFILE}/education/${userId}`, data),
+    updateEducation: (userId, eduId, data) => api.put(`${endpoints.USER_ENDPOINTS.PROFILE}/education/${userId}/${eduId}`, data),
+    deleteEducation: (userId, eduId) => api.delete(`${endpoints.USER_ENDPOINTS.PROFILE}/education/${userId}/${eduId}`),
+    addExperience: (userId, data) => api.post(`${endpoints.USER_ENDPOINTS.PROFILE}/experience/${userId}`, data),
+    updateExperience: (userId, expId, data) => api.put(`${endpoints.USER_ENDPOINTS.PROFILE}/experience/${userId}/${expId}`, data),
+    deleteExperience: (userId, expId) => api.delete(`${endpoints.USER_ENDPOINTS.PROFILE}/experience/${userId}/${expId}`),
+    addSkill: (userId, data) => api.post(`${endpoints.USER_ENDPOINTS.PROFILE}/skills/${userId}`, data),
+    updateSkill: (userId, skillId, data) => api.put(`${endpoints.USER_ENDPOINTS.PROFILE}/skills/${userId}/${skillId}`, data),
+    deleteSkill: (userId, skillId) => api.delete(`${endpoints.USER_ENDPOINTS.PROFILE}/skills/${userId}/${skillId}`),
+    uploadProfilePicture: (userId, formData) => {
+      const config = {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      };
+      return api.post(`${endpoints.USER_ENDPOINTS.PROFILE}/picture/${userId}`, formData, config);
+    }
   }
 };

@@ -9,6 +9,12 @@ export const AUTH_ENDPOINTS = {
   REGISTER: `${API_BASE_URL}/auth/register`,
   LOGOUT: `${API_BASE_URL}/auth/logout`,
   ME: `${API_BASE_URL}/auth/me`,
+  FORGOT_PASSWORD: `${API_BASE_URL}/auth/forgot-password`,
+  RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
+  VERIFY_EMAIL: `${API_BASE_URL}/auth/verify-email`,
+  REFRESH_TOKEN: `${API_BASE_URL}/auth/refresh-token`,
+  CHANGE_PASSWORD: `${API_BASE_URL}/auth/change-password`,
+  USER_INFO: `${API_BASE_URL}/auth/user-info`,
 };
 
 // Resume endpoints
@@ -23,6 +29,11 @@ export const RESUME_ENDPOINTS = {
   GET_RESUME_TEMPLATES: `${API_BASE_URL}/resume/templates`,
   CREATE_RESUME: `${API_BASE_URL}/resume/create`,
   UPDATE_RESUME: (resumeId) => `${API_BASE_URL}/resume/${resumeId}/update`,
+  SCORE: `${API_BASE_URL}/resume/score`,
+  OPTIMIZE: `${API_BASE_URL}/resume/optimize`,
+  EXTRACT_KEYWORDS: `${API_BASE_URL}/resume/extract-keywords`,
+  GENERATE_PDF: `${API_BASE_URL}/resume/generate-pdf`,
+  TRACK_SCORE: `${API_BASE_URL}/resume/track-score`,
 };
 
 // Interview endpoints
@@ -32,6 +43,14 @@ export const INTERVIEW_ENDPOINTS = {
   GET_BY_ID: (id) => `${API_BASE_URL}/interview/${id}`,
   UPDATE: (id) => `${API_BASE_URL}/interview/${id}`,
   DELETE: (id) => `${API_BASE_URL}/interview/${id}`,
+  GENERATE_QUESTIONS: `${API_BASE_URL}/interview/generate-questions`,
+  MOCK_INTERVIEW: `${API_BASE_URL}/interview/mock`,
+  ANALYZE_ANSWERS: `${API_BASE_URL}/interview/analyze-answers`,
+  PROVIDE_FEEDBACK: `${API_BASE_URL}/interview/feedback`,
+  GET_COACHES: `${API_BASE_URL}/interview/coaches`,
+  GET_COACH_BY_ID: (id) => `${API_BASE_URL}/interview/coaches/${id}`,
+  BOOK_SESSION: `${API_BASE_URL}/interview/book-session`,
+  GET_BOOKINGS: `${API_BASE_URL}/interview/bookings`,
 };
 
 // Job endpoints
@@ -59,11 +78,18 @@ export const JOB_ENDPOINTS = {
   CREATE_APPLICATION_TEMPLATE: `${API_BASE_URL}/job-application/templates/create`,
   UPDATE_APPLICATION_TEMPLATE: (id) => `${API_BASE_URL}/job-application/templates/${id}`,
   DELETE_APPLICATION_TEMPLATE: (id) => `${API_BASE_URL}/job-application/templates/${id}`,
+  GENERATE_COVER_LETTER: `${API_BASE_URL}/job-application/generate-cover-letter`,
+  AUTOMATE_LINKEDIN_APPLICATION: `${API_BASE_URL}/job-application/linkedin-automation`,
 };
 
 // User endpoints
 export const USER_ENDPOINTS = {
   PROFILE: `${API_BASE_URL}/user/profile`,
+  UPDATE_PROFILE: `${API_BASE_URL}/user/profile`,
+  UPLOAD_AVATAR: `${API_BASE_URL}/user/avatar`,
+  GET_NOTIFICATIONS: `${API_BASE_URL}/user/notifications`,
+  UPDATE_SETTINGS: `${API_BASE_URL}/user/settings`,
+  DELETE_ACCOUNT: `${API_BASE_URL}/user/account`,
 };
 
 // Health check
@@ -89,6 +115,10 @@ export const SKILLS_ENDPOINTS = {
   GET_ASSESSMENT_QUESTIONS: (categoryId) => `${API_BASE_URL}/skills/assessment/${categoryId}/questions`,
   GET_SKILL_GAP: (userId, jobId) => `${API_BASE_URL}/skills/gap/${userId}/${jobId}`,
   GET_JOB_TITLES: `${API_BASE_URL}/jobs/titles`,
+  ASSESS: `${API_BASE_URL}/skill/assess`,
+  GAP_ANALYSIS: `${API_BASE_URL}/skill/gap-analysis`,
+  RECOMMENDATIONS: `${API_BASE_URL}/skill/recommendations`,
+  TRACK_PROGRESS: `${API_BASE_URL}/skill/track-progress`,
 };
 
 // Add mock data for UAE jobs
@@ -568,6 +598,26 @@ export const apiEndpoints = {
     deleteResume: (resumeId) => ({
       url: RESUME_ENDPOINTS.DELETE(resumeId),
       method: 'delete'
+    }),
+    score: (resumeId) => ({
+      url: RESUME_ENDPOINTS.SCORE(resumeId),
+      method: 'post'
+    }),
+    optimize: (resumeId) => ({
+      url: RESUME_ENDPOINTS.OPTIMIZE(resumeId),
+      method: 'post'
+    }),
+    extractKeywords: (resumeId) => ({
+      url: RESUME_ENDPOINTS.EXTRACT_KEYWORDS(resumeId),
+      method: 'post'
+    }),
+    generatePdf: (resumeId) => ({
+      url: RESUME_ENDPOINTS.GENERATE_PDF(resumeId),
+      method: 'post'
+    }),
+    trackScore: (resumeId) => ({
+      url: RESUME_ENDPOINTS.TRACK_SCORE(resumeId),
+      method: 'get'
     })
   },
   skills: {
@@ -600,8 +650,25 @@ export const apiEndpoints = {
       url: SKILLS_ENDPOINTS.GET_JOB_TITLES,
       method: 'get',
       data: { mock: true }
+    }),
+    assess: (userId, jobId) => ({
+      url: SKILLS_ENDPOINTS.ASSESS(userId, jobId),
+      method: 'post'
+    }),
+    gapAnalysis: (userId, jobId) => ({
+      url: SKILLS_ENDPOINTS.GAP_ANALYSIS(userId, jobId),
+      method: 'post'
+    }),
+    recommendations: (userId) => ({
+      url: SKILLS_ENDPOINTS.RECOMMENDATIONS(userId),
+      method: 'get'
+    }),
+    trackProgress: (userId) => ({
+      url: SKILLS_ENDPOINTS.TRACK_PROGRESS(userId),
+      method: 'get'
     })
-  }
+  },
+  interview: INTERVIEW_ENDPOINTS
 };
 
 export default apiEndpoints;

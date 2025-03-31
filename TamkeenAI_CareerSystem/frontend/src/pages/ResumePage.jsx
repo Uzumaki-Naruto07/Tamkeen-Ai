@@ -1,2131 +1,1379 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Box, Paper, Typography, Tabs, Tab,
-  Button, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, IconButton,
-  Grid, List, ListItem, ListItemText,
-  ListItemSecondaryAction, Alert, Divider, CircularProgress,
-  Card, CardContent, Chip, Avatar, Tooltip, Badge,
-  Fade, useTheme, useMediaQuery, LinearProgress,
-  ListItemIcon, Container, SwipeableDrawer, AppBar, Toolbar
+import React, { useState } from 'react';
+import { 
+  Box, 
+  AppBar, 
+  Toolbar, 
+  Typography, 
+  Card, 
+  List, 
+  ListItem, 
+  ListItemIcon, 
+  ListItemText, 
+  Button, 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions, 
+  TextField, 
+  Paper, 
+  IconButton, 
+  Divider, 
+  LinearProgress, 
+  Chip,
+  Avatar,
+  Tabs,
+  Tab,
+  Badge,
+  Grid,
+  Switch,
+  FormControlLabel,
+  Tooltip,
+  CircularProgress
 } from '@mui/material';
-import {
-  Description, Add, Delete, Edit,
-  Download, Share, Analytics, Compare, CloudQueue,
-  Timeline, Refresh, Assessment, CheckCircle, Speed,
-  ArrowUpward, ArrowForward, Star, StarBorder, History,
-  FileCopy, Visibility, GetApp, Send, BarChart,
-  TrendingUp, School, Work, Code, Tune, FilterList,
-  Info, Label, Menu as MenuIcon, Close
+import { 
+  Add as AddIcon, 
+  Description as DescriptionIcon, 
+  Restore as RestoreIcon, 
+  Upload as UploadIcon, 
+  Timeline as TimelineIcon,
+  Edit as EditIcon,
+  Analytics as AnalyticsIcon,
+  CompareArrows as CompareArrowsIcon,
+  Key as KeyIcon,
+  Work as WorkIcon,
+  Settings as SettingsIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  Lightbulb as LightbulbIcon,
+  CloudUpload as CloudUploadIcon,
+  BarChart as BarChartIcon,
+  Code as CodeIcon,
+  TipsAndUpdates as TipsAndUpdatesIcon,
+  Attachment as AttachmentIcon,
+  SmartToy as SmartToyIcon,
+  Psychology as PsychologyIcon,
+  FileCopy as FileCopyIcon,
+  Description as DescriptionFileIcon,
+  ArrowRight as ArrowRightIcon,
+  Insights as InsightsIcon,
+  Person as PersonIcon,
+  Warning as WarningIcon,
+  AutoAwesomeMotion as AutoAwesomeMotionIcon,
+  WorkOutline as WorkOutlineIcon,
+  AssignmentTurnedIn as AssignmentTurnedInIcon,
+  AlternateEmail as AlternateEmailIcon,
+  Refresh as RefreshIcon,
+  TrendingUp as TrendingUpIcon
 } from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useUser, useResume } from '../context/AppContext';
-import apiEndpoints from '../utils/api';
-import mockData from '../utils/app-mocks/mockDataIndex';
-import ResumeBuilder from '../components/ResumeBuilder';
-import ResumeAnalyzer from '../components/ResumeAnalyzer';
-import JobMatchCalculator from '../components/JobMatchCalculator';
-import WordCloudVisualizer from '../components/WordCloudVisualizer';
-import LoadingSpinner from '../components/LoadingSpinner';
-import ATSResultsCard from '../components/ATSResultsCard';
-import SkillGapAnalysis from '../components/Dashboard/SkillGapAnalysis';
-import ResumeOptimizer from '../components/ResumeOptimizer';
-import ResumeUploader from '../components/ResumeUploader';
-import SkillVisualization3D from '../components/SkillVisualization3D';
-import FeaturedJobsCarousel from '../components/FeaturedJobsCarousel';
-import ResumeScoreChart from '../components/ResumeScoreChart';
-import AiFeedbackSystem from '../components/AiFeedbackSystem';
-import ResumeVersionControl from '../components/ResumeVersionControl';
-import JobSpecificCustomization from '../components/JobSpecificCustomization';
-import EnhancedExportOptions from '../components/EnhancedExportOptions';
-import KeywordsExtractor from '../components/KeywordsExtractor';
-import ResumeAnalysis from '../components/ResumeAnalysis';
 
-// Enhance transitions for smoother animations
-const fadeTransition = {
-  in: { opacity: 1, transform: 'translateY(0)', transition: 'all 0.3s ease-in-out' },
-  out: { opacity: 0, transform: 'translateY(-20px)', transition: 'all 0.3s ease-in-out' },
+// TabPanel component for the tab system
+const TabPanel = (props) => {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`resume-tabpanel-${index}`}
+      aria-labelledby={`resume-tab-${index}`}
+      style={{ width: '100%', height: 'auto', overflow: 'visible' }}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
 }
 
-const ResumePage = () => {
-  const [tabValue, setTabValue] = useState(0);
-  const [resumes, setResumes] = useState([]);
-  const [selectedResume, setSelectedResume] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [newResumeTitle, setNewResumeTitle] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState(false);
-  const [resumeToDelete, setResumeToDelete] = useState(null);
-  const [analysisData, setAnalysisData] = useState(null);
-  const [jobData, setJobData] = useState(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [skillGapData, setSkillGapData] = useState(null);
-  const [resumeVersions, setResumeVersions] = useState([]);
-  const [resumeScore, setResumeScore] = useState(null);
-  const [quickApplyJobs, setQuickApplyJobs] = useState([]);
-  const [savedJobs, setSavedJobs] = useState([]);
-  const [resumeHistory, setResumeHistory] = useState([]);
-  const [versionControlVisible, setVersionControlVisible] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+// Mock components for each tab
+const ResumeBuilder = () => {
+  const [showTips, setShowTips] = useState(true);
   
-  const currentTheme = useTheme();
-  const isMobile = useMediaQuery(currentTheme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(currentTheme.breakpoints.down('md'));
-  
-  const { resumeId } = useParams();
-  const navigate = useNavigate();
-  const { profile } = useUser();
-  const { setCurrentResume } = useResume();
-  
-  // Fetch user's resumes
-  useEffect(() => {
-    const fetchResumes = async () => {
-      // Create default userId for mock data if profile is not available
-      const userId = profile?.id || 'user-1';
-      
-      if (!userId) {
-        console.warn('No user profile found, using default user ID');
-      }
-      
-      setLoading(true);
-      setError(null);
-      
-      try {
-        // Try to get data from API endpoint
-        let resumesResponse;
-        try {
-          resumesResponse = await apiEndpoints.resumes.getUserResumes(userId);
-        } catch (err) {
-          console.log('API call failed, using mock data for resumes');
-          // Fallback to mock data if API call fails
-          const mockResumes = mockData?.resumes?.filter(resume => resume?.userId === userId) || [];
-          
-          // If no mock resumes found for this user, create a default one
-          if (!mockResumes.length) {
-            console.log('No mock resumes found for user, creating default resume');
-            mockResumes.push({
-              id: `default-resume-${Math.random().toString(36).substr(2, 9)}`,
-              userId: userId,
-              title: 'My First Resume',
-              updatedAt: new Date().toISOString(),
-              createdAt: new Date().toISOString(),
-              skills: [],
-              experience: [],
-              education: [],
-              projects: [],
-              personal: {
-                name: profile?.name || '',
-                email: profile?.email || ''
-              }
-            });
-          }
-          
-          // Ensure all mock resumes have required fields
-          const processedMockResumes = mockResumes
-            .filter(resume => resume != null) // Filter out any null/undefined items
-            .map(resume => ({
-            ...resume,
-            id: resume.id || `mock-resume-${Math.random().toString(36).substr(2, 9)}`,
-            title: resume.title || resume.name || 'Untitled Resume',
-            updatedAt: resume.updatedAt || new Date().toISOString(),
-            userId: resume.userId || userId
-          }));
-          
-          resumesResponse = { data: processedMockResumes }
-        }
+  return (
+    <Box sx={{ position: 'relative' }}>
+      <Paper sx={{ p: 3, mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <TextField 
+            label="Resume Title" 
+            variant="outlined" 
+            sx={{ flexGrow: 1, mr: 2 }}
+            defaultValue="Software Engineer Resume"
+          />
+          <Button
+            variant="outlined"
+            color="success"
+            size="small"
+            startIcon={<TipsAndUpdatesIcon />}
+            onClick={() => setShowTips(!showTips)}
+          >
+            {showTips ? "Hide Tips" : "Show Tips"}
+          </Button>
+        </Box>
         
-        // Ensure response.data is an array
-        const resumeData = Array.isArray(resumesResponse?.data) ? resumesResponse.data : [];
-        setResumes(resumeData);
-        
-        // If resumeId is provided in URL, select that resume
-        if (resumeId) {
-          const resume = resumeData.find(r => r.id === resumeId);
-          if (resume) {
-            setSelectedResume(resume);
-            setCurrentResume(resume);
-          } else {
-            setError(`Resume with ID ${resumeId} not found`);
-          }
-        } else if (resumeData.length > 0) {
-          // Otherwise select the first resume
-          setSelectedResume(resumeData[0]);
-          setCurrentResume(resumeData[0]);
-        }
-      } catch (err) {
-        setError('Failed to load your resumes');
-        console.error('Error fetching resumes:', err);
-        setResumes([]); // Set empty array on error
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    fetchResumes();
-  }, [profile, resumeId, setCurrentResume]);
-  
-  // Fetch saved jobs
-  useEffect(() => {
-    const fetchSavedJobs = async () => {
-      try {
-        // Try to get data from API endpoint
-        let jobsResponse;
-        try {
-          jobsResponse = await apiEndpoints.jobs.getSavedJobs();
-        } catch (err) {
-          console.log('API call failed, using mock data for saved jobs');
-          // Fallback to mock data if API call fails
-          const mockJobs = mockData?.jobs?.slice(0, 5) || [];
-          
-          // Ensure all mock jobs have required fields
-          const processedMockJobs = mockJobs
-            .filter(job => job != null) // Filter out any null/undefined items
-            .map(job => ({
-            ...job,
-            id: job.id || `mock-job-${Math.random().toString(36).substr(2, 9)}`
-          }));
-          
-          jobsResponse = { data: processedMockJobs }
-        }
-        
-        // Ensure response.data is an array
-        const jobsData = Array.isArray(jobsResponse?.data) ? jobsResponse.data : [];
-        setSavedJobs(jobsData.map(job => job?.id).filter(Boolean));
-      } catch (err) {
-        console.error('Error fetching saved jobs:', err);
-        setSavedJobs([]); // Set empty array on error
-      }
-    }
-    
-    fetchSavedJobs();
-  }, []);
-  
-  // Fetch resume history data for the chart
-  useEffect(() => {
-    if (!selectedResume) return;
-    
-    const fetchResumeHistory = async () => {
-      try {
-        let historyResponse;
-        try {
-          historyResponse = await apiEndpoints.resumes.getHistory(selectedResume.id);
-        } catch (err) {
-          console.log('API call failed, using mock history data');
-          // Generate mock history data if API call fails
-          const mockHistoryData = [
-            { date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), score: 65, version: 1 },
-            { date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(), score: 72, version: 2 },
-            { date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), score: 78, version: 3 },
-            { date: new Date().toISOString(), score: 85, version: 4 }
-          ];
-          historyResponse = { data: mockHistoryData }
-        }
-        
-        if (historyResponse?.data) {
-          // Format data for the chart
-          const historyData = historyResponse.data.map(item => ({
-            date: item.date || new Date().toISOString(),
-            score: item.score || 0,
-            changes: item.changes || `Version ${item.version || 1}`
-          }));
-          
-          setResumeHistory(historyData);
-        }
-      } catch (err) {
-        console.error('Error fetching resume history:', err);
-        // Set empty history array on error
-        setResumeHistory([]);
-      }
-    }
-    
-    fetchResumeHistory();
-  }, [selectedResume]);
-  
-  // Handle tab change
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  }
-  
-  // Handle creating a new resume
-  const handleCreateResume = async () => {
-    if (!newResumeTitle.trim()) return;
-    
-    setLoading(true);
-    setError(null); // Clear any previous errors
-    
-    try {
-      let createResumeResponse;
-      
-      try {
-        // Try to create resume via API
-        createResumeResponse = await apiEndpoints.resumes.createResume({
-          title: newResumeTitle,
-          userId: profile?.id || 'user-1' // Fallback to default user ID if profile is missing
-        });
-      } catch (err) {
-        console.log('API call failed, using mock data for resume creation');
-        // Create mock resume data as fallback
-        const newResumeId = `mock-resume-${Math.random().toString(36).substr(2, 9)}`;
-        const mockResumeData = {
-          id: newResumeId,
-          title: newResumeTitle,
-          userId: profile?.id || 'user-1',
-          updatedAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          skills: [],
-          experience: [],
-          education: [],
-          projects: [],
-          personal: {
-            name: profile?.name || '',
-            email: profile?.email || '',
-            phone: '',
-            location: ''
-          },
-          score: 0
-        }
-        
-        createResumeResponse = { data: mockResumeData }
-      }
-      
-      if (!createResumeResponse?.data) {
-        throw new Error('Invalid response data from resume creation');
-      }
-      
-      const newResume = createResumeResponse.data;
-      
-      // Ensure the new resume has all required fields
-      const completeResume = {
-        ...newResume,
-        id: newResume.id || `mock-resume-${Math.random().toString(36).substr(2, 9)}`,
-        title: newResume.title || newResumeTitle,
-        updatedAt: newResume.updatedAt || new Date().toISOString(),
-        createdAt: newResume.createdAt || new Date().toISOString()
-      }
-      
-      // Add new resume to list and select it
-      setResumes(prev => [...prev, completeResume]);
-      setSelectedResume(completeResume);
-      
-      // Make sure context is also updated
-      if (typeof setCurrentResume === 'function') {
-        setCurrentResume(completeResume);
-      }
-      
-      setDialogOpen(false);
-      setNewResumeTitle('');
-      
-      // Navigate to the edit tab
-      setTabValue(0);
-      
-      console.log('Resume created successfully:', completeResume);
-    } catch (err) {
-      setError('Failed to create new resume');
-      console.error('Error creating resume:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-  
-  // Handle saving resume
-  const handleSaveResume = async (resumeData) => {
-    setLoading(true);
-    
-    try {
-      const updateResumeResponse = await apiEndpoints.resumes.updateResume(selectedResume.id, {
-        ...resumeData,
-        userId: profile.id
-      });
-      
-      // Update resume in list
-      setResumes(prev => prev.map(resume => 
-        resume.id === selectedResume.id ? updateResumeResponse.data : resume
-      ));
-      
-      setSelectedResume(updateResumeResponse.data);
-      setCurrentResume(updateResumeResponse.data);
-      setSaveSuccess(true);
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
-      setError('Failed to save resume');
-      console.error('Error saving resume:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-  
-  // Handle deleting resume
-  const handleDeleteResume = async () => {
-    if (!resumeToDelete) return;
-    
-    setLoading(true);
-    
-    try {
-      await apiEndpoints.resumes.deleteResume(resumeToDelete.id);
-      
-      // Remove deleted resume from list
-      setResumes(prev => prev.filter(resume => resume.id !== resumeToDelete.id));
-      
-      // If the deleted resume was selected, select another one
-      if (selectedResume?.id === resumeToDelete.id) {
-        const newSelectedResume = resumes.find(resume => resume.id !== resumeToDelete.id);
-        setSelectedResume(newSelectedResume || null);
-        setCurrentResume(newSelectedResume || null);
-      }
-      
-      setDeleteDialog(false);
-      setResumeToDelete(null);
-    } catch (err) {
-      setError('Failed to delete resume');
-      console.error('Error deleting resume:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-  
-  // Add function to request resume analysis
-  const handleAnalyzeResume = async () => {
-    if (!selectedResume) return;
-    
-    setIsAnalyzing(true);
-    setError(null);
-    
-    try {
-      // First, get any saved job target
-      const userResponse = await apiEndpoints.user.getProfile();
-      const targetJobs = userResponse.data.targetJobs || [];
-      
-      // Use the first target job, or fetch popular jobs if none set
-      let jobId = null;
-      let jobDetails = null;
-      
-      if (targetJobs.length > 0) {
-        jobDetails = targetJobs[0];
-        setJobData(jobDetails);
-        jobId = jobDetails.id;
-      } else {
-        const jobsResponse = await apiEndpoints.jobs.getPopular();
-        if (jobsResponse.data.length > 0) {
-          jobDetails = jobsResponse.data[0];
-          setJobData(jobDetails);
-          jobId = jobDetails.id;
-        }
-      }
-      
-      if (jobId) {
-        // Fetch ATS analysis
-        const analysisResponse = await apiEndpoints.analytics.analyzeResume(
-          selectedResume.id, 
-          jobId, 
-          { includeLLM: true }
-        );
-        setAnalysisData(analysisResponse.data);
-        
-        // Fetch skill gap data
-        const skillGapResponse = await apiEndpoints.skills.getSkillGap(profile.id, jobId);
-        setSkillGapData(skillGapResponse.data);
-        
-        // Generate AI suggestions based on analysis
-        generateAiSuggestions(selectedResume.id, analysisResponse.data, jobDetails);
-      } else {
-        setError("No job target found. Please set a target job in your profile.");
-      }
-    } catch (err) {
-      setError('Failed to analyze resume. Please try again.');
-      console.error('Error analyzing resume:', err);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  }
-  
-  // Generate AI-powered suggestions
-  const generateAiSuggestions = async (resumeId, analysisData, jobData) => {
-    try {
-      const aiSuggestionsResponse = await apiEndpoints.ai.getResumeSuggestions({
-        resumeId: resumeId,
-        analysisData: analysisData,
-        jobTitle: jobData?.title || 'Unspecified Job',
-        jobDescription: jobData?.description || ''
-      });
-      
-      // Update state with AI suggestions
-      setAnalysisData(prev => ({
-        ...prev,
-        aiSuggestions: aiSuggestionsResponse.data
-      }));
-    } catch (err) {
-      console.error('Error generating AI suggestions:', err);
-      // Don't set error state as this is a supplementary feature
-    }
-  }
-  
-  // Add function to apply AI suggestions to resume
-  const handleApplySuggestion = async (suggestionId, content) => {
-    if (!selectedResume || !content) return false;
-    
-    try {
-      // Apply the suggestion
-      const updatedResume = { ...selectedResume }
-      const suggestion = analysisData?.aiSuggestions?.suggestions?.find(s => s.id === suggestionId);
-      
-      if (!suggestion) return false;
-      
-      // Apply based on suggestion category
-      switch (suggestion.category) {
-        case 'summary':
-          if (!updatedResume.personal) updatedResume.personal = {}
-          updatedResume.personal.summary = content;
-          break;
-        case 'skills':
-          // Extract skills from content
-          const skillsToAdd = content.split(/[,\n]/).map(skill => skill.trim()).filter(Boolean);
-          if (!updatedResume.skills) updatedResume.skills = [];
-          // Add new skills
-          skillsToAdd.forEach(skill => {
-            if (!updatedResume.skills.some(s => s.name === skill)) {
-              updatedResume.skills.push({ name: skill });
-            }
-          });
-          break;
-        case 'experience':
-          // For experience, we would need more context to know which experience entry to modify
-          // This is a simplified approach - in a real implementation, you would have more context
-          if (updatedResume.experience && updatedResume.experience.length > 0) {
-            updatedResume.experience[0].description = content;
-          }
-          break;
-        default:
-          // For other suggestions, we might need different handling
-          console.warn('Unsupported suggestion category:', suggestion.category);
-          return false;
-      }
-      
-      // Save the updated resume
-      await handleSaveResume(updatedResume);
-      
-      // Call the API to mark the suggestion as applied
-      await apiEndpoints.ai.applySuggestion(selectedResume.id, suggestionId);
-      
-      return true;
-    } catch (err) {
-      console.error('Error applying suggestion:', err);
-      return false;
-    }
-  }
-  
-  // Add function to apply optimizer suggestions
-  const handleApplyOptimizations = (section, improved, index) => {
-    if (!selectedResume) return;
-    
-    const updatedResume = { ...selectedResume }
-    
-    // Apply changes based on section
-    if (section === 'summary' && improved) {
-      if (!updatedResume.personal) updatedResume.personal = {}
-      updatedResume.personal.summary = improved;
-    }
-    else if (section === 'experience' && improved && index !== undefined) {
-      if (!updatedResume.experience) updatedResume.experience = [];
-      if (updatedResume.experience[index]) {
-        updatedResume.experience[index].description = improved;
-      }
-    }
-    else if (section === 'skills' && Array.isArray(improved)) {
-      if (!updatedResume.skills) updatedResume.skills = [];
-      // Add new skills
-      improved.forEach(skill => {
-        if (!updatedResume.skills.some(s => s.name === skill)) {
-          updatedResume.skills.push({ name: skill });
-        }
-      });
-    }
-    else if (section === 'all' && improved?.sections) {
-      // Apply all suggestions
-      const suggestions = improved.sections;
-      
-      // Update summary
-      if (suggestions.summary?.improved) {
-        if (!updatedResume.personal) updatedResume.personal = {}
-        updatedResume.personal.summary = suggestions.summary.improved;
-      }
-      
-      // Update experience items
-      if (suggestions.experience?.items) {
-        if (!updatedResume.experience) updatedResume.experience = [];
-        suggestions.experience.items.forEach((item, idx) => {
-          if (updatedResume.experience[idx]) {
-            updatedResume.experience[idx].description = item.improved;
-          }
-        });
-      }
-    }
-    
-    // Save the updated resume
-    handleSaveResume(updatedResume);
-    return true;
-  }
-  
-  // New function to fetch resume versions and history
-  const fetchResumeVersions = async (id) => {
-    if (!id) return;
-    
-    try {
-      const versionsResponse = await apiEndpoints.resumes.getVersions(id);
-      setResumeVersions(versionsResponse.data || []);
-    } catch (err) {
-      console.error('Error fetching resume versions:', err);
-    }
-  }
-  
-  // New function to calculate resume score
-  const calculateResumeScore = () => {
-    if (!selectedResume) return null;
-    
-    // Base score starts at 40
-    let score = 40;
-    
-    // Add points for different resume sections
-    if (selectedResume.personal?.summary) score += 10;
-    
-    // Experience sections (up to 20 points)
-    if (selectedResume.experience?.length) {
-      score += Math.min(selectedResume.experience.length * 5, 20);
-    }
-    
-    // Skills (up to 15 points)
-    if (selectedResume.skills?.length) {
-      score += Math.min(selectedResume.skills.length, 15);
-    }
-    
-    // Education (up to 10 points)
-    if (selectedResume.education?.length) {
-      score += Math.min(selectedResume.education.length * 5, 10);
-    }
-    
-    // Projects (up to 5 points)
-    if (selectedResume.projects?.length) {
-      score += Math.min(selectedResume.projects.length * 2, 5);
-    }
-    
-    // Ensure we don't exceed 100
-    return Math.min(score, 100);
-  }
-  
-  // Get matching jobs for quick apply
-  useEffect(() => {
-    const fetchQuickApplyJobs = async () => {
-      if (!selectedResume) return;
-      
-      try {
-        // Instead of calling API directly, use the mock implementation to avoid CORS errors
-        // const mockApiResponse = await api.post('/api/job/recommend', {
-        //   resumeId: selectedResume.id,
-        //   userId: profile.id
-        // });
-        
-        // Mock data to avoid CORS errors
-        const mockJobs = [
-          {
-            id: 'job-rec-1',
-            title: 'Senior Frontend Developer',
-            company: 'InnovateTech',
-            companyLogo: '/assets/companies/innovate.png',
-            location: 'Remote',
-            matchPercentage: 92,
-            applied: false,
-            description: 'We are looking for a skilled Frontend Developer proficient in React and TypeScript.'
-          },
-          {
-            id: 'job-rec-2',
-            title: 'Full Stack JavaScript Developer',
-            company: 'WebFlow Solutions',
-            companyLogo: '/assets/companies/webflow.png',
-            location: 'New York, NY',
-            matchPercentage: 87,
-            applied: false,
-            description: 'Develop modern web applications using the MERN stack.'
-          },
-          {
-            id: 'job-rec-3',
-            title: 'UI/UX Developer',
-            company: 'DesignFirst',
-            companyLogo: '/assets/companies/designfirst.png',
-            location: 'San Francisco, CA',
-            matchPercentage: 82,
-            applied: true,
-            description: 'Create beautiful and intuitive user interfaces for our clients.'
-          },
-          {
-            id: 'job-rec-4',
-            title: 'React Native Developer',
-            company: 'MobileTech',
-            companyLogo: '/assets/companies/mobiletech.png',
-            location: 'Austin, TX',
-            matchPercentage: 78,
-            applied: false,
-            description: 'Develop cross-platform mobile applications using React Native.'
-          }
-        ];
-        
-        setQuickApplyJobs(mockJobs);
-      } catch (err) {
-        console.error('Error fetching quick apply jobs:', err);
-      }
-    }
-    
-    fetchQuickApplyJobs();
-  }, [selectedResume, profile]);
-  
-  // Effect to update resume score when selected resume changes
-  useEffect(() => {
-    if (selectedResume) {
-      setResumeScore(calculateResumeScore());
-      fetchResumeVersions(selectedResume.id);
-    }
-  }, [selectedResume]);
-  
-  // Handle job application
-  const handleQuickApply = async (jobId) => {
-    if (!selectedResume) return;
-    
-    try {
-      await apiEndpoints.jobs.applyToJob(jobId, selectedResume.id);
-      // Show success message
-      alert('Successfully applied to job!');
-    } catch (err) {
-      setError('Failed to apply for job');
-      console.error('Error applying for job:', err);
-    }
-  }
-  
-  // Add handler for restoring a previous version
-  const handleRestoreVersion = async (versionId) => {
-    if (!selectedResume) return;
-    
-    setLoading(true);
-    
-    try {
-      const restoreVersionResponse = await apiEndpoints.resumes.restoreVersion(selectedResume.id, versionId);
-      
-      // Update resume in list
-      setResumes(prev => prev.map(resume => 
-        resume.id === selectedResume.id ? restoreVersionResponse.data : resume
-      ));
-      
-      setSelectedResume(restoreVersionResponse.data);
-      setCurrentResume(restoreVersionResponse.data);
-      
-      // Show success message
-      alert('Resume version restored successfully');
-    } catch (err) {
-      setError('Failed to restore resume version');
-      console.error('Error restoring resume version:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-  
-  // Add handler for saving a new version
-  const handleSaveVersion = async (name) => {
-    if (!selectedResume) return;
-    
-    setLoading(true);
-    
-    try {
-      const saveVersionResponse = await apiEndpoints.resumes.saveVersion(selectedResume.id, { name });
-      
-      // Fetch versions again to include the new one
-      fetchResumeVersions(selectedResume.id);
-      
-      return true;
-    } catch (err) {
-      setError('Failed to save resume version');
-      console.error('Error saving resume version:', err);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }
-  
-  // Add handler for saving customized resume
-  const handleSaveCustomization = async (customizedResume, metadata) => {
-    if (!customizedResume) return;
-    
-    setLoading(true);
-    
-    try {
-      const saveCustomizationResponse = await apiEndpoints.resumes.saveCustomization(customizedResume, metadata);
-      
-      // Add new resume to list and select it
-      setResumes(prev => [...prev, saveCustomizationResponse.data]);
-      setSelectedResume(saveCustomizationResponse.data);
-      setCurrentResume(saveCustomizationResponse.data);
-      
-      // Show success message
-      alert('Customized resume saved successfully');
-      
-      return true;
-    } catch (err) {
-      setError('Failed to save customized resume');
-      console.error('Error saving customized resume:', err);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }
-  
-  // Enhanced render functions
-  
-  // Render the resume sidebar with improved styling
-  const renderResumeSidebar = () => (
-    <Card sx={{ 
-      height: '100%', 
-      borderRadius: 2, 
-      boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-      position: 'relative', 
-      overflow: 'visible',
-      bgcolor: 'background.paper',
-    }}>
-      <CardContent sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ 
-          p: 2, 
-          borderTopLeftRadius: 8, 
-          borderTopRightRadius: 8,
-          background: 'linear-gradient(135deg, #4776E6 0%, #8E54E9 100%)',
-          color: 'white', 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center'
-        }}>
-          <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
-            My Resumes
-          </Typography>
-          
-          <Tooltip title="Create New Resume">
-            <IconButton 
-              onClick={() => setDialogOpen(true)}
+        {/* Drag and drop sections */}
+        {['Personal Information', 'Professional Summary', 'Work Experience', 'Education', 'Skills'].map((section, index) => (
+          <Paper 
+            key={index} 
+            sx={{ 
+              p: 2, 
+              mb: 2, 
+              borderLeft: '4px solid #1976d2',
+              cursor: 'move',
+              '&:hover': { boxShadow: 3 }
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography variant="subtitle1" fontWeight="bold">{section}</Typography>
+              <Box>
+                <IconButton size="small"><EditIcon fontSize="small" /></IconButton>
+                <IconButton size="small"><ArrowRightIcon fontSize="small" /></IconButton>
+              </Box>
+            </Box>
+            
+            <TextField 
+              variant="outlined" 
+              fullWidth 
+              multiline 
+              rows={2}
+              placeholder={`Enter your ${section.toLowerCase()}`}
               size="small"
-              sx={{ 
-                color: 'white', 
-                bgcolor: 'rgba(255,255,255,0.15)', 
-                '&:hover': { 
-                  bgcolor: 'rgba(255,255,255,0.25)',
-                  transform: 'scale(1.05)',
-                },
-                transition: 'all 0.2s ease',
+            />
+            
+            {/* Inline feedback */}
+            {index === 1 && (
+              <Box sx={{ 
+                mt: 1, 
+                p: 1, 
+                bgcolor: '#fff9c4', 
+                borderRadius: 1, 
+                fontSize: '0.8rem' 
+              }}>
+                <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <LightbulbIcon fontSize="small" sx={{ mr: 0.5, color: '#f57c00' }} />
+                  Consider using more action verbs in your professional summary
+                </Typography>
+              </Box>
+            )}
+          </Paper>
+        ))}
+      </Paper>
+      
+      {/* Side popover: Tips from AI */}
+      {showTips && (
+        <Paper sx={{ 
+          position: { xs: 'static', md: 'absolute' },
+          right: { xs: 0, md: -300 },
+          top: 0, 
+          width: { xs: '100%', md: 280 },
+          mt: { xs: 2, md: 0 },
+          p: 2,
+          boxShadow: 3,
+          borderLeft: '4px solid #4caf50',
+          zIndex: 1
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <TipsAndUpdatesIcon sx={{ mr: 1, color: '#4caf50' }} />
+            <Typography variant="subtitle1" fontWeight="bold">Tips from AI</Typography>
+            <IconButton 
+              size="small" 
+              sx={{ ml: 'auto' }} 
+              onClick={() => setShowTips(false)}
+            >
+              <CancelIcon fontSize="small" />
+            </IconButton>
+          </Box>
+          
+          <List disablePadding>
+            {[
+              'Add specific metrics to your accomplishments',
+              'Consider including relevant certifications',
+              'Tailor your skills section to the job description',
+              'Use more quantifiable achievements'
+            ].map((tip, i) => (
+              <ListItem key={i} sx={{ py: 0.5 }}>
+                <ListItemIcon sx={{ minWidth: 30 }}>
+                  <LightbulbIcon fontSize="small" sx={{ color: '#4caf50' }} />
+                </ListItemIcon>
+                <ListItemText primary={tip} primaryTypographyProps={{ fontSize: '0.9rem' }} />
+              </ListItem>
+            ))}
+          </List>
+        </Paper>
+      )}
+    </Box>
+  );
+};
+
+const ResumeAnalysis = () => (
+  <Box>
+    <Grid container spacing={3}>
+      <Grid item xs={12} md={4}>
+        <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>ATS Match</Typography>
+          <Box sx={{ position: 'relative', display: 'inline-flex', my: 2 }}>
+            <CircularProgress variant="determinate" value={78} size={120} color="success" thickness={5} />
+            <Box
+              sx={{
+                top: 0,
+                left: 0,
+                bottom: 0,
+                right: 0,
+                position: 'absolute',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <Add />
-            </IconButton>
-          </Tooltip>
-        </Box>
-        
-        <Divider />
-        
-        <Box sx={{ mb: 2, p: 2 }}>
-          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
-            Upload Resume
+              <Typography variant="h4" component="div" color="text.secondary">78%</Typography>
+            </Box>
+          </Box>
+          <Typography variant="body2" color="text.secondary" textAlign="center">
+            Your resume is ATS-friendly but could be improved
           </Typography>
-          <ResumeUploader onUploadSuccess={(newResume) => {
-            setResumes(prev => [...prev, newResume]);
-            setSelectedResume(newResume);
-            setCurrentResume(newResume);
-            navigate(`/resume/${newResume.id}`);
-          }} />
-        </Box>
-        
-        <Divider />
-        
-        <Box sx={{ flexGrow: 1, overflow: 'auto', p: 0 }}>
-          {Array.isArray(resumes) && resumes.length > 0 ? (
-            <List disablePadding>
-              {resumes.filter(resume => resume != null).map(resume => (
-                <ListItem
-                  key={resume.id || `item-${Math.random()}`}
-                  button
-                  selected={selectedResume?.id === resume.id}
-                  onClick={() => {
-                    setSelectedResume(resume);
-                    setCurrentResume(resume);
-                    navigate(`/resume/${resume?.id || 'new'}`);
-                    setDrawerOpen(false); // Close mobile drawer when selecting
-                  }}
-                  sx={{ 
-                    transition: 'all 0.2s',
-                    borderLeft: selectedResume?.id === resume.id ? `4px solid ${currentTheme.palette.primary.main}` : '4px solid transparent',
-                    bgcolor: selectedResume?.id === resume.id ? 'rgba(71, 118, 230, 0.08)' : 'transparent',
-                    '&:hover': {
-                      bgcolor: selectedResume?.id === resume.id ? 'rgba(71, 118, 230, 0.12)' : 'rgba(0, 0, 0, 0.04)'
-                    }
-                  }}
-                >
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Description 
-                          fontSize="small" 
-                          color={selectedResume?.id === resume.id ? "primary" : "action"} 
-                          sx={{ mr: 1 }} 
-                        />
-                        <Typography variant="body1" noWrap sx={{ fontWeight: selectedResume?.id === resume.id ? 600 : 400 }}>
-                          {resume?.title || 'Untitled Resume'}
-                        </Typography>
-                      </Box>
-                    }
-                    secondary={
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                        {resume?.updatedAt ? `Updated ${new Date(resume.updatedAt).toLocaleDateString()}` : 'New resume'}
-                      </Typography>
-                    }
-                  />
-                  
-                  <ListItemSecondaryAction>
-                    <IconButton 
-                      edge="end" 
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setResumeToDelete(resume);
-                        setDeleteDialog(true);
-                      }}
-                      sx={{ 
-                        color: currentTheme.palette.error.main,
-                        opacity: 0.7,
-                        '&:hover': {
-                          opacity: 1,
-                          bgcolor: 'rgba(211, 47, 47, 0.04)'
-                        }
-                      }}
-                    >
-                      <Delete fontSize="small" />
-                    </IconButton>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography color="text.secondary" variant="body2">
-                No resumes yet. Create your first resume!
-              </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Add />}
-                onClick={() => setDialogOpen(true)}
-                sx={{ 
-                  mt: 2,
-                  background: 'linear-gradient(135deg, #4776E6 0%, #8E54E9 100%)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #3d68d8 0%, #7c48cc 100%)',
+        </Paper>
+      </Grid>
+      
+      <Grid item xs={12} md={8}>
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>AI Feedback</Typography>
+          
+          {['Add more keywords related to your industry', 'Improve formatting for better readability', 'Quantify your achievements'].map((feedback, i) => (
+            <Box key={i} sx={{ 
+              p: 1.5, 
+              mb: 1, 
+              bgcolor: i === 0 ? '#ffebee' : i === 1 ? '#fff8e1' : '#e8f5e9',
+              borderRadius: 1
+            }}>
+              <Typography variant="body2">{feedback}</Typography>
+            </Box>
+          ))}
+        </Paper>
+      </Grid>
+      
+      <Grid item xs={12}>
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Skill Gap Analysis</Typography>
+          
+          <Grid container spacing={2}>
+            {['Python', 'React', 'Node.js', 'AWS', 'Machine Learning'].map((skill, i) => (
+              <Grid item xs={6} md={4} key={i}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="body2" sx={{ mr: 1 }}>{skill}</Typography>
+                  {i < 3 ? 
+                    <Chip size="small" label="Present" color="success" /> : 
+                    <Chip size="small" label="Missing" color="error" />
                   }
+                </Box>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={i < 3 ? 90 - (i * 20) : 0} 
+                  sx={{ height: 8, borderRadius: 4 }}
+                  color={i < 3 ? "success" : "error"}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
+      </Grid>
+      
+      <Grid item xs={12}>
+        <Paper sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="subtitle1" fontWeight="bold">Resume Score History</Typography>
+            <Button variant="contained" startIcon={<CheckCircleIcon />}>
+              Apply All Suggestions
+            </Button>
+          </Box>
+          
+          {/* Placeholder for chart */}
+          <Box 
+            sx={{ 
+              height: 200, 
+              bgcolor: '#f5f5f5', 
+              borderRadius: 1, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Resume Score Chart (Trend visualization)
+            </Typography>
+          </Box>
+        </Paper>
+      </Grid>
+    </Grid>
+  </Box>
+);
+
+const JobMatchCalculator = () => (
+  <Box>
+    <Paper sx={{ p: 3, mb: 3 }}>
+      <Typography variant="h6" fontWeight="bold" gutterBottom>Job Match Analysis</Typography>
+      
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <CircularProgress variant="determinate" value={65} size={80} color="warning" thickness={5} sx={{ mr: 3 }} />
+        <Box>
+          <Typography variant="h5" component="div">65% Match</Typography>
+          <Typography variant="body2" color="text.secondary">
+            For: Senior Software Engineer at TechCorp
+          </Typography>
+        </Box>
+      </Box>
+      
+      <Divider sx={{ mb: 3 }} />
+      
+      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Keywords Match</Typography>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+        {['React', 'TypeScript', 'Node.js'].map((kw) => (
+          <Chip key={kw} label={kw} color="success" size="small" icon={<CheckCircleIcon />} />
+        ))}
+        {['AWS Lambda', 'Docker', 'Kubernetes'].map((kw) => (
+          <Chip key={kw} label={kw} color="error" size="small" icon={<CancelIcon />} />
+        ))}
+      </Box>
+      
+      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Experience Alignment</Typography>
+      
+      {['Software Development', 'Team Leadership', 'Project Management'].map((exp, i) => (
+        <Tooltip 
+          key={i} 
+          title={i === 2 ? "Improve this section for better match" : ""}
+          arrow
+        >
+          <Paper 
+            sx={{ 
+              p: 2, 
+              mb: 2, 
+              bgcolor: i === 2 ? '#fff8e1' : '#f5f5f5',
+              border: i === 2 ? '1px dashed #ffa000' : 'none'
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography variant="body1">{exp}</Typography>
+              <Chip 
+                size="small" 
+                label={`${i === 2 ? 40 : 80}%`}
+                color={i === 2 ? "warning" : "success"}
+              />
+            </Box>
+          </Paper>
+        </Tooltip>
+      ))}
+    </Paper>
+  </Box>
+);
+
+const KeywordsExtractor = () => (
+  <Box>
+    <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <Paper sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" fontWeight="bold">Keywords Analysis</Typography>
+            <Box>
+              <Button startIcon={<BarChartIcon />} variant="outlined" sx={{ mr: 1 }}>
+                Word Cloud
+              </Button>
+              <FormControlLabel
+                control={<Switch size="small" />}
+                label="JSON View"
+                labelPlacement="start"
+              />
+            </Box>
+          </Box>
+          
+          <Divider sx={{ mb: 3 }} />
+          
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1" gutterBottom>Top Keywords in Your Resume</Typography>
+              <Box sx={{ 
+                p: 2, 
+                bgcolor: '#f5f5f5', 
+                borderRadius: 1,
+                maxHeight: 300,
+                overflow: 'auto'
+              }}>
+                {[
+                  { word: 'JavaScript', count: 8, importance: 'high' },
+                  { word: 'React', count: 6, importance: 'high' },
+                  { word: 'Development', count: 5, importance: 'medium' },
+                  { word: 'API', count: 4, importance: 'medium' },
+                  { word: 'Team', count: 4, importance: 'low' },
+                  { word: 'Software', count: 3, importance: 'medium' },
+                  { word: 'Architecture', count: 3, importance: 'high' },
+                  { word: 'Database', count: 2, importance: 'medium' },
+                  { word: 'Testing', count: 2, importance: 'medium' },
+                ].map((kw, i) => (
+                  <Chip 
+                    key={i}
+                    label={`${kw.word} (${kw.count})`}
+                    sx={{ 
+                      m: 0.5, 
+                      bgcolor: kw.importance === 'high' 
+                        ? '#e8f5e9' 
+                        : kw.importance === 'medium' 
+                          ? '#fff8e1' 
+                          : '#f5f5f5',
+                      border: kw.importance === 'high' 
+                        ? '1px solid #4caf50' 
+                        : kw.importance === 'medium' 
+                          ? '1px solid #ff9800' 
+                          : 'none'
+                    }}
+                  />
+                ))}
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1" gutterBottom>Industry-Recommended Keywords</Typography>
+              <Box sx={{ 
+                p: 2, 
+                bgcolor: '#f5f5f5', 
+                borderRadius: 1,
+                maxHeight: 300,
+                overflow: 'auto'
+              }}>
+                {[
+                  'TypeScript', 'Node.js', 'Redux', 'REST API', 'GraphQL', 
+                  'Unit Testing', 'CI/CD', 'AWS', 'Docker', 'Microservices'
+                ].map((kw, i) => (
+                  <Chip 
+                    key={i}
+                    label={kw}
+                    sx={{ m: 0.5 }}
+                    color={i < 4 ? "success" : "default"}
+                  />
+                ))}
+              </Box>
+            </Grid>
+          </Grid>
+          
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="subtitle1" gutterBottom>Resume Preview with Highlighted Keywords</Typography>
+            <Paper sx={{ p: 2, bgcolor: '#f9f9f9', maxHeight: 200, overflow: 'auto' }}>
+              <Typography variant="body2" component="div" sx={{ lineHeight: 1.6 }}>
+                Experienced <mark>Software</mark> Engineer with 5+ years in <mark>JavaScript</mark> and <mark>React</mark> <mark>development</mark>. Built scalable <mark>APIs</mark> and led <mark>teams</mark> in delivering high-quality <mark>software</mark> solutions. Designed robust <mark>architecture</mark> for web applications.
+                {/* More resume text here */}
+              </Typography>
+            </Paper>
+          </Box>
+        </Paper>
+      </Grid>
+    </Grid>
+  </Box>
+);
+
+const FeaturedJobs = () => {
+  return (
+    <Box>
+      <Typography variant="h6" fontWeight="bold" gutterBottom>Recommended Jobs</Typography>
+      
+      <Box sx={{ position: 'relative', mt: 2 }}>
+        <Grid container spacing={3}>
+          {[
+            { title: 'Senior React Developer', company: 'TechCorp', location: 'Remote', match: 85 },
+            { title: 'Frontend Engineer', company: 'StartupXYZ', location: 'San Francisco', match: 78 },
+            { title: 'Full Stack Developer', company: 'Enterprise Inc', location: 'New York', match: 72 },
+            { title: 'JavaScript Engineer', company: 'SoftwareAI', location: 'Austin', match: 68 },
+            { title: 'React Native Developer', company: 'MobileApps', location: 'Chicago', match: 65 },
+            { title: 'UI/UX Developer', company: 'DesignLab', location: 'Boston', match: 60 }
+          ].map((job, i) => (
+            <Grid item xs={12} sm={6} md={4} key={i}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column'
                 }}
               >
-                Create Resume
-              </Button>
-            </Box>
-          )}
-        </Box>
+                <Box sx={{ p: 2, flexGrow: 1 }}>
+                  <Typography variant="subtitle1" fontWeight="bold">{job.title}</Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>{job.company} • {job.location}</Typography>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
+                    <Typography variant="body2" sx={{ mr: 1 }}>Match:</Typography>
+                    <LinearProgress 
+                      variant="determinate" 
+                      value={job.match} 
+                      sx={{ height: 8, borderRadius: 4, flexGrow: 1 }}
+                      color={job.match > 80 ? "success" : job.match > 70 ? "warning" : "error"}
+                    />
+                    <Typography variant="body2" sx={{ ml: 1, fontWeight: 'bold' }}>{job.match}%</Typography>
+                  </Box>
+                  
+                  <Button 
+                    variant="contained" 
+                    size="small" 
+                    fullWidth 
+                    sx={{ mt: 1 }}
+                  >
+                    Apply with Resume
+                  </Button>
+                </Box>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+      
+      <Paper sx={{ p: 3, mt: 3 }}>
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Job Details</Typography>
+        <Typography variant="body2" paragraph>Select a job to view details and customize your resume before applying.</Typography>
         
-        {selectedResume && (
-          <Box sx={{ p: 2, bgcolor: 'background.default' }}>
-            <Box sx={{ mb: 1 }}>
-              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
-                Resume Strength
-              </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+          <Button 
+            variant="outlined" 
+            startIcon={<DescriptionFileIcon />}
+            size="small"
+          >
+            View Job Description
+          </Button>
+          
+          <Button 
+            variant="outlined" 
+            startIcon={<CompareArrowsIcon />}
+            size="small"
+          >
+            Compare with Resume
+          </Button>
+        </Box>
+      </Paper>
+    </Box>
+  );
+};
+
+const FeaturesPanel = () => (
+  <Box>
+    <Typography variant="h6" fontWeight="bold" gutterBottom>Advanced Features</Typography>
+    
+    <Grid container spacing={3}>
+      <Grid item xs={12} md={6}>
+        <Card sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <AttachmentIcon sx={{ mr: 1, color: '#1976d2' }} />
+            <Typography variant="subtitle1" fontWeight="bold">Resume Version Control</Typography>
+          </Box>
+          <Typography variant="body2" paragraph>
+            Access complete version history, restore previous versions, and track improvements over time.
+          </Typography>
+          <Button size="small" variant="outlined">Manage Versions</Button>
+        </Card>
+      </Grid>
+      
+      <Grid item xs={12} md={6}>
+        <Card sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <SmartToyIcon sx={{ mr: 1, color: '#7b1fa2' }} />
+            <Typography variant="subtitle1" fontWeight="bold">AI Feedback System</Typography>
+          </Box>
+          <Typography variant="body2" paragraph>
+            Receive detailed AI-powered suggestions for improving your resume's effectiveness.
+          </Typography>
+          <Button size="small" variant="outlined">Get AI Feedback</Button>
+        </Card>
+      </Grid>
+      
+      <Grid item xs={12} md={6}>
+        <Card sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <PsychologyIcon sx={{ mr: 1, color: '#ff9800' }} />
+            <Typography variant="subtitle1" fontWeight="bold">Job-Specific Customization</Typography>
+          </Box>
+          <Typography variant="body2" paragraph>
+            Automatically tailor your resume for specific job descriptions to maximize match rate.
+          </Typography>
+          <Button size="small" variant="outlined">Customize Resume</Button>
+        </Card>
+      </Grid>
+      
+      <Grid item xs={12} md={6}>
+        <Card sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <FileCopyIcon sx={{ mr: 1, color: '#388e3c' }} />
+            <Typography variant="subtitle1" fontWeight="bold">Enhanced Export Options</Typography>
+          </Box>
+          <Typography variant="body2" paragraph>
+            Export your resume in multiple formats including PDF, DOCX, plain text, and ATS-friendly versions.
+          </Typography>
+          <Button size="small" variant="outlined">Export Options</Button>
+        </Card>
+      </Grid>
+      
+      <Grid item xs={12}>
+        <Card sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <DescriptionFileIcon sx={{ mr: 1, color: '#e91e63' }} />
+            <Typography variant="subtitle1" fontWeight="bold">AI Cover Letter Generator</Typography>
+          </Box>
+          <Typography variant="body2" paragraph>
+            Automatically generate tailored cover letters based on your resume and job descriptions.
+          </Typography>
+          <Button size="small" variant="contained">Generate Cover Letter</Button>
+        </Card>
+      </Grid>
+    </Grid>
+  </Box>
+);
+
+const ResumePage = () => {
+  const [newResumeDialogOpen, setNewResumeDialogOpen] = useState(false);
+  const [resumeName, setResumeName] = useState('');
+  const [activeTab, setActiveTab] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  
+  // Mock data for resumes
+  const [resumes, setResumes] = useState([
+    { id: 1, name: 'Software Engineer Resume', score: 85, lastUpdated: '2023-08-15' },
+    { id: 2, name: 'Product Manager Resume', score: 72, lastUpdated: '2023-07-22' },
+    { id: 3, name: 'UX Designer Resume', score: 90, lastUpdated: '2023-08-10' },
+  ]);
+
+  // Mock data for versions
+  const versions = [
+    { id: 1, date: '2023-08-15', time: '14:30' },
+    { id: 2, date: '2023-08-10', time: '09:15' },
+    { id: 3, date: '2023-08-05', time: '16:45' },
+  ];
+
+  const handleNewResumeOpen = () => {
+    setNewResumeDialogOpen(true);
+  };
+
+  const handleNewResumeClose = () => {
+    setNewResumeDialogOpen(false);
+    setResumeName('');
+  };
+
+  const handleCreateResume = () => {
+    if (resumeName.trim()) {
+      const newResume = {
+        id: resumes.length + 1,
+        name: resumeName,
+        score: 50,
+        lastUpdated: new Date().toISOString().split('T')[0]
+      };
+      setResumes([...resumes, newResume]);
+      handleNewResumeClose();
+    }
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  // Function to get color based on score
+  const getScoreColor = (score) => {
+    if (score >= 80) return 'success';
+    if (score >= 60) return 'warning';
+    return 'error';
+  };
+
+  return (
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      width: '100%',
+      minHeight: '100vh', 
+      height: 'auto', 
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      {/* Navigation Bar */}
+      <AppBar position="static" sx={{ boxShadow: 2, zIndex: 1200 }}>
+        <Toolbar>
+          <IconButton 
+            edge="start" 
+            color="inherit" 
+            aria-label="menu" 
+            sx={{ mr: 2 }}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            {sidebarOpen ? <ArrowRightIcon sx={{ transform: 'rotate(180deg)' }} /> : <ArrowRightIcon />}
+          </IconButton>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Resume Builder
+          </Typography>
+        </Toolbar>
+      </AppBar>
+      
+      {/* Main Content Area with Sidebar */}
+      <Box sx={{ 
+        display: 'flex',
+        position: 'relative',
+        width: '100%',
+        flexGrow: 1,
+        height: 'calc(100vh - 64px)',
+        overflow: 'hidden'
+      }}>
+        {/* Backdrop for mobile */}
+        {sidebarOpen && (
+          <Box 
+            sx={{ 
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              bgcolor: 'rgba(0,0,0,0.5)',
+              zIndex: 1050,
+              display: { xs: 'block', md: 'none' }
+            }}
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        
+        {/* LEFT SIDEBAR – ENHANCED DESIGN */}
+        <Box sx={{ 
+          width: { xs: 280, md: 280 }, // Reduced from 320px to 280px
+          flexShrink: 0,
+          p: 0, 
+          bgcolor: '#f8f9fa',
+          borderRight: '1px solid rgba(0, 0, 0, 0.08)',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          position: { xs: 'fixed', md: 'sticky' },
+          top: { xs: 0, md: '64px' },
+          left: { xs: sidebarOpen ? 0 : -280, md: 0 },
+          zIndex: 1100,
+          transition: 'all 0.3s ease',
+          boxShadow: { xs: '5px 0 15px rgba(0,0,0,0.1)', md: 'none' },
+          pt: { xs: '64px', md: 0 },
+          overflow: 'auto',
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'rgba(0,0,0,0.1)',
+            borderRadius: '4px',
+          },
+          '&:hover::-webkit-scrollbar-thumb': {
+            backgroundColor: 'rgba(0,0,0,0.2)',
+          }
+        }}>
+          {/* Sidebar Header with action buttons */}
+          <Box sx={{ 
+            px: 2, 
+            py: 1.5, 
+            borderBottom: '1px solid rgba(0,0,0,0.06)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            position: 'sticky',
+            top: 0,
+            bgcolor: '#f8f9fa',
+            zIndex: 2
+          }}>
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                fontWeight: '600', 
+                color: 'primary.main',
+              }}
+            >
+              My Workspace
+            </Typography>
+            <Button 
+              variant="contained" 
+              startIcon={<AddIcon />}
+              onClick={handleNewResumeOpen}
+              size="small"
+              sx={{ 
+                py: 0.5,
+                px: 1,
+                boxShadow: 1,
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                textTransform: 'none',
+                '&:hover': {
+                  boxShadow: 2,
+                }
+              }}
+            >
+              New Resume
+            </Button>
+          </Box>
+          
+          {/* Sidebar Content - Scrollable Area */}
+          <Box sx={{ p: 2, flexGrow: 1, overflow: 'auto' }}>
+            {/* Resume Uploader Component */}
+            <Card sx={{ 
+              p: 1.5, 
+              mb: 2,
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+              transition: 'all 0.2s',
+              '&:hover': {
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                transform: 'translateY(-2px)'
+              }
+            }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Box sx={{ flexGrow: 1, mr: 2 }}>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={resumeScore || 0} 
+                <Avatar sx={{ bgcolor: 'primary.light', mr: 1.5, width: 28, height: 28 }}>
+                  <UploadIcon sx={{ color: 'white', fontSize: 16 }} />
+                </Avatar>
+                <Typography variant="subtitle2" fontWeight="600">Upload Resume</Typography>
+              </Box>
+              <Button 
+                variant="outlined" 
+                component="label" 
+                fullWidth
+                size="small"
+                sx={{ 
+                  borderRadius: 1.5,
+                  textTransform: 'none',
+                  py: 0.5,
+                  fontSize: '0.75rem'
+                }}
+              >
+                Choose File
+                <input type="file" hidden />
+              </Button>
+            </Card>
+            
+            {/* Resume Strength Meter */}
+            <Card sx={{ 
+              p: 1.5,
+              mb: 2,
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle2" fontWeight="600">Resume Strength</Typography>
+                <Chip 
+                  label="75/100" 
+                  size="small" 
+                  color="success"
+                  sx={{ fontWeight: 'bold', height: 20, fontSize: '0.7rem' }}
+                />
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={75} 
+                color="success"
+                sx={{ 
+                  height: 6, 
+                  borderRadius: 3, 
+                  mb: 1,
+                  backgroundColor: 'rgba(76, 175, 80, 0.2)'
+                }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                <CheckCircleIcon sx={{ fontSize: 14, mr: 0.5, color: 'success.main' }} />
+                Your resume is looking good!
+              </Typography>
+            </Card>
+            
+            {/* Resume Summary AI Inference */}
+            <Card sx={{ 
+              p: 1.5, 
+              mb: 2,
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+              bgcolor: 'rgba(25, 118, 210, 0.05)'
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <InsightsIcon sx={{ mr: 0.5, color: 'primary.main', fontSize: 18 }} />
+                  <Typography variant="subtitle2" fontWeight="600">AI Summary</Typography>
+                </Box>
+                <Tooltip title="Refresh inference">
+                  <IconButton size="small" sx={{ color: 'primary.light', p: 0.5, ml: 0.5 }}>
+                    <RefreshIcon fontSize="small" sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Typography variant="caption" sx={{ 
+                fontStyle: 'italic', 
+                color: 'text.secondary', 
+                mb: 1, 
+                lineHeight: 1.4,
+                display: 'block'
+              }}>
+                "Experienced software engineer with strong React skills and backend development experience. Shows leadership potential and problem-solving abilities."
+              </Typography>
+              <Chip 
+                size="small" 
+                icon={<SmartToyIcon sx={{ fontSize: '14px !important' }} />} 
+                label="AI Generated" 
+                sx={{ 
+                  bgcolor: 'rgba(25, 118, 210, 0.1)', 
+                  color: 'primary.main',
+                  height: 20,
+                  fontSize: '0.65rem',
+                  '& .MuiChip-label': { px: 1 }
+                }} 
+              />
+            </Card>
+            
+            {/* List of Resumes - Reworked as cards */}
+            <Typography variant="subtitle2" sx={{ 
+              fontWeight: 'bold', 
+              mb: 1,
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              <DescriptionIcon sx={{ mr: 0.75, color: 'primary.main', fontSize: 18 }} />
+              My Resumes
+            </Typography>
+            
+            {resumes.map((resume, index) => (
+              <Card 
+                key={resume.id}
+                sx={{ 
+                  p: 1.5, 
+                  mb: 1,
+                  borderRadius: 1.5,
+                  borderLeft: index === 0 ? '3px solid' : '3px solid transparent',
+                  borderColor: index === 0 ? 'primary.main' : 'transparent',
+                  bgcolor: index === 0 ? 'rgba(25, 118, 210, 0.04)' : 'white',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                  '&:hover': { 
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.12)',
+                    bgcolor: index === 0 ? 'rgba(25, 118, 210, 0.06)' : 'rgba(0, 0, 0, 0.01)'
+                  },
+                  transition: 'all 0.2s',
+                  cursor: 'pointer'
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                  <Typography 
+                    variant="body2" 
                     sx={{ 
-                      height: 10, 
-                      borderRadius: 5,
-                      bgcolor: 'rgba(0,0,0,0.05)',
-                      '& .MuiLinearProgress-bar': {
-                        borderRadius: 5,
-                        background: resumeScore > 80 
-                          ? 'linear-gradient(90deg, #00C853 0%, #B2FF59 100%)' 
-                          : resumeScore > 60 
-                            ? 'linear-gradient(90deg, #2196F3 0%, #4FC3F7 100%)' 
-                            : resumeScore > 40 
-                              ? 'linear-gradient(90deg, #FF9800 0%, #FFCC80 100%)' 
-                              : 'linear-gradient(90deg, #F44336 0%, #FF8A80 100%)',
-                      }
+                      fontWeight: index === 0 ? 600 : 500,
+                      color: index === 0 ? 'primary.main' : 'text.primary',
+                      flexGrow: 1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {resume.name}
+                  </Typography>
+                  <Chip 
+                    label={`${resume.score}%`}
+                    size="small"
+                    color={getScoreColor(resume.score)}
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      height: 20, 
+                      fontSize: '0.65rem',
+                      ml: 1,
+                      '& .MuiChip-label': { px: 1 }
                     }}
                   />
                 </Box>
                 <Typography 
-                  variant="h6" 
-                  sx={{
-                    fontWeight: 700,
-                    color: resumeScore > 80 ? '#00C853' : 
-                           resumeScore > 60 ? '#2196F3' : 
-                           resumeScore > 40 ? '#FF9800' : '#F44336',
-                  }}
+                  variant="caption" 
+                  color="text.secondary"
+                  sx={{ display: 'block', fontSize: '0.7rem' }}
                 >
-                  {resumeScore}%
+                  Last updated: {resume.lastUpdated}
                 </Typography>
-              </Box>
-              <Typography variant="caption" color="text.secondary">
-                {resumeScore > 80 ? 'Excellent' : 
-                 resumeScore > 60 ? 'Good' : 
-                 resumeScore > 40 ? 'Average' : 'Needs Work'}
-              </Typography>
-            </Box>
-            
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<GetApp />}
-                onClick={() => {
-                  // Download resume as PDF
-                  apiEndpoints.resumes.downloadPdf(selectedResume.id);
-                }}
-                sx={{ 
-                  borderRadius: '20px',
-                  textTransform: 'none',
-                  '&:hover': {
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                  }
-                }}
-              >
-                Download
-              </Button>
-              
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<Share />}
-                onClick={() => {
-                  // Share resume functionality
-                  const shareUrl = `${window.location.origin}/shared-resume/${selectedResume.id}`;
-                  navigator.clipboard.writeText(shareUrl);
-                  alert('Share link copied to clipboard!');
-                }}
-                sx={{ 
-                  borderRadius: '20px',
-                  textTransform: 'none',
-                  '&:hover': {
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                  }
-                }}
-              >
-                Share
-              </Button>
-            </Box>
-          </Box>
-        )}
-      </CardContent>
-    </Card>
-  );
-  
-  // Enhanced tabs with better styling
-  const renderTabHeader = () => (
-    <Paper sx={{ 
-      borderRadius: 2, 
-      mb: 3, 
-      boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-      overflow: 'hidden'
-    }}>
-      <Box sx={{ 
-        bgcolor: 'background.paper',
-        position: 'relative'
-      }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          variant={isMobile ? "scrollable" : "fullWidth"}
-          scrollButtons="auto"
-          sx={{ 
-            minHeight: 64,
-            '& .MuiTabs-indicator': {
-              height: 3,
-              borderTopLeftRadius: 3,
-              borderTopRightRadius: 3,
-              background: 'linear-gradient(90deg, #4776E6 0%, #8E54E9 100%)'
-            },
-            '& .MuiTab-root': {
-              minHeight: 64,
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              transition: 'all 0.2s',
-              '&.Mui-selected': {
-                color: '#4776E6',
-                fontWeight: 600
-              }
-            }
-          }}
-        >
-          <Tab 
-            icon={<Edit />} 
-            label={isMobile ? null : "Edit"} 
-            iconPosition={isMobile ? 'start' : 'top'}
-          />
-          <Tab 
-            icon={<Analytics />} 
-            label={isMobile ? null : "Analyze"} 
-            iconPosition={isMobile ? 'start' : 'top'}
-          />
-          <Tab 
-            icon={<Compare />} 
-            label={isMobile ? null : "Match"} 
-            iconPosition={isMobile ? 'start' : 'top'}
-          />
-          <Tab 
-            icon={<Label />} 
-            label={isMobile ? null : "Keywords"} 
-            iconPosition={isMobile ? 'start' : 'top'}
-          />
-          <Tab 
-            icon={<Work />} 
-            label={isMobile ? null : "Jobs"} 
-            iconPosition={isMobile ? 'start' : 'top'}
-          />
-          <Tab 
-            icon={<Tune />} 
-            label={isMobile ? null : "Features"} 
-            iconPosition={isMobile ? 'start' : 'top'}
-          />
-        </Tabs>
-        
-        {/* Optional quick actions */}
-        <Box sx={{ 
-          position: 'absolute', 
-          right: 16, 
-          top: '50%', 
-          transform: 'translateY(-50%)', 
-          display: { xs: 'none', md: 'flex' },
-          gap: 1
-        }}>
-          {selectedResume && tabValue === 0 && (
-            <>
-              <Tooltip title="Export Options">
-                <IconButton 
-                  size="small" 
-                  sx={{ 
-                    color: '#4776E6',
-                    '&:hover': { bgcolor: 'rgba(71, 118, 230, 0.08)' } 
-                  }}
-                >
-                  <Download />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Resume Versions">
-                <IconButton 
-                  size="small" 
-                  sx={{ 
-                    color: '#4776E6',
-                    '&:hover': { bgcolor: 'rgba(71, 118, 230, 0.08)' } 
-                  }}
-                  onClick={() => setVersionControlVisible(!versionControlVisible)}
-                >
-                  <History />
-                </IconButton>
-              </Tooltip>
-            </>
-          )}
-        </Box>
-      </Box>
-    </Paper>
-  );
-  
-  // Add Quick Apply section with improved styling
-  const renderQuickApplySection = () => {
-    if (!quickApplyJobs || quickApplyJobs.length === 0) return null;
-    
-    return (
-      <Card sx={{ 
-        my: 3, 
-        borderRadius: 2, 
-        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-        overflow: 'hidden'
-      }}>
-        <Box sx={{ 
-          p: 2, 
-          background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.05) 0%, rgba(142, 84, 233, 0.05) 100%)',
-          borderBottom: '1px solid rgba(0, 0, 0, 0.05)'
-        }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Quick Apply Based on Your Resume
-          </Typography>
-        </Box>
-        
-        <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
-            <Button 
-              variant="contained"
-              size="large"
-              endIcon={<ArrowForward />}
-              onClick={() => navigate('/jobs')}
-              sx={{ 
-                px: 4,
-                py: 1.5,
-                borderRadius: 2,
-                textTransform: 'none',
-                fontSize: '1rem',
-                background: 'linear-gradient(135deg, #4776E6 0%, #8E54E9 100%)',
-                boxShadow: '0 4px 15px rgba(142, 84, 233, 0.3)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #3d68d8 0%, #7c48cc 100%)',
-                  boxShadow: '0 6px 20px rgba(142, 84, 233, 0.4)',
-                  transform: 'translateY(-2px)'
-                },
-                transition: 'all 0.3s ease'
-              }}
-            >
-              View All Matching Jobs
-            </Button>
-          </Box>
-          
-          <Box sx={{ mt: 3 }}>
-            <EnhancedExportOptions 
-              resumeId={selectedResume?.id}
-              resumeData={selectedResume}
-            />
-          </Box>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  // Enhance Resume Timeline component
-  const renderResumeTimeline = () => {
-    if (!resumeVersions || resumeVersions.length <= 1) return null;
-    
-    return (
-      <Card 
-        sx={{ 
-          mt: 3, 
-          borderRadius: 2, 
-          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-          overflow: 'hidden'
-        }}
-      >
-        <Box sx={{ 
-          p: 2, 
-          background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.05) 0%, rgba(142, 84, 233, 0.05) 100%)',
-          borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1
-        }}>
-          <History sx={{ color: '#4776E6' }} />
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Resume Timeline
-          </Typography>
-        </Box>
-        
-        <Box sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-            {resumeVersions.map((version, index) => (
-              <Box 
-                key={index}
-                sx={{ 
-                  position: 'relative',
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  '&:not(:last-child)::after': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 16,
-                    right: 0,
-                    width: '100%',
-                    height: 2,
-                    background: 'linear-gradient(to right, rgba(71, 118, 230, 0.3), rgba(142, 84, 233, 0.3))',
-                    zIndex: 0,
-                  }
-                }}
-              >
-                <Tooltip title={`Version ${version.versionNumber} - ${new Date(version.date).toLocaleDateString()}`}>
-                  <Avatar 
-                    sx={{ 
-                      width: 40, 
-                      height: 40, 
-                      background: index === 0 
-                        ? 'linear-gradient(135deg, #4776E6 0%, #8E54E9 100%)'
-                        : 'rgba(142, 84, 233, 0.1)',
-                      color: index === 0 ? 'white' : '#8E54E9',
-                      zIndex: 1,
-                      cursor: 'pointer',
-                      border: '2px solid white',
-                      boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        transform: 'scale(1.1)',
-                        boxShadow: 'rgba(0, 0, 0, 0.1) 0px 10px 30px 0px, rgba(0, 0, 0, 0.1) 0px 0px 0px 1px',
-                      }
-                    }}
-                    onClick={() => {
-                      // View specific version
-                    }}
-                  >
-                    {version.versionNumber}
-                  </Avatar>
-                </Tooltip>
-                <Typography variant="caption" mt={1.5} textAlign="center" sx={{ fontWeight: 500 }}>
-                  {new Date(version.date).toLocaleDateString()}
-                </Typography>
-              </Box>
+              </Card>
             ))}
-          </Box>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-            <Button 
-              variant="outlined" 
-              size="medium"
-              startIcon={<Timeline />}
-              onClick={() => navigate('/resume-score-tracker')}
-              sx={{ 
-                borderRadius: 2,
-                textTransform: 'none',
-                borderColor: '#4776E6',
-                color: '#4776E6',
-                '&:hover': {
-                  borderColor: '#8E54E9',
-                  background: 'rgba(142, 84, 233, 0.05)',
-                  boxShadow: 'rgba(142, 84, 233, 0.2) 0px 2px 8px 0px'
-                },
-                transition: 'all 0.2s ease'
-              }}
-            >
-              View Full Timeline
-            </Button>
-          </Box>
-        </Box>
-      </Card>
-    );
-  }
-  
-  // Enhance the keywords tab implementation
-  const renderKeywordsTab = () => (
-    <Box sx={{ 
-      ...fadeTransition.in,
-      animation: 'fadeIn 0.3s ease-in-out'
-    }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Card sx={{ 
-            borderRadius: 2, 
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-            overflow: 'hidden'
-          }}>
-            <Box sx={{ 
-              p: 2,
-              background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.05) 0%, rgba(142, 84, 233, 0.05) 100%)',
-              borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}>
-              <Label sx={{ color: '#4776E6' }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Keywords Extraction
-              </Typography>
-            </Box>
-            <Box sx={{ p: 2 }}>
-              <KeywordsExtractor 
-                resumeId={selectedResume?.id} 
-                resumeData={selectedResume}
-                jobData={jobData}
-              />
-            </Box>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
-  );
-  
-  // Enhance the analytics tab implementation
-  const renderAnalyticsTab = () => (
-    <Box sx={{ ...fadeTransition.in }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Card sx={{ 
-            borderRadius: 2, 
-            overflow: 'hidden',
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-            height: '100%',
-          }}>
-            <Box sx={{ 
-              p: 2, 
-              background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.05) 0%, rgba(142, 84, 233, 0.05) 100%)',
-              borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}>
-              <Timeline sx={{ color: '#4776E6' }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Resume Score Progression
-              </Typography>
-            </Box>
-            <Box sx={{ p: 2, height: 'calc(100% - 60px)' }}>
-              <ResumeScoreChart 
-                data={resumeHistory}
-                loading={loading}
-                height={350}
-              />
-            </Box>
-          </Card>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <Card 
-            sx={{ 
-              height: '100%',
-              borderRadius: 2,
-              overflow: 'hidden',
-              boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            <Box sx={{ 
-              p: 2, 
-              background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.05) 0%, rgba(142, 84, 233, 0.05) 100%)',
-              borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}>
-              <Assessment sx={{ color: '#4776E6' }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Resume Insights
-              </Typography>
-            </Box>
             
-            <CardContent sx={{ flexGrow: 1, p: 0 }}>
-              <List>
-                <ListItem sx={{ 
-                  px: 3, 
-                  py: 2,
-                  '&:hover': { bgcolor: 'rgba(71, 118, 230, 0.03)' },
-                }}>
-                  <ListItemIcon>
-                    <TrendingUp sx={{ color: '#4776E6' }} />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                        Resume Strength
-                      </Typography>
-                    }
-                    secondary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                        <Box sx={{ mr: 1 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            {resumeScore > 80 ? 'Excellent' : 
-                             resumeScore > 60 ? 'Good' : 
-                             resumeScore > 40 ? 'Average' : 'Needs Improvement'}
-                          </Typography>
-                        </Box>
-                        <Chip 
-                          label={`${resumeScore}%`} 
-                          size="small" 
-                          sx={{ 
-                            bgcolor: resumeScore > 80 ? 'success.light' : 
-                                    resumeScore > 60 ? 'primary.light' : 
-                                    resumeScore > 40 ? 'warning.light' : 'error.light',
-                            color: 'white',
-                            fontWeight: 600,
-                          }} 
-                        />
-                      </Box>
-                    }
-                  />
-                </ListItem>
-                
-                <Divider variant="inset" component="li" />
-                
-                <ListItem sx={{ 
-                  px: 3, 
-                  py: 2,
-                  '&:hover': { bgcolor: 'rgba(71, 118, 230, 0.03)' },
-                }}>
-                  <ListItemIcon>
-                    <School sx={{ color: '#4776E6' }} />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                        Education Details
-                      </Typography>
-                    }
-                    secondary={
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {selectedResume?.education?.length 
-                          ? `${selectedResume.education.length} ${selectedResume.education.length === 1 ? 'entry' : 'entries'}`
-                          : 'Missing education information'}
-                      </Typography>
-                    }
-                  />
-                </ListItem>
-                
-                <Divider variant="inset" component="li" />
-                
-                <ListItem sx={{ 
-                  px: 3, 
-                  py: 2,
-                  '&:hover': { bgcolor: 'rgba(71, 118, 230, 0.03)' },
-                }}>
-                  <ListItemIcon>
-                    <Work sx={{ color: '#4776E6' }} />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                        Experience
-                      </Typography>
-                    }
-                    secondary={
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {selectedResume?.experience?.length 
-                          ? `${selectedResume.experience.length} ${selectedResume.experience.length === 1 ? 'role' : 'roles'}, ${calculateYearsOfExperience(selectedResume.experience)} years` 
-                          : 'Missing experience details'}
-                      </Typography>
-                    }
-                  />
-                </ListItem>
-                
-                <Divider variant="inset" component="li" />
-                
-                <ListItem sx={{ 
-                  px: 3, 
-                  py: 2,
-                  '&:hover': { bgcolor: 'rgba(71, 118, 230, 0.03)' },
-                }}>
-                  <ListItemIcon>
-                    <Code sx={{ color: '#4776E6' }} />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                        Skills
-                      </Typography>
-                    }
-                    secondary={
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {selectedResume?.skills?.length 
-                          ? `${selectedResume.skills.length} ${selectedResume.skills.length === 1 ? 'skill' : 'skills'} documented` 
-                          : 'Missing skills details'}
-                      </Typography>
-                    }
-                  />
-                </ListItem>
-              </List>
-              
-              <Box sx={{ p: 3, bgcolor: 'rgba(71, 118, 230, 0.03)' }}>
-                <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
-                  <Info fontSize="small" sx={{ mr: 1, color: '#4776E6' }} />
-                  Improvement Opportunities
-                </Typography>
-                
-                <List dense sx={{ 
-                  bgcolor: 'white', 
-                  borderRadius: 1, 
-                  boxShadow: 'rgba(0, 0, 0, 0.04) 0px 2px 6px 0px',
-                  mt: 1,
-                  overflow: 'hidden',
-                }}>
-                  {resumeScore < 70 && (
-                    <ListItem sx={{ py: 1.5 }}>
-                      <ListItemIcon sx={{ minWidth: 36 }}>
-                        <ArrowUpward fontSize="small" sx={{ color: '#FF9800' }} />
-                      </ListItemIcon>
-                      <ListItemText 
-                        primary={
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            Boost Resume Score
-                          </Typography>
-                        }
-                        secondary={
-                          <Typography variant="caption" color="text.secondary">
-                            Add more details to key sections
-                          </Typography>
-                        }
-                      />
-                    </ListItem>
-                  )}
-                  
-                  {!selectedResume?.personal?.summary && (
-                    <>
-                      {resumeScore < 70 && <Divider variant="inset" component="li" />}
-                      <ListItem sx={{ py: 1.5 }}>
-                        <ListItemIcon sx={{ minWidth: 36 }}>
-                          <ArrowUpward fontSize="small" sx={{ color: '#FF9800' }} />
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary={
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              Add Personal Summary
-                            </Typography>
-                          }
-                          secondary={
-                            <Typography variant="caption" color="text.secondary">
-                              A strong summary increases engagement
-                            </Typography>
-                          }
-                        />
-                      </ListItem>
-                    </>
-                  )}
-                  
-                  {!selectedResume?.projects?.length && (
-                    <>
-                      {(resumeScore < 70 || !selectedResume?.personal?.summary) && 
-                        <Divider variant="inset" component="li" />
-                      }
-                      <ListItem sx={{ py: 1.5 }}>
-                        <ListItemIcon sx={{ minWidth: 36 }}>
-                          <ArrowUpward fontSize="small" sx={{ color: '#FF9800' }} />
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary={
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              Add Projects
-                            </Typography>
-                          }
-                          secondary={
-                            <Typography variant="caption" color="text.secondary">
-                              Showcase your hands-on experience
-                            </Typography>
-                          }
-                        />
-                      </ListItem>
-                    </>
-                  )}
-                </List>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        <Grid item xs={12}>
-          <Card sx={{ 
-            borderRadius: 2, 
-            overflow: 'hidden',
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-          }}>
-            <Box sx={{ 
-              p: 2, 
-              background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.05) 0%, rgba(142, 84, 233, 0.05) 100%)',
-              borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
+            {/* Resume Timeline - Graphical Journey */}
+            <Typography variant="subtitle2" sx={{ 
+              fontWeight: 'bold', 
+              mt: 3,
+              mb: 1,
               display: 'flex',
-              alignItems: 'center',
-              gap: 1
+              alignItems: 'center'
             }}>
-              <Work sx={{ color: '#4776E6' }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Featured Jobs
-              </Typography>
-            </Box>
-            <Box sx={{ p: 2 }}>
-              <FeaturedJobsCarousel 
-                resumeId={selectedResume?.id}
-                customText="Based on your resume's skills and qualifications, we've identified relevant job opportunities that match your profile."
-              />
-            </Box>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
-  );
-  
-  // Enhance the features tab implementation
-  const renderFeaturesTab = () => (
-    <Box sx={{ ...fadeTransition.in }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Card sx={{ 
-            borderRadius: 2, 
-            overflow: 'hidden',
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-          }}>
-            <Box sx={{ 
-              p: 2, 
-              background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.05) 0%, rgba(142, 84, 233, 0.05) 100%)',
-              borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}>
-              <Tune sx={{ color: '#4776E6' }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Enhanced Resume Features
-              </Typography>
-            </Box>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Take advantage of our advanced tools to optimize your resume and track changes.
-              </Typography>
-              <Divider sx={{ my: 2 }} />
-              
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Card sx={{ 
-                    height: '100%',
-                    borderRadius: 2,
-                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: 'rgba(0, 0, 0, 0.1) 0px 12px 28px 0px, rgba(0, 0, 0, 0.1) 0px 2px 4px 0px',
-                    },
-                  }}>
-                    <CardContent>
-                      <AiFeedbackSystem 
-                        resumeId={selectedResume?.id}
-                        resumeData={selectedResume}
-                        jobData={jobData}
-                      />
-                    </CardContent>
-                  </Card>
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <Card sx={{ 
-                    height: '100%',
-                    borderRadius: 2,
-                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: 'rgba(0, 0, 0, 0.1) 0px 12px 28px 0px, rgba(0, 0, 0, 0.1) 0px 2px 4px 0px',
-                    },
-                  }}>
-                    <CardContent>
-                      <ResumeVersionControl 
-                        resumeId={selectedResume?.id}
-                        onRestoreVersion={handleRestoreVersion}
-                        onSaveVersion={handleSaveVersion}
-                        loading={loading}
-                      />
-                    </CardContent>
-                  </Card>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Card sx={{ 
-                    borderRadius: 2,
-                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: 'rgba(0, 0, 0, 0.1) 0px 12px 28px 0px, rgba(0, 0, 0, 0.1) 0px 2px 4px 0px',
-                    },
-                  }}>
-                    <CardContent>
-                      <JobSpecificCustomization 
-                        resumeData={selectedResume}
-                        onSaveCustomizations={handleSaveCustomization}
-                        loading={loading}
-                      />
-                    </CardContent>
-                  </Card>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Card sx={{ 
-                    borderRadius: 2,
-                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: 'rgba(0, 0, 0, 0.1) 0px 12px 28px 0px, rgba(0, 0, 0, 0.1) 0px 2px 4px 0px',
-                    },
-                  }}>
-                    <CardContent>
-                      <EnhancedExportOptions 
-                        resumeId={selectedResume?.id}
-                        resumeData={selectedResume}
-                        loading={loading}
-                      />
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
-  );
-  
-  // Complete the resume content render function with more tabs
-  const renderResumeContent = () => {
-    // Make sure selected resume is valid
-    const isValidResume = selectedResume && typeof selectedResume === 'object' && selectedResume.id;
-    
-    if (!isValidResume) {
-      return (
-        <Paper sx={{ 
-          p: 4, 
-          textAlign: 'center',
-          borderRadius: 2,
-          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
-          backdropFilter: 'blur(10px)',
-          height: '70vh',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}>
-          <Box sx={{ 
-            width: 80, 
-            height: 80, 
-            borderRadius: '50%', 
-            background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.1) 0%, rgba(142, 84, 233, 0.1) 100%)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            mb: 3
-          }}>
-            <Description sx={{ fontSize: 40, color: '#4776E6' }} />
-          </Box>
-          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
-            No Resume Selected
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 400 }}>
-            Please select a resume from the sidebar or create a new one to get started with your career journey.
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setDialogOpen(true)}
-            sx={{ 
-              px: 3,
-              py: 1,
-              borderRadius: 2,
-              textTransform: 'none',
-              fontSize: '1rem',
-              background: 'linear-gradient(135deg, #4776E6 0%, #8E54E9 100%)',
-              boxShadow: '0 4px 15px rgba(142, 84, 233, 0.3)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #3d68d8 0%, #7c48cc 100%)',
-                boxShadow: '0 6px 20px rgba(142, 84, 233, 0.4)',
-                transform: 'translateY(-2px)'
-              },
-              transition: 'all 0.3s ease'
-            }}
-          >
-            Create New Resume
-          </Button>
-        </Paper>
-      );
-    }
-    
-    return (
-      <Box sx={{ width: '100%' }}>
-        {error && (
-          <Alert 
-            severity="error" 
-            sx={{ 
-              mb: 3, 
-              borderRadius: 2, 
-              boxShadow: 'rgba(244, 67, 54, 0.1) 0px 4px 12px',
-              border: '1px solid rgba(244, 67, 54, 0.2)'
-            }}
-            onClose={() => setError(null)}
-          >
-            {error}
-          </Alert>
-        )}
-        
-        {saveSuccess && (
-          <Alert 
-            severity="success" 
-            sx={{ 
-              mb: 3, 
-              borderRadius: 2, 
-              boxShadow: 'rgba(76, 175, 80, 0.1) 0px 4px 12px',
-              border: '1px solid rgba(76, 175, 80, 0.2)'
-            }}
-            onClose={() => setSaveSuccess(false)}
-          >
-            Resume saved successfully!
-          </Alert>
-        )}
-        
-        {renderTabHeader()}
-        
-        {loading ? (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            minHeight: 400,
-            borderRadius: 2,
-            background: 'rgba(255, 255, 255, 0.7)',
-            backdropFilter: 'blur(10px)',
-            boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-          }}>
-            <CircularProgress 
-              size={60} 
-              thickness={4} 
-              sx={{ 
-                color: '#4776E6',
-                '& .MuiCircularProgress-circle': {
-                  strokeLinecap: 'round',
-                }
-              }} 
-            />
-            <Typography variant="h6" sx={{ ml: 2, fontWeight: 600 }}>
-              Loading resume data...
+              <TimelineIcon sx={{ mr: 0.75, color: 'primary.main', fontSize: 18 }} />
+              Resume Journey
             </Typography>
-          </Box>
-        ) : (
-          <>
-            {/* Main content based on selected tab */}
-            <Box>
-              {tabValue === 0 && (
-                <Fade in={true} timeout={500}>
-                  <Card 
-                    elevation={0}
-                    sx={{ 
-                      borderRadius: 2,
-                      overflow: 'hidden',
-                      transition: 'all 0.3s ease',
-                      boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-                      ...fadeTransition.in
+            
+            <Card sx={{ 
+              p: 2, 
+              mb: 2,
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+              overflow: 'hidden'
+            }}>
+              {/* Timeline visual representation */}
+              <Box sx={{ height: 140, position: 'relative', mb: 1 }}>
+                {/* Horizontal timeline line */}
+                <Box sx={{ 
+                  position: 'absolute', 
+                  left: 10, 
+                  right: 10, 
+                  top: '50%', 
+                  height: 3, 
+                  borderRadius: 1.5,
+                  background: 'linear-gradient(90deg, #e0e0e0 0%, #1976d2 100%)',
+                  zIndex: 0
+                }} />
+                
+                {/* Timeline milestones */}
+                {[
+                  { date: 'Aug 1', label: 'Created', score: 50, current: false },
+                  { date: 'Aug 5', label: 'Updated', score: 65, current: false },
+                  { date: 'Aug 12', label: 'ATS Pass', score: 75, current: false },
+                  { date: 'Aug 15', label: 'Current', score: 85, current: true }
+                ].map((milestone, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      position: 'absolute',
+                      left: `calc(${index * 30}% + 10px)`,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      zIndex: 1,
+                      width: 50
                     }}
                   >
-                    <Box sx={{ 
-                      p: 2, 
-                      background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.05) 0%, rgba(142, 84, 233, 0.05) 100%)',
-                      borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1
-                    }}>
-                      <Edit sx={{ color: '#4776E6' }} />
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        Edit Resume
-                      </Typography>
-                    </Box>
-                    <ResumeBuilder
-                      resumeData={selectedResume} 
-                      onSave={handleSaveResume}
-                    />
-                  </Card>
-                </Fade>
-              )}
-              
-              {tabValue === 1 && (
-                <Box sx={{ ...fadeTransition.in }}>
-                  {isAnalyzing ? (
-                    <Box sx={{ 
-                      textAlign: 'center', 
-                      py: 8,
-                      borderRadius: 2,
-                      background: 'rgba(255, 255, 255, 0.7)',
-                      backdropFilter: 'blur(10px)',
-                      boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-                    }}>
-                      <CircularProgress 
-                        size={70} 
-                        thickness={4} 
-                        sx={{ 
-                          color: '#4776E6',
-                          '& .MuiCircularProgress-circle': {
-                            strokeLinecap: 'round',
-                          }
-                        }} 
-                      />
-                      <Typography variant="h6" sx={{ mt: 3, fontWeight: 600 }}>
-                        Analyzing your resume...
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1, maxWidth: 500, mx: 'auto' }}>
-                        This may take a moment as we process your resume against job requirements using our AI-powered analysis.
-                      </Typography>
-                    </Box>
-                  ) : analysisData ? (
-                    <Grid container spacing={3}>
-                      <Grid item xs={12}>
-                        <Card sx={{ 
-                          borderRadius: 2, 
-                          overflow: 'hidden',
-                          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-                        }}>
-                          <Box sx={{ 
-                            p: 2, 
-                            background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.05) 0%, rgba(142, 84, 233, 0.05) 100%)',
-                            borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1
-                          }}>
-                            <Analytics sx={{ color: '#4776E6' }} />
-                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                              Resume Analysis
-                            </Typography>
-                          </Box>
-                          <Box sx={{ p: 0 }}>
-                            <ResumeAnalysis 
-                              resumeId={selectedResume?.id}
-                              resumeData={selectedResume}
-                              jobData={jobData}
-                              analysisData={analysisData}
-                              isAnalyzing={isAnalyzing} 
-                              error={error}
-                              onAnalysisComplete={(data) => {
-                                setAnalysisData(data);
-                                if (data.skillGap) {
-                                  setSkillGapData(data.skillGap);
-                                }
-                              }}
-                              onApplySuggestion={handleApplySuggestion}
-                            />
-                          </Box>
-                        </Card>
-                      </Grid>
-                      
-                      {/* Keep skill gap analysis card */}
-                    </Grid>
-                  ) : (
-                    <Box sx={{ 
-                      p: 6, 
-                      textAlign: 'center',
-                      borderRadius: 2,
-                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
-                      backdropFilter: 'blur(10px)',
-                      boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-                    }}>
-                      <Box sx={{ 
-                        width: 80, 
-                        height: 80, 
-                        borderRadius: '50%', 
-                        background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.1) 0%, rgba(142, 84, 233, 0.1) 100%)',
+                    {/* Circle marker */}
+                    <Box
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        bgcolor: milestone.current ? 'primary.main' : '#fff',
+                        border: `2px solid ${milestone.current ? 'primary.main' : '#bdbdbd'}`,
                         display: 'flex',
-                        justifyContent: 'center',
                         alignItems: 'center',
-                        mb: 3,
-                        mx: 'auto'
-                      }}>
-                        <Analytics sx={{ fontSize: 40, color: '#4776E6' }} />
-                      </Box>
-                      <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                        No Analysis Data Available
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
-                        Analyze your resume against job requirements to get ATS compatibility score,
-                        keyword analysis, and AI-powered optimization suggestions.
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              )}
-              
-              {tabValue === 2 && (
-                <Fade in={true} timeout={500}>
-                  <Card sx={{ 
-                    borderRadius: 2, 
-                    overflow: 'hidden',
-                    boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-                  }}>
-                    <Box sx={{ 
-                      p: 2, 
-                      background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.05) 0%, rgba(142, 84, 233, 0.05) 100%)',
-                      borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1
-                    }}>
-                      <Compare sx={{ color: '#4776E6' }} />
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        Job Match Calculator
+                        justifyContent: 'center',
+                        mb: 1,
+                        boxShadow: milestone.current ? '0 3px 8px rgba(25, 118, 210, 0.3)' : 'none',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'scale(1.1)',
+                          boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
+                        }
+                      }}
+                    >
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          fontWeight: 'bold',
+                          color: milestone.current ? 'white' : 'text.secondary',
+                          fontSize: '0.7rem' 
+                        }}
+                      >
+                        {milestone.score}%
                       </Typography>
                     </Box>
-                    <Box sx={{ p: 2 }}>
-                      <JobMatchCalculator 
-                        resume={selectedResume}
-                        job={jobData}
-                      />
-                    </Box>
-                  </Card>
-                </Fade>
-              )}
-              
-              {tabValue === 3 && renderKeywordsTab()}
-              
-              {tabValue === 4 && (
-                <Box sx={{ ...fadeTransition.in }}>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12}>
-                      <Card sx={{ 
-                        borderRadius: 2, 
-                        overflow: 'hidden',
-                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-                      }}>
-                        <Box sx={{ 
-                          p: 2, 
-                          background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.05) 0%, rgba(142, 84, 233, 0.05) 100%)',
-                          borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1
-                        }}>
-                          <Work sx={{ color: '#4776E6' }} />
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            Recommended Jobs
-                          </Typography>
-                        </Box>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" paragraph>
-                            Based on your skills and experience, these jobs might be a good match:
-                          </Typography>
-                          <FeaturedJobsCarousel 
-                            resumeId={selectedResume?.id}
-                            customText="Explore job opportunities that match your skills and experience."
-                          />
-                        </CardContent>
-                      </Card>
-                    </Grid>
                     
-                    <Grid item xs={12}>
-                      <Card sx={{ 
-                        borderRadius: 2, 
-                        overflow: 'hidden',
-                        boxShadow: 'rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px',
-                      }}>
-                        <Box sx={{ 
-                          p: 2, 
-                          background: 'linear-gradient(135deg, rgba(71, 118, 230, 0.05) 0%, rgba(142, 84, 233, 0.05) 100%)',
-                          borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1
-                        }}>
-                          <Tune sx={{ color: '#4776E6' }} />
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            Job-Specific Customization
-                          </Typography>
-                        </Box>
-                        <CardContent>
-                          <JobSpecificCustomization 
-                            resumeData={selectedResume}
-                          />
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  </Grid>
+                    {/* Label below */}
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        fontWeight: milestone.current ? 'bold' : 'normal',
+                        color: milestone.current ? 'primary.main' : 'text.secondary',
+                        textAlign: 'center',
+                        fontSize: '0.7rem',
+                        lineHeight: 1.2
+                      }}
+                    >
+                      {milestone.label}
+                    </Typography>
+                    
+                    {/* Date below label */}
+                    <Typography
+                      variant="caption"
+                      sx={{ 
+                        fontSize: '0.65rem',
+                        color: 'text.secondary',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {milestone.date}
+                    </Typography>
+                    
+                    {/* Current version indicator */}
+                    {milestone.current && (
+                      <Box 
+                        sx={{ 
+                          width: 0, 
+                          height: 0, 
+                          borderLeft: '6px solid transparent',
+                          borderRight: '6px solid transparent',
+                          borderBottom: '6px solid primary.main',
+                          position: 'absolute',
+                          top: -8
+                        }}
+                      />
+                    )}
+                  </Box>
+                ))}
+                
+                {/* Score trend line */}
+                <Box sx={{ 
+                  position: 'absolute',
+                  left: 10,
+                  right: 10,
+                  bottom: 15,
+                  height: 40
+                }}>
+                  <svg width="100%" height="100%" viewBox="0 0 100 40" preserveAspectRatio="none">
+                    <path 
+                      d="M0,40 L33,30 L66,20 L100,5" 
+                      fill="none" 
+                      stroke="rgba(25, 118, 210, 0.3)" 
+                      strokeWidth="2"
+                      strokeDasharray="2"
+                    />
+                  </svg>
                 </Box>
-              )}
-            </Box>
-          </>
-        )}
+              </Box>
+              
+              <Divider sx={{ mb: 1.5 }} />
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <TrendingUpIcon sx={{ color: 'success.main', fontSize: 16, mr: 0.5 }} />
+                  <Typography variant="caption" fontWeight="medium" color="text.secondary">
+                    +35% improvement
+                  </Typography>
+                </Box>
+                
+                <Button 
+                  size="small" 
+                  variant="text" 
+                  endIcon={<ArrowRightIcon sx={{ fontSize: 14 }} />}
+                  sx={{ 
+                    textTransform: 'none', 
+                    fontSize: '0.75rem',
+                    py: 0.5
+                  }}
+                >
+                  View History
+                </Button>
+              </Box>
+            </Card>
+            
+            {/* Personality Traits Based on Resume */}
+            <Card sx={{ 
+              p: 1.5, 
+              mb: 2,
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <PersonIcon sx={{ mr: 0.75, color: 'primary.main', fontSize: 18 }} />
+                  <Typography variant="subtitle2" fontWeight="600">Personality Traits</Typography>
+                </Box>
+              </Box>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {[
+                  { trait: 'Analytical', score: 92 },
+                  { trait: 'Detail-oriented', score: 88 },
+                  { trait: 'Problem-solver', score: 85 }
+                ].map((trait, index) => (
+                  <Chip 
+                    key={index}
+                    label={trait.trait}
+                    size="small"
+                    sx={{ 
+                      bgcolor: 'rgba(76, 175, 80, 0.1)',
+                      color: 'success.dark',
+                      border: '1px solid rgba(76, 175, 80, 0.2)',
+                      fontWeight: 600,
+                      height: 22,
+                      fontSize: '0.65rem',
+                      '& .MuiChip-label': { px: 1 }
+                    }}
+                  />
+                ))}
+              </Box>
+            </Card>
+            
+            {/* Bias/Inclusion Audit */}
+            <Card sx={{ 
+              p: 1.5, 
+              mb: 2,
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+              bgcolor: 'rgba(255, 152, 0, 0.05)',
+              border: '1px solid rgba(255, 152, 0, 0.1)'
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <WarningIcon sx={{ mr: 0.75, color: '#ff9800', fontSize: 18 }} />
+                <Typography variant="subtitle2" fontWeight="600">Bias/Inclusion Audit</Typography>
+                <Chip 
+                  label="85%" 
+                  size="small" 
+                  color="success"
+                  sx={{ 
+                    ml: 'auto', 
+                    height: 20, 
+                    fontSize: '0.65rem',
+                    '& .MuiChip-label': { px: 1 }
+                  }}
+                />
+              </Box>
+              
+              <Box sx={{ mt: 1, p: 0.75, bgcolor: 'rgba(255, 152, 0, 0.1)', borderRadius: 1 }}>
+                <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <WarningIcon fontSize="small" sx={{ mr: 0.5, color: '#ff9800', fontSize: 14 }} />
+                  Consider gender-neutral language
+                </Typography>
+              </Box>
+            </Card>
+            
+            {/* Quick Apply Section */}
+            <Card sx={{ 
+              p: 1.5, 
+              mb: 2,
+              borderRadius: 2,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              border: '1px solid rgba(25, 118, 210, 0.1)',
+              bgcolor: 'rgba(25, 118, 210, 0.02)'
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <WorkOutlineIcon sx={{ mr: 0.75, color: 'primary.main', fontSize: 18 }} />
+                <Typography variant="subtitle2" fontWeight="600">Quick Apply</Typography>
+              </Box>
+              
+              <Box sx={{ mb: 1, p: 1, bgcolor: 'rgba(25, 118, 210, 0.05)', borderRadius: 1 }}>
+                <Typography variant="body2" fontWeight="600" sx={{ fontSize: '0.8rem' }}>Senior React Developer</Typography>
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>TechCorp • Remote</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="caption" sx={{ mr: 1 }}>Match:</Typography>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={85} 
+                    sx={{ height: 4, borderRadius: 2, flexGrow: 1 }}
+                    color="success"
+                  />
+                  <Typography variant="caption" sx={{ ml: 1, fontWeight: 'bold' }}>85%</Typography>
+                </Box>
+              </Box>
+              
+              <Button
+                variant="contained"
+                size="small"
+                fullWidth
+                startIcon={<AlternateEmailIcon sx={{ fontSize: 16 }} />}
+                sx={{ 
+                  textTransform: 'none',
+                  fontWeight: 'bold',
+                  py: 0.5,
+                  fontSize: '0.75rem'
+                }}
+              >
+                Apply Now
+              </Button>
+            </Card>
+          </Box>
+        </Box>
+        
+        {/* MAIN RIGHT PANEL – TAB SYSTEM */}
+        <Box sx={{ 
+          flexGrow: 1,
+          width: { xs: '100%', md: 'calc(100% - 280px)' },
+          marginLeft: { xs: sidebarOpen ? '280px' : 0, md: 0 },
+          transition: 'margin-left 0.3s ease',
+          overflow: 'auto',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <Box sx={{ 
+            borderBottom: 1, 
+            borderColor: 'divider', 
+            bgcolor: 'background.paper',
+            position: 'sticky',
+            top: 0,
+            zIndex: 20,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+          }}>
+            <Tabs 
+              value={activeTab} 
+              onChange={handleTabChange} 
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
+              sx={{ 
+                '.MuiTab-root': { 
+                  minHeight: '48px',
+                  textTransform: 'none',
+                  fontWeight: 'medium',
+                  fontSize: '0.85rem',
+                  px: 2
+                } 
+              }}
+            >
+              <Tab icon={<EditIcon />} iconPosition="start" label="Edit Resume" />
+              <Tab 
+                icon={<AnalyticsIcon />} 
+                iconPosition="start" 
+                label={
+                  <Badge color="primary" variant="dot">
+                    Analyze (AI)
+                  </Badge>
+                } 
+              />
+              <Tab icon={<CompareArrowsIcon />} iconPosition="start" label="Job Match" />
+              <Tab icon={<KeyIcon />} iconPosition="start" label="Keywords" />
+              <Tab icon={<WorkIcon />} iconPosition="start" label="Jobs" />
+              <Tab icon={<SettingsIcon />} iconPosition="start" label="Features" />
+            </Tabs>
+          </Box>
+          
+          {/* Tab Panels - Improved styling */}
+          <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+            <TabPanel value={activeTab} index={0}>
+              <ResumeBuilder />
+            </TabPanel>
+            
+            <TabPanel value={activeTab} index={1}>
+              <ResumeAnalysis />
+            </TabPanel>
+            
+            <TabPanel value={activeTab} index={2}>
+              <JobMatchCalculator />
+            </TabPanel>
+            
+            <TabPanel value={activeTab} index={3}>
+              <KeywordsExtractor />
+            </TabPanel>
+            
+            <TabPanel value={activeTab} index={4}>
+              <FeaturedJobs />
+            </TabPanel>
+            
+            <TabPanel value={activeTab} index={5}>
+              <FeaturesPanel />
+            </TabPanel>
+          </Box>
+        </Box>
       </Box>
-    );
-  }
 
-  return renderResumeContent();
+      {/* Create New Resume Dialog */}
+      <Dialog open={newResumeDialogOpen} onClose={handleNewResumeClose}>
+        <DialogTitle>Create New Resume</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Resume Name"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={resumeName}
+            onChange={(e) => setResumeName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleNewResumeClose}>Cancel</Button>
+          <Button onClick={handleCreateResume} variant="contained">Create</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
 };
 
 export default ResumePage;

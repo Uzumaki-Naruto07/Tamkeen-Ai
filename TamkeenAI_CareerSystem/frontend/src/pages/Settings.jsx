@@ -126,33 +126,49 @@ const Settings = () => {
         });
         
         // Load notification settings
-        const notificationsResponse = await apiEndpoints.settings.getNotificationSettings(profile.id);
-        if (notificationsResponse.data) {
-          setNotificationSettings(notificationsResponse.data);
+        try {
+          const notificationsResponse = await apiEndpoints.settings.getNotificationSettings(profile.id);
+          if (notificationsResponse?.data) {
+            setNotificationSettings(notificationsResponse.data);
+          }
+        } catch (err) {
+          console.log('Notification settings API not available, using defaults');
         }
         
         // Load appearance settings
-        const appearanceResponse = await apiEndpoints.settings.getAppearanceSettings(profile.id);
-        if (appearanceResponse.data) {
-          setAppearanceSettings(appearanceResponse.data);
+        try {
+          const appearanceResponse = await apiEndpoints.settings.getAppearanceSettings(profile.id);
+          if (appearanceResponse?.data) {
+            setAppearanceSettings(appearanceResponse.data);
+          }
+        } catch (err) {
+          console.log('Appearance settings API not available, using defaults');
         }
         
         // Load privacy settings
-        const privacyResponse = await apiEndpoints.settings.getPrivacySettings(profile.id);
-        if (privacyResponse.data) {
-          setPrivacySettings(privacyResponse.data);
+        try {
+          const privacyResponse = await apiEndpoints.settings.getPrivacySettings(profile.id);
+          if (privacyResponse?.data) {
+            setPrivacySettings(privacyResponse.data);
+          }
+        } catch (err) {
+          console.log('Privacy settings API not available, using defaults');
         }
         
         // Load data settings
-        const dataResponse = await apiEndpoints.settings.getDataSettings(profile.id);
-        if (dataResponse.data) {
-          setDataSettings(dataResponse.data);
+        try {
+          const dataResponse = await apiEndpoints.settings.getDataSettings(profile.id);
+          if (dataResponse?.data) {
+            setDataSettings(dataResponse.data);
+          }
+        } catch (err) {
+          console.log('Data settings API not available, using defaults');
         }
         
         setLoading(false);
       } catch (err) {
         console.error('Error loading settings:', err);
-        setError('Failed to load settings. Please try again later.');
+        setError('Failed to load settings. Using default values.');
         setLoading(false);
       }
     };

@@ -53,6 +53,7 @@ import ExploreIcon from '@mui/icons-material/Explore';
 import TranslateIcon from '@mui/icons-material/Translate';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import LinkedIn from '@mui/icons-material/LinkedIn';
 
 // Context
 import { useUser } from '../../context/AppContext';
@@ -201,12 +202,12 @@ const navVariants = {
 const navigationItems = [
   { path: '/dashboard', label: 'Dashboard', labelKey: 'navigation.dashboard', icon: <DashboardIcon /> },
   { path: '/jobs', label: 'Jobs', labelKey: 'navigation.jobs', icon: <WorkIcon /> },
+  { path: '/automation-linkedin', label: 'Automation LinkedIn', labelKey: 'navigation.automationLinkedin', icon: <LinkedIn /> },
   { path: '/ai-coach', label: 'AI Coach', labelKey: 'navigation.aiCoach', icon: <SmartToyIcon /> },
   { path: '/resumePage', label: 'Resume Builder', labelKey: 'navigation.resumeBuilder', icon: <DescriptionIcon /> },
   { path: '/resume-score-tracker', label: 'Resume Score', labelKey: 'navigation.resumeScore', icon: <AssessmentIcon /> },
   { path: '/skills-assessment', label: 'Skill Builder', labelKey: 'navigation.skillBuilder', icon: <SchoolIcon /> },
   { path: '/achievements', label: 'Achievements', labelKey: 'navigation.achievements', icon: <EmojiEventsIcon /> },
-  { path: '/settings', label: 'Settings', labelKey: 'navigation.settings', icon: <SettingsIcon /> },
 ];
 
 const NavigationBar = ({ open, onToggleDrawer }) => {

@@ -71,6 +71,12 @@ const ResumePage = lazyLoad(() => import('./pages/ResumePage'));
 const SkillsAssessment = lazyLoad(() => import('./pages/SkillsAssessment'));
 // Add ResumeScoreTracker
 const ResumeScoreTracker = lazyLoad(() => import('./pages/ResumeScoreTracker'));
+// Add CertificationsAchievements component
+const CertificationsAchievements = lazyLoad(() => import('./pages/CertificationsAchievements'));
+// Add Settings component
+const Settings = lazyLoad(() => import('./pages/Settings'));
+// Add LinkedIn Automation component
+const LinkedInAutomation = lazyLoad(() => import('./pages/LinkedinAutomation'));
 
 // Suspense fallback component
 const SuspenseFallback = () => (
@@ -126,7 +132,7 @@ const router = createBrowserRouter(
       
       {/* Protected routes with navigation */}
       <Route element={<MainLayout />}>
-        <Route path="/" element={<Navigate to="/dashboard" />} />
+        <Route path="/" element={<Navigate to="/user-profile" />} />
         <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
         <Route path="/resume-analysis" element={<ProtectedRoute element={<ResumeAnalysis />} />} />
         
@@ -159,6 +165,13 @@ const router = createBrowserRouter(
           errorElement={<RouteErrorBoundary />}
         />
         
+        {/* Add LinkedIn Automation route */}
+        <Route 
+          path="/automation-linkedin" 
+          element={<ProtectedRoute element={<LinkedInAutomation />} />} 
+          errorElement={<RouteErrorBoundary />}
+        />
+        
         {/* Admin routes */}
         <Route path="/admin-panel" element={<ProtectedRoute element={<AdminPanel />} />} />
         
@@ -176,6 +189,12 @@ const router = createBrowserRouter(
         {/* User Profile routes */}
         <Route path="/user-profile" element={<ProtectedRoute element={<UserProfileWithErrorBoundary />} />} />
         <Route path="/user-profile/:username" element={<ProtectedRoute element={<UserProfileWithErrorBoundary />} />} />
+        
+        {/* Certifications and Achievements route */}
+        <Route path="/achievements" element={<ProtectedRoute element={<CertificationsAchievements />} />} />
+        
+        {/* Settings route */}
+        <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
         
         {/* Redirect /profile to /user-profile to fix 404 */}
         <Route path="/profile" element={<Navigate to="/user-profile" replace />} />

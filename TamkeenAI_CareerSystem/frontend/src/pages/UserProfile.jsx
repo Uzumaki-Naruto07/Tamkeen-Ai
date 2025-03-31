@@ -59,7 +59,7 @@ const UserProfile = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
-  const [editMode, setEditMode] = useState(true);
+  const [editMode, setEditMode] = useState(false); // Changed from true to false to show profile info first
   const [activeTab, setActiveTab] = useState(0);
   const [achievements, setAchievements] = useState([]);
   const [skills, setSkills] = useState([]);
@@ -441,53 +441,111 @@ const UserProfile = () => {
         
         // Regular profile loading from server
         // Fetch user profile data
-        const profileResponse = await apiEndpoints.profiles.getUserProfile(userAccountProfile.id);
-        setUserProfile(profileResponse.data);
-        
-        // Initialize profile fields
-        setProfileFieldsEdited({
-          firstName: profileResponse.data.firstName || '',
-          lastName: profileResponse.data.lastName || '',
-          title: profileResponse.data.title || '',
-          bio: profileResponse.data.bio || '',
-          location: profileResponse.data.location || '',
-          phone: profileResponse.data.phone || '',
-          email: profileResponse.data.email || ''
-        });
-        
-        // Set profile visibility settings
-        setProfileVisibility(profileResponse.data.visibility || {
-          isPublic: true,
-          showEmail: false,
-          showPhone: false,
-          showEducation: true,
-          showExperience: true,
-          showSkills: true
-        });
-        
-        // Set profile URL
-        setProfileUrl(`${window.location.origin}/profile/${profileResponse.data.username || userAccountProfile.id}`);
+        try {
+          const profileResponse = await apiEndpoints.profiles.getUserProfile(userAccountProfile.id);
+          setUserProfile(profileResponse.data);
+          
+          // Initialize profile fields
+          setProfileFieldsEdited({
+            firstName: profileResponse.data.firstName || '',
+            lastName: profileResponse.data.lastName || '',
+            title: profileResponse.data.title || '',
+            bio: profileResponse.data.bio || '',
+            location: profileResponse.data.location || '',
+            phone: profileResponse.data.phone || '',
+            email: profileResponse.data.email || ''
+          });
+          
+          // Set profile visibility settings
+          setProfileVisibility(profileResponse.data.visibility || {
+            isPublic: true,
+            showEmail: false,
+            showPhone: false,
+            showEducation: true,
+            showExperience: true,
+            showSkills: true
+          });
+          
+          // Set profile URL
+          setProfileUrl(`${window.location.origin}/profile/${profileResponse.data.username || userAccountProfile.id}`);
+        } catch (err) {
+          console.log('User profile API not available, using default data');
+          const mockProfile = {
+            firstName: userAccountProfile?.firstName || 'User',
+            lastName: userAccountProfile?.lastName || '',
+            title: userAccountProfile?.title || 'Professional',
+            bio: '',
+            location: '',
+            phone: '',
+            email: userAccountProfile?.email || '',
+            visibility: {
+              isPublic: true,
+              showEmail: false,
+              showPhone: false,
+              showEducation: true,
+              showExperience: true,
+              showSkills: true
+            }
+          };
+          
+          setUserProfile(mockProfile);
+          
+          // Initialize profile fields with mock data
+          setProfileFieldsEdited({
+            firstName: mockProfile.firstName,
+            lastName: mockProfile.lastName,
+            title: mockProfile.title,
+            bio: mockProfile.bio,
+            location: mockProfile.location,
+            phone: mockProfile.phone,
+            email: mockProfile.email
+          });
+          
+          // Set profile visibility settings
+          setProfileVisibility(mockProfile.visibility);
+          
+          // Set profile URL
+          setProfileUrl(`${window.location.origin}/profile/${userAccountProfile.id}`);
+        }
         
         // Fetch additional profile data
-        const [achievementsRes, skillsRes, educationRes, experienceRes] = await Promise.all([
-          apiEndpoints.profiles.getAchievements(userAccountProfile.id),
-          apiEndpoints.profiles.getSkills(userAccountProfile.id),
-          apiEndpoints.profiles.getEducation(userAccountProfile.id),
-          apiEndpoints.profiles.getExperience(userAccountProfile.id)
-        ]);
-        
-        setAchievements(achievementsRes.data || []);
-        setSkills(skillsRes.data || []);
-        setEducation(educationRes.data || []);
-        setWorkExperience(experienceRes.data || []);
-        
-        // Set social links
-        setSocialLinks({
-          linkedin: profileResponse.data.socialLinks?.linkedin || '',
-          github: profileResponse.data.socialLinks?.github || '',
-          twitter: profileResponse.data.socialLinks?.twitter || '',
-          portfolio: profileResponse.data.socialLinks?.portfolio || ''
-        });
+        try {
+          const [achievementsRes, skillsRes, educationRes, experienceRes] = await Promise.all([
+            apiEndpoints.profiles.getAchievements(userAccountProfile.id),
+            apiEndpoints.profiles.getSkills(userAccountProfile.id),
+            apiEndpoints.profiles.getEducation(userAccountProfile.id),
+            apiEndpoints.profiles.getExperience(userAccountProfile.id)
+          ]);
+          
+          setAchievements(achievementsRes.data || []);
+          setSkills(skillsRes.data || []);
+          setEducation(educationRes.data || []);
+          setWorkExperience(experienceRes.data || []);
+          
+          // Set social links
+          if (profileResponse?.data) {
+            setSocialLinks({
+              linkedin: profileResponse.data.socialLinks?.linkedin || '',
+              github: profileResponse.data.socialLinks?.github || '',
+              twitter: profileResponse.data.socialLinks?.twitter || '',
+              portfolio: profileResponse.data.socialLinks?.portfolio || ''
+            });
+          }
+        } catch (err) {
+          console.log('Profile details APIs not available, using empty data');
+          setAchievements([]);
+          setSkills([]);
+          setEducation([]);
+          setWorkExperience([]);
+          
+          // Set default social links
+          setSocialLinks({
+            linkedin: '',
+            github: '',
+            twitter: '',
+            portfolio: ''
+          });
+        }
         
       } catch (err) {
         console.error('Error loading user profile:', err);
@@ -1045,9 +1103,14 @@ const UserProfile = () => {
                   </Box>
                   <Button
                     variant="outlined"
+                    color="primary"
                     startIcon={<Edit />}
                     onClick={() => setEditMode(true)}
-                    size="small"
+                    sx={{ 
+                      ml: 2, 
+                      fontWeight: 'bold',
+                      display: userAccountProfile?.id && !editMode ? 'flex' : 'none' 
+                    }}
                   >
                     Edit Profile
                   </Button>
