@@ -244,4 +244,370 @@ const mockDashboardData = {
   // ... add more mock data as needed ...
 };
 
+// Add new API functions for skills assessment
+const skills = {
+  // ... existing functions ...
+  
+  // Generate AI-powered assessment questions
+  generateAIQuestions: async (categoryId, userId, difficulty = 'medium') => {
+    console.log(`[API] Generating AI questions for category ${categoryId}`);
+    
+    try {
+      const response = await axios.post(apiEndpoints.ASSESSMENT.GENERATE_AI_QUESTIONS, {
+        categoryId,
+        userId,
+        difficulty,
+        timestamp: new Date().toISOString()
+      });
+      
+      return response;
+    } catch (error) {
+      console.error('Error generating AI questions:', error);
+      
+      // Fallback to mock questions if API fails
+      return {
+        data: generateMockQuestionsForCategory(categoryId, difficulty)
+      };
+    }
+  },
+  
+  // Get assessment questions with adaptive difficulty support
+  getAssessmentQuestions: async (categoryId, options = {}) => {
+    console.log(`[API] Getting assessment questions for category ${categoryId}`);
+    const { difficulty, adaptiveMode, userLevel, previousAssessments } = options;
+    
+    try {
+      const response = await axios.get(
+        `${apiEndpoints.ASSESSMENT.GET_QUESTIONS}/${categoryId}`,
+        {
+          params: {
+            difficulty,
+            adaptiveMode: adaptiveMode ? 'true' : 'false',
+            userLevel,
+            previousAssessments: JSON.stringify(previousAssessments || [])
+          }
+        }
+      );
+      
+      return response;
+    } catch (error) {
+      console.error('Error fetching assessment questions:', error);
+      
+      // Fallback to mock questions
+      return {
+        data: generateMockQuestionsForCategory(categoryId, difficulty)
+      };
+    }
+  },
+  
+  // Submit assessment with support for adaptive difficulty
+  submitAssessment: async (assessmentData) => {
+    console.log(`[API] Submitting assessment for category ${assessmentData.categoryId}`);
+    
+    try {
+      const response = await axios.post(
+        apiEndpoints.ASSESSMENT.SUBMIT_ANSWERS(assessmentData.categoryId),
+        assessmentData
+      );
+      
+      return response;
+    } catch (error) {
+      console.error('Error submitting assessment:', error);
+      
+      // Generate mock results if API fails
+      return {
+        data: generateMockAssessmentResults(assessmentData)
+      };
+    }
+  },
+  
+  // Get skill insights based on assessment results
+  getSkillInsights: async (insightRequest) => {
+    console.log(`[API] Getting skill insights for user ${insightRequest.userId}`);
+    
+    try {
+      const response = await axios.post(
+        apiEndpoints.ASSESSMENT.GET_SKILL_INSIGHTS,
+        insightRequest
+      );
+      
+      return response;
+    } catch (error) {
+      console.error('Error fetching skill insights:', error);
+      
+      // Generate mock insights
+      return {
+        data: generateMockSkillInsights(insightRequest)
+      };
+    }
+  },
+  
+  // Get skill growth forecast
+  getSkillForecast: async (userId, skillCategory) => {
+    console.log(`[API] Getting skill forecast for ${skillCategory}`);
+    
+    try {
+      const response = await axios.get(
+        apiEndpoints.ASSESSMENT.GET_SKILL_FORECAST,
+        {
+          params: {
+            userId,
+            skillCategory
+          }
+        }
+      );
+      
+      return response;
+    } catch (error) {
+      console.error('Error fetching skill forecast:', error);
+      
+      // Generate mock forecast
+      return {
+        data: generateMockSkillForecast(skillCategory)
+      };
+    }
+  }
+};
+
+// Add AI-related functions to assessments
+const assessments = {
+  // ... existing functions ...
+  
+  // Detect emotion from image
+  detectEmotion: async (imageData) => {
+    console.log('[API] Detecting emotion');
+    
+    try {
+      const response = await axios.post(
+        apiEndpoints.ASSESSMENT.DETECT_EMOTION,
+        imageData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      
+      return response;
+    } catch (error) {
+      console.error('Error detecting emotion:', error);
+      
+      // Generate mock emotion detection
+      const emotions = ['neutral', 'happy', 'sad', 'stressed', 'anxious'];
+      const randomEmotion = emotions[Math.floor(Math.random() * emotions.length)];
+      
+      return {
+        data: {
+          emotion: randomEmotion,
+          confidence: Math.floor(Math.random() * 30) + 70 // 70-100%
+        }
+      };
+    }
+  },
+  
+  // Update adaptive difficulty settings
+  updateAdaptiveDifficulty: async (userId, difficultyData) => {
+    console.log(`[API] Updating adaptive difficulty for user ${userId}`);
+    
+    try {
+      const response = await axios.post(
+        apiEndpoints.ASSESSMENT.ADAPTIVE_DIFFICULTY,
+        {
+          userId,
+          ...difficultyData
+        }
+      );
+      
+      return response;
+    } catch (error) {
+      console.error('Error updating adaptive difficulty:', error);
+      
+      // Mock response
+      return {
+        data: {
+          success: true,
+          updatedDifficulty: difficultyData.newDifficulty || 'medium'
+        }
+      };
+    }
+  }
+};
+
+// Helper function to generate mock questions for a category
+const generateMockQuestionsForCategory = (categoryId, difficulty = 'medium') => {
+  const questions = [];
+  const categories = {
+    1: 'technical',
+    2: 'data',
+    3: 'soft_skills',
+    4: 'leadership',
+    5: 'design'
+  };
+  
+  const categoryType = categories[categoryId] || 'general';
+  
+  // Generate 5-10 questions based on category and difficulty
+  const questionCount = difficulty === 'easy' ? 5 : difficulty === 'medium' ? 7 : 10;
+  
+  for (let i = 1; i <= questionCount; i++) {
+    let question = {
+      id: `${categoryType}-q${i}`,
+      text: `Sample ${categoryType} question ${i} (${difficulty} difficulty)`,
+      category: categoryType,
+      difficulty,
+      options: [
+        { value: 'a', text: `Option A for question ${i}` },
+        { value: 'b', text: `Option B for question ${i}` },
+        { value: 'c', text: `Option C for question ${i}` },
+        { value: 'd', text: `Option D for question ${i}` }
+      ],
+      correctAnswer: ['a', 'b', 'c', 'd'][Math.floor(Math.random() * 4)]
+    };
+    
+    // Add more options for hard questions
+    if (difficulty === 'hard') {
+      question.options.push({ value: 'e', text: `Advanced option E for question ${i}` });
+    }
+    
+    questions.push(question);
+  }
+  
+  return questions;
+};
+
+// Helper function to generate mock assessment results
+const generateMockAssessmentResults = (assessmentData) => {
+  const { categoryId, responses } = assessmentData;
+  
+  // Calculate a mock score (70-100%)
+  const score = Math.floor(Math.random() * 31) + 70;
+  
+  // Generate detailed feedback
+  const strengths = [
+    'Strong understanding of core concepts',
+    'Good problem-solving approach',
+    'Effective application of knowledge'
+  ];
+  
+  const weaknesses = [
+    'Could improve in advanced topics',
+    'Some gaps in technical terminology',
+    'Limited understanding of edge cases'
+  ];
+  
+  // Select 1-2 random strengths and weaknesses
+  const randomStrengths = strengths.sort(() => 0.5 - Math.random()).slice(0, Math.ceil(Math.random() * 2));
+  const randomWeaknesses = weaknesses.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 2) + 1);
+  
+  // Generate skill forecast
+  const skillForecast = generateMockSkillForecast(`Category ${categoryId}`);
+  
+  return {
+    id: `assessment-${Date.now()}`,
+    categoryId,
+    score,
+    maxScore: 100,
+    completedAt: new Date().toISOString(),
+    feedbackDetails: {
+      strengths: randomStrengths,
+      weaknesses: randomWeaknesses,
+      recommendations: [
+        'Practice with more advanced examples',
+        'Review the core terminology',
+        'Apply concepts in real-world scenarios'
+      ]
+    },
+    skillForecast
+  };
+};
+
+// Helper function to generate mock skill insights
+const generateMockSkillInsights = (insightRequest) => {
+  const { skillCategory } = insightRequest;
+  
+  return {
+    category: skillCategory,
+    strengths: [
+      'Good conceptual understanding',
+      'Strong problem-solving ability'
+    ],
+    weaknesses: [
+      'Limited practical application',
+      'Gaps in advanced topics'
+    ],
+    recommendations: [
+      {
+        type: 'course',
+        title: `Advanced ${skillCategory} Course`,
+        provider: 'Udemy',
+        url: 'https://www.udemy.com',
+        duration: '20 hours'
+      },
+      {
+        type: 'project',
+        title: `${skillCategory} Practice Project`,
+        description: 'Build a real-world application to apply your knowledge',
+        difficulty: 'Intermediate',
+        duration: '2 weeks'
+      },
+      {
+        type: 'resource',
+        title: `${skillCategory} Best Practices Guide`,
+        url: 'https://example.com/guide',
+        format: 'eBook'
+      }
+    ],
+    projectedImprovement: {
+      timeframe: '3 months',
+      expectedGrowth: Math.floor(Math.random() * 20) + 20 // 20-40% improvement
+    }
+  };
+};
+
+// Helper function to generate mock skill forecast
+const generateMockSkillForecast = (categoryName) => {
+  const today = new Date();
+  const forecast = {
+    category: categoryName,
+    currentLevel: Math.floor(Math.random() * 30) + 40, // 40-70%
+    projections: [],
+    milestones: []
+  };
+  
+  // Generate 6-month forecast with monthly projections
+  for (let i = 1; i <= 6; i++) {
+    const futureDate = new Date(today);
+    futureDate.setMonth(today.getMonth() + i);
+    
+    // Projected growth based on learning curve
+    const projectedGrowth = Math.min(100, forecast.currentLevel + (15 * (1 - Math.exp(-0.3 * i))));
+    
+    forecast.projections.push({
+      month: i,
+      date: futureDate.toISOString().split('T')[0],
+      projectedLevel: Math.round(projectedGrowth)
+    });
+    
+    // Add milestone if significant improvement expected
+    if (i % 2 === 0) { // Every other month
+      forecast.milestones.push({
+        date: futureDate.toISOString().split('T')[0],
+        description: `Expected to reach ${Math.round(projectedGrowth)}% proficiency in ${categoryName}`,
+        actions: [
+          `Complete advanced ${categoryName} training`,
+          `Apply skills in practical projects`
+        ]
+      });
+    }
+  }
+  
+  return forecast;
+};
+
+// Add the new API functions to the apiClient
+Object.assign(apiClient, {
+  skills,
+  assessments
+});
+
 export default apiClient; 

@@ -1,144 +1,197 @@
 import React, { useState } from 'react';
-import { 
-  Box, Button, Typography, Alert, 
-  CircularProgress, Paper, IconButton
+import {
+  Box,
+  Typography,
+  Button,
+  Paper,
+  CircularProgress,
+  Alert,
+  Snackbar,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
-import { Upload, Delete, FileCopy } from '@mui/icons-material';
-import { useResume } from '../context/AppContext';
+import { 
+  CloudUpload, 
+  FilePresent, 
+  CheckCircle, 
+  Delete 
+} from '@mui/icons-material';
+import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
-import LoadingSpinner from './LoadingSpinner';
 
-const ResumeUploader = ({ onUploadComplete }) => {
+/**
+ * Component for uploading resume files
+ */
+const ResumeUploader = ({ onUploadSuccess }) => {
   const [file, setFile] = useState(null);
+  const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [progress, setProgress] = useState(0);
-  const { setCurrentResume, addResumeFile } = useResume();
+  const [success, setSuccess] = useState(false);
+  const [open, setOpen] = useState(false);
+  
+  const { profile } = useUser();
   
   const handleFileChange = (event) => {
     const selectedFile = event.target.files[0];
+    
     if (selectedFile) {
+      // Check file format (.pdf, .docx, .doc)
+      const validExtensions = ['pdf', 'docx', 'doc'];
+      const fileExt = selectedFile.name.split('.').pop().toLowerCase();
+      
+      if (!validExtensions.includes(fileExt)) {
+        setError('Invalid file format. Please upload PDF or Word documents only.');
+        return;
+      }
+      
+      if (selectedFile.size > 5 * 1024 * 1024) { // 5MB
+        setError('File size too large. Maximum size is 5MB.');
+        return;
+      }
+      
       setFile(selectedFile);
+      setTitle(selectedFile.name.split('.')[0]);
       setError(null);
+      setOpen(true);
     }
   };
   
   const handleUpload = async () => {
-    if (!file) {
-      setError('Please select a file to upload');
-      return;
-    }
+    if (!file || !title.trim() || !profile?.id) return;
     
     setLoading(true);
     setError(null);
-    setProgress(0);
-    
-    // Create form data for file upload
-    const formData = new FormData();
-    formData.append('resume', file);
     
     try {
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setProgress(prev => Math.min(prev + 10, 90));
-      }, 500);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('title', title);
+      formData.append('userId', profile.id);
       
-      // Upload file
-      const response = await apiEndpoints.resume.upload(formData);
+      const response = await apiEndpoints.resumes.uploadResume(formData);
       
-      clearInterval(progressInterval);
-      setProgress(100);
+      setSuccess(true);
+      setFile(null);
+      setTitle('');
+      setOpen(false);
       
-      // Response includes parsed data from resume_parser.py
-      const resumeData = response.data;
-      addResumeFile(resumeData);
-      setCurrentResume(resumeData);
-      
-      // Callback
-      if (onUploadComplete) {
-        onUploadComplete(resumeData);
+      // Callback to parent component with the new resume
+      if (onUploadSuccess) {
+        onUploadSuccess(response.data);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to upload resume');
-      console.error('Resume upload error:', err);
+      setError('Failed to upload resume: ' + (err.response?.data?.message || err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
   };
   
+  const cancelUpload = () => {
+    setFile(null);
+    setTitle('');
+    setOpen(false);
+  };
+  
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Upload Your Resume
-      </Typography>
-      
-      <Box sx={{ my: 2 }}>
+    <Box>
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 3,
+          textAlign: 'center',
+          borderStyle: 'dashed',
+          borderWidth: 2,
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+          borderRadius: 2,
+          cursor: 'pointer',
+          '&:hover': {
+            bgcolor: 'action.hover',
+          },
+        }}
+        component="label"
+      >
         <input
           type="file"
           accept=".pdf,.doc,.docx"
-          id="resume-upload"
           style={{ display: 'none' }}
           onChange={handleFileChange}
         />
-        <label htmlFor="resume-upload">
-          <Button
-            variant="outlined"
-            component="span"
-            startIcon={<Upload />}
-            fullWidth
-            disabled={loading}
-          >
-            Select Resume File
-          </Button>
-        </label>
-      </Box>
-      
-      {file && (
-        <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
-          <FileCopy sx={{ mr: 1 }} />
-          <Typography variant="body2" sx={{ flexGrow: 1 }}>
-            {file.name}
-          </Typography>
-          <IconButton 
-            size="small" 
-            onClick={() => setFile(null)}
-            disabled={loading}
-          >
-            <Delete fontSize="small" />
-          </IconButton>
-        </Box>
-      )}
+        
+        <CloudUpload
+          color="primary"
+          sx={{ fontSize: 48, mb: 2 }}
+        />
+        
+        <Typography variant="h6" gutterBottom>
+          Upload Resume
+        </Typography>
+        
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Drag and drop your resume file or click to browse
+        </Typography>
+        
+        <Typography variant="caption" display="block" color="text.secondary">
+          Supported formats: PDF, DOC, DOCX (Max size: 5MB)
+        </Typography>
+      </Paper>
       
       {error && (
-        <Alert severity="error" sx={{ my: 2 }}>
+        <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
       
-      {loading && (
-        <Box sx={{ my: 2 }}>
-          <LoadingSpinner 
-            type="linear" 
-            variant="determinate" 
-            progress={progress} 
+      {/* Upload Dialog */}
+      <Dialog open={open} onClose={cancelUpload}>
+        <DialogTitle>Resume Details</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, mt: 1 }}>
+            <FilePresent color="primary" sx={{ mr: 1 }} />
+            <Typography variant="body2">
+              {file?.name} ({(file?.size / 1024 / 1024).toFixed(2)} MB)
+            </Typography>
+          </Box>
+          
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Resume Title"
+            fullWidth
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            helperText="Give your resume a name to help identify it"
           />
-          <Typography variant="caption" align="center" display="block" sx={{ mt: 1 }}>
-            {progress < 100 ? 'Uploading...' : 'Processing resume...'}
-          </Typography>
-        </Box>
-      )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelUpload} disabled={loading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleUpload} 
+            variant="contained" 
+            disabled={loading || !title.trim()}
+            startIcon={loading ? <CircularProgress size={20} /> : <CloudUpload />}
+          >
+            {loading ? 'Uploading...' : 'Upload'}
+          </Button>
+        </DialogActions>
+      </Dialog>
       
-      <Button
-        variant="contained"
-        color="primary"
-        fullWidth
-        disabled={!file || loading}
-        onClick={handleUpload}
-        sx={{ mt: 2 }}
+      <Snackbar
+        open={success}
+        autoHideDuration={3000}
+        onClose={() => setSuccess(false)}
       >
-        {loading ? 'Uploading...' : 'Upload Resume'}
-      </Button>
-    </Paper>
+        <Alert severity="success" sx={{ width: '100%' }}>
+          Resume uploaded successfully!
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 };
 

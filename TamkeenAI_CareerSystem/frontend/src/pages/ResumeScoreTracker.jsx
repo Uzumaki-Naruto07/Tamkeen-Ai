@@ -14,13 +14,16 @@ import {
   History, CompareArrows, Download, Visibility, VisibilityOff, Print,
   FilterList, DateRange, Share, CloudDownload, Info, Star, StarBorder,
   CheckCircle, MoreVert, ArrowUpward, ArrowDownward, Error as ErrorIcon,
-  Warning, WbIncandescent, Assignment, Compare, Delete, Refresh
+  Warning, WbIncandescent, Assignment, Compare, Delete, Refresh, OpenInNew,
+  Lightbulb
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../context/AppContext';
+import { useUser, useResume } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format, subDays, parseISO } from 'date-fns';
+import ResumeScoreCard from '../components/ResumeScoreCard';
+import ResumeUpload from '../components/ResumeUpload';
 
 // Charts
 import {
@@ -36,35 +39,23 @@ import SkillChip from '../components/common/SkillChip';
 import ScoreGauge from '../components/ScoreGauge';
 import TimelineComponent from '../components/TimelineComponent';
 
+/**
+ * Page to track and compare resume scores
+ */
 const ResumeScoreTracker = () => {
+  const [resumes, setResumes] = useState([]);
+  const [resumeScores, setResumeScores] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [scoreHistory, setScoreHistory] = useState([]);
-  const [selectedResumeId, setSelectedResumeId] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const [selectedResume, setSelectedResume] = useState(null);
-  const [comparisonMode, setComparisonMode] = useState(false);
-  const [compareResumeId, setCompareResumeId] = useState(null);
-  const [compareResume, setCompareResume] = useState(null);
-  const [visibleMetrics, setVisibleMetrics] = useState({
-    atsScore: true,
-    keywordMatch: true,
-    formatScore: true,
-    contentScore: true,
-    relevanceScore: true
-  });
-  const [dateRange, setDateRange] = useState('6month'); // all, 1month, 3month, 6month, 1year
-  const [activeTab, setActiveTab] = useState(0); // 0: Timeline, 1: Metrics, 2: Versions
-  const [currentResumeVersions, setCurrentResumeVersions] = useState([]);
-  const [improvementTipsOpen, setImprovementTipsOpen] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState(null);
   
   const navigate = useNavigate();
   const { profile } = useUser();
   
-  // Load score history
+  // Fetch user's resumes
   useEffect(() => {
-    const loadScoreHistory = async () => {
+    const fetchResumes = async () => {
       if (!profile?.id) {
         setLoading(false);
         return;
@@ -74,1007 +65,407 @@ const ResumeScoreTracker = () => {
       setError(null);
       
       try {
-        const response = await apiEndpoints.resumes.getScoreHistory(profile.id);
+        const response = await apiEndpoints.resumes.getUserResumes(profile.id);
+        setResumes(response.data);
         
-        // Ensure scores are sorted by date
-        const sortedScores = response.data.sort((a, b) => 
-          new Date(a.date) - new Date(b.date)
-        );
+        // If we have resumes, analyze the first one
+        if (response.data.length > 0) {
+          setSelectedResume(response.data[0]);
+        }
+      } catch (err) {
+        setError('Failed to load your resumes');
+        console.error('Error fetching resumes:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchResumes();
+  }, [profile]);
+  
+  // Analyze selected resume
+  useEffect(() => {
+    const analyzeResume = async () => {
+      if (!selectedResume) return;
+      
+      setAnalyzing(true);
+      
+      try {
+        // Get any saved job target
+        const userResponse = await apiEndpoints.user.getProfile();
+        const targetJobs = userResponse.data.targetJobs || [];
         
-        setScoreHistory(sortedScores);
-        
-        // Set the most recent resume as selected by default
-        if (sortedScores.length > 0) {
-          const mostRecent = sortedScores[sortedScores.length - 1];
-          setSelectedResumeId(mostRecent.id);
-          setSelectedResume(mostRecent);
-          
-          // Load versions for this resume
-          const versionsResponse = await apiEndpoints.resumes.getVersions(mostRecent.id);
-          setCurrentResumeVersions(versionsResponse.data);
+        // Use the first target job, or fetch popular jobs if none set
+        let jobId = null;
+        if (targetJobs.length > 0) {
+          jobId = targetJobs[0].id;
+        } else {
+          const jobsResponse = await apiEndpoints.jobs.getPopular();
+          if (jobsResponse.data.length > 0) {
+            jobId = jobsResponse.data[0].id;
+          }
         }
         
-        setLoading(false);
-      } catch (err) {
-        console.error('Error loading resume score history:', err);
-        setError('Failed to load resume score history. Please try again later.');
-        setLoading(false);
-      }
-    };
-    
-    loadScoreHistory();
-  }, [profile?.id]);
-  
-  // Filter data based on date range
-  const getFilteredScoreHistory = () => {
-    if (dateRange === 'all') return scoreHistory;
-    
-    const now = new Date();
-    let startDate;
-    
-    switch (dateRange) {
-      case '1month':
-        startDate = subDays(now, 30);
-        break;
-      case '3month':
-        startDate = subDays(now, 90);
-        break;
-      case '6month':
-        startDate = subDays(now, 180);
-        break;
-      case '1year':
-        startDate = subDays(now, 365);
-        break;
-      default:
-        startDate = subDays(now, 180); // Default to 6 months
-    }
-    
-    return scoreHistory.filter(item => new Date(item.date) >= startDate);
-  };
-  
-  // Handle resume selection
-  const handleResumeSelect = async (id) => {
-    if (comparisonMode) {
-      setCompareResumeId(id);
-      const selectedForComparison = scoreHistory.find(item => item.id === id);
-      setCompareResume(selectedForComparison);
-    } else {
-      setSelectedResumeId(id);
-      const selected = scoreHistory.find(item => item.id === id);
-      setSelectedResume(selected);
+        if (jobId) {
+          // Fetch ATS analysis
+          const analysisResponse = await apiEndpoints.analytics.analyzeResume(selectedResume.id, jobId);
       
-      // Load versions for this resume
-      try {
-        const versionsResponse = await apiEndpoints.resumes.getVersions(id);
-        setCurrentResumeVersions(versionsResponse.data);
+          // Save to state
+          setResumeScores(prev => ({
+            ...prev,
+            [selectedResume.id]: {
+              atsResults: analysisResponse.data,
+              jobId,
+              timestamp: new Date().toISOString()
+            }
+          }));
+        }
       } catch (err) {
-        console.error('Error loading resume versions:', err);
-      }
+        console.error('Error analyzing resume:', err);
+      } finally {
+        setAnalyzing(false);
     }
   };
   
-  // Toggle comparison mode
-  const toggleComparisonMode = () => {
-    setComparisonMode(!comparisonMode);
-    if (!comparisonMode) {
-      // When enabling comparison mode, default the comparison resume to the one before selected
-      const currentIndex = scoreHistory.findIndex(item => item.id === selectedResumeId);
-      if (currentIndex > 0) {
-        const prevResume = scoreHistory[currentIndex - 1];
-        setCompareResumeId(prevResume.id);
-        setCompareResume(prevResume);
+    if (selectedResume && !resumeScores[selectedResume.id]) {
+      analyzeResume();
+    }
+  }, [selectedResume, resumeScores]);
+  
+  // Handle analyzing additional resumes
+  const handleAnalyzeResume = async (resumeId) => {
+    const resumeToAnalyze = resumes.find(r => r.id === resumeId);
+    if (!resumeToAnalyze) return;
+    
+    setAnalyzing(true);
+    
+    try {
+      // Similar logic to the useEffect above
+      const userResponse = await apiEndpoints.user.getProfile();
+      const targetJobs = userResponse.data.targetJobs || [];
+      
+      let jobId = null;
+      if (targetJobs.length > 0) {
+        jobId = targetJobs[0].id;
       } else {
-        setCompareResumeId(null);
-        setCompareResume(null);
+        const jobsResponse = await apiEndpoints.jobs.getPopular();
+        if (jobsResponse.data.length > 0) {
+          jobId = jobsResponse.data[0].id;
+        }
       }
-    } else {
-      // When disabling comparison mode
-      setCompareResumeId(null);
-      setCompareResume(null);
+      
+      if (jobId) {
+        const analysisResponse = await apiEndpoints.analytics.analyzeResume(resumeId, jobId);
+        
+        setResumeScores(prev => ({
+          ...prev,
+          [resumeId]: {
+            atsResults: analysisResponse.data,
+            jobId,
+            timestamp: new Date().toISOString()
+          }
+        }));
+      }
+    } catch (err) {
+      console.error('Error analyzing resume:', err);
+    } finally {
+      setAnalyzing(false);
     }
   };
   
-  // Toggle metric visibility
-  const toggleMetricVisibility = (metric) => {
-    setVisibleMetrics({
-      ...visibleMetrics,
-      [metric]: !visibleMetrics[metric]
-    });
+  // Handle resume upload success
+  const handleResumeUploaded = (newResume) => {
+    setResumes(prev => [...prev, newResume]);
+    setSelectedResume(newResume);
   };
   
-  // Handle date range change
-  const handleDateRangeChange = (event) => {
-    setDateRange(event.target.value);
+  // Handle viewing a resume
+  const handleViewResume = (resumeId) => {
+    navigate(`/resume/${resumeId}`);
   };
   
-  // Calculate improvement percentage
-  const calculateImprovement = (currentScore, previousScore) => {
-    if (!previousScore) return { value: 0, isPositive: true };
-    const diff = currentScore - previousScore;
-    return {
-      value: Math.abs(diff),
-      isPositive: diff >= 0
-    };
-  };
-  
-  // Get improvement text and color
-  const getImprovementDetails = (metricName) => {
-    if (!selectedResume || !compareResume) {
-      const firstScore = scoreHistory[0]?.[metricName];
-      const latestScore = selectedResume?.[metricName];
-      
-      if (firstScore !== undefined && latestScore !== undefined) {
-        const improvement = calculateImprovement(latestScore, firstScore);
-        return {
-          text: `${improvement.isPositive ? '+' : '-'}${improvement.value.toFixed(1)}%`,
-          color: improvement.isPositive ? 'success.main' : 'error.main',
-          icon: improvement.isPositive ? <TrendingUp fontSize="small" /> : <TrendingDown fontSize="small" />
-        };
-      }
-      
-      return { text: 'N/A', color: 'text.secondary', icon: null };
+  // Handle deleting a resume
+  const handleDeleteResume = async (resumeId) => {
+    if (!window.confirm('Are you sure you want to delete this resume? This action cannot be undone.')) {
+      return;
     }
     
-    const improvement = calculateImprovement(
-      selectedResume[metricName],
-      compareResume[metricName]
-    );
-    
-    return {
-      text: `${improvement.isPositive ? '+' : '-'}${improvement.value.toFixed(1)}%`,
-      color: improvement.isPositive ? 'success.main' : 'error.main',
-      icon: improvement.isPositive ? <TrendingUp fontSize="small" /> : <TrendingDown fontSize="small" />
-    };
+    try {
+      await apiEndpoints.resumes.deleteResume(resumeId);
+      
+      // Remove from state
+      setResumes(prev => prev.filter(r => r.id !== resumeId));
+      
+      // If the deleted resume was selected, select another one
+      if (selectedResume?.id === resumeId) {
+        const remaining = resumes.filter(r => r.id !== resumeId);
+        setSelectedResume(remaining.length > 0 ? remaining[0] : null);
+      }
+    } catch (err) {
+      console.error('Error deleting resume:', err);
+      alert('Failed to delete resume. Please try again.');
+    }
   };
   
-  // Format version date
-  const formatVersionDate = (dateString) => {
-    return format(parseISO(dateString), 'MMM dd, yyyy h:mm a');
+  // Get score for a resume
+  const getResumeScore = (resumeId) => {
+    const scoreData = resumeScores[resumeId];
+    if (!scoreData) return null;
+    
+    return scoreData.atsResults.score || 0;
   };
   
-  // Handle version selection for details view
-  const handleVersionSelect = (version) => {
-    setSelectedVersion(version);
-    setDetailsOpen(true);
+  // Get score color based on value
+  const getScoreColor = (score) => {
+    if (score >= 80) return 'success';
+    if (score >= 60) return 'warning';
+    return 'error';
   };
   
-  // Render timeline chart
-  const renderTimelineChart = () => {
-    const filteredData = getFilteredScoreHistory();
-    
-    return (
-      <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={filteredData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis 
-            dataKey="date" 
-            tickFormatter={(date) => format(new Date(date), 'MMM dd')}
-          />
-          <YAxis domain={[0, 100]} />
-          <RechartsTooltip 
-            formatter={(value, name) => [`${value}%`, name]}
-            labelFormatter={(label) => format(new Date(label), 'MMM dd, yyyy')}
-          />
-          <Legend />
-          
-          {visibleMetrics.atsScore && (
-            <Line 
-              type="monotone" 
-              dataKey="atsScore" 
-              name="ATS Score" 
-              stroke="#8884d8" 
-              activeDot={{ r: 8 }}
-              strokeWidth={2}
-            />
-          )}
-          
-          {visibleMetrics.keywordMatch && (
-            <Line 
-              type="monotone" 
-              dataKey="keywordMatch" 
-              name="Keyword Match" 
-              stroke="#82ca9d" 
-            />
-          )}
-          
-          {visibleMetrics.formatScore && (
-            <Line 
-              type="monotone" 
-              dataKey="formatScore" 
-              name="Format Score" 
-              stroke="#ffc658" 
-            />
-          )}
-          
-          {visibleMetrics.contentScore && (
-            <Line 
-              type="monotone" 
-              dataKey="contentScore" 
-              name="Content Score" 
-              stroke="#ff8042" 
-            />
-          )}
-          
-          {visibleMetrics.relevanceScore && (
-            <Line 
-              type="monotone" 
-              dataKey="relevanceScore" 
-              name="Relevance Score" 
-              stroke="#0088fe" 
-            />
-          )}
-        </LineChart>
-      </ResponsiveContainer>
-    );
-  };
-  
-  // Render bar chart
-  const renderBarChart = () => {
-    const filteredData = getFilteredScoreHistory();
-    
-    return (
-      <ResponsiveContainer width="100%" height={400}>
-        <RechartsBarChart data={filteredData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis 
-            dataKey="date" 
-            tickFormatter={(date) => format(new Date(date), 'MMM dd')}
-          />
-          <YAxis domain={[0, 100]} />
-          <RechartsTooltip 
-            formatter={(value, name) => [`${value}%`, name]}
-            labelFormatter={(label) => format(new Date(label), 'MMM dd, yyyy')}
-          />
-          <Legend />
-          <ReferenceLine y={70} stroke="#ff0000" strokeDasharray="3 3" />
-          
-          {visibleMetrics.atsScore && (
-            <Bar dataKey="atsScore" name="ATS Score" fill="#8884d8" />
-          )}
-        </RechartsBarChart>
-      </ResponsiveContainer>
-    );
-  };
-  
-  // Render radar chart for comparison
-  const renderRadarChart = () => {
-    if (!selectedResume) return null;
-    
-    const compareData = [
-      {
-        subject: 'ATS Score',
-        A: selectedResume.atsScore,
-        B: compareResume?.atsScore || 0,
-        fullMark: 100,
-      },
-      {
-        subject: 'Keywords',
-        A: selectedResume.keywordMatch,
-        B: compareResume?.keywordMatch || 0,
-        fullMark: 100,
-      },
-      {
-        subject: 'Format',
-        A: selectedResume.formatScore,
-        B: compareResume?.formatScore || 0,
-        fullMark: 100,
-      },
-      {
-        subject: 'Content',
-        A: selectedResume.contentScore,
-        B: compareResume?.contentScore || 0,
-        fullMark: 100,
-      },
-      {
-        subject: 'Relevance',
-        A: selectedResume.relevanceScore,
-        B: compareResume?.relevanceScore || 0,
-        fullMark: 100,
-      },
-    ];
-    
-    return (
-      <ResponsiveContainer width="100%" height={400}>
-        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={compareData}>
-          <PolarGrid />
-          <PolarAngleAxis dataKey="subject" />
-          <PolarRadiusAxis angle={30} domain={[0, 100]} />
-          <Radar
-            name={selectedResume.title || "Current Resume"}
-            dataKey="A"
-            stroke="#8884d8"
-            fill="#8884d8"
-            fillOpacity={0.6}
-          />
-          {compareResume && (
-            <Radar
-              name={compareResume.title || "Comparison Resume"}
-              dataKey="B"
-              stroke="#82ca9d"
-              fill="#82ca9d"
-              fillOpacity={0.6}
-            />
-          )}
-          <Legend />
-        </RadarChart>
-      </ResponsiveContainer>
-    );
-  };
+  if (loading) {
+    return <LoadingSpinner message="Loading your resume data..." />;
+  }
   
   return (
-    <Box>
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h5" component="h1">
+    <Box sx={{ py: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4">
             Resume Score Tracker
           </Typography>
           
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="outlined"
-              startIcon={<CloudDownload />}
-              onClick={() => {/* Handle export */}}
-            >
-              Export
-            </Button>
-            
-            <Button
-              variant="outlined"
-              startIcon={comparisonMode ? <CompareArrows color="primary" /> : <CompareArrows />}
-              onClick={toggleComparisonMode}
-              color={comparisonMode ? "primary" : "inherit"}
-            >
-              {comparisonMode ? "Comparing" : "Compare"}
-            </Button>
-            
-            <FormControl variant="outlined" size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Date Range</InputLabel>
-              <Select
-                value={dateRange}
-                onChange={handleDateRangeChange}
-                label="Date Range"
-              >
-                <MenuItem value="all">All Time</MenuItem>
-                <MenuItem value="1month">Last Month</MenuItem>
-                <MenuItem value="3month">Last 3 Months</MenuItem>
-                <MenuItem value="6month">Last 6 Months</MenuItem>
-                <MenuItem value="1year">Last Year</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
+        <ResumeUpload onComplete={handleResumeUploaded} />
         </Box>
         
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-            <LoadingSpinner message="Loading score history..." />
-          </Box>
-        ) : error ? (
+      {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
-        ) : scoreHistory.length === 0 ? (
-          <Alert severity="info" sx={{ mb: 3 }}>
-            No resume score history found. Upload your resume to get started.
-          </Alert>
+      )}
+      
+      {resumes.length === 0 ? (
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Assessment sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h6" gutterBottom>
+            No Resumes Found
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Upload your first resume to start tracking your scores and optimizing for job applications.
+          </Typography>
+        </Paper>
         ) : (
-          <>
-            {/* Score Overview */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} md={4}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      Latest ATS Score
+        <Grid container spacing={3}>
+          {/* Selected Resume Score Card */}
+          {selectedResume && (
+            <Grid item xs={12}>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Current Selected Resume: {selectedResume.title}
                     </Typography>
                     
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <ScoreGauge 
-                        value={selectedResume?.atsScore || 0} 
-                        size={80} 
-                        thickness={8}
-                      />
-                      
-                      <Box sx={{ ml: 2 }}>
-                        <Typography variant="h4" component="div">
-                          {selectedResume?.atsScore || 0}%
-                        </Typography>
-                        
-                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                          {getImprovementDetails('atsScore').icon}
-                          <Typography 
-                            variant="body2" 
-                            color={getImprovementDetails('atsScore').color}
-                            sx={{ ml: 0.5 }}
+                {analyzing ? (
+                  <Paper sx={{ p: 3, textAlign: 'center' }}>
+                    <CircularProgress size={40} />
+                    <Typography variant="body2" sx={{ mt: 2 }}>
+                      Analyzing resume...
+                    </Typography>
+                  </Paper>
+                ) : resumeScores[selectedResume.id] ? (
+                  <>
+                    <ResumeScoreCard 
+                      resumeData={selectedResume} 
+                      atsResults={resumeScores[selectedResume.id].atsResults}
+                      onViewDetails={() => handleViewResume(selectedResume.id)}
+                    />
+                    
+                    {/* AI Suggestions Panel */}
+                    {resumeScores[selectedResume.id].atsResults.optimizations?.length > 0 && (
+                      <Paper elevation={2} sx={{ p: 3, mt: 3, borderRadius: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                          <Typography variant="h6">
+                            AI-Powered Resume Suggestions
+                          </Typography>
+                          
+                          <Button 
+                            variant="contained" 
+                            color="primary"
+                            size="small"
+                            onClick={() => handleViewResume(selectedResume.id)}
                           >
-                            {getImprovementDetails('atsScore').text} {comparisonMode ? 'vs comparison' : 'since first version'}
-                          </Typography>
+                            Apply Suggestions
+                          </Button>
                         </Box>
-                      </Box>
-                    </Box>
-                    
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                      {selectedResume?.date ? `Last updated: ${format(new Date(selectedResume.date), 'MMM dd, yyyy')}` : ''}
-                    </Typography>
-                  </CardContent>
-                  <CardActions>
+                        
+                        <Typography variant="body2" color="text.secondary" paragraph>
+                          Our AI has analyzed your resume and found these opportunities for improvement:
+                          </Typography>
+                        
+                        <List>
+                          {resumeScores[selectedResume.id].atsResults.optimizations.map((suggestion, index) => (
+                            <ListItem 
+                              key={index} 
+                              sx={{ 
+                                bgcolor: 'background.default', 
+                                mb: 1, 
+                                borderRadius: 1,
+                                border: '1px solid',
+                                borderColor: 'divider'
+                              }}
+                            >
+                              <ListItemIcon>
+                                <Lightbulb color="warning" />
+                              </ListItemIcon>
+                              <ListItemText 
+                                primary={
+                                  <Typography variant="subtitle2">
+                                    {suggestion.title || `Suggestion ${index + 1}`}
+                            </Typography>
+                                }
+                                secondary={suggestion.description}
+                              />
+                            </ListItem>
+                          ))}
+                        </List>
+                        
+                        {!resumeScores[selectedResume.id].atsResults.optimizations?.length && (
+                          <Box sx={{ textAlign: 'center', py: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                              No suggestions available for this resume.
+                            </Typography>
+                          </Box>
+                        )}
+                      </Paper>
+                    )}
+                  </>
+                ) : (
+                  <Paper sx={{ p: 3, textAlign: 'center' }}>
                     <Button 
-                      size="small" 
-                      startIcon={<WbIncandescent />}
-                      onClick={() => setImprovementTipsOpen(true)}
+                      variant="contained"
+                      startIcon={<Assessment />}
+                      onClick={() => handleAnalyzeResume(selectedResume.id)}
                     >
-                      Improvement Tips
+                      Analyze This Resume
                     </Button>
-                  </CardActions>
-                </Card>
-              </Grid>
-              
-              <Grid item xs={12} md={8}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      Score Breakdown
-                    </Typography>
-                    
-                    <Grid container spacing={2}>
-                      <Grid item xs={6} sm={3}>
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            Keywords
-                          </Typography>
-                          <Typography variant="h6">
-                            {selectedResume?.keywordMatch || 0}%
-                          </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            {getImprovementDetails('keywordMatch').icon}
-                            <Typography 
-                              variant="caption" 
-                              color={getImprovementDetails('keywordMatch').color}
-                              noWrap
-                            >
-                              {getImprovementDetails('keywordMatch').text}
-                            </Typography>
-                          </Box>
+                  </Paper>
+                )}
                         </Box>
-                      </Grid>
-                      
-                      <Grid item xs={6} sm={3}>
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            Format
-                          </Typography>
-                          <Typography variant="h6">
-                            {selectedResume?.formatScore || 0}%
-                          </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            {getImprovementDetails('formatScore').icon}
-                            <Typography 
-                              variant="caption" 
-                              color={getImprovementDetails('formatScore').color}
-                              noWrap
-                            >
-                              {getImprovementDetails('formatScore').text}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={6} sm={3}>
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            Content
-                          </Typography>
-                          <Typography variant="h6">
-                            {selectedResume?.contentScore || 0}%
-                          </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            {getImprovementDetails('contentScore').icon}
-                            <Typography 
-                              variant="caption" 
-                              color={getImprovementDetails('contentScore').color}
-                              noWrap
-                            >
-                              {getImprovementDetails('contentScore').text}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={6} sm={3}>
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            Relevance
-                          </Typography>
-                          <Typography variant="h6">
-                            {selectedResume?.relevanceScore || 0}%
-                          </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            {getImprovementDetails('relevanceScore').icon}
-                            <Typography 
-                              variant="caption" 
-                              color={getImprovementDetails('relevanceScore').color}
-                              noWrap
-                            >
-                              {getImprovementDetails('relevanceScore').text}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
             </Grid>
-            
-            {/* Chart Display Options */}
-            <Box sx={{ mb: 3 }}>
-              <Tabs
-                value={activeTab}
-                onChange={(e, newValue) => setActiveTab(newValue)}
-                textColor="primary"
-                indicatorColor="primary"
-              >
-                <Tab icon={<TimelineIcon />} iconPosition="start" label="Score Timeline" />
-                <Tab icon={<BarChart />} iconPosition="start" label="Score Comparison" />
-                <Tab icon={<History />} iconPosition="start" label="Version History" />
-              </Tabs>
-            </Box>
-            
-            {/* Chart Content */}
-            <Box sx={{ mb: 3 }}>
-              {activeTab === 0 && (
-                <Paper sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2, gap: 1 }}>
-                    <Tooltip title="ATS Score">
-                      <Chip
-                        label="ATS Score"
-                        color={visibleMetrics.atsScore ? "primary" : "default"}
-                        onClick={() => toggleMetricVisibility('atsScore')}
-                        variant={visibleMetrics.atsScore ? "filled" : "outlined"}
-                      />
-                    </Tooltip>
-                    
-                    <Tooltip title="Keyword Match">
-                      <Chip
-                        label="Keywords"
-                        color={visibleMetrics.keywordMatch ? "success" : "default"}
-                        onClick={() => toggleMetricVisibility('keywordMatch')}
-                        variant={visibleMetrics.keywordMatch ? "filled" : "outlined"}
-                      />
-                    </Tooltip>
-                    
-                    <Tooltip title="Format Score">
-                      <Chip
-                        label="Format"
-                        color={visibleMetrics.formatScore ? "secondary" : "default"}
-                        onClick={() => toggleMetricVisibility('formatScore')}
-                        variant={visibleMetrics.formatScore ? "filled" : "outlined"}
-                      />
-                    </Tooltip>
-                    
-                    <Tooltip title="Content Score">
-                      <Chip
-                        label="Content"
-                        color={visibleMetrics.contentScore ? "warning" : "default"}
-                        onClick={() => toggleMetricVisibility('contentScore')}
-                        variant={visibleMetrics.contentScore ? "filled" : "outlined"}
-                      />
-                    </Tooltip>
-                    
-                    <Tooltip title="Relevance Score">
-                      <Chip
-                        label="Relevance"
-                        color={visibleMetrics.relevanceScore ? "info" : "default"}
-                        onClick={() => toggleMetricVisibility('relevanceScore')}
-                        variant={visibleMetrics.relevanceScore ? "filled" : "outlined"}
-                      />
-                    </Tooltip>
-                  </Box>
-                  
-                  {renderTimelineChart()}
-                </Paper>
-              )}
-              
-              {activeTab === 1 && (
-                <Paper sx={{ p: 3 }}>
-                  {comparisonMode ? (
-                    <Box>
-                      <Typography variant="subtitle1" gutterBottom>
-                        Comparing{' '}
-                        <Chip 
-                          size="small" 
-                          label={selectedResume?.title || 'Current'} 
-                          color="primary"
-                        />{' '}
-                        with{' '}
-                        <Chip 
-                          size="small" 
-                          label={compareResume?.title || 'Select a resume'} 
-                          color="secondary"
-                        />
+          )}
+          
+          {/* Resume Table */}
+          <Grid item xs={12}>
+            <Typography variant="h6" gutterBottom>
+              All Resumes
                       </Typography>
                       
-                      {compareResume ? (
-                        renderRadarChart()
-                      ) : (
-                        <Alert severity="info">
-                          Please select a resume to compare with from the version history.
-                        </Alert>
-                      )}
-                    </Box>
-                  ) : (
-                    renderBarChart()
-                  )}
-                </Paper>
-              )}
-              
-              {activeTab === 2 && (
-                <Paper sx={{ p: 3 }}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Version History
-                  </Typography>
-                  
-                  <TableContainer>
+            <TableContainer component={Paper}>
                     <Table>
                       <TableHead>
                         <TableRow>
-                          <TableCell>Version</TableCell>
-                          <TableCell>Date</TableCell>
-                          <TableCell>ATS Score</TableCell>
-                          <TableCell>Change</TableCell>
-                          <TableCell>Action</TableCell>
+                    <TableCell>Resume Name</TableCell>
+                    <TableCell align="center">Last Updated</TableCell>
+                    <TableCell align="center">ATS Score</TableCell>
+                    <TableCell align="center">Status</TableCell>
+                    <TableCell align="right">Actions</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {currentResumeVersions.map((version, index) => (
+                  {resumes.map((resume) => {
+                    const score = getResumeScore(resume.id);
+                    const scoreColor = score !== null ? getScoreColor(score) : null;
+                    
+                    return (
                           <TableRow 
-                            key={version.id}
-                            selected={selectedResumeId === version.id || compareResumeId === version.id}
-                            hover
-                          >
-                            <TableCell>v{version.versionNumber}</TableCell>
-                            <TableCell>{formatVersionDate(version.date)}</TableCell>
+                        key={resume.id}
+                        sx={{ 
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'action.hover' },
+                          bgcolor: selectedResume?.id === resume.id ? 'action.selected' : 'inherit'
+                        }}
+                        onClick={() => setSelectedResume(resume)}
+                      >
                             <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Typography>{version.atsScore}%</Typography>
-                                <LinearProgress 
-                                  variant="determinate" 
-                                  value={version.atsScore} 
-                                  sx={{ ml: 1, width: 100 }}
-                                  color={version.atsScore >= 70 ? "success" : version.atsScore >= 50 ? "warning" : "error"}
-                                />
-                              </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {resume.title}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          {new Date(resume.updatedAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell align="center">
+                          {score !== null ? (
+                            <Chip 
+                              label={`${score}%`} 
+                              color={scoreColor}
+                              size="small"
+                            />
+                          ) : (
+                            <Chip 
+                              label="Not analyzed" 
+                              variant="outlined"
+                              size="small"
+                            />
+                          )}
                             </TableCell>
-                            <TableCell>
-                              {index < currentResumeVersions.length - 1 ? (
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                  {version.atsScore > currentResumeVersions[index + 1].atsScore ? (
-                                    <>
-                                      <ArrowUpward fontSize="small" color="success" />
-                                      <Typography variant="body2" color="success.main">
-                                        +{(version.atsScore - currentResumeVersions[index + 1].atsScore).toFixed(1)}%
-                                      </Typography>
-                                    </>
-                                  ) : version.atsScore < currentResumeVersions[index + 1].atsScore ? (
-                                    <>
-                                      <ArrowDownward fontSize="small" color="error" />
-                                      <Typography variant="body2" color="error.main">
-                                        {(version.atsScore - currentResumeVersions[index + 1].atsScore).toFixed(1)}%
-                                      </Typography>
-                                    </>
+                        <TableCell align="center">
+                          {score !== null ? (
+                            score >= 70 ? (
+                              <Chip icon={<TrendingUp />} label="Strong" color="success" size="small" />
+                            ) : score >= 50 ? (
+                              <Chip icon={<BarChart />} label="Average" color="warning" size="small" />
                                   ) : (
-                                    <Typography variant="body2" color="text.secondary">
-                                      No change
-                                    </Typography>
-                                  )}
-                                </Box>
+                              <Chip icon={<TrendingDown />} label="Needs Work" color="error" size="small" />
+                            )
                               ) : (
-                                <Typography variant="body2" color="text.secondary">
-                                  Base version
-                                </Typography>
+                            <Chip label="Unknown" variant="outlined" size="small" />
                               )}
                             </TableCell>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', gap: 1 }}>
-                                <Tooltip title="View Details">
+                        <TableCell align="right">
+                          <Tooltip title="View Resume">
                                   <IconButton 
                                     size="small"
-                                    onClick={() => handleVersionSelect(version)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewResume(resume.id);
+                              }}
                                   >
-                                    <Visibility fontSize="small" />
+                              <OpenInNew fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
-                                
-                                <Tooltip title={comparisonMode ? "Select for Comparison" : "Select"}>
+                          {!resumeScores[resume.id] && (
+                            <Tooltip title="Analyze Resume">
                                   <IconButton 
                                     size="small"
-                                    onClick={() => handleResumeSelect(version.id)}
-                                    color={(selectedResumeId === version.id || compareResumeId === version.id) ? "primary" : "default"}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAnalyzeResume(resume.id);
+                                }}
                                   >
-                                    {comparisonMode ? (
-                                      compareResumeId === version.id ? <CheckCircle fontSize="small" /> : <Compare fontSize="small" />
-                                    ) : (
-                                      selectedResumeId === version.id ? <CheckCircle fontSize="small" /> : <Assignment fontSize="small" />
-                                    )}
+                                <Assessment fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          <Tooltip title="Delete Resume">
+                            <IconButton 
+                              size="small" 
+                              color="error"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteResume(resume.id);
+                              }}
+                            >
+                              <Delete fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
-                              </Box>
                             </TableCell>
                           </TableRow>
-                        ))}
+                    );
+                  })}
                       </TableBody>
                     </Table>
                   </TableContainer>
-                </Paper>
-              )}
-            </Box>
-          </>
-        )}
-      </Paper>
-      
-      {/* Improvement Tips Dialog */}
-      <Dialog
-        open={improvementTipsOpen}
-        onClose={() => setImprovementTipsOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <Typography variant="h6">
-            Improvement Tips
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          {selectedResume && (
-            <>
-              <Typography variant="subtitle1" gutterBottom>
-                Based on your current ATS score of {selectedResume.atsScore}%, here are some areas to improve:
-              </Typography>
-              
-              <List>
-                {selectedResume.keywordMatch < 70 && (
-                  <ListItem>
-                    <ListItemIcon>
-                      <WbIncandescent color="warning" />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary="Keyword Optimization"
-                      secondary="Your resume is missing key terms relevant to your target job. Try to incorporate more industry-specific keywords."
-                    />
-                  </ListItem>
-                )}
-                
-                {selectedResume.formatScore < 70 && (
-                  <ListItem>
-                    <ListItemIcon>
-                      <Warning color="warning" />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary="Improve Formatting"
-                      secondary="Your resume format may be difficult for ATS systems to parse. Use a simpler layout with clear section headers."
-                    />
-                  </ListItem>
-                )}
-                
-                {selectedResume.contentScore < 70 && (
-                  <ListItem>
-                    <ListItemIcon>
-                      <ErrorIcon color="warning" />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary="Enhance Content Quality"
-                      secondary="Try to quantify your achievements and use action verbs to make your experience more impactful."
-                    />
-                  </ListItem>
-                )}
-                
-                {selectedResume.relevanceScore < 70 && (
-                  <ListItem>
-                    <ListItemIcon>
-                      <Info color="warning" />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary="Increase Relevance"
-                      secondary="Your resume content doesn't strongly align with job requirements. Tailor your experience to highlight relevant skills."
-                    />
-                  </ListItem>
-                )}
-                
-                {(selectedResume.keywordMatch >= 70 && 
-                 selectedResume.formatScore >= 70 && 
-                 selectedResume.contentScore >= 70 && 
-                 selectedResume.relevanceScore >= 70) && (
-                  <ListItem>
-                    <ListItemIcon>
-                      <CheckCircle color="success" />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary="Great Job!"
-                      secondary="Your resume is well-optimized for ATS systems. Continue updating it to stay relevant to your target roles."
-                    />
-                  </ListItem>
-                )}
-              </List>
-              
-              <Typography variant="subtitle1" sx={{ mt: 2 }}>
-                Top Missing Keywords:
-              </Typography>
-              
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, my: 2 }}>
-                {selectedResume.missingKeywords?.map((keyword, index) => (
-                  <Chip 
-                    key={index} 
-                    label={keyword} 
-                    variant="outlined" 
-                    color="error"
-                    size="small"
-                  />
-                ))}
-                
-                {!selectedResume.missingKeywords?.length && (
-                  <Typography variant="body2" color="text.secondary">
-                    No critical keywords missing.
-                  </Typography>
-                )}
-              </Box>
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setImprovementTipsOpen(false)}>
-            Close
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={() => {
-              setImprovementTipsOpen(false);
-              navigate('/resume-builder');
-            }}
-          >
-            Edit Resume
-          </Button>
-        </DialogActions>
-      </Dialog>
-      
-      {/* Resume Version Details Dialog */}
-      <Dialog
-        open={detailsOpen}
-        onClose={() => setDetailsOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          Resume Version Details
-        </DialogTitle>
-        <DialogContent>
-          {selectedVersion && (
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Basic Information
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Version:</strong> v{selectedVersion.versionNumber}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Date:</strong> {formatVersionDate(selectedVersion.date)}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Title:</strong> {selectedVersion.title || 'N/A'}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>ATS Score:</strong> {selectedVersion.atsScore}%
-                </Typography>
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Score Breakdown
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Keyword Match:</strong> {selectedVersion.keywordMatch}%
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Format Score:</strong> {selectedVersion.formatScore}%
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Content Score:</strong> {selectedVersion.contentScore}%
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Relevance Score:</strong> {selectedVersion.relevanceScore}%
-                </Typography>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Divider sx={{ my: 2 }} />
-                <Typography variant="subtitle1" gutterBottom>
-                  Changes from Previous Version
-                </Typography>
-                
-                {selectedVersion.changes ? (
-                  <List>
-                    {selectedVersion.changes.map((change, index) => (
-                      <ListItem key={index}>
-                        <ListItemIcon>
-                          {change.type === 'added' ? (
-                            <Add color="success" />
-                          ) : change.type === 'removed' ? (
-                            <Delete color="error" />
-                          ) : (
-                            <Edit color="info" />
-                          )}
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary={change.description} 
-                          secondary={change.section} 
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No specific changes recorded for this version.
-                  </Typography>
-                )}
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Divider sx={{ my: 2 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="subtitle1">
-                    Preview
-                  </Typography>
-                  <Button
-                    startIcon={<CloudDownload />}
-                    onClick={() => handleDownloadResume(selectedVersion.id)}
-                  >
-                    Download PDF
-                  </Button>
-                </Box>
-                
-                <Box sx={{ 
-                  mt: 2, 
-                  p: 2, 
-                  border: '1px solid', 
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  maxHeight: '300px',
-                  overflow: 'auto'
-                }}>
-                  {selectedVersion.previewImage ? (
-                    <Box 
-                      component="img" 
-                      src={selectedVersion.previewImage}
-                      alt="Resume Preview"
-                      sx={{ 
-                        width: '100%',
-                        objectFit: 'contain'
-                      }}
-                    />
-                  ) : (
-                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 5 }}>
-                      Preview not available for this version
-                    </Typography>
-                  )}
-                </Box>
               </Grid>
             </Grid>
           )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDetailsOpen(false)}>
-            Close
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={() => {
-              navigate(`/resume-builder?version=${selectedVersion.id}`);
-              setDetailsOpen(false);
-            }}
-          >
-            Edit This Version
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

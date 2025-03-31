@@ -61,6 +61,12 @@ const Checkout = lazyLoad(() => import('./pages/Checkout'));
 const Notifications = lazyLoad(() => import('./pages/Notifications'));
 // Add Package Confirmation component
 const PackageConfirmation = lazyLoad(() => import('./pages/PackageConfirmation'));
+// Add ResumeBuilder and SkillsAssessment components
+const ResumeBuilder = lazyLoad(() => import('./pages/ResumeBuilder'));
+const ResumePage = lazyLoad(() => import('./pages/ResumePage'));
+const SkillsAssessment = lazyLoad(() => import('./pages/SkillsAssessment'));
+// Add ResumeScoreTracker
+const ResumeScoreTracker = lazyLoad(() => import('./pages/ResumeScoreTracker'));
 
 // Suspense fallback component
 const SuspenseFallback = () => (
@@ -119,6 +125,12 @@ const router = createBrowserRouter(
         <Route path="/" element={<Navigate to="/dashboard" />} />
         <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
         <Route path="/resume-analysis" element={<ProtectedRoute element={<ResumeAnalysis />} />} />
+        
+        {/* Add Resume Builder and Skills Assessment routes */}
+        <Route path="/resume-builder" element={<ProtectedRoute element={<ResumeBuilder />} />} />
+        <Route path="/resumePage/:resumeId?" element={<ProtectedRoute element={<ResumePage />} />} />
+        <Route path="/resume-score-tracker" element={<ProtectedRoute element={<ResumeScoreTracker />} />} />
+        <Route path="/skills-assessment" element={<ProtectedRoute element={<SkillsAssessment />} />} />
         
         {/* Add Job routes */}
         <Route path="/jobs" element={<Navigate to="/job-search" replace />} />
@@ -187,7 +199,7 @@ const App = () => {
             <AppContextProvider>
               <RouterProvider 
                 router={router} 
-                fallbackElement={<SuspenseFallback />}
+                fallback={<SuspenseFallback />}
                 future={{
                   v7_startTransition: true,
                   v7_relativeSplatPath: true,

@@ -23,7 +23,10 @@ import {
   Radio,
   RadioGroup,
   Card,
-  CardContent
+  CardContent,
+  List,
+  ListItem,
+  ListItemText
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -35,7 +38,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { 
   CloudQueue, TextFields, ColorLens, 
-  Save, Refresh, GetApp, FilterList 
+  Save, Refresh, GetApp, FilterList, Add
 } from '@mui/icons-material';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
@@ -334,10 +337,12 @@ const WordCloudVisualizer = ({
   jobId = null,
   width = 800,
   height = 600,
-  readOnly = false
+  readOnly = false,
+  resume = null,
+  loading = false
 }) => {
   const [cloudData, setCloudData] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [manualText, setManualText] = useState('');
   const [settings, setSettings] = useState({
@@ -351,6 +356,23 @@ const WordCloudVisualizer = ({
     shape: 'circle', // circle, square, rectangle
     removeStopwords: true
   });
+  
+  const [wordContext, setWordContext] = useState({});
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [categories, setCategories] = useState({
+    technical: { color: "#4285F4", label: "Technical" },
+    soft: { color: "#34A853", label: "Soft Skills" },
+    industry: { color: "#FBBC05", label: "Industry-Specific" },
+    action: { color: "#EA4335", label: "Action Verbs" },
+    tools: { color: "#8C44DB", label: "Tools & Software" }
+  });
+  
+  // If resume is provided but not documentId, use resume.id
+  useEffect(() => {
+    if (resume?.id && !documentId) {
+      setDocumentId(resume.id);
+    }
+  }, [resume, documentId]);
   
   // Generate word cloud when component mounts or inputs change
   useEffect(() => {
@@ -367,7 +389,7 @@ const WordCloudVisualizer = ({
   const generateFromText = async (textToAnalyze) => {
     if (!textToAnalyze) return;
     
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     
     try {
@@ -385,7 +407,7 @@ const WordCloudVisualizer = ({
       setError(err.response?.data?.message || 'Failed to generate word cloud');
       console.error('Error generating word cloud:', err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
   
@@ -393,7 +415,7 @@ const WordCloudVisualizer = ({
   const generateFromDocument = async () => {
     if (!documentId) return;
     
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     
     try {
@@ -413,22 +435,207 @@ const WordCloudVisualizer = ({
       setError(err.response?.data?.message || 'Failed to generate word cloud');
       console.error('Error generating word cloud:', err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
   
   // Process API response into word cloud data format
   const processWordCloudData = (data) => {
-    if (!data || !data.keywords) {
-      setCloudData([]);
-      return;
-    }
-    setCloudData(data.keywords);
+    if (!data || !Array.isArray(data.words)) return [];
+    
+    // Define skill categories with colors
+    const categories = {
+      technical: { color: "#4285F4", label: "Technical" },
+      soft: { color: "#34A853", label: "Soft Skills" },
+      industry: { color: "#FBBC05", label: "Industry-Specific" },
+      action: { color: "#EA4335", label: "Action Verbs" },
+      tools: { color: "#8C44DB", label: "Tools & Software" }
+    };
+    
+    // Basic categorization rules (in a real app, use a more sophisticated system)
+    const categoryPatterns = {
+      technical: [
+        'programming', 'software', 'development', 'code', 'api', 'database', 'sql',
+        'python', 'java', 'javascript', 'react', 'node', 'angular', 'vue', 'aws', 'azure',
+        'cloud', 'devops', 'frontend', 'backend', 'fullstack', 'data', 'analytics'
+      ],
+      soft: [
+        'communication', 'teamwork', 'leadership', 'problem-solving', 'adaptability',
+        'creativity', 'collaboration', 'critical', 'thinking', 'emotional', 'intelligence',
+        'interpersonal', 'negotiation', 'presentation', 'time', 'management'
+      ],
+      tools: [
+        'git', 'jira', 'jenkins', 'docker', 'kubernetes', 'slack', 'adobe', 'photoshop',
+        'illustrator', 'figma', 'sketch', 'office', 'excel', 'powerpoint', 'word', 'tableau'
+      ],
+      action: [
+        'implemented', 'developed', 'created', 'designed', 'managed', 'led', 'coordinated',
+        'analyzed', 'built', 'delivered', 'achieved', 'improved', 'increased', 'reduced',
+        'launched', 'spearheaded', 'orchestrated', 'mentored', 'supervised'
+      ]
+    };
+    
+    // Determine category for a word
+    const getCategory = (word) => {
+      const lowerWord = word.toLowerCase();
+      
+      for (const [category, patterns] of Object.entries(categoryPatterns)) {
+        if (patterns.some(pattern => lowerWord.includes(pattern))) {
+          return category;
+        }
+      }
+      
+      // Default to industry-specific if no match
+      return "industry";
+    };
+    
+    // Process the word data
+    const processedData = data.words.map(item => ({
+      text: item.text,
+      value: item.value || item.count || 1,
+      category: getCategory(item.text),
+      color: categories[getCategory(item.text)]?.color || "#777"
+    }));
+    
+    setCloudData(processedData);
   };
 
   const handleExportImage = () => {
     // Implementation of handleExportImage function
   };
+
+  const handleWordClick = (word, count, category) => {
+    // Find context for this word in the resume (in a real app, use proper text analysis)
+    if (resume && resume.content) {
+      // Simple context extraction - find sentences containing the word
+      const sentences = resume.content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+      const relevantSentences = sentences.filter(s => 
+        s.toLowerCase().includes(word.toLowerCase())
+      ).map(s => s.trim());
+      
+      setWordContext({
+        word,
+        count,
+        category,
+        sentences: relevantSentences
+      });
+    }
+  };
+
+  const getFilteredWords = () => {
+    if (!cloudData) return [];
+    
+    return selectedCategory === 'all' 
+      ? cloudData 
+      : cloudData.filter(w => w.category === selectedCategory);
+  };
+
+  const extractKeywordsFromResume = async () => {
+    if (!resume || !resume.id) return;
+    
+    setIsLoading(true);
+    
+    try {
+      // In a real app, this would call an API endpoint that extracts keywords
+      const response = await apiEndpoints.resume.extractKeywords(resume.id);
+      
+      if (response.data && response.data.words) {
+        const processedData = processWordCloudData(response.data);
+        setCloudData(processedData);
+      }
+    } catch (err) {
+      console.error('Error extracting keywords:', err);
+      // Fall back to simpler extraction if API fails
+      fallbackKeywordExtraction();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fallbackKeywordExtraction = () => {
+    if (!resume) return;
+    
+    // Combine all text from resume
+    let fullText = '';
+    
+    // Add personal info
+    if (resume.personal) {
+      fullText += resume.personal.summary || '';
+    }
+    
+    // Add experience descriptions
+    if (resume.experience && Array.isArray(resume.experience)) {
+      resume.experience.forEach(exp => {
+        fullText += ' ' + (exp.description || '');
+        fullText += ' ' + (exp.position || '');
+        fullText += ' ' + (exp.company || '');
+      });
+    }
+    
+    // Add skills
+    if (resume.skills && Array.isArray(resume.skills)) {
+      resume.skills.forEach(skill => {
+        fullText += ' ' + (skill.name || skill);
+      });
+    }
+    
+    // Add education
+    if (resume.education && Array.isArray(resume.education)) {
+      resume.education.forEach(edu => {
+        fullText += ' ' + (edu.degree || '');
+        fullText += ' ' + (edu.fieldOfStudy || '');
+      });
+    }
+    
+    // Simple word frequency counting
+    const words = fullText.toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .split(/\s+/)
+      .filter(word => word.length > 3) // Filter out short words
+      .reduce((acc, word) => {
+        acc[word] = (acc[word] || 0) + 1;
+        return acc;
+      }, {});
+    
+    // Convert to array and sort by frequency
+    const wordsArray = Object.entries(words)
+      .map(([text, value]) => ({ text, value }))
+      .filter(w => w.value > 1) // Only include words that appear more than once
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 100); // Limit to top 100 words
+    
+    // Process the word data
+    const processedData = wordsArray.map(item => ({
+      text: item.text,
+      value: item.value,
+      category: getCategory(item.text),
+      color: categories[getCategory(item.text)]?.color || "#777"
+    }));
+    
+    setCloudData(processedData);
+  };
+
+  useEffect(() => {
+    if (resume && !cloudData && !isLoading) {
+      extractKeywordsFromResume();
+    }
+  }, [resume]);
+
+  if (loading || isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!text && !documentId && !resume) {
+    return (
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="subtitle1">Select a resume to visualize word frequency</Typography>
+      </Paper>
+    );
+  }
 
   return (
     <Paper elevation={0} variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
@@ -596,9 +803,9 @@ const WordCloudVisualizer = ({
               <Button
                 variant="contained"
                 color="primary"
-                startIcon={loading ? <CircularProgress size={20} /> : <Refresh />}
+                startIcon={isLoading ? <CircularProgress size={20} /> : <Refresh />}
                 onClick={() => manualText ? generateFromText(manualText) : generateFromDocument()}
-                disabled={loading || (!documentId && !manualText && !text)}
+                disabled={isLoading || (!documentId && !manualText && !text)}
                 sx={{ mr: 1 }}
               >
                 Regenerate
@@ -608,7 +815,7 @@ const WordCloudVisualizer = ({
                 variant="outlined"
                 startIcon={<GetApp />}
                 onClick={handleExportImage}
-                disabled={loading || cloudData.length === 0}
+                disabled={isLoading || cloudData.length === 0}
               >
                 Export as Image
               </Button>
@@ -617,12 +824,12 @@ const WordCloudVisualizer = ({
         </Grid>
       </Box>
       
-      {loading ? (
+      {isLoading ? (
         <LoadingSpinner message="Generating word cloud..." />
       ) : cloudData.length > 0 ? (
         <Box sx={{ textAlign: 'center' }}>
           <WordCloudChart
-            data={cloudData}
+            data={getFilteredWords()}
             width={width}
             height={height}
             fontFamily={settings.fontFamily}
@@ -630,6 +837,7 @@ const WordCloudVisualizer = ({
             rotation={settings.rotation}
             shape={settings.shape}
             showFrequency={settings.showFrequency}
+            onWordClick={handleWordClick}
           />
         </Box>
       ) : (
@@ -640,6 +848,81 @@ const WordCloudVisualizer = ({
             {error || "Enter text or choose a document to generate a word cloud."}
           </Typography>
         </Card>
+      )}
+
+      {/* Category filter buttons */}
+      <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+        <Chip 
+          label="All Categories" 
+          color={selectedCategory === 'all' ? 'primary' : 'default'}
+          onClick={() => setSelectedCategory('all')}
+          variant={selectedCategory === 'all' ? 'filled' : 'outlined'}
+        />
+        {Object.entries(categories).map(([key, cat]) => (
+          <Chip 
+            key={key}
+            label={cat.label}
+            style={{ backgroundColor: selectedCategory === key ? cat.color : undefined, 
+                    color: selectedCategory === key ? '#fff' : undefined }}
+            onClick={() => setSelectedCategory(key)}
+            variant={selectedCategory === key ? 'filled' : 'outlined'}
+          />
+        ))}
+      </Box>
+
+      {/* Word Context Display */}
+      {wordContext.word && (
+        <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Context for "{wordContext.word}"
+          </Typography>
+          
+          {wordContext.sentences && wordContext.sentences.length > 0 ? (
+            <Box>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                This word appears in the following contexts:
+              </Typography>
+              <List dense>
+                {wordContext.sentences.slice(0, 3).map((sentence, index) => (
+                  <ListItem key={index} sx={{ bgcolor: 'background.default', borderRadius: 1, mb: 1 }}>
+                    <ListItemText
+                      primary={sentence.replace(
+                        new RegExp(`(${wordContext.word})`, 'gi'),
+                        '<strong>$1</strong>'
+                      )}
+                      primaryTypographyProps={{
+                        dangerouslySetInnerHTML: { 
+                          __html: sentence.replace(
+                            new RegExp(`(${wordContext.word})`, 'gi'),
+                            '<strong style="color: #4285F4;">$1</strong>'
+                          )
+                        }
+                      }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No detailed context available for this word.
+            </Typography>
+          )}
+          
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button 
+              size="small" 
+              variant="text" 
+              endIcon={<Add />}
+              onClick={() => {
+                // In a real app, this would trigger a skill addition flow
+                console.log(`Adding ${wordContext.word} as a skill`);
+              }}
+            >
+              Add as Skill
+            </Button>
+          </Box>
+        </Paper>
       )}
     </Paper>
   );

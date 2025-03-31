@@ -26,7 +26,7 @@ import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import DownloadIcon from '@mui/icons-material/Download';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import InfoIcon from '@mui/icons-material/Info';
-import api from '../api/api';
+import apiEndpoints from '../utils/api';
 
 const ATSResultsCard = ({ results, onReAnalyze }) => {
   const [showDetails, setShowDetails] = useState(false);
@@ -74,7 +74,7 @@ const ATSResultsCard = ({ results, onReAnalyze }) => {
   
   const handleDownloadReport = async () => {
     try {
-      const response = await api.downloadATSReport(results.id);
+      const response = await apiEndpoints.downloadATSReport(results.id);
       // Create a blob from the PDF Stream
       const file = new Blob([response.data], { type: 'application/pdf' });
       // Build a URL from the file

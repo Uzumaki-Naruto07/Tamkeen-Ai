@@ -1,184 +1,319 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Box,
   Paper,
   Typography,
   CircularProgress,
-  LinearProgress,
-  Divider,
-  Button,
   Grid,
+  Divider,
   Chip,
-  IconButton,
-  Tooltip
+  Button,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
 import {
+  Check,
+  Close,
   TrendingUp,
-  Assessment,
-  Refresh,
-  Info,
-  Download
+  Star,
+  BarChart,
+  ArrowUpward,
+  ArrowForward,
+  Lightbulb
 } from '@mui/icons-material';
-import { useResume } from '../context/AppContext';
-import apiEndpoints from '../utils/api';
-import LoadingSpinner from './LoadingSpinner';
 
-const ResumeScoreCard = ({ resumeId, compact = false }) => {
-  const [scoreData, setScoreData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const { currentResume, resumeScores, addResumeScore } = useResume();
-  
-  // Get resume ID from context if not provided
-  const effectiveResumeId = resumeId || (currentResume?.id);
-  
-  useEffect(() => {
-    const fetchResumeScore = async () => {
-      if (!effectiveResumeId) {
-        setError('Resume ID is required for scoring');
-        setLoading(false);
-        return;
-      }
-      
-      // Check if we already have the score in context
-      if (resumeScores && resumeScores[effectiveResumeId]) {
-        setScoreData(resumeScores[effectiveResumeId]);
-        setLoading(false);
-        return;
-      }
-      
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const response = await apiEndpoints.resume.analyze(effectiveResumeId);
-        
-        // Store score in context
-        addResumeScore(effectiveResumeId, response.data);
-        
-        // Update local state
-        setScoreData(response.data);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to analyze resume');
-        console.error('Resume analysis error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+/**
+ * Component to display resume scores and metrics with improvement suggestions
+ */
+const ResumeScoreCard = ({ resumeData, atsResults, onViewDetails }) => {
+  // Calculate overall score based on various components
+  const calculateScore = () => {
+    if (!resumeData || !atsResults) return 0;
     
-    fetchResumeScore();
-  }, [effectiveResumeId, resumeScores, addResumeScore]);
-  
-  const handleRefreshScore = () => {
-    // Force a refresh of the score
-    setLoading(true);
-    setError(null);
+    // If ATS results are available, use the score
+    if (atsResults && typeof atsResults.score === 'number') {
+      return atsResults.score;
+    }
     
-    apiEndpoints.resume.analyze(effectiveResumeId, { force: true })
-      .then(response => {
-        addResumeScore(effectiveResumeId, response.data);
-        setScoreData(response.data);
-      })
-      .catch(err => {
-        setError(err.response?.data?.message || 'Failed to refresh score');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    // Otherwise calculate a basic score based on resume completeness
+    let score = 0;
+    const maxScore = 100;
+    
+    // Check personal information
+    if (resumeData.personal) {
+      if (resumeData.personal.name) score += 5;
+      if (resumeData.personal.email) score += 5;
+      if (resumeData.personal.phone) score += 5;
+      if (resumeData.personal.location) score += 5;
+      if (resumeData.personal.summary && resumeData.personal.summary.length > 50) score += 10;
+    }
+    
+    // Check education
+    if (resumeData.education && resumeData.education.length > 0) {
+      score += Math.min(10, resumeData.education.length * 5);
+    }
+    
+    // Check experience
+    if (resumeData.experience && resumeData.experience.length > 0) {
+      score += Math.min(30, resumeData.experience.length * 10);
+    }
+    
+    // Check skills
+    if (resumeData.skills && resumeData.skills.length > 0) {
+      score += Math.min(20, resumeData.skills.length * 2);
+    }
+    
+    // Check projects
+    if (resumeData.projects && resumeData.projects.length > 0) {
+      score += Math.min(10, resumeData.projects.length * 5);
+    }
+    
+    return Math.min(score, maxScore);
   };
   
-  if (loading) {
-    return (
-      <Paper sx={{ p: compact ? 2 : 3 }}>
-        <LoadingSpinner message="Analyzing resume..." />
-      </Paper>
-    );
-  }
+  const score = calculateScore();
   
-  if (error) {
-    return (
-      <Paper sx={{ p: compact ? 2 : 3 }}>
-        <Typography color="error" variant="body2">
-          {error}
-        </Typography>
-        <Button 
-          variant="outlined" 
-          size="small" 
-          onClick={handleRefreshScore}
-          sx={{ mt: 1 }}
-        >
-          Try Again
-        </Button>
-      </Paper>
-    );
-  }
+  // Get score color
+  const getScoreColor = () => {
+    if (score >= 80) return 'success.main';
+    if (score >= 60) return 'warning.main';
+    return 'error.main';
+  };
   
-  if (!scoreData) {
+  // Get score label
+  const getScoreLabel = () => {
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Good';
+    if (score >= 40) return 'Fair';
+    return 'Needs Improvement';
+  };
+  
+  // Get matched and missing keywords from ATS results
+  const matchedKeywords = atsResults?.matched_keywords || [];
+  const missingKeywords = atsResults?.missing_keywords || [];
+  const suggestions = atsResults?.optimizations || [];
+  
+  if (!resumeData) {
     return (
-      <Paper sx={{ p: compact ? 2 : 3 }}>
-        <Typography color="text.secondary" variant="body2">
-          No score data available
+      <Paper sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="subtitle1" color="text.secondary">
+          No resume data available
         </Typography>
       </Paper>
     );
   }
   
-  // Compact view for embedding in other components
-  if (compact) {
-    return (
-      <Paper sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Box sx={{ position: 'relative', mr: 2 }}>
+  return (
+    <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+        <Typography variant="h6">
+          Resume Score
+        </Typography>
+        
+        {onViewDetails && (
+          <Button 
+            variant="text" 
+            color="primary" 
+            endIcon={<ArrowForward />}
+            onClick={onViewDetails}
+            size="small"
+          >
+            View Details
+          </Button>
+        )}
+      </Box>
+      
+      <Grid container spacing={3}>
+        <Grid item xs={12} sm={5} sx={{ textAlign: 'center' }}>
+          <Box sx={{ position: 'relative', display: 'inline-flex' }}>
             <CircularProgress
               variant="determinate"
-              value={scoreData.overallScore}
-              size={60}
+              value={score}
+              size={120}
               thickness={5}
-              sx={{
-                color: scoreData.overallScore > 70 ? 'success.main' : 
-                      scoreData.overallScore > 50 ? 'warning.main' : 'error.main',
-              }}
+              sx={{ color: getScoreColor() }}
             />
             <Box
               sx={{
-                position: 'absolute',
                 top: 0,
                 left: 0,
                 bottom: 0,
                 right: 0,
+                position: 'absolute',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexDirection: 'column',
               }}
             >
-              <Typography variant="h6" component="div" color="text.primary">
-                {Math.round(scoreData.overallScore)}
+              <Typography variant="h4" component="div" color={getScoreColor()}>
+                {score}%
+              </Typography>
+              <Typography variant="caption" component="div" color="text.secondary">
+                {getScoreLabel()}
               </Typography>
             </Box>
           </Box>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              Resume Score
-            </Typography>
-            <Typography variant="subtitle2">
-              {scoreData.overallScore > 70 ? 'Excellent' : 
-               scoreData.overallScore > 50 ? 'Good' : 'Needs Work'}
-            </Typography>
-          </Box>
-        </Box>
-      </Paper>
-    );
-  }
-  
-  // Full detailed view
-  return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Resume Analysis Score
-      </Typography>
+        </Grid>
+        
+        <Grid item xs={12} sm={7}>
+          <List dense disablePadding>
+            <ListItem>
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <Star color="warning" />
+              </ListItemIcon>
+              <ListItemText 
+                primary="ATS Compatibility"
+                secondary={atsResults ? `${atsResults.pass_probability || score}% match rate` : "Not analyzed yet"}
+              />
+            </ListItem>
+            
+            <ListItem>
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <Check color={resumeData.experience?.length > 0 ? "success" : "error"} />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Experience" 
+                secondary={resumeData.experience?.length > 0 
+                  ? `${resumeData.experience.length} roles defined` 
+                  : "No experience added"}
+              />
+            </ListItem>
+            
+            <ListItem>
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <Check color={resumeData.skills?.length > 0 ? "success" : "error"} />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Skills" 
+                secondary={resumeData.skills?.length > 0 
+                  ? `${resumeData.skills.length} skills added` 
+                  : "No skills added"}
+              />
+            </ListItem>
+            
+            <ListItem>
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <BarChart color="primary" />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Last Updated"
+                secondary={new Date(resumeData.updatedAt).toLocaleDateString()}
+              />
+            </ListItem>
+          </List>
+        </Grid>
+      </Grid>
       
-      {/* Score visualization and breakdown would go here */}
-      {/* Would include overall score, section scores, recommendations, etc. */}
+      {atsResults && (
+        <>
+          <Divider sx={{ my: 2 }} />
+          
+          <Typography variant="subtitle1" gutterBottom>
+            Keyword Analysis
+          </Typography>
+          
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Matched Keywords ({matchedKeywords.length})
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {matchedKeywords.slice(0, 5).map((keyword, i) => (
+                  <Chip 
+                    key={i} 
+                    label={keyword} 
+                    size="small" 
+                    color="success" 
+                    variant="outlined"
+                  />
+                ))}
+                {matchedKeywords.length > 5 && (
+                  <Chip 
+                    label={`+${matchedKeywords.length - 5} more`} 
+                    size="small" 
+                    variant="outlined"
+                  />
+                )}
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Missing Keywords ({missingKeywords.length})
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {missingKeywords.slice(0, 5).map((keyword, i) => (
+                  <Chip 
+                    key={i} 
+                    label={keyword} 
+                    size="small" 
+                    color="error" 
+                    variant="outlined"
+                  />
+                ))}
+                {missingKeywords.length > 5 && (
+                  <Chip 
+                    label={`+${missingKeywords.length - 5} more`} 
+                    size="small" 
+                    variant="outlined"
+                  />
+                )}
+              </Box>
+            </Grid>
+          </Grid>
+          
+          {atsResults.ats_feedback && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                AI Suggestions
+              </Typography>
+              <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default' }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                  <Lightbulb color="warning" sx={{ mt: 0.5 }} />
+                  <Typography variant="body2">
+                    {atsResults.ats_feedback}
+                  </Typography>
+                </Box>
+              </Paper>
+            </Box>
+          )}
+          
+          {suggestions && suggestions.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Improvement Suggestions
+              </Typography>
+              <List dense>
+                {suggestions.slice(0, 3).map((suggestion, index) => (
+                  <ListItem key={index} sx={{ pl: 0 }}>
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      <Lightbulb color="info" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={suggestion.title || `Suggestion ${index + 1}`} 
+                      secondary={suggestion.description} 
+                    />
+                  </ListItem>
+                ))}
+              </List>
+              
+              {suggestions.length > 3 && (
+                <Button 
+                  variant="text" 
+                  size="small" 
+                  onClick={onViewDetails}
+                  sx={{ mt: 1 }}
+                >
+                  View all {suggestions.length} suggestions
+                </Button>
+              )}
+            </Box>
+          )}
+        </>
+      )}
     </Paper>
   );
 };

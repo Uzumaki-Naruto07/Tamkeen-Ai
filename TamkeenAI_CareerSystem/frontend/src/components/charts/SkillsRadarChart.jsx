@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ResponsiveRadar } from '@nivo/radar';
-import { Box, Paper, Typography, useTheme } from '@mui/material';
+import { Box, Paper, Typography, useTheme, Alert, Skeleton } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
 /**
@@ -23,11 +23,24 @@ const SkillsRadarChart = ({ data, height = 400, className = '' }) => {
     { skill: t('critical_thinking'), value: 9, category: t('cognitive') }
   ];
   
-  // Use provided data or default
-  const chartData = data && data.length > 0 ? data : defaultData;
+  // Validate data and use provided data or default
+  const isValidData = Array.isArray(data) && data.length > 0 && 
+    data.every(item => item && typeof item === 'object' && 'skill' in item && 'value' in item);
+  
+  const chartData = useMemo(() => {
+    if (!isValidData) return defaultData;
+    
+    // Ensure all data items have the required properties
+    return data.map(item => ({
+      skill: item.skill || 'Unnamed Skill',
+      value: typeof item.value === 'number' ? item.value : 0,
+      category: item.category || 'Uncategorized',
+      requiredValue: typeof item.requiredValue === 'number' ? item.requiredValue : 0
+    }));
+  }, [data, isValidData, defaultData]);
   
   // Custom theme for the radar chart
-  const chartTheme = {
+  const chartTheme = useMemo(() => ({
     background: 'transparent',
     textColor: theme.palette.text.primary,
     fontSize: 12,
@@ -72,13 +85,21 @@ const SkillsRadarChart = ({ data, height = 400, className = '' }) => {
         boxShadow: theme.shadows[3]
       }
     }
-  };
+  }), [theme]);
   
   // Group skills by category for color coding
-  const categories = [...new Set(chartData.map(item => item.category))];
+  const categories = useMemo(() => 
+    [...new Set(chartData.map(item => item.category))],
+    [chartData]
+  );
   
   // Generate colors based on the theme palette
-  const getColor = (category) => {
+  const getColor = useMemo(() => (category) => {
+    // Check if data or category is undefined
+    if (!category) {
+      return theme.palette.grey[500]; // Default color for undefined category
+    }
+    
     const colorMap = {
       [t('technical')]: theme.palette.primary.main,
       [t('soft_skills')]: theme.palette.secondary.main,
@@ -88,14 +109,40 @@ const SkillsRadarChart = ({ data, height = 400, className = '' }) => {
     };
     
     return colorMap[category] || theme.palette.info.main;
-  };
+  }, [theme, t]);
+
+  // Handle error state
+  if (!chartData || chartData.length === 0) {
+    return (
+      <Box className={className} sx={{ height: height || 400, width: '100%' }}>
+        <Alert severity="warning">
+          No skill data available to display the chart.
+        </Alert>
+      </Box>
+    );
+  }
+
+  // Build an accessible description of the data for screen readers
+  const accessibilityDescription = useMemo(() => {
+    return `Radar chart displaying skill proficiency levels for: ${chartData.map(item => 
+      `${item.skill} (${item.value}/10)`).join(', ')}`;
+  }, [chartData]);
 
   return (
-    <Box className={className} sx={{ 
-      height: height || 400, 
-      width: '100%',
-      '& text': { fill: theme.palette.text.primary }
-    }}>
+    <Box 
+      className={className} 
+      sx={{ 
+        height: height || 400, 
+        width: '100%',
+        '& text': { fill: theme.palette.text.primary }
+      }}
+      role="img"
+      aria-label="Skills Radar Chart"
+    >
+      <Typography variant="srOnly" id="skills-chart-description">
+        {accessibilityDescription}
+      </Typography>
+      
       <ResponsiveRadar
         data={chartData}
         keys={['value']}
@@ -112,7 +159,7 @@ const SkillsRadarChart = ({ data, height = 400, className = '' }) => {
         enableDotLabel={true}
         dotLabel="value"
         dotLabelYOffset={-12}
-        colors={({ data }) => getColor(data.category)}
+        colors={({ data }) => data && data.category ? getColor(data.category) : theme.palette.grey[500]}
         fillOpacity={0.25}
         blendMode="multiply"
         animate={true}
@@ -140,6 +187,9 @@ const SkillsRadarChart = ({ data, height = 400, className = '' }) => {
           }
         ]}
         theme={chartTheme}
+        role="application"
+        ariaLabel="Skills radar chart"
+        ariaDescribedBy="skills-chart-description"
       />
     </Box>
   );

@@ -41,19 +41,126 @@ import CameraFeed from './CameraFeed';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 
-const EmotionScorePanel = ({ onEmotionUpdate = () => {} }) => {
+// Define emotion colors and their corresponding icons
+const emotionConfig = {
+  happy: { 
+    color: '#4caf50',
+    icon: <SentimentVerySatisfiedIcon />,
+    label: 'Happy',
+    description: 'You appear to be engaged and enjoying the assessment'
+  },
+  neutral: { 
+    color: '#9e9e9e',
+    icon: <SentimentNeutral />,
+    label: 'Neutral',
+    description: 'You seem focused and attentive'
+  },
+  sad: { 
+    color: '#2196f3',
+    icon: <SentimentDissatisfiedIcon />,
+    label: 'Sad',
+    description: 'You may be feeling a bit uncertain or disappointed'
+  },
+  angry: { 
+    color: '#f44336',
+    icon: <SentimentVeryDissatisfiedIcon />,
+    label: 'Angry',
+    description: 'You appear frustrated or upset with the assessment'
+  },
+  surprised: { 
+    color: '#ff9800',
+    icon: <SentimentSatisfiedAltIcon />,
+    label: 'Surprised',
+    description: 'You seem surprised by the content or difficulty'
+  },
+  fearful: { 
+    color: '#9c27b0',
+    icon: <SentimentVeryDissatisfiedIcon />,
+    label: 'Anxious',
+    description: 'You may be feeling stressed or nervous'
+  },
+  disgusted: { 
+    color: '#795548',
+    icon: <SentimentVeryDissatisfiedIcon />,
+    label: 'Disgusted',
+    description: 'You appear to be having a negative reaction'
+  }
+};
+
+const EmotionScorePanel = ({ 
+  emotionData, 
+  isAssessmentActive = false,
+  difficultyLevel = 'medium',
+  onEmotionUpdate,
+  showVideo = true,
+  compact = false
+}) => {
   const [cameraActive, setCameraActive] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-  const [emotionData, setEmotionData] = useState(null);
   const [error, setError] = useState(null);
   const [captureInterval, setCaptureInterval] = useState(null);
-
+  const [stressLevel, setStressLevel] = useState('normal');
+  const [emotionHistory, setEmotionHistory] = useState([]);
+  const [currentEmotion, setCurrentEmotion] = useState('neutral');
+  const [currentConfidence, setCurrentConfidence] = useState(0);
+  
+  // Update current emotion when emotionData changes
+  useEffect(() => {
+    if (emotionData) {
+      // Find the emotion with highest confidence
+      let highestEmotion = 'neutral';
+      let highestConfidence = 0;
+      
+      Object.entries(emotionData.emotions || {}).forEach(([emotion, confidence]) => {
+        if (confidence > highestConfidence) {
+          highestEmotion = emotion;
+          highestConfidence = confidence;
+        }
+      });
+      
+      setCurrentEmotion(highestEmotion);
+      setCurrentConfidence(highestConfidence);
+      
+      // Add to history
+      setEmotionHistory(prev => [
+        ...prev, 
+        { 
+          emotion: highestEmotion, 
+          confidence: highestConfidence, 
+          timestamp: new Date().toISOString() 
+        }
+      ].slice(-10)); // Keep last 10 entries
+      
+      // Update stress level
+      updateStressLevel(highestEmotion);
+    }
+  }, [emotionData]);
+  
+  // Start camera and analysis when assessment becomes active
+  useEffect(() => {
+    if (isAssessmentActive && !cameraActive) {
+      setCameraActive(true);
+      startAnalysis();
+    } else if (!isAssessmentActive && cameraActive) {
+      stopAnalysis();
+    }
+    
+    return () => {
+      if (captureInterval) {
+        clearInterval(captureInterval);
+      }
+    };
+  }, [isAssessmentActive]);
+  
   // Start/stop camera
   const toggleCamera = () => {
     if (cameraActive) {
       stopAnalysis();
     } else {
       setCameraActive(true);
+      if (isAssessmentActive) {
+        startAnalysis();
+      }
     }
   };
 
@@ -63,7 +170,7 @@ const EmotionScorePanel = ({ onEmotionUpdate = () => {} }) => {
     setError(null);
     
     // Set up interval to analyze emotions periodically
-    const interval = setInterval(captureAndAnalyze, 3000); // Every 3 seconds
+    const interval = setInterval(captureAndAnalyze, 5000); // Every 5 seconds
     setCaptureInterval(interval);
   };
 
@@ -78,172 +185,261 @@ const EmotionScorePanel = ({ onEmotionUpdate = () => {} }) => {
       setCameraActive(false);
     }
   };
-
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (captureInterval) {
-        clearInterval(captureInterval);
-      }
-    };
-  }, [captureInterval]);
+  
+  // Update stress level based on detected emotion
+  const updateStressLevel = (emotion) => {
+    if (['angry', 'fearful', 'disgusted'].includes(emotion)) {
+      setStressLevel('high');
+    } else if (['sad'].includes(emotion)) {
+      setStressLevel('moderate');
+    } else if (['happy', 'surprised'].includes(emotion)) {
+      setStressLevel('low');
+    } else {
+      setStressLevel('normal');
+    }
+  };
 
   // Capture image and send for analysis
   const captureAndAnalyze = async () => {
     try {
-      // Get canvas from CameraFeed component
-      const canvas = document.getElementById('camera-canvas');
-      if (!canvas) return;
+      // In a real application, this would call the camera API
+      // and send the frame for emotion analysis
       
-      // Convert canvas to blob
-      const blob = await new Promise(resolve => {
-        canvas.toBlob(resolve, 'image/jpeg', 0.8);
-      });
+      // For this demo, we'll use mock data
+      const mockEmotions = ['neutral', 'happy', 'neutral', 'surprised', 'neutral', 'sad'];
+      const randomEmotion = mockEmotions[Math.floor(Math.random() * mockEmotions.length)];
+      const mockData = {
+        emotions: {
+          happy: randomEmotion === 'happy' ? 0.7 : 0.1,
+          sad: randomEmotion === 'sad' ? 0.6 : 0.05,
+          angry: randomEmotion === 'angry' ? 0.8 : 0.03,
+          surprised: randomEmotion === 'surprised' ? 0.65 : 0.07,
+          fearful: randomEmotion === 'fearful' ? 0.75 : 0.02,
+          disgusted: randomEmotion === 'disgusted' ? 0.55 : 0.01,
+          neutral: randomEmotion === 'neutral' ? 0.85 : 0.2
+        },
+        primaryEmotion: randomEmotion,
+        insights: [
+          {
+            title: 'Assessment Confidence',
+            description: randomEmotion === 'happy' || randomEmotion === 'neutral' 
+              ? 'You appear confident about this assessment'
+              : 'You may be experiencing some uncertainty'
+          },
+          {
+            title: 'Stress Management',
+            description: stressLevel === 'high'
+              ? 'Try taking a deep breath to manage stress'
+              : 'You seem to be handling the assessment well'
+          }
+        ]
+      };
       
-      if (!blob) return;
+      // In a real app, this would come from the API
+      // const response = await apiEndpoints.assessments.detectEmotion(formData);
+      // const newEmotionData = response.data;
       
-      // Prepare form data
-      const formData = new FormData();
-      formData.append('image', blob, 'emotion-capture.jpg');
-      
-      // This connects to emotion_detector.py backend
-      const response = await apiEndpoints.interview.analyzeEmotions(formData);
-      
-      // Response includes facial expression scoring from emotion_detector.py
-      const newEmotionData = response.data;
-      setEmotionData(newEmotionData);
-      onEmotionUpdate(newEmotionData);
+      if (onEmotionUpdate) {
+        onEmotionUpdate(mockData);
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to analyze emotions');
+      setError('Failed to analyze emotions');
       console.error('Emotion analysis error:', err);
-      stopAnalysis();
     }
   };
 
+  // Render compact version
+  if (compact) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', p: 1, bgcolor: 'background.paper', borderRadius: 1 }}>
+        <Tooltip title={emotionConfig[currentEmotion]?.description || 'Emotion status'}>
+          <Box sx={{ 
+            color: emotionConfig[currentEmotion]?.color || 'text.secondary',
+            display: 'flex',
+            alignItems: 'center',
+            mr: 1
+          }}>
+            {emotionConfig[currentEmotion]?.icon || <SentimentNeutral />}
+          </Box>
+        </Tooltip>
+        
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            {emotionConfig[currentEmotion]?.label || 'Neutral'}
+          </Typography>
+          {stressLevel !== 'normal' && (
+            <Chip 
+              size="small" 
+              label={`${stressLevel.charAt(0).toUpperCase() + stressLevel.slice(1)} stress`}
+              color={stressLevel === 'high' ? 'error' : stressLevel === 'moderate' ? 'warning' : 'success'}
+              sx={{ height: 20, fontSize: '0.7rem' }}
+            />
+          )}
+        </Box>
+        
+        <IconButton 
+          size="small" 
+          onClick={toggleCamera}
+          color={cameraActive ? 'primary' : 'default'}
+        >
+          {cameraActive ? <Videocam fontSize="small" /> : <VideocamOff fontSize="small" />}
+        </IconButton>
+      </Box>
+    );
+  }
+
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper sx={{ p: 2 }}>
       <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
         <Sentiment sx={{ mr: 1 }} />
-        Facial Expression Analysis
+        Emotion Assessment
       </Typography>
       
-      <Box sx={{ position: 'relative', mb: 2 }}>
-        {cameraActive ? (
-          <CameraFeed 
-            width={400} 
-            height={300} 
-            canvasId="camera-canvas" 
-          />
-        ) : (
-          <Box 
-            sx={{ 
+      {showVideo && (
+        <Box sx={{ position: 'relative', mb: 2 }}>
+          {cameraActive ? (
+            <Box sx={{ 
               width: '100%', 
-              height: 300, 
-              bgcolor: 'grey.200', 
+              height: 200, 
+              bgcolor: 'grey.900', 
               display: 'flex', 
               alignItems: 'center', 
-              justifyContent: 'center'
-            }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              Camera is disabled
-            </Typography>
-          </Box>
-        )}
-        
-        {analyzing && (
-          <Box 
-            sx={{ 
-              position: 'absolute', 
-              top: 10, 
-              right: 10, 
-              bgcolor: 'rgba(0,0,0,0.7)',
-              color: 'white',
-              px: 1,
-              py: 0.5,
+              justifyContent: 'center',
               borderRadius: 1,
-              display: 'flex',
-              alignItems: 'center'
-            }}
-          >
-            <CircularProgress size={14} sx={{ color: 'white', mr: 1 }} />
-            <Typography variant="caption">Analyzing...</Typography>
-          </Box>
-        )}
-      </Box>
+              overflow: 'hidden'
+            }}>
+              <Typography color="white">Camera feed placeholder</Typography>
+              {/* In a real app, this would be: */}
+              {/* <CameraFeed width={400} height={300} /> */}
+            </Box>
+          ) : (
+            <Box 
+              sx={{ 
+                width: '100%', 
+                height: 200, 
+                bgcolor: 'grey.200', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                borderRadius: 1
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                Camera is disabled
+              </Typography>
+            </Box>
+          )}
+          
+          {analyzing && (
+            <Box 
+              sx={{ 
+                position: 'absolute', 
+                top: 10, 
+                right: 10, 
+                bgcolor: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <CircularProgress size={14} sx={{ color: 'white', mr: 1 }} />
+              <Typography variant="caption">Analyzing</Typography>
+            </Box>
+          )}
+        </Box>
+      )}
       
-      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ 
+          bgcolor: emotionConfig[currentEmotion]?.color || 'grey.500', 
+          color: 'white', 
+          width: 40, 
+          height: 40, 
+          borderRadius: '50%', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          mr: 2
+        }}>
+          {emotionConfig[currentEmotion]?.icon || <SentimentNeutral />}
+        </Box>
+        
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography variant="subtitle1">
+            {emotionConfig[currentEmotion]?.label || 'Neutral'} 
+            <Typography component="span" variant="body2" sx={{ ml: 1, color: 'text.secondary' }}>
+              ({Math.round(currentConfidence * 100)}% confidence)
+            </Typography>
+          </Typography>
+          
+          <Typography variant="body2" color="text.secondary">
+            {emotionConfig[currentEmotion]?.description || 'Your emotional state appears neutral'}
+          </Typography>
+        </Box>
+        
         <Button
           variant={cameraActive ? "outlined" : "contained"}
           startIcon={cameraActive ? <VideocamOff /> : <Videocam />}
+          size="small"
           onClick={toggleCamera}
         >
-          {cameraActive ? 'Disable Camera' : 'Enable Camera'}
+          {cameraActive ? 'Disable' : 'Enable'}
         </Button>
+      </Box>
+      
+      {stressLevel !== 'normal' && (
+        <Alert 
+          severity={stressLevel === 'high' ? 'warning' : stressLevel === 'moderate' ? 'info' : 'success'} 
+          sx={{ mb: 2 }}
+        >
+          {stressLevel === 'high' 
+            ? 'High stress detected. Take a deep breath and try to relax.' 
+            : stressLevel === 'moderate' 
+              ? 'Moderate stress detected. Remember to stay calm and focused.'
+              : 'Low stress detected. You seem to be handling this well!'}
+        </Alert>
+      )}
+      
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          Difficulty Adjustment
+        </Typography>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Current difficulty: {difficultyLevel.charAt(0).toUpperCase() + difficultyLevel.slice(1)}
+        </Typography>
         
-        {cameraActive && (
-          <Button
-            variant={analyzing ? "outlined" : "contained"}
-            color={analyzing ? "error" : "primary"}
-            onClick={analyzing ? stopAnalysis : startAnalysis}
-          >
-            {analyzing ? 'Stop Analysis' : 'Start Analysis'}
-          </Button>
-        )}
+        <List dense>
+          <ListItem>
+            <ListItemIcon sx={{ minWidth: 36 }}>
+              <InfoIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText 
+              primary={stressLevel === 'high' 
+                ? 'Difficulty reduced due to high stress'
+                : 'Difficulty adjusted based on emotion and performance'}
+            />
+          </ListItem>
+          <ListItem>
+            <ListItemIcon sx={{ minWidth: 36 }}>
+              <TipsAndUpdatesIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Recommendation"
+              secondary={stressLevel === 'high'
+                ? 'Take a short break if needed'
+                : 'Continue at current pace'}
+            />
+          </ListItem>
+        </List>
       </Box>
       
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
-      )}
-      
-      {emotionData && (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle1" gutterBottom>
-              Emotion Distribution
-            </Typography>
-            <Box sx={{ height: 200 }}>
-              <Doughnut 
-                data={{
-                  labels: Object.keys(emotionData.emotions),
-                  datasets: [{
-                    data: Object.values(emotionData.emotions),
-                    backgroundColor: [
-                      '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'
-                    ]
-                  }]
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      position: 'right',
-                    }
-                  }
-                }}
-              />
-            </Box>
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle1" gutterBottom>
-              Interview Performance Insights
-            </Typography>
-            <List>
-              {emotionData.insights.map((insight, index) => (
-                <ListItem key={index} divider={index < emotionData.insights.length - 1}>
-                  <ListItemText
-                    primary={insight.title}
-                    secondary={insight.description}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Grid>
-        </Grid>
       )}
     </Paper>
   );

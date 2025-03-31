@@ -23,10 +23,18 @@ const SkillChip = ({
   onClick,
   ...props 
 }) => {
+  // If skill is not provided, return null
+  if (!skill) return null;
+  
   // If skill is just a string, convert to object
   const skillData = typeof skill === 'string' 
     ? { name: skill } 
     : skill;
+  
+  // If skillData has no name property, use a default or return null
+  if (!skillData.name) {
+    return null;
+  }
   
   // Define the icon to display
   const getSkillIcon = () => {
@@ -50,15 +58,22 @@ const SkillChip = ({
     if (showLevel && skillData.level) {
       return `${skillData.name} (${skillData.level})`;
     }
+    if (showLevel && skillData.proficiency) {
+      return `${skillData.name} (${skillData.proficiency})`;
+    }
+    if (showLevel && skillData.userLevel) {
+      return `${skillData.name} (${skillData.userLevel})`;
+    }
     return skillData.name;
   };
   
   // Generate color based on skill level
   const getColor = () => {
-    if (skillData.level) {
-      if (skillData.level >= 4) return 'success';
-      if (skillData.level >= 3) return 'info';
-      if (skillData.level >= 2) return 'warning';
+    const level = skillData.level || skillData.proficiency || skillData.userLevel;
+    if (level) {
+      if (level >= 4) return 'success';
+      if (level >= 3) return 'info';
+      if (level >= 2) return 'warning';
       return 'default';
     }
     return color;

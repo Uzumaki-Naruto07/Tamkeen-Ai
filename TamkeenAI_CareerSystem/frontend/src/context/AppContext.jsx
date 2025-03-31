@@ -112,7 +112,9 @@ export const useResume = () => {
   // This is a simplified version of the useResume hook for compatibility
   return { 
     resume: context.profile?.resume || null,
-    resumeScore: context.profile?.resumeScore || null
+    resumeScore: context.profile?.resumeScore || null,
+    currentResume: context.currentResume || null,
+    setCurrentResume: context.setCurrentResume || (() => {})
   };
 };
 
@@ -200,6 +202,7 @@ export const AppContextProvider = ({ children }) => {
   const [userRoles, setUserRoles] = useState([]);
   const [error, setError] = useState(null);
   const [savedJobs, setSavedJobs] = useState([]);
+  const [currentResume, setCurrentResume] = useState(null);
   
   // Apply language changes
   useEffect(() => {
@@ -743,6 +746,7 @@ export const AppContextProvider = ({ children }) => {
     unreadCount,
     userRoles,
     savedJobs,
+    currentResume,
     
     // Auth actions
     login,
@@ -767,7 +771,8 @@ export const AppContextProvider = ({ children }) => {
     fetchSavedJobs,
     toggleSaveJob,
     isSavedJob,
-    setSavedJobs
+    setSavedJobs,
+    setCurrentResume
   };
   
   return (

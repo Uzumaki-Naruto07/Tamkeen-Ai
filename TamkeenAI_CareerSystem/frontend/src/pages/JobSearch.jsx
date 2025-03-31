@@ -1432,12 +1432,12 @@ const JobSearch = () => {
                     {job.companyLogo ? (
                       <Avatar 
                         src={job.companyLogo} 
-                        alt={job.company}
+                        alt={typeof job.company === 'string' ? job.company : job.company?.name || 'Company Logo'}
                           sx={{ width: 50, height: 50 }}
                       />
                     ) : (
                         <Avatar sx={{ width: 50, height: 50, bgcolor: 'primary.main' }}>
-                        {job.company?.charAt(0) || "J"}
+                        {typeof job.company === 'string' ? job.company.charAt(0) : job.company?.name?.charAt(0) || "J"}
                       </Avatar>
                     )}
                   </Box>
@@ -1449,7 +1449,7 @@ const JobSearch = () => {
                       {job.title}
                     </Typography>
                           <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
-                      {job.company}
+                      {typeof job.company === 'string' ? job.company : job.company?.name || 'Unknown Company'}
                     </Typography>
                         </Box>
                         
@@ -1681,12 +1681,12 @@ const JobSearch = () => {
                       {job.companyLogo ? (
                         <Avatar 
                           src={job.companyLogo} 
-                          alt={job.company}
+                          alt={typeof job.company === 'string' ? job.company : job.company?.name || 'Company Logo'}
                           sx={{ width: 50, height: 50 }}
                         />
                       ) : (
                         <Avatar sx={{ width: 50, height: 50, bgcolor: 'primary.main' }}>
-                          {job.company?.name?.charAt(0) || "J"}
+                          {typeof job.company === 'string' ? job.company.charAt(0) : job.company?.name?.charAt(0) || "J"}
                         </Avatar>
                       )}
                     </Box>
@@ -1698,7 +1698,7 @@ const JobSearch = () => {
                             {job.title}
                           </Typography>
                           <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
-                            {job.company}
+                            {typeof job.company === 'string' ? job.company : job.company?.name || 'Unknown Company'}
                           </Typography>
                   </Box>
                   
@@ -1924,7 +1924,7 @@ const JobSearch = () => {
         jobId: currentSharedJob.id,
         email: shareEmail,
         sender: profile?.id,
-        message: `Check out this job: ${currentSharedJob.title} at ${currentSharedJob.company}`
+        message: `Check out this job: ${currentSharedJob.title} at ${typeof currentSharedJob.company === 'string' ? currentSharedJob.company : currentSharedJob.company?.name || 'the company'}`
       });
       
       setSnackbarMessage(`Job shared with ${shareEmail}`);
@@ -2388,10 +2388,10 @@ const JobSearch = () => {
                 >
                   <ListItemAvatar>
                     {job.companyLogo ? (
-                      <Avatar src={job.companyLogo} alt={job.company} />
+                      <Avatar src={job.companyLogo} alt={typeof job.company === 'string' ? job.company : job.company?.name || 'Company Logo'} />
                     ) : (
                       <Avatar sx={{ bgcolor: 'primary.main' }}>
-                        {job.company?.name?.charAt(0) || "J"}
+                        {typeof job.company === 'string' ? job.company.charAt(0) : job.company?.name?.charAt(0) || "J"}
                       </Avatar>
                     )}
                   </ListItemAvatar>

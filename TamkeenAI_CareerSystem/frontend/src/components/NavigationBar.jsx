@@ -75,7 +75,7 @@ const NavigationBar = () => {
     { label: 'Career Assessment', path: '/career-assessment', icon: <FiTrendingUp /> },
     { label: 'Career Explorer', path: '/career-explorer', icon: <FiBriefcase /> },
     { label: 'Interview Results', path: '/interview-results', icon: <FiMessageSquare /> },
-    { label: 'Resume Builder', path: '/resume-builder', icon: <FiFileText /> },
+    { label: 'Resume Builder', path: '/resumePage', icon: <FiFileText /> },
     { label: 'Cover Letter', path: '/cover-letter', icon: <FiBook /> },
     { label: 'Networking', path: '/networking', icon: <FiUsers /> },
     { label: 'AI Job Journey', path: '/ai-job-journey', icon: <FiTrendingUp /> },

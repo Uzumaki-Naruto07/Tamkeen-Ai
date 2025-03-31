@@ -297,13 +297,13 @@ const WalkthroughTour = () => {
     
     if (userType === 'jobseeker') {
       actions.push(
-        { title: 'Build Your Resume', path: '/resume-builder', icon: <Assignment /> },
+        { title: 'Build Your Resume', path: '/resumePage', icon: <Assignment /> },
         { title: 'Explore Job Matches', path: '/job-search', icon: <Work /> }
       );
     } else if (userType === 'student') {
       actions.push(
         { title: 'Skill Assessment', path: '/skill-assessment', icon: <School /> },
-        { title: 'Entry-Level Resume', path: '/resume-builder?template=graduate', icon: <Assignment /> }
+        { title: 'Entry-Level Resume', path: '/resumePage?template=graduate', icon: <Assignment /> }
       );
     } else if (userType === 'career-changer') {
       actions.push(

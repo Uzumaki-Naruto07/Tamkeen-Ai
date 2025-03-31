@@ -110,6 +110,11 @@ export const ASSESSMENT = {
   GET_CAREER_FIT: `${BASE_URL}/assessment/career-fit`,
   GET_PROGRESS: `${BASE_URL}/assessment/progress`,
   GENERATE_REPORT: (id) => `${BASE_URL}/assessment/${id}/report`,
+  GENERATE_AI_QUESTIONS: `${BASE_URL}/assessment/ai/generate-questions`,
+  DETECT_EMOTION: `${BASE_URL}/assessment/emotion/detect`,
+  GET_SKILL_INSIGHTS: `${BASE_URL}/assessment/skills/insights`,
+  GET_SKILL_FORECAST: `${BASE_URL}/assessment/skills/forecast`,
+  ADAPTIVE_DIFFICULTY: `${BASE_URL}/assessment/adaptive-difficulty`,
 };
 
 /**

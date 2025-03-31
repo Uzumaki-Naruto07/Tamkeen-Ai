@@ -17,7 +17,8 @@ export default defineConfig({
     open: true,
     cors: true, // Enable CORS for all requests
     hmr: {
-      clientPort: getPort(), // Use the same port for HMR WebSocket
+      // Don't specify clientPort to let it automatically match whatever port the server uses
+      // clientPort: getPort(),
       overlay: true, // Show errors as overlay
     }
   },

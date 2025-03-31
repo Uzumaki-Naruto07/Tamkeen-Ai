@@ -29,7 +29,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
-import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 import { format } from 'date-fns';
 import { useReactToPrint } from 'react-to-print';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';

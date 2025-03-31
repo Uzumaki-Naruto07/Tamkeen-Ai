@@ -44,7 +44,8 @@ import {
   InputAdornment,
   Slider,
   Rating,
-  Autocomplete
+  Autocomplete,
+  Link
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -87,6 +88,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import ColorLensIcon from '@mui/icons-material/ColorLens';
+import PersonIcon from '@mui/icons-material/Person';
 import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
@@ -192,22 +194,57 @@ const ResumeBuilder = ({
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
+      // Ensure the initialData has the expected structure
+      const safeInitialData = {
+        personal: {
+          firstName: '',
+          lastName: '',
+          title: '',
+          email: '',
+          phone: '',
+          location: '',
+          website: '',
+          linkedin: '',
+          github: '',
+          summary: '',
+          ...(initialData.personal || {})
+        },
+        experience: initialData.experience || [],
+        education: initialData.education || [],
+        skills: {
+          technical: [],
+          soft: [],
+          ...(initialData.skills || {})
+        },
+        projects: initialData.projects || [],
+        certifications: initialData.certifications || [],
+        languages: initialData.languages || [],
+        interests: initialData.interests || [],
+        ...initialData
+      };
+      
+      setFormData(safeInitialData);
       if (initialData.id) {
         setResumeId(initialData.id);
       }
     } else if (profile) {
       // Pre-fill personal info from user profile
-      setFormData(prev => ({
-        ...prev,
-        personal: {
-          ...prev.personal,
-          name: `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
-          email: profile.email || '',
-          phone: profile.phone || '',
-          location: profile.location || ''
-        }
-      }));
+      setFormData(prev => {
+        const firstName = profile.firstName || '';
+        const lastName = profile.lastName || '';
+        return {
+          ...prev,
+          personal: {
+            ...(prev.personal || {}),
+            firstName,
+            lastName,
+            name: `${firstName} ${lastName}`.trim(),
+            email: profile.email || '',
+            phone: profile.phone || '',
+            location: profile.location || ''
+          }
+        };
+      });
     }
   }, [initialData, profile]);
 
@@ -226,7 +263,7 @@ const ResumeBuilder = ({
     setFormData(prev => ({
       ...prev,
       personal: {
-        ...prev.personal,
+        ...(prev.personal || {}), // Ensure personal exists
         [name]: value
       }
     }));
@@ -471,6 +508,16 @@ const ResumeBuilder = ({
   };
 
   const handleSave = async () => {
+    const setLoading = (state) => {
+      // Create a local loading state if needed, since loading is a prop
+      // This avoids modifying a prop directly
+    };
+    
+    const setError = (error) => {
+      // Create a local error state if needed
+      setErrors({ message: error });
+    };
+    
     setLoading(true);
     setError(null);
     
@@ -488,17 +535,17 @@ const ResumeBuilder = ({
       } else {
         // Create new resume
         response = await apiEndpoints.documents.createResume(payload);
-        setResumeId(response.data.id);
+        setResumeId(response?.data?.id);
       }
       
       setSuccessMessage('Resume saved successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
       
       if (onSave) {
-        onSave(response.data);
+        onSave(response?.data);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save resume');
+      setError(err?.response?.data?.message || 'Failed to save resume');
       console.error('Resume save error:', err);
     } finally {
       setLoading(false);
@@ -663,6 +710,739 @@ const ResumeBuilder = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const renderPersonalInfoSection = () => {
+    // Add defensive checks for data
+    const personal = formData?.personal || {};
+    // Split name into firstName/lastName if we have name but not firstName
+    const fullName = personal.name || '';
+    const nameParts = fullName.split(' ');
+    const inferredFirstName = personal.firstName || (nameParts.length > 0 ? nameParts[0] : '');
+    const inferredLastName = personal.lastName || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : '');
+    
+    return (
+      <Grid container spacing={3}>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="First Name"
+            name="firstName"
+            value={inferredFirstName}
+            onChange={handlePersonalChange}
+            variant="outlined"
+            margin="normal"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Last Name"
+            name="lastName"
+            value={inferredLastName}
+            onChange={handlePersonalChange}
+            variant="outlined"
+            margin="normal"
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Professional Title"
+            name="title"
+            value={personal.title || ''}
+            onChange={handlePersonalChange}
+            variant="outlined"
+            margin="normal"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Email"
+            name="email"
+            value={personal.email || ''}
+            onChange={handlePersonalChange}
+            variant="outlined"
+            margin="normal"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <AlternateEmailIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Phone"
+            name="phone"
+            value={personal.phone || ''}
+            onChange={handlePersonalChange}
+            variant="outlined"
+            margin="normal"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PhoneIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Location"
+            name="location"
+            value={personal.location || ''}
+            onChange={handlePersonalChange}
+            variant="outlined"
+            margin="normal"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LocationOnIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="LinkedIn"
+            name="linkedin"
+            value={personal.linkedin || ''}
+            onChange={handlePersonalChange}
+            variant="outlined"
+            margin="normal"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LinkedInIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="GitHub"
+            name="github"
+            value={personal.github || ''}
+            onChange={handlePersonalChange}
+            variant="outlined"
+            margin="normal"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <GitHubIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Website"
+            name="website"
+            value={personal.website || ''}
+            onChange={handlePersonalChange}
+            variant="outlined"
+            margin="normal"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LanguageIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Professional Summary"
+            name="summary"
+            value={personal.summary || ''}
+            onChange={handlePersonalChange}
+            variant="outlined"
+            margin="normal"
+            multiline
+            rows={4}
+            placeholder="Write a compelling summary of your professional background, skills, and career goals..."
+          />
+        </Grid>
+      </Grid>
+    );
+  };
+
+  const renderExperienceSection = () => {
+    // Add defensive checks
+    const experience = formData?.experience || [];
+    
+    return (
+      <Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Typography variant="h6">
+            Work Experience
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => openExperienceDialog()}
+          >
+            Add Experience
+          </Button>
+        </Box>
+        
+        {experience.length === 0 ? (
+          <Alert severity="info" sx={{ my: 2 }}>
+            No work experience added yet. Add your professional experience to enhance your resume.
+          </Alert>
+        ) : (
+          experience.map((exp, index) => (
+            <Card key={index} sx={{ mb: 2 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="h6">{exp?.position || ''}</Typography>
+                  <Box>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => openExperienceDialog(index)}
+                      color="primary"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => removeExperience(index)}
+                      color="error"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </Box>
+                <Typography variant="subtitle1" color="textSecondary">{exp?.company || ''}</Typography>
+                <Typography variant="body2" color="textSecondary">
+                  <LocationOnIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: 'text-bottom' }} />
+                  {exp?.location || ''}
+                </Typography>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                  <DateRangeIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: 'text-bottom' }} />
+                  {exp?.startDate || ''} - {exp?.current ? 'Present' : exp?.endDate || ''}
+                </Typography>
+                {exp?.description && (
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    {exp.description}
+                  </Typography>
+                )}
+                {exp?.highlights?.length > 0 && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2" fontWeight="bold">Key Achievements:</Typography>
+                    <List dense sx={{ pl: 2 }}>
+                      {exp.highlights.map((highlight, idx) => (
+                        <ListItem key={idx} sx={{ py: 0 }}>
+                          <ListItemIcon sx={{ minWidth: 24 }}>
+                            <CheckIcon fontSize="small" color="primary" />
+                          </ListItemIcon>
+                          <ListItemText primary={highlight} />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </Box>
+    );
+  };
+
+  const renderEducationSection = () => {
+    // Add defensive checks
+    const education = formData?.education || [];
+    
+    return (
+      <Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Typography variant="h6">
+            Education
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => openEducationDialog()}
+          >
+            Add Education
+          </Button>
+        </Box>
+        
+        {education.length === 0 ? (
+          <Alert severity="info" sx={{ my: 2 }}>
+            No education entries added yet. Add your educational background to enhance your resume.
+          </Alert>
+        ) : (
+          education.map((edu, index) => (
+            <Card key={index} sx={{ mb: 2 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="h6">{edu?.degree || ''}</Typography>
+                  <Box>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => openEducationDialog(index)}
+                      color="primary"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => removeEducation(index)}
+                      color="error"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </Box>
+                <Typography variant="subtitle1" color="textSecondary">{edu?.institution || ''}</Typography>
+                <Typography variant="body2" color="textSecondary">
+                  <LocationOnIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: 'text-bottom' }} />
+                  {edu?.location || ''}
+                </Typography>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                  <DateRangeIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: 'text-bottom' }} />
+                  {edu?.startDate || ''} - {edu?.endDate || ''}
+                </Typography>
+                {edu?.field && (
+                  <Typography variant="body2" color="textSecondary">
+                    Field of Study: {edu.field}
+                  </Typography>
+                )}
+                {edu?.gpa && (
+                  <Typography variant="body2" color="textSecondary">
+                    GPA: {edu.gpa}
+                  </Typography>
+                )}
+                {edu?.courses?.length > 0 && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2" fontWeight="bold">Relevant Courses:</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                      {edu.courses.map((course, idx) => (
+                        <Chip 
+                          key={idx} 
+                          label={course} 
+                          size="small" 
+                          variant="outlined"
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </Box>
+    );
+  };
+
+  const renderSkillsSection = () => {
+    // Add defensive checks
+    const skills = formData?.skills || { technical: [], soft: [] };
+    
+    return (
+      <Box>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          Skills
+        </Typography>
+        
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle1" sx={{ mb: 1 }}>Technical Skills</Typography>
+          
+          <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+              <TextField
+                fullWidth
+                label="Add a technical skill"
+                value={skillInput}
+                onChange={(e) => setSkillInput(e.target.value)}
+                variant="outlined"
+                size="small"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    addSkill();
+                    e.preventDefault();
+                  }
+                }}
+              />
+              <Button 
+                variant="contained" 
+                onClick={addSkill}
+                disabled={!skillInput.trim()}
+              >
+                Add
+              </Button>
+            </Box>
+            
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {skills.technical.map((skill, index) => (
+                <Chip
+                  key={index}
+                  label={skill}
+                  onDelete={() => removeSkill(index)}
+                  color="primary"
+                  variant="outlined"
+                />
+              ))}
+            </Box>
+          </Box>
+          
+          <Typography variant="subtitle1" sx={{ mb: 1, mt: 3 }}>Soft Skills</Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {skills.soft.map((skill, index) => (
+              <Chip
+                key={index}
+                label={skill}
+                onDelete={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    skills: {
+                      ...(prev.skills || {}),
+                      soft: (prev.skills?.soft || []).filter((_, i) => i !== index)
+                    }
+                  }));
+                }}
+                color="secondary"
+                variant="outlined"
+              />
+            ))}
+            <Chip
+              icon={<AddIcon />}
+              label="Add Soft Skill"
+              onClick={() => {
+                const skill = window.prompt("Enter a soft skill");
+                if (skill && skill.trim()) {
+                  setFormData(prev => ({
+                    ...prev,
+                    skills: {
+                      ...(prev.skills || {}),
+                      soft: [...(prev.skills?.soft || []), skill.trim()]
+                    }
+                  }));
+                }
+              }}
+              color="default"
+              variant="outlined"
+            />
+          </Box>
+        </Box>
+        
+        <Divider sx={{ my: 2 }} />
+        
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle1" sx={{ mb: 1 }}>Languages</Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {(formData.languages || []).map((lang, index) => (
+              <Chip
+                key={index}
+                label={lang}
+                onDelete={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    languages: (prev.languages || []).filter((_, i) => i !== index)
+                  }));
+                }}
+                color="default"
+                variant="outlined"
+              />
+            ))}
+            <Chip
+              icon={<AddIcon />}
+              label="Add Language"
+              onClick={() => {
+                const language = window.prompt("Enter a language");
+                if (language && language.trim()) {
+                  setFormData(prev => ({
+                    ...prev,
+                    languages: [...(prev.languages || []), language.trim()]
+                  }));
+                }
+              }}
+              color="default"
+              variant="outlined"
+            />
+          </Box>
+        </Box>
+      </Box>
+    );
+  };
+
+  const renderProjectsSection = () => {
+    // Add defensive checks
+    const projects = formData?.projects || [];
+    
+    return (
+      <Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Typography variant="h6">
+            Projects
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => openProjectDialog()}
+          >
+            Add Project
+          </Button>
+        </Box>
+        
+        {projects.length === 0 ? (
+          <Alert severity="info" sx={{ my: 2 }}>
+            No projects added yet. Add your projects to showcase your practical skills.
+          </Alert>
+        ) : (
+          projects.map((project, index) => (
+            <Card key={index} sx={{ mb: 2 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="h6">{project?.name || ''}</Typography>
+                  <Box>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => openProjectDialog(index)}
+                      color="primary"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => removeProject(index)}
+                      color="error"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </Box>
+                
+                {project?.startDate && project?.endDate && (
+                  <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                    <DateRangeIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: 'text-bottom' }} />
+                    {project.startDate} - {project.endDate}
+                  </Typography>
+                )}
+                
+                {project?.description && (
+                  <Typography variant="body2" sx={{ my: 1 }}>
+                    {project.description}
+                  </Typography>
+                )}
+                
+                {project?.link && (
+                  <Typography variant="body2" sx={{ my: 1 }}>
+                    <Link href={project.link} target="_blank" rel="noopener noreferrer">
+                      Project Link
+                    </Link>
+                  </Typography>
+                )}
+                
+                {project?.technologies?.length > 0 && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2" fontWeight="bold">Technologies:</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                      {project.technologies.map((tech, idx) => (
+                        <Chip 
+                          key={idx} 
+                          label={tech} 
+                          size="small" 
+                          color="primary"
+                          variant="outlined"
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </Box>
+    );
+  };
+
+  const renderAdditionalInfoSection = () => {
+    // Add defensive checks
+    const certifications = formData?.certifications || [];
+    const interests = formData?.interests || [];
+    
+    return (
+      <Box>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          Additional Information
+        </Typography>
+        
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>Certifications</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {certifications.map((cert, index) => (
+                      <Chip
+                        key={index}
+                        label={cert}
+                        onDelete={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            certifications: (prev?.certifications || []).filter((_, i) => i !== index)
+                          }));
+                        }}
+                        color="default"
+                      />
+                    ))}
+                  </Box>
+                  <Box sx={{ mt: 2 }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        const cert = window.prompt("Enter a certification");
+                        if (cert && cert.trim()) {
+                          setFormData(prev => ({
+                            ...prev,
+                            certifications: [...(prev?.certifications || []), cert.trim()]
+                          }));
+                        }
+                      }}
+                    >
+                      Add Certification
+                    </Button>
+                  </Box>
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+            
+            <Accordion sx={{ mt: 2 }}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>Interests</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {interests.map((interest, index) => (
+                      <Chip
+                        key={index}
+                        label={interest}
+                        onDelete={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            interests: (prev?.interests || []).filter((_, i) => i !== index)
+                          }));
+                        }}
+                        color="default"
+                      />
+                    ))}
+                  </Box>
+                  <Box sx={{ mt: 2 }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        const interest = window.prompt("Enter an interest");
+                        if (interest && interest.trim()) {
+                          setFormData(prev => ({
+                            ...prev,
+                            interests: [...(prev?.interests || []), interest.trim()]
+                          }));
+                        }
+                      }}
+                    >
+                      Add Interest
+                    </Button>
+                  </Box>
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+            
+            <Accordion sx={{ mt: 2 }}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>Custom Sections</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box>
+                  {customSections.map((section, index) => (
+                    <Box key={index} sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="subtitle1">{section?.name || ''}</Typography>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => {
+                            setCustomSections(prev => prev.filter((_, i) => i !== index));
+                          }}
+                          color="error"
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
+                        variant="outlined"
+                        value={section?.content || ''}
+                        onChange={(e) => {
+                          const newSections = [...customSections];
+                          newSections[index] = {
+                            ...newSections[index],
+                            content: e.target.value
+                          };
+                          setCustomSections(newSections);
+                        }}
+                        margin="normal"
+                      />
+                    </Box>
+                  ))}
+                  
+                  <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                    <TextField
+                      label="Section Name"
+                      value={customSectionName}
+                      onChange={(e) => setCustomSectionName(e.target.value)}
+                      size="small"
+                    />
+                    <Button
+                      variant="outlined"
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        if (customSectionName.trim()) {
+                          setCustomSections(prev => [
+                            ...prev,
+                            { name: customSectionName.trim(), content: '' }
+                          ]);
+                          setCustomSectionName('');
+                        }
+                      }}
+                      disabled={!customSectionName.trim()}
+                    >
+                      Add Section
+                    </Button>
+                  </Box>
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+          </Grid>
+        </Grid>
+      </Box>
+    );
   };
 
   return (
