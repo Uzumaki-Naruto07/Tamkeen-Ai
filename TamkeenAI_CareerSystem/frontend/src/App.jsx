@@ -77,6 +77,8 @@ const CertificationsAchievements = lazyLoad(() => import('./pages/Certifications
 const Settings = lazyLoad(() => import('./pages/Settings'));
 // Add LinkedIn Automation component
 const LinkedInAutomation = lazyLoad(() => import('./pages/LinkedinAutomation'));
+// Add Learning Resources component
+const LearningResources = lazyLoad(() => import('./pages/LearningResources'));
 
 // Suspense fallback component
 const SuspenseFallback = () => (
@@ -169,6 +171,13 @@ const router = createBrowserRouter(
         <Route 
           path="/automation-linkedin" 
           element={<ProtectedRoute element={<LinkedInAutomation />} />} 
+          errorElement={<RouteErrorBoundary />}
+        />
+        
+        {/* Add Learning Resources route */}
+        <Route 
+          path="/learning" 
+          element={<ProtectedRoute element={<LearningResources />} />} 
           errorElement={<RouteErrorBoundary />}
         />
         

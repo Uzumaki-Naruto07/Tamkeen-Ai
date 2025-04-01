@@ -675,7 +675,7 @@ const PersonalizedLearningPaths = ({ learningPathsData, userProfile }) => {
                     <Typography variant="subtitle1" gutterBottom>
                       Description
                     </Typography>
-                    <Typography variant="body2" paragraph>
+                    <Typography variant="body2" component="div" sx={{ mb: 2 }}>
                       {selectedNode.description}
                     </Typography>
                     

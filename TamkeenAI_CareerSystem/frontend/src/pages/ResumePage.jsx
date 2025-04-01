@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Box, 
   AppBar, 
@@ -28,7 +28,9 @@ import {
   Switch,
   FormControlLabel,
   Tooltip,
-  CircularProgress
+  CircularProgress,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -63,8 +65,10 @@ import {
   AssignmentTurnedIn as AssignmentTurnedInIcon,
   AlternateEmail as AlternateEmailIcon,
   Refresh as RefreshIcon,
-  TrendingUp as TrendingUpIcon
+  TrendingUp as TrendingUpIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
+import resumeApi from '../utils/resumeApi';
 
 // TabPanel component for the tab system
 const TabPanel = (props) => {
@@ -626,20 +630,90 @@ const ResumePage = () => {
   const [resumeName, setResumeName] = useState('');
   const [activeTab, setActiveTab] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [resumes, setResumes] = useState([]);
+  const [selectedResume, setSelectedResume] = useState(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  const [resumeMetrics, setResumeMetrics] = useState({
+    strength: 75,
+    history: []
+  });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [resumeToDelete, setResumeToDelete] = useState(null);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [resumeFile, setResumeFile] = useState(null);
   
-  // Mock data for resumes
-  const [resumes, setResumes] = useState([
-    { id: 1, name: 'Software Engineer Resume', score: 85, lastUpdated: '2023-08-15' },
-    { id: 2, name: 'Product Manager Resume', score: 72, lastUpdated: '2023-07-22' },
-    { id: 3, name: 'UX Designer Resume', score: 90, lastUpdated: '2023-08-10' },
-  ]);
+  // Current user ID - normally from auth context
+  const userId = "current-user-id"; // Replace with actual user ID from auth context
 
-  // Mock data for versions
-  const versions = [
-    { id: 1, date: '2023-08-15', time: '14:30' },
-    { id: 2, date: '2023-08-10', time: '09:15' },
-    { id: 3, date: '2023-08-05', time: '16:45' },
-  ];
+  // Fetch user's resumes
+  const fetchResumes = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await resumeApi.getUserResumes(userId);
+      if (response && response.data) {
+        setResumes(response.data);
+        // If there are resumes, select the first one
+        if (response.data.length > 0 && !selectedResume) {
+          setSelectedResume(response.data[0]);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching resumes:', err);
+      setError('Failed to load resumes');
+      setSnackbar({
+        open: true,
+        message: 'Failed to load resumes',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, selectedResume]);
+
+  // Fetch resume metrics
+  const fetchResumeMetrics = useCallback(async (resumeId) => {
+    if (!resumeId) return;
+    
+    try {
+      // Fetch resume strength
+      const scoreResponse = await resumeApi.getAtsScore(resumeId);
+      if (scoreResponse && scoreResponse.data) {
+        setResumeMetrics(prev => ({
+          ...prev,
+          strength: scoreResponse.data.score
+        }));
+      }
+      
+      // Fetch history
+      const historyResponse = await resumeApi.getAtsHistory();
+      if (historyResponse && historyResponse.data) {
+        setResumeMetrics(prev => ({
+          ...prev,
+          history: historyResponse.data
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching resume metrics:', err);
+    }
+  }, []);
+
+  // Initial data load
+  useEffect(() => {
+    fetchResumes();
+  }, [fetchResumes]);
+
+  // Fetch metrics when selected resume changes
+  useEffect(() => {
+    if (selectedResume) {
+      fetchResumeMetrics(selectedResume.id);
+    }
+  }, [selectedResume, fetchResumeMetrics]);
 
   const handleNewResumeOpen = () => {
     setNewResumeDialogOpen(true);
@@ -650,17 +724,277 @@ const ResumePage = () => {
     setResumeName('');
   };
 
-  const handleCreateResume = () => {
+  const handleCreateResume = async () => {
     if (resumeName.trim()) {
-      const newResume = {
-        id: resumes.length + 1,
-        name: resumeName,
-        score: 50,
-        lastUpdated: new Date().toISOString().split('T')[0]
-      };
-      setResumes([...resumes, newResume]);
-      handleNewResumeClose();
+      setLoading(true);
+      try {
+        const newResumeData = {
+          name: resumeName,
+          userId: userId,
+          content: {
+            sections: {
+              personalInfo: {},
+              professionalSummary: '',
+              workExperience: [],
+              education: [],
+              skills: []
+            }
+          }
+        };
+        
+        const response = await resumeApi.createResume(newResumeData);
+        
+        if (response && response.data) {
+          const newResume = {
+            id: response.data.id,
+            name: resumeName,
+            score: 50,
+            lastUpdated: new Date().toISOString().split('T')[0]
+          };
+          
+          setResumes([...resumes, newResume]);
+          setSelectedResume(newResume);
+          setSnackbar({
+            open: true,
+            message: 'Resume created successfully',
+            severity: 'success'
+          });
+        }
+      } catch (err) {
+        console.error('Error creating resume:', err);
+        setSnackbar({
+          open: true,
+          message: 'Failed to create resume',
+          severity: 'error'
+        });
+      } finally {
+        setLoading(false);
+        handleNewResumeClose();
+      }
     }
+  };
+
+  const handleDeleteResumeOpen = (resume) => {
+    setResumeToDelete(resume);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteResumeClose = () => {
+    setDeleteDialogOpen(false);
+    setResumeToDelete(null);
+  };
+
+  const handleDeleteResume = async () => {
+    if (!resumeToDelete) return;
+    
+    setLoading(true);
+    try {
+      await resumeApi.deleteResume(resumeToDelete.id);
+      
+      // Remove deleted resume from state
+      const updatedResumes = resumes.filter(r => r.id !== resumeToDelete.id);
+      setResumes(updatedResumes);
+      
+      // If deleted resume was selected, select another one
+      if (selectedResume && selectedResume.id === resumeToDelete.id) {
+        setSelectedResume(updatedResumes.length > 0 ? updatedResumes[0] : null);
+      }
+      
+      setSnackbar({
+        open: true,
+        message: 'Resume deleted successfully',
+        severity: 'success'
+      });
+    } catch (err) {
+      console.error('Error deleting resume:', err);
+      setSnackbar({
+        open: true,
+        message: 'Failed to delete resume',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+      handleDeleteResumeClose();
+    }
+  };
+
+  const handleUploadResumeOpen = () => {
+    setUploadDialogOpen(true);
+  };
+
+  const handleUploadResumeClose = () => {
+    setUploadDialogOpen(false);
+    setResumeFile(null);
+  };
+
+  const handleResumeFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setResumeFile(file);
+    }
+  };
+
+  const handleUploadResume = async () => {
+    if (!resumeFile) return;
+    
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', resumeFile);
+      formData.append('userId', userId);
+      
+      const response = await resumeApi.uploadResume(formData);
+      
+      if (response && response.data) {
+        // Refresh resume list after successful upload
+        fetchResumes();
+        
+        setSnackbar({
+          open: true,
+          message: 'Resume uploaded successfully',
+          severity: 'success'
+        });
+      }
+    } catch (err) {
+      console.error('Error uploading resume:', err);
+      setSnackbar({
+        open: true,
+        message: 'Failed to upload resume',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+      handleUploadResumeClose();
+    }
+  };
+
+  const handleSelectResume = (resume) => {
+    setSelectedResume(resume);
+  };
+
+  const handleUpdateResume = async (resumeId, updatedData) => {
+    setLoading(true);
+    try {
+      await resumeApi.updateResume(resumeId, updatedData);
+      
+      // Update local state
+      const updatedResumes = resumes.map(resume => 
+        resume.id === resumeId 
+          ? { ...resume, ...updatedData, lastUpdated: new Date().toISOString().split('T')[0] } 
+          : resume
+      );
+      
+      setResumes(updatedResumes);
+      
+      // If updated resume is selected, update selected resume
+      if (selectedResume && selectedResume.id === resumeId) {
+        setSelectedResume(updatedResumes.find(r => r.id === resumeId));
+      }
+      
+      setSnackbar({
+        open: true,
+        message: 'Resume updated successfully',
+        severity: 'success'
+      });
+    } catch (err) {
+      console.error('Error updating resume:', err);
+      setSnackbar({
+        open: true,
+        message: 'Failed to update resume',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportResume = async (format = 'pdf') => {
+    if (!selectedResume) return;
+    
+    try {
+      await resumeApi.exportResume(selectedResume.id, format);
+      
+      setSnackbar({
+        open: true,
+        message: `Resume exported as ${format.toUpperCase()}`,
+        severity: 'success'
+      });
+    } catch (err) {
+      console.error('Error exporting resume:', err);
+      setSnackbar({
+        open: true,
+        message: 'Failed to export resume',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleApplyToJob = async (jobId) => {
+    if (!selectedResume) {
+      setSnackbar({
+        open: true,
+        message: 'Please select a resume to apply',
+        severity: 'warning'
+      });
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // This would typically connect to a job application API
+      // For now using mock apply function
+      const response = await resumeApi.optimizeResume(
+        selectedResume.id, 
+        "Software Engineer", 
+        "Senior developer with React.js experience"
+      );
+      
+      if (response) {
+        setSnackbar({
+          open: true,
+          message: 'Job application submitted successfully',
+          severity: 'success'
+        });
+      }
+    } catch (err) {
+      console.error('Error applying to job:', err);
+      setSnackbar({
+        open: true,
+        message: 'Failed to submit application',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefreshAnalysis = async () => {
+    if (!selectedResume) return;
+    
+    setLoading(true);
+    try {
+      await fetchResumeMetrics(selectedResume.id);
+      
+      setSnackbar({
+        open: true,
+        message: 'Resume analysis refreshed',
+        severity: 'success'
+      });
+    } catch (err) {
+      console.error('Error refreshing analysis:', err);
+      setSnackbar({
+        open: true,
+        message: 'Failed to refresh analysis',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') return;
+    setSnackbar({ ...snackbar, open: false });
   };
 
   const handleTabChange = (event, newValue) => {
@@ -825,6 +1159,7 @@ const ResumePage = () => {
                 component="label" 
                 fullWidth
                 size="small"
+                onClick={handleUploadResumeOpen}
                 sx={{ 
                   borderRadius: 1.5,
                   textTransform: 'none',
@@ -833,7 +1168,6 @@ const ResumePage = () => {
                 }}
               >
                 Choose File
-                <input type="file" hidden />
               </Button>
             </Card>
             
@@ -847,26 +1181,37 @@ const ResumePage = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="subtitle2" fontWeight="600">Resume Strength</Typography>
                 <Chip 
-                  label="75/100" 
+                  label={`${resumeMetrics.strength}/100`} 
                   size="small" 
-                  color="success"
+                  color={getScoreColor(resumeMetrics.strength)}
                   sx={{ fontWeight: 'bold', height: 20, fontSize: '0.7rem' }}
                 />
               </Box>
               <LinearProgress 
                 variant="determinate" 
-                value={75} 
-                color="success"
+                value={resumeMetrics.strength} 
+                color={getScoreColor(resumeMetrics.strength)}
                 sx={{ 
                   height: 6, 
                   borderRadius: 3, 
                   mb: 1,
-                  backgroundColor: 'rgba(76, 175, 80, 0.2)'
+                  backgroundColor: `rgba(${getScoreColor(resumeMetrics.strength) === 'success' ? '76, 175, 80' : 
+                    getScoreColor(resumeMetrics.strength) === 'warning' ? '255, 152, 0' : 
+                    '244, 67, 54'}, 0.2)`
                 }}
               />
               <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
-                <CheckCircleIcon sx={{ fontSize: 14, mr: 0.5, color: 'success.main' }} />
-                Your resume is looking good!
+                {resumeMetrics.strength >= 70 ? (
+                  <>
+                    <CheckCircleIcon sx={{ fontSize: 14, mr: 0.5, color: 'success.main' }} />
+                    Your resume is looking good!
+                  </>
+                ) : (
+                  <>
+                    <WarningIcon sx={{ fontSize: 14, mr: 0.5, color: 'warning.main' }} />
+                    Your resume needs improvement
+                  </>
+                )}
               </Typography>
             </Card>
             
@@ -884,8 +1229,16 @@ const ResumePage = () => {
                   <Typography variant="subtitle2" fontWeight="600">AI Summary</Typography>
                 </Box>
                 <Tooltip title="Refresh inference">
-                  <IconButton size="small" sx={{ color: 'primary.light', p: 0.5, ml: 0.5 }}>
-                    <RefreshIcon fontSize="small" sx={{ fontSize: 16 }} />
+                  <IconButton 
+                    size="small" 
+                    sx={{ color: 'primary.light', p: 0.5, ml: 0.5 }}
+                    onClick={handleRefreshAnalysis}
+                    disabled={loading || !selectedResume}
+                  >
+                    {loading ? 
+                      <CircularProgress size={16} color="inherit" /> : 
+                      <RefreshIcon fontSize="small" sx={{ fontSize: 16 }} />
+                    }
                   </IconButton>
                 </Tooltip>
               </Box>
@@ -896,7 +1249,10 @@ const ResumePage = () => {
                 lineHeight: 1.4,
                 display: 'block'
               }}>
-                "Experienced software engineer with strong React skills and backend development experience. Shows leadership potential and problem-solving abilities."
+                {selectedResume ? 
+                  `"Experienced software engineer with strong React skills and backend development experience. Shows leadership potential and problem-solving abilities."` : 
+                  "Select a resume to see AI summary"
+                }
               </Typography>
               <Chip 
                 size="small" 
@@ -923,61 +1279,85 @@ const ResumePage = () => {
               My Resumes
             </Typography>
             
-            {resumes.map((resume, index) => (
-              <Card 
-                key={resume.id}
-                sx={{ 
-                  p: 1.5, 
-                  mb: 1,
-                  borderRadius: 1.5,
-                  borderLeft: index === 0 ? '3px solid' : '3px solid transparent',
-                  borderColor: index === 0 ? 'primary.main' : 'transparent',
-                  bgcolor: index === 0 ? 'rgba(25, 118, 210, 0.04)' : 'white',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                  '&:hover': { 
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.12)',
-                    bgcolor: index === 0 ? 'rgba(25, 118, 210, 0.06)' : 'rgba(0, 0, 0, 0.01)'
-                  },
-                  transition: 'all 0.2s',
-                  cursor: 'pointer'
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontWeight: index === 0 ? 600 : 500,
-                      color: index === 0 ? 'primary.main' : 'text.primary',
-                      flexGrow: 1,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {resume.name}
-                  </Typography>
-                  <Chip 
-                    label={`${resume.score}%`}
-                    size="small"
-                    color={getScoreColor(resume.score)}
-                    sx={{ 
-                      fontWeight: 'bold', 
-                      height: 20, 
-                      fontSize: '0.65rem',
-                      ml: 1,
-                      '& .MuiChip-label': { px: 1 }
-                    }}
-                  />
-                </Box>
-                <Typography 
-                  variant="caption" 
-                  color="text.secondary"
-                  sx={{ display: 'block', fontSize: '0.7rem' }}
+            {loading && resumes.length === 0 ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : resumes.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', p: 2 }}>
+                No resumes found. Create a new resume or upload one.
+              </Typography>
+            ) : (
+              resumes.map((resume, index) => (
+                <Card 
+                  key={resume.id}
+                  sx={{ 
+                    p: 1.5, 
+                    mb: 1,
+                    borderRadius: 1.5,
+                    borderLeft: selectedResume && selectedResume.id === resume.id ? '3px solid' : '3px solid transparent',
+                    borderColor: selectedResume && selectedResume.id === resume.id ? 'primary.main' : 'transparent',
+                    bgcolor: selectedResume && selectedResume.id === resume.id ? 'rgba(25, 118, 210, 0.04)' : 'white',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                    '&:hover': { 
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.12)',
+                      bgcolor: selectedResume && selectedResume.id === resume.id ? 'rgba(25, 118, 210, 0.06)' : 'rgba(0, 0, 0, 0.01)'
+                    },
+                    transition: 'all 0.2s',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => handleSelectResume(resume)}
                 >
-                  Last updated: {resume.lastUpdated}
-                </Typography>
-              </Card>
-            ))}
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontWeight: selectedResume && selectedResume.id === resume.id ? 600 : 500,
+                        color: selectedResume && selectedResume.id === resume.id ? 'primary.main' : 'text.primary',
+                        flexGrow: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {resume.name}
+                    </Typography>
+                    <Chip 
+                      label={`${resume.score}%`}
+                      size="small"
+                      color={getScoreColor(resume.score)}
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        height: 20, 
+                        fontSize: '0.65rem',
+                        ml: 1,
+                        '& .MuiChip-label': { px: 1 }
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary"
+                      sx={{ display: 'block', fontSize: '0.7rem' }}
+                    >
+                      Last updated: {resume.lastUpdated}
+                    </Typography>
+                    <IconButton 
+                      size="small" 
+                      color="error"
+                      sx={{ p: 0.2, ml: 0.5 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteResumeOpen(resume);
+                      }}
+                    >
+                      <DeleteIcon fontSize="small" sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </Box>
+                </Card>
+              ))
+            )}
             
             {/* Resume Timeline - Graphical Journey */}
             <Typography variant="subtitle2" sx={{ 
@@ -1369,9 +1749,93 @@ const ResumePage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleNewResumeClose}>Cancel</Button>
-          <Button onClick={handleCreateResume} variant="contained">Create</Button>
+          <Button 
+            onClick={handleCreateResume} 
+            variant="contained"
+            disabled={loading || !resumeName.trim()}
+          >
+            {loading ? <CircularProgress size={24} /> : 'Create'}
+          </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Upload Resume Dialog */}
+      <Dialog open={uploadDialogOpen} onClose={handleUploadResumeClose}>
+        <DialogTitle>Upload Resume</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Upload your existing resume to import into the system. Supported formats: PDF, DOCX, TXT.
+          </Typography>
+          <Button
+            variant="outlined"
+            component="label"
+            startIcon={<CloudUploadIcon />}
+            sx={{ mt: 1 }}
+            fullWidth
+          >
+            Select File
+            <input
+              type="file"
+              hidden
+              accept=".pdf,.docx,.doc,.txt"
+              onChange={handleResumeFileChange}
+            />
+          </Button>
+          {resumeFile && (
+            <Box sx={{ mt: 2, p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+              <Typography variant="body2">{resumeFile.name}</Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleUploadResumeClose}>Cancel</Button>
+          <Button 
+            onClick={handleUploadResume} 
+            variant="contained"
+            disabled={loading || !resumeFile}
+          >
+            {loading ? <CircularProgress size={24} /> : 'Upload'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Resume Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={handleDeleteResumeClose}>
+        <DialogTitle>Delete Resume</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">
+            Are you sure you want to delete "{resumeToDelete?.name}"? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteResumeClose}>Cancel</Button>
+          <Button 
+            onClick={handleDeleteResume} 
+            variant="contained" 
+            color="error"
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity} 
+          sx={{ width: '100%' }}
+          variant="filled"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -50,7 +50,11 @@ const MarketInsightsSection = ({ marketInsights, insights }) => {
     salary_data = {}, 
     regional_demand = [], 
     skill_demand = [], 
-    industry_trends = [], 
+    industry_trends = {
+      growing_sectors: [],
+      emerging_roles: [],
+      key_trends: []
+    }, 
     personalized_insights = {
       market_position: { percentile: 0, explanation: '' },
       suggestions: [],
@@ -277,38 +281,44 @@ const MarketInsightsSection = ({ marketInsights, insights }) => {
     <Box>
       <Typography variant="subtitle2" gutterBottom>Industry Trends</Typography>
       
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="body2" sx={{ mb: 1 }}>Growing Sectors</Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-          {industry_trends.growing_sectors.map((sector, index) => (
-            <Chip key={index} label={sector} color="success" />
-          ))}
-        </Box>
-      </Box>
-      
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="body2" sx={{ mb: 1 }}>Emerging Roles</Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-          {industry_trends.emerging_roles.map((role, index) => (
-            <Chip key={index} label={role} color="primary" />
-          ))}
-        </Box>
-      </Box>
-      
-      <Typography variant="body2" sx={{ mb: 1 }}>Key Trends</Typography>
-      {industry_trends.key_trends.map((trend, index) => (
-        <Box key={index} sx={{ mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-            <Typography variant="subtitle2">{trend.trend}</Typography>
-            <Chip 
-              label={`Impact: ${trend.impact_score}/10`} 
-              size="small" 
-              color={trend.impact_score > 8 ? "warning" : "primary"} 
-            />
+      {!industry_trends || !industry_trends.growing_sectors ? (
+        <Alert severity="info" sx={{ mb: 2 }}>Industry trends data is not available</Alert>
+      ) : (
+        <>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" sx={{ mb: 1 }}>Growing Sectors</Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {industry_trends.growing_sectors.map((sector, index) => (
+                <Chip key={index} label={sector} color="success" />
+              ))}
+            </Box>
           </Box>
-          <Typography variant="body2">{trend.description}</Typography>
-        </Box>
-      ))}
+          
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" sx={{ mb: 1 }}>Emerging Roles</Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {industry_trends.emerging_roles.map((role, index) => (
+                <Chip key={index} label={role} color="primary" />
+              ))}
+            </Box>
+          </Box>
+          
+          <Typography variant="body2" sx={{ mb: 1 }}>Key Trends</Typography>
+          {industry_trends.key_trends.map((trend, index) => (
+            <Box key={index} sx={{ mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="subtitle2">{trend.trend}</Typography>
+                <Chip 
+                  label={`Impact: ${trend.impact_score}/10`} 
+                  size="small" 
+                  color={trend.impact_score > 8 ? "warning" : "primary"} 
+                />
+              </Box>
+              <Typography variant="body2">{trend.description}</Typography>
+            </Box>
+          ))}
+        </>
+      )}
     </Box>
   );
   

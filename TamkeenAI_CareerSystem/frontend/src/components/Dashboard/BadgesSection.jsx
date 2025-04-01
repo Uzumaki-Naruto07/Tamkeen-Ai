@@ -352,15 +352,15 @@ const BadgesSection = ({ data }) => {
                             <Box sx={{ flex: 1 }}>
                               <Typography variant="body2" fontWeight="medium">
                                 {badge.name}
-                                {isNext && (
-                                  <Chip 
-                                    label={t('badges.nextLabel')} 
-                                    size="small" 
-                                    color="primary" 
-                                    sx={{ ml: 1, height: 20 }} 
-                                  />
-                                )}
                               </Typography>
+                              {isNext && (
+                                <Chip 
+                                  label={t('badges.nextLabel')} 
+                                  size="small" 
+                                  color="primary" 
+                                  sx={{ ml: 1, height: 20 }} 
+                                />
+                              )}
                               <Typography variant="caption" color="text.secondary">
                                 {badge.description}
                               </Typography>
@@ -531,7 +531,7 @@ const BadgesSection = ({ data }) => {
                   </Avatar>
                 </Box>
                 <Box sx={{ flex: 1, p: 2 }}>
-                  <Typography variant="body1" paragraph>
+                  <Typography variant="body1" component="div" sx={{ mb: 2 }}>
                     {selectedBadge.description}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">

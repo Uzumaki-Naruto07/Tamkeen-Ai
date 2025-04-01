@@ -5,8 +5,16 @@
 import axios from 'axios';
 import * as endpoints from './endpoints';
 import withMockFallback, { isBackendUnavailable } from './mockFallback';
-import mockData from './app-mocks/mockDataIndex';
-import { jobEndpoints } from './endpoints';
+import { JOB_ENDPOINTS } from '../api/endpoints';
+
+// Import all our API modules
+import authService from '../api/auth';
+import chatgptApi from '../api/chatgpt';
+import learningApi from '../api/learning';
+import resumeApi from '../api/resume';
+import jobsApi from '../api/jobs';
+import profileApi from '../api/profile';
+import assessmentApi from '../api/assessment';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -128,6 +136,15 @@ api.interceptors.request.use(
       source.cancel('Backend is not available, using mock data');
     }
     
+    // Prevent double '/api' prefixes in URLs
+    if (config.url && config.url.startsWith('/api/')) {
+      // Remove the '/api' prefix from the URL since baseURL already has it
+      config.url = config.url.substring(4); // Remove '/api'
+    } else if (config.url && config.url.startsWith('api/')) {
+      // Remove the 'api/' prefix from the URL since baseURL already has it
+      config.url = config.url.substring(4); // Remove 'api/'
+    }
+    
     // Always include auth token if available
     const token = localStorage.getItem('token');
     if (token) {
@@ -141,28 +158,43 @@ api.interceptors.request.use(
   }
 );
 
+// Centralized API endpoints
+const apiEndpoints = {
+  auth: authService,
+  chatgpt: chatgptApi,
+  learning: learningApi,
+  resume: resumeApi,
+  jobs: jobsApi,
+  profile: profileApi,
+  assessment: assessmentApi
+};
+
 // Export all necessary functions and objects
 export {
   api,
   checkBackendAvailability,
-  jobEndpoints
+  JOB_ENDPOINTS
 };
 
 // Add default export for backward compatibility
 export default {
   ...endpoints,
+  ...apiEndpoints,
+  
+  // Legacy API methods will remain for backward compatibility
+  // These can be gradually migrated to the new API modules
   resumes: {
-    getUserResumes: (userId) => api.get(endpoints.RESUME_ENDPOINTS.GET_USER_RESUMES(userId)),
-    getHistory: (resumeId) => api.get(`${endpoints.RESUME_ENDPOINTS.GET_BY_ID(resumeId)}/history`),
-    createResume: (data) => api.post(endpoints.RESUME_ENDPOINTS.CREATE_RESUME, data),
-    updateResume: (id, data) => api.put(endpoints.RESUME_ENDPOINTS.UPDATE_RESUME(id), data),
-    deleteResume: (id) => api.delete(endpoints.RESUME_ENDPOINTS.DELETE(id)),
-    getLatest: (userId) => api.get(`${endpoints.RESUME_ENDPOINTS.GET_USER_RESUMES(userId)}/latest`)
+    getUserResumes: (userId) => api.get(`${endpoints.RESUME_ENDPOINTS.BASE}/list/${userId}`),
+    getHistory: (resumeId) => api.get(`${endpoints.RESUME_ENDPOINTS.BASE}/history/${resumeId}`),
+    createResume: (data) => api.post(endpoints.RESUME_ENDPOINTS.CREATE, data),
+    updateResume: (id, data) => api.put(`${endpoints.RESUME_ENDPOINTS.UPDATE}/${id}`, data),
+    deleteResume: (id) => api.delete(`${endpoints.RESUME_ENDPOINTS.DELETE}/${id}`),
+    getLatest: (userId) => api.get(`${endpoints.RESUME_ENDPOINTS.BASE}/list/${userId}/latest`)
   },
   jobs: {
-    getSavedJobs: () => api.get(endpoints.JOB_ENDPOINTS.GET_SAVED),
-    saveJob: (id) => api.post(endpoints.JOB_ENDPOINTS.SAVE(id)),
-    unsaveJob: (id) => api.delete(endpoints.JOB_ENDPOINTS.UNSAVE(id))
+    getSavedJobs: (userId) => api.get(`${endpoints.JOB_ENDPOINTS.SAVED}/${userId}`),
+    saveJob: (userId, jobId) => api.post(`${endpoints.JOB_ENDPOINTS.SAVE}/${userId}/${jobId}`),
+    unsaveJob: (userId, jobId) => api.delete(`${endpoints.JOB_ENDPOINTS.UNSAVE}/${userId}/${jobId}`)
   },
   user: {
     getCertifications: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/certifications/${userId}`),
@@ -184,7 +216,7 @@ export default {
     updateDataSettings: (userId, data) => api.put(`${endpoints.USER_ENDPOINTS.PROFILE}/settings/data/${userId}`, data)
   },
   skills: {
-    getTopSkills: (userId) => api.get(`${endpoints.SKILLS_ENDPOINTS.GET_USER_SKILLS(userId)}/top`)
+    getTopSkills: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/skills/${userId}/top`)
   },
   profiles: {
     getUserProfile: (userId) => api.get(`${endpoints.USER_ENDPOINTS.PROFILE}/${userId}`),
@@ -210,5 +242,5 @@ export default {
       };
       return api.post(`${endpoints.USER_ENDPOINTS.PROFILE}/picture/${userId}`, formData, config);
     }
-  }
+  },
 };

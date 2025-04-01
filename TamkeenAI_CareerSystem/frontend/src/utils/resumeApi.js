@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { RESUME_ENDPOINTS, JOB_ENDPOINTS } from './endpoints';
+import { RESUME_ENDPOINTS } from './endpoints';
+import { JOB_ENDPOINTS } from '../api/endpoints';
 import { api } from './api';
 import mockData from './app-mocks/mockDataIndex';
 

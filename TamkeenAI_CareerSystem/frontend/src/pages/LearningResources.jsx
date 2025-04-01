@@ -8,7 +8,8 @@ import {
   Menu, MenuItem, Select, FormControl, InputLabel,
   Tabs, Tab, Rating, Tooltip, Badge, Avatar,
   Accordion, AccordionSummary, AccordionDetails,
-  LinearProgress, Skeleton, Checkbox, FormControlLabel
+  LinearProgress, Skeleton, Checkbox, FormControlLabel,
+  Snackbar
 } from '@mui/material';
 import {
   School, LibraryBooks, Search, FilterList, BookmarkBorder,
@@ -21,7 +22,8 @@ import {
   VerifiedUser, Language, Computer, Engineering,
   ArrowUpward, ArrowDownward, Public, Collections,
   QuestionAnswer, Description, KeyboardArrowRight,
-  Close, Check, SaveAlt, Feedback, RateReview
+  Close, Check, SaveAlt, Feedback, RateReview,
+  Report
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '../context/AppContext';
@@ -113,22 +115,55 @@ const LearningResources = () => {
       setError(null);
       
       try {
-        // Fetch skills list, saved resources, and completed resources
-        const [skillsResponse, savedResponse, completedResponse] = await Promise.all([
-          apiEndpoints.skills.getAllSkills(),
-          apiEndpoints.learning.getSavedResources(profile.id),
-          apiEndpoints.learning.getCompletedResources(profile.id)
-        ]);
+        // Get bookmarked resources
+        const bookmarkedResponse = await apiEndpoints.learning.getBookmarkedResources(profile.id);
+        if (bookmarkedResponse && bookmarkedResponse.data) {
+          // Extract the resources from the bookmarked data
+          const savedResourcesData = await Promise.all(
+            bookmarkedResponse.data.map(async (bookmark) => {
+              try {
+                const resourceData = await apiEndpoints.learning.getResourceById(bookmark.resourceId);
+                return resourceData.data;
+              } catch (error) {
+                console.error(`Error fetching resource ${bookmark.resourceId}:`, error);
+                return null;
+              }
+            })
+          );
+          
+          setSavedResources(savedResourcesData.filter(resource => resource !== null));
+        }
         
-        setSkillsList(skillsResponse.data || []);
-        setSavedResources(savedResponse.data || []);
-        setCompletedResources(completedResponse.data || []);
+        // Get user progress
+        const progressResponse = await apiEndpoints.learning.getUserProgress(profile.id);
+        if (progressResponse && progressResponse.data && progressResponse.data.resources) {
+          // Extract completed resources
+          const completedResourcesData = await Promise.all(
+            progressResponse.data.resources
+              .filter(progress => progress.status === 'completed')
+              .map(async (progress) => {
+                try {
+                  const resourceData = await apiEndpoints.learning.getResourceById(progress.resourceId);
+                  return {
+                    ...resourceData.data,
+                    completedDate: progress.completedAt || progress.lastAccessedAt,
+                    userRating: progress.userRating || 0
+                  };
+                } catch (error) {
+                  console.error(`Error fetching resource ${progress.resourceId}:`, error);
+                  return null;
+                }
+              })
+          );
+          
+          setCompletedResources(completedResourcesData.filter(resource => resource !== null));
+        }
         
-        // Search resources with initial filters
+        // Initial search
         await searchResources();
       } catch (err) {
         console.error('Error fetching learning resources data:', err);
-        setError('Failed to load learning resources data');
+        setError('Failed to load learning resources data. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -170,20 +205,35 @@ const LearningResources = () => {
     try {
       setLoading(true);
       
-      const response = await apiEndpoints.learning.searchResources({
-        query: debouncedSearchTerm,
-        page,
-        pageSize,
-        filters,
+      const searchFilters = {
+        type: filters.resourceType,
+        level: filters.skillLevel,
+        duration: filters.duration,
+        free: filters.free ? 'true' : undefined,
+        skills: filters.skills.join(','),
         sortBy: sorting.field,
-        sortDirection: sorting.direction
-      });
+        sortDir: sorting.direction
+      };
       
-      setResources(response.data.resources || []);
-      setTotalResources(response.data.total || 0);
+      let response;
+      if (debouncedSearchTerm) {
+        response = await apiEndpoints.learning.searchResources(debouncedSearchTerm, searchFilters);
+      } else {
+        response = await apiEndpoints.learning.getResources(searchFilters, page, pageSize);
+      }
+      
+      if (response && response.data) {
+        setResources(response.data);
+        setTotalResources(response.pagination?.total || response.data.length);
+      } else {
+        setResources([]);
+        setTotalResources(0);
+      }
     } catch (err) {
       console.error('Error searching resources:', err);
       setError('Failed to search resources. Please try again.');
+      setResources([]);
+      setTotalResources(0);
     } finally {
       setLoading(false);
     }
@@ -195,15 +245,17 @@ const LearningResources = () => {
       const isSaved = savedResources.some(r => r.id === resourceId);
       
       if (isSaved) {
-        await apiEndpoints.learning.removeSavedResource(profile.id, resourceId);
+        await apiEndpoints.learning.removeBookmark(profile.id, resourceId);
         setSavedResources(savedResources.filter(r => r.id !== resourceId));
         setSnackbarMessage('Resource removed from your saved list');
       } else {
-        await apiEndpoints.learning.saveResource(profile.id, resourceId);
+        await apiEndpoints.learning.bookmarkResource(profile.id, resourceId);
         
         // Find the resource and add it to saved resources
-        const resource = resources.find(r => r.id === resourceId);
-        setSavedResources([...savedResources, resource]);
+        const foundResource = resources.find(r => r.id === resourceId);
+        if (foundResource) {
+          setSavedResources([...savedResources, foundResource]);
+        }
         setSnackbarMessage('Resource saved to your list');
       }
       
@@ -221,19 +273,29 @@ const LearningResources = () => {
       const isCompleted = completedResources.some(r => r.id === resourceId);
       
       if (isCompleted) {
-        await apiEndpoints.learning.markResourceIncomplete(profile.id, resourceId);
+        await apiEndpoints.learning.updateProgress(profile.id, resourceId, 0, 'not-started');
         setCompletedResources(completedResources.filter(r => r.id !== resourceId));
         setSnackbarMessage('Resource marked as not completed');
       } else {
-        await apiEndpoints.learning.markResourceComplete(profile.id, resourceId);
+        await apiEndpoints.learning.updateProgress(profile.id, resourceId, 100, 'completed');
         
         // Find the resource and add it to completed resources
-        const resource = resources.find(r => r.id === resourceId);
-        setCompletedResources([...completedResources, resource]);
+        const foundResource = resources.find(r => r.id === resourceId) || 
+                         savedResources.find(r => r.id === resourceId);
+        
+        if (foundResource) {
+          const completedResource = {
+            ...foundResource,
+            completedDate: new Date().toISOString(),
+            userRating: 0
+          };
+          setCompletedResources([...completedResources, completedResource]);
+        }
+        
         setSnackbarMessage('Resource marked as completed');
         
         // Check if the user wants to leave a review
-        setSelectedResource(resource);
+        setSelectedResource(foundResource);
         setReviewDialogOpen(true);
       }
       
@@ -241,6 +303,44 @@ const LearningResources = () => {
     } catch (err) {
       console.error('Error toggling resource completion:', err);
       setSnackbarMessage('Failed to update resource completion status');
+      setSnackbarOpen(true);
+    }
+  };
+  
+  // Handle submitting a review
+  const handleSubmitReview = async () => {
+    try {
+      if (!selectedResource || !profile?.id) {
+        setReviewDialogOpen(false);
+        return;
+      }
+      
+      await apiEndpoints.learning.submitReview(
+        profile.id, 
+        selectedResource.id, 
+        userReview.rating, 
+        userReview.comment
+      );
+      
+      // Update the user rating in completed resources
+      setCompletedResources(completedResources.map(resource => 
+        resource.id === selectedResource.id ? 
+          { ...resource, userRating: userReview.rating } : 
+          resource
+      ));
+      
+      setSnackbarMessage('Review submitted successfully');
+      setSnackbarOpen(true);
+      setReviewDialogOpen(false);
+      
+      // Reset review form
+      setUserReview({
+        rating: 0,
+        comment: ''
+      });
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      setSnackbarMessage('Failed to submit review');
       setSnackbarOpen(true);
     }
   };
@@ -323,7 +423,89 @@ const LearningResources = () => {
   const renderResourceList = () => {
     return (
       <Box>
-        {/* Resource list content */}
+        {/* Search input */}
+        <TextField
+          fullWidth
+          placeholder="Search for learning resources..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ mb: 3 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search />
+              </InputAdornment>
+            )
+          }}
+        />
+        
+        {/* Resource cards */}
+        <Grid container spacing={3}>
+          {resources.length > 0 ? (
+            resources.map(resource => (
+              <Grid item xs={12} sm={6} md={4} key={resource.id}>
+                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <Box
+                    component="img"
+                    sx={{
+                      width: '100%',
+                      height: 160,
+                      objectFit: 'cover'
+                    }}
+                    src={resource.thumbnail || 'https://placehold.co/400x300/e0e0e0/gray?text=No+Image'}
+                    alt={resource.title}
+                  />
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" component="h3" gutterBottom>
+                      {resource.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {resource.provider} • {resource.duration}
+                    </Typography>
+                    <Typography variant="body2" paragraph>
+                      {resource.description}
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                      {resource.skills && resource.skills.slice(0, 3).map(skill => (
+                        <Chip key={skill} label={skill} size="small" />
+                      ))}
+                    </Box>
+                  </CardContent>
+                  <CardActions>
+                    <Button size="small" color="primary" href={resource.url} target="_blank">
+                      View Resource
+                    </Button>
+                    <IconButton 
+                      size="small"
+                      onClick={() => handleBookmarkToggle(resource.id)}
+                      color={savedResources.some(r => r.id === resource.id) ? 'primary' : 'default'}
+                    >
+                      {savedResources.some(r => r.id === resource.id) ? <Bookmark /> : <BookmarkBorder />}
+                    </IconButton>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))
+          ) : (
+            <Grid item xs={12}>
+              <Typography variant="body1" textAlign="center">
+                No resources found. Try adjusting your search criteria.
+              </Typography>
+            </Grid>
+          )}
+        </Grid>
+        
+        {/* Pagination */}
+        {totalResources > pageSize && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+            <Pagination 
+              count={Math.ceil(totalResources / pageSize)}
+              page={page}
+              onChange={(e, newPage) => setPage(newPage)}
+              color="primary"
+            />
+          </Box>
+        )}
       </Box>
     );
   };
@@ -332,7 +514,76 @@ const LearningResources = () => {
   const renderSavedResources = () => {
     return (
       <Box>
-        {/* Saved resources content */}
+        {savedResources.length > 0 ? (
+          <Grid container spacing={3}>
+            {savedResources.map(resource => (
+              <Grid item xs={12} sm={6} md={4} key={resource.id}>
+                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <Box
+                    component="img"
+                    sx={{
+                      width: '100%',
+                      height: 160,
+                      objectFit: 'cover'
+                    }}
+                    src={resource.thumbnail || 'https://placehold.co/400x300/e0e0e0/gray?text=No+Image'}
+                    alt={resource.title}
+                  />
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" component="h3" gutterBottom>
+                      {resource.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {resource.provider} • {resource.duration}
+                    </Typography>
+                    <Typography variant="body2" paragraph>
+                      {resource.description}
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                      {resource.skills && resource.skills.slice(0, 3).map(skill => (
+                        <Chip key={skill} label={skill} size="small" />
+                      ))}
+                    </Box>
+                  </CardContent>
+                  <CardActions>
+                    <Button size="small" color="primary" href={resource.url} target="_blank">
+                      View Resource
+                    </Button>
+                    <IconButton 
+                      size="small"
+                      onClick={() => handleBookmarkToggle(resource.id)}
+                      color="primary"
+                    >
+                      <Bookmark />
+                    </IconButton>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => handleCompletionToggle(resource.id)}
+                      color={completedResources.some(r => r.id === resource.id) ? 'success' : 'default'}
+                    >
+                      <CheckCircle />
+                    </IconButton>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No saved resources
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Bookmark resources to save them for later
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={() => setActiveTab(0)}
+            >
+              Browse Resources
+            </Button>
+          </Box>
+        )}
       </Box>
     );
   };
@@ -341,8 +592,170 @@ const LearningResources = () => {
   const renderCompletedResources = () => {
     return (
       <Box>
-        {/* Completed resources content */}
+        {completedResources.length > 0 ? (
+          <Grid container spacing={3}>
+            {completedResources.map(resource => (
+              <Grid item xs={12} sm={6} md={4} key={resource.id}>
+                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <Box
+                    component="img"
+                    sx={{
+                      width: '100%',
+                      height: 160,
+                      objectFit: 'cover'
+                    }}
+                    src={resource.thumbnail || 'https://placehold.co/400x300/e0e0e0/gray?text=No+Image'}
+                    alt={resource.title}
+                  />
+                  <Box sx={{ position: 'absolute', top: 10, right: 10 }}>
+                    <Chip
+                      icon={<CheckCircle />}
+                      label="Completed"
+                      color="success"
+                      size="small"
+                    />
+                  </Box>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" component="h3" gutterBottom>
+                      {resource.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {resource.provider} • {resource.duration}
+                    </Typography>
+                    {resource.completedDate && (
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Completed on: {new Date(resource.completedDate).toLocaleDateString()}
+                      </Typography>
+                    )}
+                    {resource.userRating && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+                          Your rating:
+                        </Typography>
+                        <Rating value={resource.userRating} readOnly size="small" />
+                      </Box>
+                    )}
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                      {resource.skills && resource.skills.slice(0, 3).map(skill => (
+                        <Chip key={skill} label={skill} size="small" />
+                      ))}
+                    </Box>
+                  </CardContent>
+                  <CardActions>
+                    <Button size="small" color="primary" href={resource.url} target="_blank">
+                      View Resource
+                    </Button>
+                    <Button 
+                      size="small" 
+                      color="secondary"
+                      onClick={() => {
+                        setSelectedResource(resource);
+                        setReviewDialogOpen(true);
+                      }}
+                    >
+                      {resource.userRating ? 'Edit Review' : 'Add Review'}
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No completed resources
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Mark resources as completed to track your progress
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={() => setActiveTab(0)}
+            >
+              Browse Resources
+            </Button>
+          </Box>
+        )}
       </Box>
+    );
+  };
+  
+  // Handle viewing resource details
+  const handleViewResourceDetails = () => {
+    if (currentOptionsResource) {
+      setSelectedResource(currentOptionsResource);
+      setResourceDialogOpen(true);
+    }
+    setOptionsMenuAnchorEl(null);
+  };
+  
+  // Handle sharing a resource
+  const handleShareResource = () => {
+    if (currentOptionsResource) {
+      // Share resource functionality would go here
+      const shareUrl = `${window.location.origin}/learning?resourceId=${currentOptionsResource.id}`;
+      
+      // If Web Share API is available, use it
+      if (navigator.share) {
+        navigator.share({
+          title: currentOptionsResource.title,
+          text: `Check out this learning resource: ${currentOptionsResource.title}`,
+          url: shareUrl
+        }).catch(err => console.error('Error sharing resource:', err));
+      } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(shareUrl)
+          .then(() => {
+            setSnackbarMessage('Link copied to clipboard');
+            setSnackbarOpen(true);
+          })
+          .catch(() => {
+            setSnackbarMessage('Unable to copy link');
+            setSnackbarOpen(true);
+          });
+      }
+    }
+    setOptionsMenuAnchorEl(null);
+  };
+  
+  // Handle adding to learning plan
+  const handleAddToLearningPlan = () => {
+    if (currentOptionsResource) {
+      // Add to learning plan functionality would go here
+      setSnackbarMessage('Added to your learning plan');
+      setSnackbarOpen(true);
+    }
+    setOptionsMenuAnchorEl(null);
+  };
+  
+  // Handle reporting a resource
+  const handleReportResource = () => {
+    if (currentOptionsResource) {
+      // Report resource functionality would go here
+      setSnackbarMessage('Thank you for reporting this resource. We will review it.');
+      setSnackbarOpen(true);
+    }
+    setOptionsMenuAnchorEl(null);
+  };
+  
+  // Snackbar for notifications
+  const renderSnackbar = () => {
+    return (
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+        action={
+          <IconButton
+            size="small"
+            color="inherit"
+            onClick={() => setSnackbarOpen(false)}
+          >
+            <Close fontSize="small" />
+          </IconButton>
+        }
+      />
     );
   };
   
@@ -390,49 +803,47 @@ const LearningResources = () => {
       
       {renderResourceDialog()}
       {renderReviewDialog()}
+      {renderSnackbar()}
       
       <Menu
         open={Boolean(optionsMenuAnchorEl)}
         anchorEl={optionsMenuAnchorEl}
         onClose={() => setOptionsMenuAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
       >
         <MenuItem onClick={handleViewResourceDetails}>
           <ListItemIcon>
             <Visibility fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="View Details" />
+          <ListItemText>View Details</ListItemText>
         </MenuItem>
-        
         <MenuItem onClick={handleShareResource}>
           <ListItemIcon>
             <Share fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Share" />
+          <ListItemText>Share Resource</ListItemText>
         </MenuItem>
-        
         <MenuItem onClick={handleAddToLearningPlan}>
           <ListItemIcon>
-            <AssignmentTurnedIn fontSize="small" />
+            <Add fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Add to Learning Plan" />
+          <ListItemText>Add to Learning Plan</ListItemText>
         </MenuItem>
-        
         <Divider />
-        
         <MenuItem onClick={handleReportResource}>
           <ListItemIcon>
-            <Feedback fontSize="small" />
+            <Report fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Report Issue" />
+          <ListItemText>Report Resource</ListItemText>
         </MenuItem>
       </Menu>
-      
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={() => setSnackbarOpen(false)}
-        message={snackbarMessage}
-      />
     </Box>
   );
 };

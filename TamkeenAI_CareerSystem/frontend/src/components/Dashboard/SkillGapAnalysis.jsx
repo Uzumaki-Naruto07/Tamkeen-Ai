@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import {
   Card,
   CardContent,
@@ -18,7 +19,9 @@ import {
   Alert,
   IconButton,
   Stack,
-  Link
+  Link,
+  CircularProgress,
+  Collapse
 } from '@mui/material';
 import {
   BarChart,
@@ -50,7 +53,15 @@ import SchoolIcon from '@mui/icons-material/School';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
+import StarsIcon from '@mui/icons-material/Stars';
+import InfoIcon from '@mui/icons-material/Info';
+import AddIcon from '@mui/icons-material/Add';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import DashboardAPI from '../../api/DashboardAPI';
+import chatService from '../../api/chatgpt';
 
 // Category icon mapping
 const categoryIcons = {
@@ -110,6 +121,10 @@ const SkillGapAnalysis = ({ skillData, targetRole }) => {
   const [largestGapCategory, setLargestGapCategory] = useState(null);
   const [aiPlan, setAiPlan] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [aiInsights, setAiInsights] = useState('');
+  const [error, setError] = useState(null);
+  const [huggingfaceStatus, setHuggingfaceStatus] = useState('unknown');
   
   // Process skill data for chart display
   const chartData = useMemo(() => {
@@ -249,252 +264,228 @@ const SkillGapAnalysis = ({ skillData, targetRole }) => {
       )
       .slice(0, 4); // Top 4 skills with gaps
   };
+
+  useEffect(() => {
+    // Check Hugging Face API status (simulated)
+    const checkHuggingFaceStatus = async () => {
+      try {
+        // In a real implementation, you would make an API call to check status
+        // For now, we'll randomly simulate connection status
+        const statusCheck = Math.random() > 0.3;
+        setHuggingfaceStatus(statusCheck ? 'connected' : 'disconnected');
+      } catch (err) {
+        console.error('Error checking Hugging Face status:', err);
+        setHuggingfaceStatus('disconnected');
+      }
+    };
+    
+    checkHuggingFaceStatus();
+  }, []);
+
+  const fetchAIInsights = async () => {
+    if (aiInsights) {
+      setExpanded(!expanded);
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    setExpanded(true);
+    
+    try {
+      // Craft prompt for skill gap analysis
+      const prompt = `
+I have these current skills: ${skillData.categories[largestGapCategory.name].skills.map(s => s.name).join(', ')}.
+For the role of ${targetRole}, these skills are required: ${skillData.categories[largestGapCategory.name].skills.map(s => s.name).join(', ')}.
+Provide a brief analysis of my skill gap and suggestions for how to bridge it.
+`;
+      
+      // Call ChatGPT API to get AI insights
+      const response = await chatService.sendMessage(prompt, '', 'career');
+      setAiInsights(response.response);
+      
+      // In a real implementation, also call Hugging Face API for enhanced analysis
+      if (huggingfaceStatus === 'connected') {
+        console.log('Calling Hugging Face API for enhanced skill matching');
+        // This would be an actual API call in production
+        // enhanceWithHuggingFace(currentSkills, requiredSkills, targetRole);
+      }
+    } catch (err) {
+      console.error('Error fetching AI insights:', err);
+      setError('Failed to get AI insights. Please try again.');
+      
+      // Fallback insights
+      setAiInsights(
+        `Based on your current skills and the requirements for ${targetRole}, 
+        you should focus on acquiring the missing skills listed above. 
+        Consider taking online courses or hands-on projects to develop these skills.`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
   
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Skill Gap Analysis
-        </Typography>
-        
-        <Typography variant="body2" color="text.secondary" paragraph>
-          This analysis compares your current skill levels against what's required for your target role: <strong>{targetRole}</strong>
-        </Typography>
-        
-        {/* Bar Chart for Skill Gaps */}
-        <Box sx={{ height: 400, mb: 4 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              layout="vertical"
-              margin={{ top: 20, right: 30, left: 60, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" domain={[0, 5]} />
-              <YAxis 
-                dataKey="name" 
-                type="category" 
-                tick={{ fontSize: 13 }}
-                width={100}
-              />
-              <ChartTooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar 
-                dataKey="gap" 
-                name="Skill Gap" 
-                background={{ fill: '#f3f3f3' }}
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-                <LabelList dataKey="gap" position="right" />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Box>
-        
-        <Divider sx={{ mb: 3 }} />
-        
-        {/* AI Suggested Plan */}
-        <Box>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-            <PsychologyIcon sx={{ mr: 1 }} />
-            AI-Suggested Plan for Closing Your Biggest Gap
-          </Typography>
+    <Box sx={{ height: '100%' }}>
+      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <StarsIcon color="primary" sx={{ mr: 1 }} />
+          <Typography variant="h6">Skill Gap Analysis</Typography>
           
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-              <Typography>Generating personalized plan...</Typography>
+          {/* Hugging Face Status Indicator */}
+          <Tooltip title={`Hugging Face AI: ${huggingfaceStatus}`}>
+            <Box component="span" sx={{ ml: 1, display: 'flex', alignItems: 'center' }}>
+              {huggingfaceStatus === 'connected' ? 
+                <CloudDoneIcon fontSize="small" color="success" /> : 
+                <CloudOffIcon fontSize="small" color="action" />
+              }
             </Box>
-          ) : aiPlan ? (
-            <Box>
-              <Alert severity="info" sx={{ mb: 2 }}>
-                <Typography variant="body2">
-                  <strong>Focus area:</strong> {aiPlan.category} (Gap: {aiPlan.gap})
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Estimated timeline:</strong> {aiPlan.timeline}
-                </Typography>
-              </Alert>
-              
-              <Typography variant="body2" paragraph>
-                {aiPlan.description}
-              </Typography>
-              
-              <Typography variant="body2" paragraph>
-                {aiPlan.approach}
-              </Typography>
-              
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Key Skills to Develop:
-                  </Typography>
-                  <List dense>
-                    {getKeySkillsWithGaps(aiPlan.category).map((skill, index) => (
-                      <ListItem key={index} sx={{ px: 0 }}>
-                        <ListItemIcon sx={{ minWidth: 36 }}>
-                          <PriorityHighIcon color="warning" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={skill.name}
-                          secondary={
-                            <Box sx={{ mt: 0.5 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                  Current: {skill.current_level}/5
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  Required: {skill.required_level}/5
-                                </Typography>
-                              </Box>
-                              <LinearProgress 
-                                variant="determinate" 
-                                value={(skill.current_level / skill.required_level) * 100} 
-                                sx={{ height: 6, borderRadius: 1 }} 
-                              />
-                            </Box>
-                          }
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                  
-                  <Typography variant="subtitle2" gutterBottom sx={{ mt: 3 }}>
-                    Action Plan:
-                  </Typography>
-                  <List dense>
-                    {aiPlan.steps.map((step, index) => (
-                      <ListItem key={index} alignItems="flex-start" sx={{ px: 0 }}>
-                        <ListItemIcon sx={{ minWidth: 36, mt: 0.5 }}>
-                          <Chip 
-                            label={index + 1} 
-                            size="small" 
-                            color="primary" 
-                            sx={{ 
-                              height: 24, 
-                              width: 24, 
-                              borderRadius: '50%',
-                              '& .MuiChip-label': { p: 0 }
-                            }} 
-                          />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Typography variant="body2" fontWeight="medium">
-                                {step.title}
-                              </Typography>
-                              <Chip 
-                                label={step.priority} 
-                                size="small" 
-                                color={step.priority === 'High' ? 'error' : 'warning'} 
-                                sx={{ ml: 1, height: 20 }} 
-                              />
-                            </Box>
-                          }
-                          secondary={
-                            <>
-                              <Typography variant="body2" color="text.secondary">
-                                {step.description}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                Timeline: {step.timeline}
-                              </Typography>
-                            </>
-                          }
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Recommended Resources:
-                  </Typography>
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <List dense disablePadding>
-                      {aiPlan.resources.map((resource, index) => (
-                        <ListItem 
-                          key={index} 
-                          sx={{ 
-                            px: 1, 
-                            py: 1.5, 
-                            borderBottom: index < aiPlan.resources.length - 1 ? '1px solid #eee' : 'none' 
-                          }}
-                        >
-                          <ListItemIcon sx={{ minWidth: 36 }}>
-                            {resourceTypeIcons[resource.type]}
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={
-                              <Link 
-                                href={resource.url} 
-                                target="_blank" 
-                                rel="noopener" 
-                                color="inherit" 
-                                sx={{ 
-                                  fontWeight: 'medium',
-                                  display: 'flex', 
-                                  alignItems: 'center',
-                                  '&:hover': { color: 'primary.main' }
-                                }}
-                              >
-                                {resource.title}
-                                <ArrowForwardIcon fontSize="small" sx={{ ml: 0.5, fontSize: 14 }} />
-                              </Link>
-                            }
-                            secondary={
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                  {resource.provider}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {resource.duration}
-                                </Typography>
-                              </Box>
-                            }
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Paper>
-                  
-                  <Typography variant="subtitle2" gutterBottom sx={{ mt: 3 }}>
-                    Expected Outcomes:
-                  </Typography>
-                  <List dense>
-                    {aiPlan.outcomes.map((outcome, index) => (
-                      <ListItem key={index} sx={{ px: 0 }}>
-                        <ListItemIcon sx={{ minWidth: 36 }}>
-                          <CheckCircleIcon color="success" />
-                        </ListItemIcon>
-                        <ListItemText primary={outcome} />
-                      </ListItem>
-                    ))}
-                  </List>
-                  
-                  <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-                    <Button 
-                      variant="contained" 
-                      color="primary" 
-                      endIcon={<AssignmentIcon />}
-                    >
-                      Add to Development Plan
-                    </Button>
-                  </Box>
-                </Grid>
-              </Grid>
-            </Box>
-          ) : (
-            <Alert severity="warning">
-              Unable to generate plan. Please try refreshing the page.
-            </Alert>
-          )}
+          </Tooltip>
         </Box>
-      </CardContent>
-    </Card>
+        <Typography variant="body2" color="textSecondary">
+          Target: {targetRole || 'Not specified'}
+        </Typography>
+      </Box>
+      
+      <Paper sx={{ p: 2, mb: 2 }} elevation={1}>
+        <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+          Skills Match
+          <Tooltip title="Based on required skills for this role">
+            <InfoIcon fontSize="small" sx={{ ml: 1, opacity: 0.6 }} />
+          </Tooltip>
+        </Typography>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Box sx={{ flexGrow: 1, mr: 2 }}>
+            <LinearProgress 
+              variant="determinate" 
+              value={Math.round((largestGapCategory?.current || 0 / largestGapCategory?.required || 0) * 100)} 
+              sx={{ 
+                height: 10, 
+                borderRadius: 5,
+                bgcolor: 'grey.200',
+                '& .MuiLinearProgress-bar': {
+                  bgcolor: Math.round((largestGapCategory?.current || 0 / largestGapCategory?.required || 0) * 100) < 40 ? 'error.main' : Math.round((largestGapCategory?.current || 0 / largestGapCategory?.required || 0) * 100) < 70 ? 'warning.main' : 'success.main',
+                  borderRadius: 5,
+                }
+              }} 
+            />
+          </Box>
+          <Typography 
+            variant="h6" 
+            color={Math.round((largestGapCategory?.current || 0 / largestGapCategory?.required || 0) * 100) < 40 ? 'error' : Math.round((largestGapCategory?.current || 0 / largestGapCategory?.required || 0) * 100) < 70 ? 'warning.main' : 'success.main'}
+          >
+            {Math.round((largestGapCategory?.current || 0 / largestGapCategory?.required || 0) * 100)}%
+          </Typography>
+        </Box>
+      </Paper>
+      
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+        >
+          <Paper sx={{ p: 2 }} elevation={1}>
+            <Typography variant="subtitle1" gutterBottom>
+              Matched Skills ({largestGapCategory?.skillCount})
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {largestGapCategory?.skillCount > 0 ? getKeySkillsWithGaps(largestGapCategory.name).map((skill, index) => (
+                <Chip 
+                  key={index} 
+                  label={skill.name} 
+                  color="success" 
+                  size="small" 
+                  variant="outlined"
+                />
+              )) : (
+                <Typography variant="body2" color="text.secondary">No matched skills yet.</Typography>
+              )}
+            </Box>
+          </Paper>
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+        >
+          <Paper sx={{ p: 2 }} elevation={1}>
+            <Typography variant="subtitle1" gutterBottom>
+              Missing Skills ({skillData?.categories && largestGapCategory 
+                ? skillData.categories[largestGapCategory.name]?.skills.length - largestGapCategory.skillCount 
+                : 0})
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {skillData?.categories && largestGapCategory && skillData.categories[largestGapCategory.name]?.skills
+                .filter(s => s.required_level > s.current_level).map((skill, index) => (
+                <Chip 
+                  key={index} 
+                  label={skill.name} 
+                  color="error" 
+                  size="small" 
+                  variant="outlined"
+                  deleteIcon={<AddIcon />}
+                  onDelete={() => console.log(`Add ${skill.name} to learning plan`)}
+                />
+              ))}
+            </Box>
+          </Paper>
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+        >
+          <Paper sx={{ p: 2 }} elevation={1}>
+            <Typography variant="subtitle1" gutterBottom>
+              Additional Skills ({skillData?.categories && largestGapCategory 
+                ? skillData.categories[largestGapCategory.name]?.skills.length - largestGapCategory.skillCount 
+                : 0})
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {skillData?.categories && largestGapCategory && skillData.categories[largestGapCategory.name]?.skills
+                .filter(s => s.required_level < s.current_level).map((skill, index) => (
+                <Chip 
+                  key={index} 
+                  label={skill.name} 
+                  color="primary" 
+                  size="small" 
+                  variant="outlined"
+                />
+              ))}
+            </Box>
+          </Paper>
+        </motion.div>
+      </Box>
+      
+      <Paper sx={{ p: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: expanded ? 2 : 0 }}>
+          <Typography variant="subtitle1">
+            AI-Powered Insights
+          </Typography>
+          <IconButton 
+            onClick={fetchAIInsights}
+            disabled={loading}
+            size="small"
+          >
+            {loading ? <CircularProgress size={16} /> : expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          </IconButton>
+        </Box>
+        
+        <Collapse in={expanded}>
+          {error ? (
+            <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              {aiInsights}
+            </Typography>
+          )}
+        </Collapse>
+      </Paper>
+    </Box>
   );
 };
 

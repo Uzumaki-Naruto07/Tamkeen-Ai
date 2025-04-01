@@ -1,7 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
 import { api } from '../api/apiClient';
-import { AUTH, USER } from '../api/endpoints';
-import { jobEndpoints } from '../utils/endpoints';
+import { AUTH_ENDPOINTS, USER_ENDPOINTS, JOB_ENDPOINTS } from '../api/endpoints';
 import i18n from '../i18n';
 import { initializeTheme, setTheme, toggleTheme as toggleThemeUtil } from '../utils/themeToggle';
 
@@ -260,7 +259,7 @@ export const AppContextProvider = ({ children }) => {
       // Try to fetch from API if user is authenticated
       if (user && user.id) {
         try {
-          const response = await jobEndpoints.jobs.getSavedJobs(user.id);
+          const response = await JOB_ENDPOINTS.jobs.getSavedJobs(user.id);
           if (response && response.success && response.data) {
             setSavedJobs(response.data);
             return response.data;
@@ -284,7 +283,7 @@ export const AppContextProvider = ({ children }) => {
       // Try to remove from API if user is authenticated
       if (user && user.id) {
         try {
-          await jobEndpoints.jobs.unsaveJob(jobId);
+          await JOB_ENDPOINTS.jobs.unsaveJob(jobId);
         } catch (error) {
           console.log('Error removing job from API:', error);
           // Continue with local removal even if API fails
@@ -348,7 +347,7 @@ export const AppContextProvider = ({ children }) => {
           }
           
           // Normal API call in production
-          const response = await api.get(USER.GET_CURRENT);
+          const response = await api.get(AUTH_ENDPOINTS.ME);
           setUser(response.data.data);
           setUserRoles(response.data.data.roles || []);
           
@@ -373,7 +372,7 @@ export const AppContextProvider = ({ children }) => {
   // Fetch user profile
   const fetchUserProfile = async () => {
     try {
-      const response = await api.get(USER.GET_PROFILE);
+      const response = await api.get(USER_ENDPOINTS.PROFILE);
       setProfile(response.data.data.profile || {});
     } catch (err) {
       console.error('Failed to fetch user profile:', err);
@@ -522,7 +521,7 @@ export const AppContextProvider = ({ children }) => {
       }
       
       // Real API call for production
-      const response = await api.put(USER.UPDATE_PROFILE, profileData);
+      const response = await api.put(USER_ENDPOINTS.UPDATE_PROFILE, profileData);
       const updatedProfile = response.data.data.profile;
       setProfile(updatedProfile);
       
@@ -587,7 +586,7 @@ export const AppContextProvider = ({ children }) => {
     }
   };
   
-  // Login function - fixed to use AUTH endpoint and prevent duplicate calls
+  // Login function - fixed to use AUTH_ENDPOINTS endpoint and prevent duplicate calls
   const login = async (email, password) => {
     if (isLoggingIn) return { success: false, error: 'Login already in progress' };
     
@@ -596,8 +595,8 @@ export const AppContextProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      // Always use AUTH.LOGIN instead of USER.LOGIN to prevent multiple calls
-      const response = await api.post(AUTH.LOGIN, { email, password });
+      // Always use AUTH_ENDPOINTS.LOGIN instead of USER.LOGIN to prevent multiple calls
+      const response = await api.post(AUTH_ENDPOINTS.LOGIN, { email, password });
       
       // Check if response has the expected structure
       if (!response || !response.data || !response.data.data) {
@@ -660,7 +659,7 @@ export const AppContextProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const response = await api.post(AUTH.REGISTER, userData);
+      const response = await api.post(AUTH_ENDPOINTS.REGISTER, userData);
       const { token, user } = response.data.data;
       
       // Store token
@@ -710,7 +709,7 @@ export const AppContextProvider = ({ children }) => {
   // Fetch notifications
   const fetchNotifications = async () => {
     try {
-      const response = await api.get(USER.GET_NOTIFICATIONS);
+      const response = await api.get(USER_ENDPOINTS.GET_NOTIFICATIONS);
       const notifications = response.data.data.notifications || [];
       setNotifications(notifications);
       setUnreadCount(notifications.filter(n => !n.read).length);
@@ -725,7 +724,7 @@ export const AppContextProvider = ({ children }) => {
   // Mark notification as read
   const markNotificationAsRead = async (id) => {
     try {
-      await api.put(USER.MARK_NOTIFICATION_READ(id));
+      await api.put(USER_ENDPOINTS.MARK_NOTIFICATION_READ(id));
       
       // Update notifications state
       setNotifications(prevNotifications => 

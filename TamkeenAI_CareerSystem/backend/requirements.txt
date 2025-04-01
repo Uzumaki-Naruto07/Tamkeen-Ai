@@ -1,5 +1,4 @@
-# Python version requirement
-python_version<3.12
+# Requires Python version < 3.12 for compatibility with some packages
 
 # Core dependencies with compatible versions
 typing-extensions==4.5.0  # Version that works with TensorFlow
@@ -92,6 +91,8 @@ python-dateutil==2.8.2
 # 1. First install portaudio: brew install portaudio
 # 2. Then try: pip install PyAudio
 # Note: If you're having issues, you may need to skip PyAudio or install an alternative
+# Audio processing
+PyAudio==0.2.14  # Use clang on macOS: export CC=clang before pip install
 
 # For emotion detection
 tensorflow>=2.10.0

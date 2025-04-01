@@ -227,7 +227,7 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
         />
       </Box>
       
-      <Typography variant="body2" paragraph>
+      <Typography variant="body2" component="div" sx={{ mb: 2 }}>
         {prediction.description}
       </Typography>
       

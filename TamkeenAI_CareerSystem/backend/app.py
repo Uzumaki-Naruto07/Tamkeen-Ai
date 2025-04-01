@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 # Load environment variables at the very beginning
 load_dotenv()
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import argparse
 import logging
@@ -81,8 +81,21 @@ def create_app():
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload size
     
-    # Enable CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # Enable CORS for the entire application with proper configuration
+    # Use a more permissive CORS policy to resolve preflight issues
+    CORS(app, origins=[
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000", 
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "*"  # For development only - remove in production
+    ],
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         expose_headers=["Content-Disposition"],
+         supports_credentials=True)
     
     # Register blueprints
     app.register_blueprint(user_bp, url_prefix='/api/user')
@@ -97,6 +110,64 @@ def create_app():
     app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(confidence_charts)
+    
+    # Add a default response for OPTIONS requests globally
+    @app.after_request
+    def after_request(response):
+        # Add CORS headers to all responses
+        origin = request.headers.get('Origin')
+        
+        # In development mode, be more permissive with CORS
+        if os.getenv('FLASK_ENV') != 'production' or app.debug:
+            response.headers.add('Access-Control-Allow-Origin', origin or '*')
+            response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+        else:
+            # In production, only allow the configured frontend origins
+            allowed_origins = [
+                "http://localhost:3000", 
+                "http://127.0.0.1:3000", 
+                "http://localhost:5173", 
+                "http://127.0.0.1:5173",
+                "http://localhost:3001",
+                "http://127.0.0.1:3001"
+            ]
+            if origin and origin in allowed_origins:
+                response.headers.add('Access-Control-Allow-Origin', origin)
+                
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Expose-Headers', 'Content-Disposition')
+        
+        # Ensure OPTIONS requests always return 200
+        if request.method == "OPTIONS":
+            response.status_code = 200
+            
+        return response
+    
+    # Add a route handler for user profile by ID
+    @app.route('/api/user/profile/<user_id>', methods=['GET', 'OPTIONS'])
+    def get_user_profile_by_id(user_id):
+        try:
+            # This is a mock implementation - in production you would fetch the actual user
+            # Import here to check MongoDB status during health check
+            from api.utils.mock_data import get_mock_user_profile
+            
+            # Generate mock user profile data
+            profile_data = get_mock_user_profile(user_id)
+            
+            return jsonify({
+                "status": "success",
+                "data": profile_data
+            })
+        except Exception as e:
+            logger.error(f"Error getting user profile: {str(e)}")
+            return jsonify({
+                "status": "error",
+                "message": f"Failed to get user profile: {str(e)}"
+            }), 500
     
     @app.route('/api/health-check')
     def health_check():
@@ -137,6 +208,48 @@ def create_app():
             return jsonify({
                 "status": "error",
                 "message": f"Failed to get dashboard data: {str(e)}"
+            }), 500
+            
+    @app.route('/api/dashboard/data')
+    def get_dashboard_data():
+        """Get general dashboard data"""
+        try:
+            # Import here to check MongoDB status during health check
+            from api.utils.mock_data import get_mock_dashboard_data
+            
+            # Generate mock dashboard data for a generic user
+            data = get_mock_dashboard_data("current")
+            
+            return jsonify({
+                "status": "success",
+                "data": data
+            })
+        except Exception as e:
+            logger.error(f"Error getting dashboard data: {str(e)}")
+            return jsonify({
+                "status": "error",
+                "message": f"Failed to get dashboard data: {str(e)}"
+            }), 500
+            
+    @app.route('/api/data')
+    def get_data():
+        """Get general data (alias for dashboard data)"""
+        try:
+            # Import here to check MongoDB status during health check
+            from api.utils.mock_data import get_mock_dashboard_data
+            
+            # Generate mock dashboard data for a generic user
+            data = get_mock_dashboard_data("current")
+            
+            return jsonify({
+                "status": "success",
+                "data": data
+            })
+        except Exception as e:
+            logger.error(f"Error getting data: {str(e)}")
+            return jsonify({
+                "status": "error",
+                "message": f"Failed to get data: {str(e)}"
             }), 500
     
     return app

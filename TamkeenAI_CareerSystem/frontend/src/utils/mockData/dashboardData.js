@@ -3,8 +3,9 @@
  * This data simulates API responses for development and testing
  */
 
+// Make sure all required data is included even if not populated
 const mockDashboardData = {
-  // User progress data
+  // Ensure these fields exist for compatibility with the Dashboard component
   progress: {
     level: 3,
     xp: 750,
@@ -28,7 +29,21 @@ const mockDashboardData = {
       { id: 1, name: "First Resume", name_ar: "السيرة الذاتية الأولى", icon: "description", earned: true },
       { id: 2, name: "Interview Ready", name_ar: "جاهز للمقابلة", icon: "record_voice_over", earned: true },
       { id: 3, name: "Network Builder", name_ar: "بناء الشبكات", icon: "people", earned: false }
-    ]
+    ],
+    // Additional fields for component compatibility
+    overall: 65,
+    resume: 80,
+    skills: 70,
+    applications: 50, 
+    interviews: 60,
+    networking: 55,
+    goals: [
+      { id: 1, name: 'Complete profile', progress: 100, completed: "true", unlocked: "true" },
+      { id: 2, name: 'Apply to 5 jobs', progress: 60, completed: "false", unlocked: "true" },
+      { id: 3, name: 'Update resume', progress: 80, completed: "false", unlocked: "true" }
+    ],
+    nextSteps: ['Update LinkedIn profile', 'Practice interview skills'],
+    completedGoals: 8
   },
   
   // Resume score data
@@ -330,7 +345,20 @@ const mockDashboardData = {
   },
   
   // Last updated timestamp
-  last_updated: new Date().toISOString()
+  last_updated: new Date().toISOString(),
+  
+  // Add additional fields that might be required but missing
+  currentSkills: ['React', 'JavaScript', 'CSS', 'HTML', 'Node.js'],
+  requiredSkills: ['React', 'JavaScript', 'TypeScript', 'Next.js', 'GraphQL'],
+  targetRole: 'Frontend Developer',
+  todaysSchedule: [],
+  weeklyGoals: [],
+  jobRecommendations: [],
+  
+  // Ensure these exist for the full dashboard experience
+  opportunities: { jobs: [], courses: [] },
+  topUsers: [],
+  topPerformers: []
 };
 
 export default mockDashboardData;

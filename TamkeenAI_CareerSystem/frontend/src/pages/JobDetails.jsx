@@ -27,7 +27,7 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useUser, useResume, useJob } from '../context/AppContext';
-import { api, jobEndpoints } from '../utils/api';
+import { api, JOB_ENDPOINTS } from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format, formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
@@ -113,8 +113,8 @@ const JobDetails = () => {
         // Check if the API functions exist, otherwise use mock implementations
         const getJobData = async (id) => {
           try {
-            if (jobEndpoints.getJobById) {
-              return await jobEndpoints.getJobById(id);
+            if (JOB_ENDPOINTS.getJobById) {
+              return await JOB_ENDPOINTS.getJobById(id);
             } else {
               console.log("Using mock getJobById implementation");
               // Use pre-existing jobs search function if available
@@ -1170,8 +1170,8 @@ const JobDetails = () => {
         
         const getSavedJobs = async (userId) => {
           try {
-            if (jobEndpoints.getSavedJobs) {
-              return await jobEndpoints.getSavedJobs(userId);
+            if (JOB_ENDPOINTS.getSavedJobs) {
+              return await JOB_ENDPOINTS.getSavedJobs(userId);
             } else {
               console.log("Using mock getSavedJobs implementation");
               return { data: [] };
@@ -1184,8 +1184,8 @@ const JobDetails = () => {
         
         const getSimilarJobs = async (jobId) => {
           try {
-            if (jobEndpoints.getSimilarJobs) {
-              return await jobEndpoints.getSimilarJobs(jobId);
+            if (JOB_ENDPOINTS.getSimilarJobs) {
+              return await JOB_ENDPOINTS.getSimilarJobs(jobId);
             } else {
               console.log("Using mock getSimilarJobs implementation");
               // Enhanced mock similar jobs with additional roles
@@ -1387,8 +1387,8 @@ const JobDetails = () => {
         
         const calculateSkillsMatch = async (jobId, userId) => {
           try {
-            if (jobEndpoints.calculateSkillsMatch) {
-              return await jobEndpoints.calculateSkillsMatch(jobId, userId);
+            if (JOB_ENDPOINTS.calculateSkillsMatch) {
+              return await JOB_ENDPOINTS.calculateSkillsMatch(jobId, userId);
             } else {
               console.log("Using mock calculateSkillsMatch implementation");
               return { 
@@ -1903,8 +1903,8 @@ const JobDetails = () => {
     try {
       // Create mock function if it doesn't exist
       const applyToJob = async (applicationData) => {
-        if (jobEndpoints.apply) {
-          return await jobEndpoints.apply(applicationData);
+        if (JOB_ENDPOINTS.apply) {
+          return await JOB_ENDPOINTS.apply(applicationData);
         } else {
           console.log("Using mock job application implementation");
           // Simulate API delay
@@ -1948,8 +1948,8 @@ const JobDetails = () => {
     try {
       // Create mock function if it doesn't exist
       const shareJobViaEmail = async (shareData) => {
-        if (jobEndpoints.shareJob) {
-          return await jobEndpoints.shareJob(shareData);
+        if (JOB_ENDPOINTS.shareJob) {
+          return await JOB_ENDPOINTS.shareJob(shareData);
         } else {
           console.log("Using mock shareJob implementation");
           // Simulate API delay
@@ -1988,8 +1988,8 @@ const JobDetails = () => {
     try {
       // Create mock function if it doesn't exist
       const reportJobListing = async (reportData) => {
-        if (jobEndpoints.reportJob) {
-          return await jobEndpoints.reportJob(reportData);
+        if (JOB_ENDPOINTS.reportJob) {
+          return await JOB_ENDPOINTS.reportJob(reportData);
         } else {
           console.log("Using mock reportJob implementation");
           // Simulate API delay

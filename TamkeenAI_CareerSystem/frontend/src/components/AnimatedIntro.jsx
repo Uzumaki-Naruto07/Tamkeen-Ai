@@ -319,12 +319,12 @@ const AnimatedIntro = ({ onComplete }) => {
               </Typography>
             </motion.div>
             <motion.div variants={itemVariants}>
-              <Typography variant="body1" paragraph>
+              <Typography variant="body1" component="div">
                 Your AI-powered career companion, designed to help you build skills, prepare for interviews, and find the perfect job. Let's get started with setting up your personalized profile.
               </Typography>
             </motion.div>
             <motion.div variants={itemVariants}>
-              <Typography variant="body1" paragraph>
+              <Typography variant="body1" component="div">
                 This quick setup will help us customize your experience. You can always update your preferences later.
               </Typography>
             </motion.div>
@@ -709,7 +709,7 @@ const AnimatedIntro = ({ onComplete }) => {
               </Typography>
             </motion.div>
             <motion.div variants={itemVariants}>
-              <Typography variant="body1" paragraph>
+              <Typography variant="body1" component="div" paragraph>
                 Thank you for completing your profile. Your personalized career dashboard is now ready.
               </Typography>
             </motion.div>

@@ -21,7 +21,8 @@ import {
   ListItemIcon,
   ListItemText,
   TextField,
-  Paper
+  Paper,
+  Badge
 } from '@mui/material';
 import WorkIcon from '@mui/icons-material/Work';
 import SchoolIcon from '@mui/icons-material/School';
@@ -37,6 +38,8 @@ import LaunchIcon from '@mui/icons-material/Launch';
 import StarsIcon from '@mui/icons-material/Stars';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import SendIcon from '@mui/icons-material/Send';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import { styled } from '@mui/material/styles';
 import { motion, AnimatePresence } from 'framer-motion';
 import chatService from '../../api/chatgpt';
@@ -140,10 +143,11 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
     setError(null);
     
     try {
-      // In a real app, this would be a call to the actual API
-      // Here we're using the chat service
+      // Make a direct call to the ChatGPT API endpoint
       const message = `Why is this ${recommendation.type} called "${recommendation.title}" a good match for me? Give a brief explanation.`;
+      console.log('Sending AI explanation request to ChatGPT API');
       const response = await chatService.sendMessage(message, JSON.stringify(profile), 'recommendation');
+      console.log('Received AI explanation response:', response);
       setAiExplanation(response.response);
     } catch (err) {
       console.error('Error fetching AI explanation:', err);
@@ -156,7 +160,7 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
         skill: "This skill is becoming increasingly important in your field. Based on your career goals and job market trends, developing this skill would complement your existing abilities and open up new opportunities."
       };
       
-      setAiExplanation(fallbackExplanations[recommendation.type.toLowerCase()] || 
+      setAiExplanation(fallbackExplanations[recommendation.type?.toLowerCase()] || 
         "This recommendation is based on your profile data, career goals, and current market trends.");
     } finally {
       setLoading(false);
@@ -343,6 +347,17 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
               <Typography variant="body2" color="text.secondary">
                 AI Explanation
               </Typography>
+              <Tooltip title={error ? "AI service disconnected" : "AI service connected"}>
+                <Box component="span" sx={{ ml: 1, display: 'inline-flex', alignItems: 'center' }}>
+                  {error ? 
+                    <Badge color="error" variant="dot" sx={{ '& .MuiBadge-badge': { right: 3, top: 3 } }}>
+                      <CloudOffIcon fontSize="small" color="error" sx={{ fontSize: '0.875rem' }} />
+                    </Badge> 
+                    :
+                    <CloudDoneIcon fontSize="small" color="success" sx={{ fontSize: '0.875rem' }} />
+                  }
+                </Box>
+              </Tooltip>
             </Box>
             <ExpandButton
               onClick={handleExpandClick}

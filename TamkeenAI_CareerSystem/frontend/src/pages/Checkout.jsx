@@ -558,7 +558,8 @@ For any questions, please contact support@tamkeen-ai.com
               
               <Grid item xs={12} md={6}>
                 <Typography variant="body1"><strong>Amount Paid:</strong> AED {(isPackagePurchase ? packageDetails.price : bookingDetails.price).toFixed(0)}</Typography>
-                <Typography variant="body1"><strong>Status:</strong> <Chip label="Paid" color="success" size="small" /></Typography>
+                <Typography variant="body1"><strong>Status:</strong></Typography>
+                <Chip label="Paid" color="success" size="small" sx={{ ml: 1 }} />
               </Grid>
             </Grid>
             
