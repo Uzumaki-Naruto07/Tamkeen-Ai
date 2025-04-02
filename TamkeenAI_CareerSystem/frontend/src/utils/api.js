@@ -25,7 +25,7 @@ const api = axios.create({
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest'
   },
-  withCredentials: false // Important for CORS preflight requests
+  withCredentials: false // Keep as false to avoid CORS issues with wildcard origin responses
 });
 
 // Create a separate instance for interview API
@@ -37,7 +37,7 @@ const interviewApi = axios.create({
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest'
   },
-  withCredentials: false
+  withCredentials: false // Keep as false to avoid CORS issues with wildcard origin responses
 });
 
 // Set up global variable to track if backend is available
@@ -74,13 +74,18 @@ const checkBackendAvailability = async () => {
   
   backendCheckInProgress = true;
   try {
-    // Try to hit the interviews/topics endpoint, which we know works
-    const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/interviews/topics`, {
+    // Try to hit the health check endpoint, with minimal headers to avoid CORS
+    const response = await axios({
+      method: 'get',
+      url: `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/health-check`,
       timeout: 2000,
       headers: {
         'Accept': 'application/json'
-      }
+        // Explicitly NOT including Authorization header to avoid CORS preflight
+      },
+      withCredentials: false
     });
+    
     isBackendAvailable = response.status === 200;
     console.log('Backend availability check:', isBackendAvailable ? 'CONNECTED' : 'DISCONNECTED');
   } catch (err) {
@@ -109,6 +114,14 @@ api.interceptors.request.use(async (config) => {
     if (!isAvailable) {
       console.log(`Backend appears to be unavailable, request may fail: ${config.url}`);
     }
+  }
+
+  // Handle authentication tokens without causing CORS preflight issues
+  const token = localStorage.getItem('token');
+  if (token) {
+    // Add token to auth header - use X-Auth-Token which doesn't trigger CORS preflight
+    // This is safer than using Authorization: Bearer which requires preflight for CORS
+    config.headers['X-Auth-Token'] = token;
   }
   
   // Always log the request URL for debugging
@@ -152,19 +165,35 @@ api.interceptors.response.use(
       return Promise.resolve({ data: null, status: 408, statusText: 'Request Timeout' });
     }
     
-    // Handle 401 Unauthorized errors
+    // Handle 401 Unauthorized errors - DON'T redirect, just clear token
     if (error.response && error.response.status === 401) {
-      // Clear token and redirect to login
+      // Clear token but don't redirect - let React context handle this 
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Don't use window.location.href to avoid breaking React context
+      console.warn('Authentication token expired or invalid');
+    }
+    
+    // Handle METHOD NOT ALLOWED errors (405)
+    if (error.response && error.response.status === 405) {
+      console.warn('Method not allowed - falling back to mock data');
+      // This is a server config issue where the API method configuration is incorrect
+      return Promise.resolve({ data: null, status: 405, statusText: 'Method Not Allowed' });
     }
     
     // Handle CORS or network errors gracefully
     if (error.code === 'ERR_NETWORK' || (error.response && error.response.status === 0)) {
-      console.warn('Network or CORS error occurred - falling back to mock data');
+      console.warn('Network or CORS error detected, using mock fallbacks');
       // Mark backend as unavailable to skip future real API calls
       isBackendAvailable = false;
+      // Set a temporary flag to avoid repeated failed requests
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('backend-unavailable', 'true');
+        // Clear after 30 seconds
+        setTimeout(() => {
+          localStorage.removeItem('backend-unavailable');
+        }, 30000);
+      }
       // Return a resolved promise with null to allow fallback to mock data
       return Promise.resolve({ data: null, status: 0, statusText: 'Network Error' });
     }
@@ -178,6 +207,46 @@ export const isBackendDown = () => !isBackendAvailable;
 
 // Export API for direct use
 export { api, checkBackendAvailability };
+
+/**
+ * Reset backend availability flags and try to reconnect
+ * Call this function when you want to force a retry of real API calls
+ */
+export const resetBackendAvailability = async () => {
+  // Clear local storage flags
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('backend-unavailable');
+    // Clear all mock warnings too
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('mock-warning-')) {
+        localStorage.removeItem(key);
+      }
+    });
+  }
+  
+  // Reset in-memory flag
+  isBackendAvailable = false;
+  
+  // Try to check backend availability
+  const available = await checkBackendAvailability();
+  
+  console.log(`Backend availability reset: ${available ? 'CONNECTED' : 'DISCONNECTED'}`);
+  return available;
+};
+
+// Set up a periodic check to see if backend comes back online
+if (typeof window !== 'undefined') {
+  // Check every 2 minutes
+  setInterval(async () => {
+    if (!isBackendAvailable) {
+      const available = await checkBackendAvailability();
+      if (available) {
+        console.log('Backend is now available, resetting state');
+        resetBackendAvailability();
+      }
+    }
+  }, 120000); // 2 minutes
+}
 
 // Centralized API endpoints
 const apiEndpoints = {
@@ -193,17 +262,26 @@ const apiEndpoints = {
   interviews: {
     createOrLoadConversation: async (userId) => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/interviews/conversation`, {
-          method: 'POST',
+        // Use axios directly to avoid authorization headers and CORS issues
+        const response = await axios({
+          method: 'post',
+          url: `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/interviews/conversation`, 
+          data: { userId },
           headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json'
+            // Explicitly NOT including Authorization header to avoid CORS preflight
           },
-          body: JSON.stringify({ userId }),
+          withCredentials: false
         });
-        return await response.json();
+        return response.data;
       } catch (error) {
         console.error('Error creating conversation:', error);
-        throw error;
+        // Use mock data as fallback
+        return {
+          conversationId: 'mock-convo-' + Date.now(),
+          messages: []
+        };
       }
     },
     getPreviousConversations: (userId) => interviewApi.get(`/interviews/conversations/${userId}`).catch(error => {
@@ -425,8 +503,18 @@ const apiEndpoints = {
   chat: {
     getRecommendation: async (prompt) => {
       try {
-        // Try to use the real API first
-        const response = await api.post('/chat/ai/recommendation', { prompt });
+        // Try to use the real API first, with a specially configured request to avoid CORS issues
+        const response = await axios({
+          method: 'post',
+          url: `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/chat/ai/recommendation`, 
+          data: { prompt },
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+            // Explicitly NOT including Authorization header to avoid CORS preflight
+          },
+          withCredentials: false
+        });
         return response;
       } catch (error) {
         console.log('Using mock data for AI recommendation', error);

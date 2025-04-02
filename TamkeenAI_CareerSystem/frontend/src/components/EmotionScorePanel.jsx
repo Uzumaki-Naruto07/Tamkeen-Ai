@@ -35,11 +35,20 @@ import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import InfoIcon from '@mui/icons-material/Info';
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
-import { Sentiment, SentimentSatisfied, SentimentVeryDissatisfied, SentimentNeutral, Videocam, VideocamOff } from '@mui/icons-material';
+import { SentimentSatisfied, SentimentVeryDissatisfied, SentimentNeutral, Videocam, VideocamOff, Face } from '@mui/icons-material';
 import { Doughnut } from 'react-chartjs-2';
+import { 
+  Chart as ChartJS, 
+  ArcElement, 
+  Tooltip as ChartTooltip, 
+  Legend 
+} from 'chart.js';
 import CameraFeed from './CameraFeed';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
+
+// Register required Chart.js components
+ChartJS.register(ArcElement, ChartTooltip, Legend);
 
 // Define emotion colors and their corresponding icons
 const emotionConfig = {
@@ -291,7 +300,7 @@ const EmotionScorePanel = ({
   return (
     <Paper sx={{ p: 2 }}>
       <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-        <Sentiment sx={{ mr: 1 }} />
+        <Face sx={{ mr: 1 }} />
         Emotion Assessment
       </Typography>
       

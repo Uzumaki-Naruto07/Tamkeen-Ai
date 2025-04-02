@@ -108,14 +108,51 @@ const processMockData = (data, params) => {
  */
 export const withMockFallback = async (apiCall, mockDataKey, params = {}, showWarning = true) => {
   try {
+    // Check if we already know the backend is unavailable
+    const isUnavailable = typeof window !== 'undefined' && 
+      localStorage.getItem('backend-unavailable') === 'true';
+    
+    // If backend is unavailable, skip API call and use mock data immediately
+    if (isUnavailable) {
+      console.log(`Backend is marked unavailable, skipping API call for ${mockDataKey}`);
+      throw new Error("Backend known to be unavailable");
+    }
+    
     // Attempt the actual API call
     const response = await apiCall(params);
+    
+    // If response exists but has null data, fall back to mock
+    if (!response || !response.data) {
+      throw new Error("Empty API response");
+    }
+    
     return response;
   } catch (error) {
     console.error(`API call failed, falling back to mock data for: ${mockDataKey}`, error);
     
+    // Check for CORS or network errors specifically
+    const isNetworkError = error.message && (
+      error.message.includes('CORS') || 
+      error.message.includes('NetworkError') ||
+      error.message.includes('Network Error')
+    );
+    
+    const isMethodNotAllowed = error.response && error.response.status === 405;
+    
+    if (isNetworkError || isMethodNotAllowed) {
+      console.warn('Development mode - CORS or Network error detected, using mock fallbacks');
+      // Mark backend as unavailable for future requests (but only temporarily)
+      if (typeof window !== 'undefined' && !localStorage.getItem('backend-unavailable')) {
+        localStorage.setItem('backend-unavailable', 'true');
+        // Clear this flag after 30 seconds to try again later
+        setTimeout(() => {
+          localStorage.removeItem('backend-unavailable');
+        }, 30000);
+      }
+    }
+    
     // Show warning toast only once per session for this type of data
-    if (showWarning && !localStorage.getItem(`mock-warning-${mockDataKey}`)) {
+    if (showWarning && typeof window !== 'undefined' && !localStorage.getItem(`mock-warning-${mockDataKey}`)) {
       toast.warn(`Using mock data for ${mockDataKey} because the backend is unavailable.`, {
         position: "top-right",
         autoClose: 5000,

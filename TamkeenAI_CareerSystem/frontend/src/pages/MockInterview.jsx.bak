@@ -1063,7 +1063,6 @@ const MockInterview = () => {
         
         // Check if this is a valid response or a no-speech situation
         const noSpeechDetected = finalTranscription.includes("I didn't catch what you said") || 
-                                  finalTranscription.includes("No speech detected") ||
                                   finalTranscription.trim().length === 0 ||
                                   finalTranscription.split(/\s+/).filter(w => w.length > 0).length <= 3;
         
@@ -1189,50 +1188,18 @@ const MockInterview = () => {
       console.error('Missing interview data for upload');
       return;
     }
-
+    
     try {
       console.log('Preparing interview data for upload...');
       
-      // Create a unique interview ID if needed
-      const uniqueInterviewId = interviewId || 'mock-interview-' + Date.now();
-      
       // Create a structured interview object
       const interviewData = {
-        id: uniqueInterviewId,
-        title: selectedCategory ? `${selectedCategory} Interview` : 'Mock Interview',
+        id: interviewId,
+        title: jobTitle || 'Mock Interview',
         date: new Date().toISOString(),
-        duration: Math.round(interviewSettings.duration * 60 - remainingTime) / 60 || 15,
+        duration: Math.round((Date.now() - interviewStartTimeRef.current) / 60000) || 15,
         questions: interviewQuestions.map((question, index) => {
           const answer = answers[index] || null;
-          
-          // Process answer data and handle no-speech scenarios
-          let processedAnalysis = {
-            technical: 50,
-            communication: 50,
-            problemSolving: 50,
-            culturalFit: 50,
-            overall: 50,
-            category: 'Average'
-          };
-          
-          if (answer) {
-            const wasNoSpeech = answer.analysis?.category === 'No Answer' || 
-                               answer.transcription?.includes("I didn't catch what you said") ||
-                               answer.transcription?.includes("No speech detected");
-            
-            if (wasNoSpeech) {
-              processedAnalysis = {
-                technical: 0,
-                communication: 0,
-                problemSolving: 0,
-                culturalFit: 0,
-                overall: 0,
-                category: 'No Answer'
-              };
-            } else if (answer.analysis) {
-              processedAnalysis = answer.analysis;
-            }
-          }
           
           return {
             id: `q${index + 1}`,
@@ -1241,7 +1208,14 @@ const MockInterview = () => {
             answer: answer ? {
               transcription: answer.transcription || '',
               videoUrl: answer.videoUrl || null,
-              analysis: processedAnalysis
+              analysis: answer.analysis || {
+                technical: 50,
+                communication: 50,
+                problemSolving: 50,
+                culturalFit: 50,
+                overall: 50,
+                category: 'Average'
+              }
             } : null
           };
         })
@@ -1251,13 +1225,8 @@ const MockInterview = () => {
       
       // Store in localStorage for persistence across page loads
       try {
-        localStorage.setItem(`interview-${uniqueInterviewId}`, JSON.stringify(interviewData));
+        localStorage.setItem(`interview-${interviewId}`, JSON.stringify(interviewData));
         console.log('Interview data saved to localStorage');
-        
-        // Set the ID we'll use for navigation
-        if (interviewId !== uniqueInterviewId) {
-          setInterviewId(uniqueInterviewId);
-        }
       } catch (e) {
         console.error('Failed to save interview to localStorage:', e);
       }
@@ -1266,7 +1235,7 @@ const MockInterview = () => {
       try {
         const formData = new FormData();
         formData.append('interviewData', JSON.stringify(interviewData));
-        formData.append('interviewId', uniqueInterviewId);
+        formData.append('interviewId', interviewId);
         
         mockInterviewApi.submitInterview(formData)
           .then(response => {
@@ -1279,7 +1248,7 @@ const MockInterview = () => {
         console.error('Error preparing interview data for server upload:', e);
       }
       
-      return uniqueInterviewId;
+      return interviewData;
     } catch (error) {
       console.error('Error in uploadInterviewData:', error);
       return null;
@@ -1874,9 +1843,7 @@ const MockInterview = () => {
                     sx={{ p: 2, mb: 2, bgcolor: quickFeedback.overall === 0 ? '#fff5f5' : '#f9f9f9', maxHeight: 150, overflow: 'auto' }}
                   >
                     <Typography variant="body2" color={quickFeedback.overall === 0 ? "error.main" : "textPrimary"}>
-                      {quickFeedback.overall === 0 ? 
-                        "No speech detected. Please check your microphone and try speaking more clearly." : 
-                        (transcription || "No transcription available")}
+                      {transcription || "No transcription available"}
                     </Typography>
                   </Paper>
                   
@@ -2029,37 +1996,57 @@ const MockInterview = () => {
                       </Grid>
                     
                       <Grid container spacing={2} sx={{ mt: 2 }}>
-                        <Grid item xs={12} md={6}>
-                          <Typography variant="subtitle2" gutterBottom>
-                            Strengths:
-                          </Typography>
-                          <List dense>
-                            {(quickFeedback.strengths || []).map((strength, index) => (
-                              <ListItem key={index}>
-                                <ListItemIcon>
-                                  <CheckCircle color="success" />
-                                </ListItemIcon>
-                                <ListItemText primary={strength} />
-                              </ListItem>
-                            ))}
-                          </List>
-                        </Grid>
-                    
-                        <Grid item xs={12} md={6}>
-                          <Typography variant="subtitle2" gutterBottom>
-                            Areas for Improvement:
-                          </Typography>
-                          <List dense>
-                            {(quickFeedback.weaknesses || []).map((weakness, index) => (
-                              <ListItem key={index}>
-                                <ListItemIcon>
-                                  <Lightbulb color="warning" />
-                                </ListItemIcon>
-                                <ListItemText primary={weakness} />
-                              </ListItem>
-                            ))}
-                          </List>
-                        </Grid>
+                        {quickFeedback.overall > 0 ? (
+                          <>
+                            <Grid item xs={12} md={6}>
+                              <Typography variant="subtitle2" gutterBottom>
+                Strengths:
+              </Typography>
+              <List dense>
+                        {(quickFeedback.strengths || []).map((strength, index) => (
+                  <ListItem key={index}>
+                    <ListItemIcon>
+                              <CheckCircle color="success" />
+                    </ListItemIcon>
+                    <ListItemText primary={strength} />
+                  </ListItem>
+                ))}
+              </List>
+                    </Grid>
+              
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="subtitle2" gutterBottom>
+                Areas for Improvement:
+              </Typography>
+              <List dense>
+                        {(quickFeedback.weaknesses || []).map((weakness, index) => (
+                  <ListItem key={index}>
+                    <ListItemIcon>
+                              <Lightbulb color="warning" />
+                    </ListItemIcon>
+                            <ListItemText primary={weakness} />
+                  </ListItem>
+                ))}
+              </List>
+                    </Grid>
+                  </>
+                ) : (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      What to do:
+                    </Typography>
+                    <List dense>
+                      {(quickFeedback.weaknesses || []).map((weakness, index) => (
+                        <ListItem key={index}>
+                          <ListItemIcon>
+                            <Lightbulb color="error" />
+                          </ListItemIcon>
+                          <ListItemText primary={weakness} />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Grid>
+                )}
                       </Grid>
                       
                       {quickFeedback.tip && (
@@ -2073,426 +2060,389 @@ const MockInterview = () => {
                           </Typography>
                         </Alert>
                       )}
-                    </>
-                  ) : (
-                    <Grid item xs={12}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        What to do:
-                      </Typography>
-                      <List dense>
-                        {(quickFeedback.weaknesses || []).map((weakness, index) => (
-                          <ListItem key={index}>
-                            <ListItemIcon>
-                              <Lightbulb color="error" />
-                            </ListItemIcon>
-                            <ListItemText primary={weakness} />
-                          </ListItem>
-                        ))}
-                      </List>
-                    </Grid>
-                  )}
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowFeedback(false)} color="primary">
-            Continue
-          </Button>
-          <Button
-            onClick={handleNextQuestion} 
-            color="primary"
-            variant="contained"
-          >
-            Next Question
-          </Button>
-        </DialogActions>
-      </Dialog>
-      
-      {/* Final Results Dialog */}
-      <Dialog
-        open={interviewComplete}
-        onClose={() => {
-          setInterviewComplete(false);
-          setCurrentQuestionIndex(0);
-          setAnswers([]);
-        }}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          Interview Complete
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <AssignmentTurnedIn sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
-            <Typography variant="h5" gutterBottom>
-              Interview Completed!
-            </Typography>
-            <Typography variant="body1">
-              You've successfully finished the mock interview. Here's your comprehensive analysis.
-            </Typography>
-          </Box>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setShowFeedback(false)} color="primary">
+                Continue
+              </Button>
+              <Button
+                onClick={handleNextQuestion} 
+                color="primary"
+                variant="contained"
+              >
+                Next Question
+              </Button>
+            </DialogActions>
+          </Dialog>
           
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              Interview Summary
-            </Typography>
-            
-            {/* Summary cards */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={6} sm={3}>
-                <Card variant="outlined" sx={{ height: '100%' }}>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography color="text.secondary" gutterBottom>
-                      Questions
-                    </Typography>
-                    <Typography variant="h4">
-                      {Array.isArray(answers) ? answers.length : 0}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              
-              <Grid item xs={6} sm={3}>
-                <Card variant="outlined" sx={{ height: '100%' }}>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography color="text.secondary" gutterBottom>
-                      Duration
-                    </Typography>
-                    <Typography variant="h4">
-                      {formatTime(interviewSettings.duration * 60 - remainingTime)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              
-              <Grid item xs={6} sm={3}>
-                <Card variant="outlined" sx={{ height: '100%' }}>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography color="text.secondary" gutterBottom>
-                      Avg. Rating
-                    </Typography>
-                    <Typography variant="h4">
-                      {Array.isArray(answers) && answers.length > 0 ? 
-                        Math.round(answers.reduce((sum, answer) => 
-                          sum + (answer?.analysis?.overall || 0), 0) / answers.length) + '%' 
-                        : 'N/A'}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              
-              <Grid item xs={6} sm={3}>
-                <Card variant="outlined" sx={{ height: '100%' }}>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography color="text.secondary" gutterBottom>
-                      Performance
-                    </Typography>
-                    <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {Array.isArray(answers) && answers.length > 0 ? 
-                        (answers.reduce((sum, answer) => 
-                          sum + (answer?.analysis?.overall || 0), 0) / answers.length) >= 75 ? 
-                        <span>⭐⭐⭐</span> : 
-                        (answers.reduce((sum, answer) => 
-                          sum + (answer?.analysis?.overall || 0), 0) / answers.length) >= 50 ? 
-                        <span>⭐⭐</span> : 
-                        <span>⭐</span>
-                      : 'N/A'}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-            
-            {/* Skill breakdown */}
-            {Array.isArray(answers) && answers.length > 0 && (
-              <Card variant="outlined" sx={{ mb: 3 }}>
-                  <CardContent>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Skill Performance Breakdown
-                    </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" gutterBottom>
-                    Technical Proficiency
+          {/* Final Results Dialog */}
+          <Dialog
+            open={interviewComplete}
+            onClose={() => {
+              setInterviewComplete(false);
+              setCurrentQuestionIndex(0);
+              setAnswers([]);
+            }}
+            maxWidth="md"
+            fullWidth
+          >
+            <DialogTitle>
+              Interview Complete
+            </DialogTitle>
+            <DialogContent>
+              <Box sx={{ textAlign: 'center', mb: 3 }}>
+                <AssignmentTurnedIn sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
+                <Typography variant="h5" gutterBottom>
+                  Interview Completed!
                 </Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={Math.round(answers.reduce((sum, answer) => 
-                      sum + (answer?.analysis?.technical || 0), 0) / answers.length)} 
-                    color="primary"
-                    sx={{ height: 10, borderRadius: 5, mb: 2 }}
-                  />
+                <Typography variant="body1">
+                  You've successfully finished the mock interview. Here's your comprehensive analysis.
+                </Typography>
+              </Box>
+              
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" gutterBottom>
+                  Interview Summary
+                </Typography>
+                
+                {/* Summary cards */}
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={6} sm={3}>
+                    <Card variant="outlined" sx={{ height: '100%' }}>
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Typography color="text.secondary" gutterBottom>
+                          Questions
+                        </Typography>
+                        <Typography variant="h4">
+                          {Array.isArray(answers) ? answers.length : 0}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
                   
-                  <Typography variant="body2" gutterBottom>
-                    Communication Skills
-                </Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={Math.round(answers.reduce((sum, answer) => 
-                      sum + (answer?.analysis?.communication || 0), 0) / answers.length)} 
-                    color="secondary"
-                    sx={{ height: 10, borderRadius: 5, mb: 2 }}
-                  />
+                  <Grid item xs={6} sm={3}>
+                    <Card variant="outlined" sx={{ height: '100%' }}>
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Typography color="text.secondary" gutterBottom>
+                          Duration
+                        </Typography>
+                        <Typography variant="h4">
+                          {formatTime(interviewSettings.duration * 60 - remainingTime)}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  
+                  <Grid item xs={6} sm={3}>
+                    <Card variant="outlined" sx={{ height: '100%' }}>
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Typography color="text.secondary" gutterBottom>
+                          Avg. Rating
+                        </Typography>
+                        <Typography variant="h4">
+                          {Array.isArray(answers) && answers.length > 0 ? 
+                            Math.round(answers.reduce((sum, answer) => 
+                              sum + (answer?.analysis?.overall || 0), 0) / answers.length) + '%' 
+                            : 'N/A'}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  
+                  <Grid item xs={6} sm={3}>
+                    <Card variant="outlined" sx={{ height: '100%' }}>
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Typography color="text.secondary" gutterBottom>
+                          Performance
+                        </Typography>
+                        <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {Array.isArray(answers) && answers.length > 0 ? 
+                            (answers.reduce((sum, answer) => 
+                              sum + (answer?.analysis?.overall || 0), 0) / answers.length) >= 75 ? 
+                            <span>⭐⭐⭐</span> : 
+                            (answers.reduce((sum, answer) => 
+                              sum + (answer?.analysis?.overall || 0), 0) / answers.length) >= 50 ? 
+                            <span>⭐⭐</span> : 
+                            <span>⭐</span>
+                          : 'N/A'}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
                 </Grid>
                 
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" gutterBottom>
-                    Problem Solving
-                  </Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={Math.round(answers.reduce((sum, answer) => 
-                      sum + (answer?.analysis?.problemSolving || 0), 0) / answers.length)} 
-                    color="success"
-                    sx={{ height: 10, borderRadius: 5, mb: 2 }}
-                  />
+                {/* Skill breakdown */}
+                {Array.isArray(answers) && answers.length > 0 && (
+                  <Card variant="outlined" sx={{ mb: 3 }}>
+                      <CardContent>
+                      <Typography variant="subtitle1" gutterBottom>
+                        Skill Performance Breakdown
+                        </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" gutterBottom>
+                          Technical Proficiency
+                      </Typography>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={Math.round(answers.reduce((sum, answer) => 
+                            sum + (answer?.analysis?.technical || 0), 0) / answers.length)} 
+                          color="primary"
+                          sx={{ height: 10, borderRadius: 5, mb: 2 }}
+                        />
+                        
+                        <Typography variant="body2" gutterBottom>
+                          Communication Skills
+                      </Typography>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={Math.round(answers.reduce((sum, answer) => 
+                            sum + (answer?.analysis?.communication || 0), 0) / answers.length)} 
+                          color="secondary"
+                          sx={{ height: 10, borderRadius: 5, mb: 2 }}
+                        />
+                      </Grid>
+                      
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" gutterBottom>
+                          Problem Solving
+                        </Typography>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={Math.round(answers.reduce((sum, answer) => 
+                            sum + (answer?.analysis?.problemSolving || 0), 0) / answers.length)} 
+                          color="success"
+                          sx={{ height: 10, borderRadius: 5, mb: 2 }}
+                        />
+                        
+                        <Typography variant="body2" gutterBottom>
+                          Cultural Fit
+                        </Typography>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={Math.round(answers.reduce((sum, answer) => 
+                            sum + (answer?.analysis?.culturalFit || 0), 0) / answers.length)} 
+                          color="warning"
+                          sx={{ height: 10, borderRadius: 5, mb: 2 }}
+                        />
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+                )}
+              </Box>
+              
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Your Answers:
+                </Typography>
+                {Array.isArray(answers) && answers.map((answer, index) => {
+                  // Apply analysis to each answer if available
+                  const analysis = answer.analysis || { 
+                    overall: 50,
+                    technical: 50,
+                    communication: 50,
+                    problemSolving: 50,
+                    culturalFit: 50,
+                    category: 'Average'
+                  };
                   
-                  <Typography variant="body2" gutterBottom>
-                    Cultural Fit
-                  </Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={Math.round(answers.reduce((sum, answer) => 
-                      sum + (answer?.analysis?.culturalFit || 0), 0) / answers.length)} 
-                    color="warning"
-                    sx={{ height: 10, borderRadius: 5, mb: 2 }}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-          )}
-        </Box>
-        
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Your Answers:
-          </Typography>
-          {Array.isArray(answers) && answers.map((answer, index) => {
-            // Apply analysis to each answer if available
-            const analysis = answer.analysis || { 
-              overall: 50,
-              technical: 50,
-              communication: 50,
-              problemSolving: 50,
-              culturalFit: 50,
-              category: 'Average'
-            };
-            
-            // Force scores to 0 for no-speech scenarios
-            const wasNoSpeech = analysis.category === 'No Answer' || 
-                                answer?.transcription?.includes("I didn't catch what you said") ||
-                                answer?.transcription?.includes("No speech detected");
-
-            const displayAnalysis = wasNoSpeech ? {
-              ...analysis,
-              overall: 0,
-              technical: 0,
-              communication: 0,
-              problemSolving: 0,
-              culturalFit: 0,
-              category: 'No Answer'
-            } : analysis;
-            
-            return (
-              <Card key={index} variant="outlined" sx={{ mb: 2 }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="subtitle1" fontWeight="bold">
-                      Question {index + 1}:
-                    </Typography>
-                    <Chip 
-                      label={`${displayAnalysis.overall || 0}/100`} 
-                      color={wasNoSpeech ? "error" : 
-                             displayAnalysis.overall >= 75 ? "success" : 
-                             displayAnalysis.overall >= 50 ? "primary" : "warning"} 
-                      size="small"
-                    />
-                  </Box>
-                  
-                  <Typography variant="body1" gutterBottom>
-                    {answer?.question?.text || "Interview question"}
-                  </Typography>
-                  
-                  <Divider sx={{ my: 1.5 }} />
-                  
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Your Answer:
-                  </Typography>
-                  <Paper 
-                    variant="outlined" 
-                    sx={{ p: 2, my: 1, bgcolor: '#f9f9f9', maxHeight: 100, overflow: 'auto' }}
-                  >
-                    <Typography variant="body2">
-                      {answer?.transcription || "No transcription available"}
-                    </Typography>
-                  </Paper>
-                  
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
-                    <Box>
-                      {answer.videoUrl && (
-                        <Button
-                          variant="outlined"
-                          startIcon={<PlayArrow />}
-                          size="small"
-                          onClick={() => {
-                            setAnswerVideoUrl(answer.videoUrl);
-                            setIsReviewingAnswer(true);
-                          }}
+                  return (
+                    <Card key={index} variant="outlined" sx={{ mb: 2 }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                          <Typography variant="subtitle1" fontWeight="bold">
+                            Question {index + 1}:
+                          </Typography>
+                          <Chip 
+                            label={`${analysis.overall || 0}/100`} 
+                            color={analysis.overall >= 75 ? "success" : 
+                                   analysis.overall >= 50 ? "primary" : "warning"} 
+                            size="small"
+                          />
+                        </Box>
+                        
+                        <Typography variant="body1" gutterBottom>
+                          {answer?.question?.text || "Interview question"}
+                        </Typography>
+                        
+                        <Divider sx={{ my: 1.5 }} />
+                        
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Your Answer:
+                        </Typography>
+                        <Paper 
+                          variant="outlined" 
+                          sx={{ p: 2, my: 1, bgcolor: '#f9f9f9', maxHeight: 100, overflow: 'auto' }}
                         >
-                          Play Recording
-                        </Button>
-                      )}
-                    </Box>
-                    
-                    <Box sx={{ display: 'flex' }}>
-                      <Chip 
-                        label={`Tech: ${displayAnalysis.technical || 0}`} 
-                        size="small" 
-                        sx={{ mr: 0.5 }} 
-                        variant="outlined" 
-                      />
-                      <Chip 
-                        label={`Comm: ${displayAnalysis.communication || 0}`} 
-                        size="small" 
-                        sx={{ mr: 0.5 }} 
-                        variant="outlined" 
-                      />
-                      <Chip 
-                        label={`PS: ${displayAnalysis.problemSolving || 0}`} 
-                        size="small" 
-                        variant="outlined" 
-                      />
-                    </Box>
-                  </Box>
+                          <Typography variant="body2">
+                            {answer?.transcription || "No transcription available"}
+                          </Typography>
+                        </Paper>
+                        
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                          <Box>
+                            {answer.videoUrl && (
+                              <Button
+                                variant="outlined"
+                                startIcon={<PlayArrow />}
+                                size="small"
+                                onClick={() => {
+                                  setAnswerVideoUrl(answer.videoUrl);
+                                  setIsReviewingAnswer(true);
+                                }}
+                              >
+                                Play Recording
+                              </Button>
+                            )}
+                          </Box>
+                          
+                          <Box sx={{ display: 'flex' }}>
+                            <Chip 
+                              label={`Tech: ${analysis.technical || 0}`} 
+                              size="small" 
+                              sx={{ mr: 0.5 }} 
+                              variant="outlined" 
+                            />
+                            <Chip 
+                              label={`Comm: ${analysis.communication || 0}`} 
+                              size="small" 
+                              sx={{ mr: 0.5 }} 
+                              variant="outlined" 
+                            />
+                            <Chip 
+                              label={`PS: ${analysis.problemSolving || 0}`} 
+                              size="small" 
+                              variant="outlined" 
+                            />
+                          </Box>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </Box>
+              
+              {/* Recommendations section */}
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Interview Recommendations
+                  </Typography>
+                  
+                  <List>
+                    {Array.isArray(answers) && answers.length > 0 ? (
+                      <>
+                        <ListItem>
+                          <ListItemIcon><StarOutline /></ListItemIcon>
+                          <ListItemText 
+                            primary="Focus on your strongest areas" 
+                            secondary={`Your best skill is ${getHighestSkill(answers)}. Make sure to highlight this in your real interviews.`} 
+                          />
+                        </ListItem>
+                        
+                        <ListItem>
+                          <ListItemIcon><StarOutline /></ListItemIcon>
+                          <ListItemText 
+                            primary="Address your improvement areas" 
+                            secondary={`Work on improving your ${getLowestSkill(answers)} before your next interview.`} 
+                          />
+                        </ListItem>
+                        
+                        <ListItem>
+                          <ListItemIcon><StarOutline /></ListItemIcon>
+                          <ListItemText 
+                            primary="Practice structured responses" 
+                            secondary="Use the STAR method (Situation, Task, Action, Result) to make your answers more compelling." 
+                          />
+                        </ListItem>
+                      </>
+                    ) : (
+                      <ListItem>
+                        <ListItemIcon><StarOutline /></ListItemIcon>
+                        <ListItemText 
+                          primary="Complete more practice interviews" 
+                          secondary="Try multiple categories to improve your versatility across different interview types." 
+                        />
+                      </ListItem>
+                    )}
+                  </List>
                 </CardContent>
               </Card>
-            );
-          })}
-        </Box>
-        
-        {/* Recommendations section */}
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Interview Recommendations
-            </Typography>
-            
-            <List>
-              {Array.isArray(answers) && answers.length > 0 ? (
-                <>
-                  <ListItem>
-                    <ListItemIcon><StarOutline /></ListItemIcon>
-                    <ListItemText 
-                      primary="Focus on your strongest areas" 
-                      secondary={`Your best skill is ${getHighestSkill(answers)}. Make sure to highlight this in your real interviews.`} 
-                    />
-                  </ListItem>
-                  
-                  <ListItem>
-                    <ListItemIcon><StarOutline /></ListItemIcon>
-                    <ListItemText 
-                      primary="Address your improvement areas" 
-                      secondary={`Work on improving your ${getLowestSkill(answers)} before your next interview.`} 
-                    />
-                  </ListItem>
-                  
-                  <ListItem>
-                    <ListItemIcon><StarOutline /></ListItemIcon>
-                    <ListItemText 
-                      primary="Practice structured responses" 
-                      secondary="Use the STAR method (Situation, Task, Action, Result) to make your answers more compelling." 
-                    />
-                  </ListItem>
-                </>
-              ) : (
-                <ListItem>
-                  <ListItemIcon><StarOutline /></ListItemIcon>
-                  <ListItemText 
-                    primary="Complete more practice interviews" 
-                    secondary="Try multiple categories to improve your versatility across different interview types." 
-                  />
-                </ListItem>
-              )}
-            </List>
-          </CardContent>
-        </Card>
-      </DialogContent>
-      <DialogActions>
-        <Button 
-          onClick={() => {
-          setInterviewComplete(false);
-            setActiveStep(0);
-            setInterviewQuestions([]);
-            setAnswers([]);
-          setCurrentQuestionIndex(0);
-            setInterviewId(null);
-          }} 
-          color="primary"
-        >
-          Start New Interview
-        </Button>
-        <Button 
-          onClick={() => {
-            // Upload data and go to results
-            const generatedId = uploadInterviewData();
-            if (generatedId) {
-              console.log('Successfully prepared interview data, navigating to results');
-              // Force a brief delay to ensure data is saved before navigation
-              setTimeout(() => {
-                navigate(`/interview-results/${generatedId}`);
-              }, 300);
-            } else {
-              console.error('Failed to prepare interview data');
-              setError('Failed to prepare interview data for results view');
-            }
-          }} 
-          color="primary"
-          variant="contained"
-        >
-          View Detailed Results
-        </Button>
-      </DialogActions>
-    </Dialog>
-  </Container>
-);
-};
-
-// Helper function to get highest skill from answers
-const getHighestSkill = (answers) => {
-  const avgTechnical = answers.reduce((sum, a) => sum + (a?.analysis?.technical || 0), 0) / answers.length;
-  const avgComm = answers.reduce((sum, a) => sum + (a?.analysis?.communication || 0), 0) / answers.length;
-  const avgPS = answers.reduce((sum, a) => sum + (a?.analysis?.problemSolving || 0), 0) / answers.length;
-  const avgCultural = answers.reduce((sum, a) => sum + (a?.analysis?.culturalFit || 0), 0) / answers.length;
-  
-  const skills = [
-    { name: 'technical knowledge', value: avgTechnical },
-    { name: 'communication skills', value: avgComm },
-    { name: 'problem-solving approach', value: avgPS },
-    { name: 'team and cultural fit', value: avgCultural }
-  ];
-  
-  return skills.sort((a, b) => b.value - a.value)[0].name;
-};
-
-// Helper function to get lowest skill from answers
-const getLowestSkill = (answers) => {
-  const avgTechnical = answers.reduce((sum, a) => sum + (a?.analysis?.technical || 0), 0) / answers.length;
-  const avgComm = answers.reduce((sum, a) => sum + (a?.analysis?.communication || 0), 0) / answers.length;
-  const avgPS = answers.reduce((sum, a) => sum + (a?.analysis?.problemSolving || 0), 0) / answers.length;
-  const avgCultural = answers.reduce((sum, a) => sum + (a?.analysis?.culturalFit || 0), 0) / answers.length;
-  
-  const skills = [
-    { name: 'technical knowledge', value: avgTechnical },
-    { name: 'communication skills', value: avgComm },
-    { name: 'problem-solving approach', value: avgPS },
-    { name: 'team and cultural fit', value: avgCultural }
-  ];
-  
-  return skills.sort((a, b) => a.value - b.value)[0].name;
-};
-
-export default MockInterview; 
+            </DialogContent>
+            <DialogActions>
+              <Button 
+                onClick={() => {
+                setInterviewComplete(false);
+                  setActiveStep(0);
+                  setInterviewQuestions([]);
+                  setAnswers([]);
+                setCurrentQuestionIndex(0);
+                  setInterviewId(null);
+                }} 
+                color="primary"
+              >
+                Start New Interview
+              </Button>
+              <Button 
+                onClick={() => {
+                  // Upload data and go to results
+                  const data = uploadInterviewData();
+                  if (data) {
+                    console.log('Successfully prepared interview data, navigating to results');
+                    navigate(`/interview-results/${interviewId}`);
+                  } else {
+                    console.error('Failed to prepare interview data');
+                    setError('Failed to prepare interview data for results view');
+                  }
+                }} 
+                color="primary"
+                variant="contained"
+              >
+                View Detailed Results
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </Container>
+      );
+    };
+    
+    // Helper function to get highest skill from answers
+    const getHighestSkill = (answers) => {
+      const avgTechnical = answers.reduce((sum, a) => sum + (a?.analysis?.technical || 0), 0) / answers.length;
+      const avgComm = answers.reduce((sum, a) => sum + (a?.analysis?.communication || 0), 0) / answers.length;
+      const avgPS = answers.reduce((sum, a) => sum + (a?.analysis?.problemSolving || 0), 0) / answers.length;
+      const avgCultural = answers.reduce((sum, a) => sum + (a?.analysis?.culturalFit || 0), 0) / answers.length;
+      
+      const skills = [
+        { name: 'technical knowledge', value: avgTechnical },
+        { name: 'communication skills', value: avgComm },
+        { name: 'problem-solving approach', value: avgPS },
+        { name: 'team and cultural fit', value: avgCultural }
+      ];
+      
+      return skills.sort((a, b) => b.value - a.value)[0].name;
+    };
+    
+    // Helper function to get lowest skill from answers
+    const getLowestSkill = (answers) => {
+      const avgTechnical = answers.reduce((sum, a) => sum + (a?.analysis?.technical || 0), 0) / answers.length;
+      const avgComm = answers.reduce((sum, a) => sum + (a?.analysis?.communication || 0), 0) / answers.length;
+      const avgPS = answers.reduce((sum, a) => sum + (a?.analysis?.problemSolving || 0), 0) / answers.length;
+      const avgCultural = answers.reduce((sum, a) => sum + (a?.analysis?.culturalFit || 0), 0) / answers.length;
+      
+      const skills = [
+        { name: 'technical knowledge', value: avgTechnical },
+        { name: 'communication skills', value: avgComm },
+        { name: 'problem-solving approach', value: avgPS },
+        { name: 'team and cultural fit', value: avgCultural }
+      ];
+      
+      return skills.sort((a, b) => a.value - b.value)[0].name;
+    };
+    
+    export default MockInterview; 

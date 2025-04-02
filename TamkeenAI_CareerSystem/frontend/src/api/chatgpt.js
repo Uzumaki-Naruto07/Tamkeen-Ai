@@ -1,4 +1,5 @@
 import { api } from './apiClient';
+import axios from 'axios';
 
 /**
  * ChatGPT API integration for the TamkeenAI Career System
@@ -55,13 +56,24 @@ export const sendMessageWithProvider = async (
       model: model || 'default' 
     });
     
-    const response = await api.post(`${AI_ENDPOINT}/recommendation`, {
-      message,
-      context,
-      type,
-      provider,
-      model,
-      language
+    // Use direct axios call without authorization headers to avoid CORS preflight issues
+    const response = await axios({
+      method: 'post',
+      url: `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}${AI_ENDPOINT}/recommendation`,
+      data: {
+        message,
+        context,
+        type,
+        provider,
+        model,
+        language
+      },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+        // Explicitly NOT including Authorization header to avoid CORS preflight
+      },
+      withCredentials: false
     });
     
     // Update connection status
@@ -156,11 +168,22 @@ export const sendMessage = async (message, context = '', serviceType = 'general'
       language 
     });
     
-    const response = await api.post(`${CHATGPT_ENDPOINT}/message`, {
-      message,
-      context,
-      service_type: serviceType,
-      language
+    // Use direct axios call without authorization headers to avoid CORS preflight issues
+    const response = await axios({
+      method: 'post',
+      url: `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}${CHATGPT_ENDPOINT}/message`,
+      data: {
+        message,
+        context,
+        service_type: serviceType,
+        language
+      },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+        // Explicitly NOT including Authorization header to avoid CORS preflight
+      },
+      withCredentials: false
     });
     
     // Update connection status
@@ -207,10 +230,21 @@ export const sendMessage = async (message, context = '', serviceType = 'general'
  */
 export const getResumeImprovements = async (resumeContent, jobDescription = '', language = 'en') => {
   try {
-    const response = await api.post(`${CHATGPT_ENDPOINT}/resume/improve`, {
-      resume_content: resumeContent,
-      job_description: jobDescription,
-      language
+    // Use direct axios call without authorization headers to avoid CORS preflight issues
+    const response = await axios({
+      method: 'post',
+      url: `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}${CHATGPT_ENDPOINT}/resume/improve`,
+      data: {
+        resume_content: resumeContent,
+        job_description: jobDescription,
+        language
+      },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+        // Explicitly NOT including Authorization header to avoid CORS preflight
+      },
+      withCredentials: false
     });
     return response.data.data;
   } catch (error) {

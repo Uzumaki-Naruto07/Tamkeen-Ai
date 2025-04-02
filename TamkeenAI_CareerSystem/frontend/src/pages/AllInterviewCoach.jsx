@@ -487,6 +487,7 @@ const AllInterviewCoach = () => {
                 variant="contained" 
                 size="large"
                 startIcon={<VideocamIcon />}
+                onClick={() => navigate('/ai-coach/mock-interview')}
               >
                 Schedule Mock Interview
               </Button>

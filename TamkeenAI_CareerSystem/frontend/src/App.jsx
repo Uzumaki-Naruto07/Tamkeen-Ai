@@ -57,6 +57,8 @@ const AIInterviewCoach = lazyLoad(() => import('./pages/AIInterviewCoach'));
 const AllInterviewCoach = lazyLoad(() => import('./pages/AllInterviewCoach'));
 const CoachProfile = lazyLoad(() => import('./pages/CoachProfile'));
 const BookingConfirmation = lazyLoad(() => import('./pages/BookingConfirmation'));
+// Add MockInterview component
+const MockInterview = lazyLoad(() => import('./pages/MockInterview'));
 // Add MyBookings component
 const MyBookings = lazyLoad(() => import('./pages/MyBookings'));
 // Add Checkout component
@@ -81,6 +83,8 @@ const LinkedInAutomation = lazyLoad(() => import('./pages/LinkedinAutomation'));
 const LearningResources = lazyLoad(() => import('./pages/LearningResources'));
 // Add AI Recommendations component
 const AIRecommendations = lazyLoad(() => import('./pages/AIRecommendations'));
+// Add InterviewResults component
+const InterviewResults = lazyLoad(() => import('./pages/InterviewResults'));
 
 // Suspense fallback component
 const SuspenseFallback = () => (
@@ -196,6 +200,8 @@ const router = createBrowserRouter(
         {/* AI Coach routes */}
         <Route path="/ai-coach" element={<ProtectedRoute element={<AllInterviewCoach />} />} />
         <Route path="/ai-coach/interview" element={<ProtectedRoute element={<AIInterviewCoach />} />} />
+        <Route path="/ai-coach/mock-interview" element={<ProtectedRoute element={<MockInterview />} />} />
+        <Route path="/interview-results/:interviewId" element={<ProtectedRoute element={<InterviewResults />} />} />
         <Route path="/ai-coach/profile/:coachId" element={<ProtectedRoute element={<CoachProfile />} />} />
         <Route path="/ai-coach/checkout/:coachId" element={<ProtectedRoute element={<Checkout />} />} />
         <Route path="/ai-coach/checkout/package" element={<ProtectedRoute element={<Checkout />} />} />
