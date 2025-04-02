@@ -205,6 +205,98 @@ chmod +x run_frontend.sh  # Make it executable
 ./run_frontend.sh
 ```
 
+## Troubleshooting
+
+### Backend API Connection Issues
+
+If you're experiencing connection issues with the Interview API (`ERR_CONNECTION_REFUSED` errors in the browser console), follow these steps:
+
+#### Issue: API Port Switching During Reloading
+
+The debug interview API server might switch between ports 5001 and 5005 during Flask's auto-reloading, causing connection issues with the frontend.
+
+#### Solution 1: Use the Simple Interview API
+
+We created a simplified version of the interview API (`simple_interview_api.py`) that:
+- Uses a fixed port 5001 (matching the main backend API)
+- Disables auto-reloading to prevent port switching
+- Has permissive CORS settings for development
+
+To use it:
+
+1. Kill any existing processes using port 5001:
+```bash
+lsof -ti:5001 | xargs kill -9 2>/dev/null || echo "No process running on port 5001"
+```
+
+2. Run the simple interview API:
+```bash
+cd TamkeenAI_CareerSystem/backend
+python simple_interview_api.py
+```
+
+3. Verify it's running correctly:
+```bash
+curl http://localhost:5001/api/health-check
+curl http://localhost:5001/api/interviews/topics
+```
+
+#### Solution 2: Update Your Frontend Environment
+
+Ensure your frontend environment points to the correct API URL:
+
+```bash
+# In frontend/.env
+VITE_API_URL=http://localhost:5001
+VITE_INTERVIEW_API_URL=http://localhost:5001
+VITE_ENABLE_MOCK_DATA=true
+VITE_ENABLE_BACKEND_CHECK=true
+```
+
+#### Solution 3: Use the Combined Run Script
+
+The `run_full_app.sh` script has been updated to:
+- Start both the main backend API and interview API on port 5001
+- Configure the frontend environment variables correctly
+- Kill all processes properly when stopping
+
+```bash
+chmod +x run_full_app.sh
+./run_full_app.sh
+```
+
+#### Other Common Issues
+
+1. **Browser caching**: Try opening your app in a private/incognito window
+2. **Network interfaces**: Use `127.0.0.1` instead of `localhost` to avoid DNS resolution issues
+3. **Multiple backends**: Check if you have multiple Python processes running with `ps aux | grep python`
+4. **Port conflicts**: Make sure no other applications are using port 5001
+
+### Debug Interview API Configuration
+
+The debug interview API server runs on port 5001 by default to match the main backend API. Make sure your frontend environment is configured correctly:
+
+```bash
+# In frontend/.env
+VITE_INTERVIEW_API_URL=http://localhost:5001
+```
+
+If you encounter connection issues:
+1. Verify the debug server is running on port 5001: `lsof -i:5001`
+2. Use 127.0.0.1 instead of localhost to avoid DNS resolution issues
+3. If you need to change the port, update both the backend and frontend configurations
+
+To start the debug interview API server:
+```bash
+cd TamkeenAI_CareerSystem/backend
+python simple_interview_api.py
+```
+
+Alternatively, use the provided script:
+```bash
+./run_interview_api.sh
+```
+
 ### Manual Setup (if scripts don't work)
 
 #### Backend

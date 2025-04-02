@@ -249,20 +249,73 @@ chmod +x run_frontend.sh  # Make it executable
 ./run_frontend.sh
 ```
 
-### Manual Setup (if scripts don't work)
+## Troubleshooting API Connection Issues
 
-#### Backend
+If you encounter connection issues between the frontend and backend APIs (particularly the Interview API), follow these steps:
+
+### Issue: API Port Switching During Reloading
+
+The debug interview API server may switch between ports 5001 and 5005 during Flask's auto-reloading, causing connection issues with the frontend. This typically appears as `ERR_CONNECTION_REFUSED` errors in the browser console.
+
+### Solution: Use the Simple Interview API
+
+We created a simplified version of the interview API (`simple_interview_api.py`) that resolves these issues by:
+- Using a fixed port 5001 (matching frontend expectations)
+- Disabling auto-reloading to prevent port switching
+- Implementing permissive CORS settings for development
+
+To use this solution:
+
+1. Kill any existing Python processes using port 5001:
 ```bash
-cd TamkeenAI_CareerSystem
-python3 -m venv venv
-source venv/bin/activate  # On Windows, use: venv\Scripts\activate
-pip install -U pip wheel setuptools
-pip install -U numpy pandas scikit-learn  # Critical data science packages
-cd backend
-pip install -r requirements.txt
-python app.py
+lsof -ti:5001 | xargs kill -9 2>/dev/null || echo "No process running on port 5001"
 ```
 
+2. Run the simple interview API:
+```bash
+cd TamkeenAI_CareerSystem/backend
+python simple_interview_api.py
+```
+
+3. Verify the API is running by checking these endpoints:
+```bash
+curl http://localhost:5001/health-check
+curl http://localhost:5001/api/interviews/topics
+```
+
+### Updating Your Frontend Environment
+
+Ensure your frontend environment points to the correct API URL in the `.env` file:
+
+```bash
+# In TamkeenAI_CareerSystem/frontend/.env
+VITE_API_URL=http://localhost:5001
+VITE_INTERVIEW_API_URL=http://localhost:5001
+VITE_ENABLE_MOCK_DATA=true
+VITE_ENABLE_BACKEND_CHECK=true
+```
+
+### Using the Combined Run Script
+
+The `run_full_app.sh` script has been updated to:
+- Start the backend API on port 5001
+- Start the simplified interview API (also on port 5001)
+- Configure frontend environment variables correctly
+- Properly manage process termination
+
+```bash
+chmod +x run_full_app.sh
+./run_full_app.sh
+```
+
+### Other Common Issues
+
+1. **Browser caching**: Try opening your app in a private/incognito window
+2. **Network interfaces**: Use `127.0.0.1` instead of `localhost` if DNS resolution issues occur
+3. **Multiple backends**: Check for multiple Python processes running with `ps aux | grep python`
+4. **Port conflicts**: Ensure no other applications are using port 5001
+
+## Development Notes
 
 ---
 

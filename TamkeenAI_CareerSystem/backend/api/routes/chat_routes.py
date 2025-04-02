@@ -19,7 +19,7 @@ from api.utils.api_utils import api_response, error_response, validate_request
 from api.utils.auth import auth_required, get_current_user
 
 # Import services
-from api.services.llm_service import query_deepseek, get_chatbot_response
+from api.services.llm_service import query_deepseek, get_chatbot_response, query_llm_provider
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -37,6 +37,128 @@ except Exception as e:
 
 # Create blueprint
 chat_bp = Blueprint('chat', __name__)
+
+
+@chat_bp.route('/ai/recommendation', methods=['POST'])
+@auth_required
+def ai_recommendation():
+    """
+    Multi-provider AI recommendation endpoint
+    Supports different AI backends including OpenAI, DeepSeek, Llama3, and local models
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return error_response("Invalid request data", 400)
+        
+        # Validate required fields
+        required_fields = ['message']
+        for field in required_fields:
+            if field not in data:
+                return error_response(f"Missing required field: {field}", 400)
+        
+        # Get fields from request
+        message = data.get('message', '')
+        context = data.get('context', '')
+        provider = data.get('provider', 'openai')  # Default to OpenAI
+        model = data.get('model', None)  # Model is optional, provider may have defaults
+        type_request = data.get('type', 'general')
+        language = data.get('language', 'en')
+        temperature = data.get('temperature', 0.7)
+        
+        # Get user ID from token
+        user_id = get_current_user()
+        
+        # Log the request
+        logger.info(f"AI recommendation request from user {user_id} using provider {provider}")
+        
+        # Construct messages for the LLM
+        system_message = ""
+        
+        # Set appropriate system message based on request type and language
+        if language == 'ar':
+            if type_request == 'career':
+                system_message = """أنت مستشار مهني ذكي يتحدث اللغة العربية. قدم نصائح مهنية مفيدة وعملية. تتضمن نصائحك خطوات عملية للتقدم المهني والمهارات المطلوبة والشهادات المهنية والاتجاهات في سوق العمل. كن دقيقًا ومحددًا وغنيًا بالمعلومات."""
+            elif type_request == 'resume':
+                system_message = """أنت خبير في تحسين السيرة الذاتية يتحدث اللغة العربية. قدم نصائح عملية لتحسين السيرة الذاتية والتقدم المهني. اجعل اقتراحاتك محددة وقابلة للتنفيذ."""
+            elif type_request == 'recommendation':
+                system_message = """أنت مساعد ذكي يتحدث اللغة العربية. استجب بمعلومات مفيدة ودقيقة حول السؤال المطروح. اجعل إجابتك محددة ومناسبة للسياق المقدم."""
+            else:
+                system_message = """أنت مساعد ذكي يتحدث اللغة العربية. قدم استجابات مفيدة ومناسبة استنادًا إلى السؤال. كن محددًا وواضحًا في إجابتك."""
+        else:
+            if type_request == 'career':
+                system_message = """You are an intelligent career advisor. Provide helpful and actionable career advice. Your advice includes practical steps for career advancement, required skills, professional certifications, and job market trends. Be precise, specific, and information-rich."""
+            elif type_request == 'resume':
+                system_message = """You are a resume improvement expert. Provide practical advice for resume enhancement and career progression. Make your suggestions specific and actionable."""
+            elif type_request == 'recommendation':
+                system_message = """You are an intelligent assistant. Respond with helpful and accurate information about the question at hand. Make your answer specific and appropriate to the context provided."""
+            else:
+                system_message = """You are an intelligent assistant. Provide helpful and relevant responses based on the question. Be specific and clear in your answer."""
+        
+        # Add context to system message if provided
+        if context:
+            system_message += f"\n\nContext: {context}"
+        
+        # Create messages array for the LLM
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": message}
+        ]
+        
+        # Call the multi-provider LLM service
+        result = query_llm_provider(
+            messages=messages,
+            provider=provider,
+            model=model,
+            temperature=temperature
+        )
+        
+        # Check if the request was successful
+        if result["success"]:
+            # Return successful response
+            return api_response({
+                "response": result["content"],
+                "provider": result["provider"],
+                "model": result.get("model", ""),
+                "timestamp": now()
+            })
+        else:
+            logger.error(f"Error using AI provider: {result['error']}")
+            
+            # Fallback to local implementation if provider fails
+            try:
+                if type_request == 'career':
+                    # Try our specialized career function
+                    fallback_response = get_chatbot_response(message, language)
+                else:
+                    # Try DeepSeek as fallback option
+                    fallback_response = query_deepseek(message, language)
+                
+                return api_response({
+                    "response": fallback_response,
+                    "provider": "fallback",
+                    "timestamp": now(),
+                    "fallback_used": True
+                })
+            except Exception as fallback_error:
+                logger.error(f"Fallback also failed: {str(fallback_error)}")
+                
+                # Last resort fallback
+                default_response = "I'm sorry, I couldn't process your request at this time. Please try again later."
+                if language == 'ar':
+                    default_response = "آسف، لم أتمكن من معالجة طلبك في هذا الوقت. يرجى المحاولة مرة أخرى لاحقًا."
+                
+                return api_response({
+                    "response": default_response,
+                    "provider": "error",
+                    "timestamp": now(),
+                    "error": str(result['error'])
+                })
+    
+    except Exception as e:
+        logger.error(f"Error in ai_recommendation: {str(e)}")
+        return error_response(f"Failed to process message: {str(e)}", 500)
 
 
 @chat_bp.route('/message', methods=['POST'])

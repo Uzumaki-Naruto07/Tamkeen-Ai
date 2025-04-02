@@ -69,7 +69,10 @@ const resources = {
         achievements: 'Achievements',
         settings: 'Settings',
         profile: 'Profile',
-        logout: 'Logout'
+        logout: 'Logout',
+        automationLinkedin: 'LinkedIn Automation',
+        aiRecommendations: 'AI Recommendations',
+        resumeScore: 'Resume Score'
       },
       
       // Notifications
@@ -186,7 +189,10 @@ const resources = {
         achievements: 'الإنجازات',
         settings: 'الإعدادات',
         profile: 'الملف الشخصي',
-        logout: 'تسجيل الخروج'
+        logout: 'تسجيل الخروج',
+        automationLinkedin: 'أتمتة لينكد إن',
+        aiRecommendations: 'توصيات الذكاء الاصطناعي',
+        resumeScore: 'تقييم السيرة الذاتية'
       },
       
       // Notifications

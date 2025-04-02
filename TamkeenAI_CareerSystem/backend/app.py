@@ -34,6 +34,8 @@ from api.routes.skill_routes import skill_bp
 from api.routes.dashboard_routes import dashboard_bp
 from api.routes.auth_routes import auth_bp
 from api.routes.confidence_chart_routes import confidence_charts
+# Import the new interview controller
+from api.controllers.interview_controller import interview_bp as interview_coach_bp
 
 # Configure logging
 logging.basicConfig(
@@ -110,6 +112,8 @@ def create_app():
     app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(confidence_charts)
+    # Register the new interview coach blueprint
+    app.register_blueprint(interview_coach_bp, url_prefix='/api/interviews')
     
     # Add a default response for OPTIONS requests globally
     @app.after_request

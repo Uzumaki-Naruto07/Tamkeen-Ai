@@ -19,6 +19,114 @@ class InterviewService:
         self.active_sessions = {}
         self.session_directory = "interview_sessions"
         os.makedirs(self.session_directory, exist_ok=True)
+        
+        # Load UAE cultural context data
+        self._load_uae_cultural_data()
+    
+    def _load_uae_cultural_data(self):
+        """Load UAE-specific cultural context and localization data"""
+        self.uae_cultural_data = {
+            "greetings": [
+                "Marhaba! Ready to ace your interview today?",
+                "Ahlan wa sahlan! Let's prepare you for interview success.",
+                "As-salamu alaykum! I'm here to help with your interview preparation."
+            ],
+            "cultural_tips": {
+                "general": [
+                    "In the UAE market, showcasing adaptability and multilingual communication can make a difference.",
+                    "Understanding of UAE Vision 2030 can demonstrate your alignment with national goals.",
+                    "Highlighting experience with diverse teams shows cultural adaptability valued in the UAE."
+                ],
+                "government": [
+                    "Knowledge of UAE government structures and Emiratization policies is valuable.",
+                    "Highlighting Arabic language skills can be advantageous for government positions.",
+                    "Understanding of UAE Vision 2030 and national priorities is important."
+                ],
+                "tech": [
+                    "The UAE is investing heavily in AI, blockchain, and smart city technologies.",
+                    "Experience with regional tech implementations can set you apart.",
+                    "Familiarity with UAE tech regulations and compliance may be relevant."
+                ],
+                "education": [
+                    "UAE education sector values international experience and multilingual abilities.",
+                    "Knowledge of UAE educational frameworks and cultural sensitivities is important.",
+                    "Experience with diverse student populations is highly regarded."
+                ]
+            },
+            "coach_personas": {
+                "noora": {
+                    "name": "NooraGPT",
+                    "title": "Government Sector Interview Specialist 🇦🇪",
+                    "specialty": "UAE government hiring practices and Emiratization policies",
+                    "greeting": "Marhaba! I'm Noora, your UAE government sector interview specialist. Ready to help you prepare for your public sector career!",
+                    "language_style": "formal, professional, government-focused"
+                },
+                "ahmed": {
+                    "name": "AhmedGPT",
+                    "title": "Tech Industry Senior Manager",
+                    "specialty": "Technical interviews and system design",
+                    "greeting": "Hello! I'm Ahmed, your tech industry interview guide. Let's prepare you for technical and managerial questions!",
+                    "language_style": "analytical, technical, solution-oriented"
+                },
+                "fatima": {
+                    "name": "FatimaGPT",
+                    "title": "Female Empowerment & Career Strategist",
+                    "specialty": "Women's career advancement in the UAE",
+                    "greeting": "Ahlan! I'm Fatima, focused on empowering women in their UAE career journeys. Let's build your confidence for your interview!",
+                    "language_style": "encouraging, supportive, empowering"
+                },
+                "zayd": {
+                    "name": "ZaydGPT",
+                    "title": "AI-driven Logic and Brainy Questions Bot",
+                    "specialty": "Analytical thinking and problem-solving",
+                    "greeting": "Greetings. I am Zayd, designed to challenge your analytical thinking. Let's assess your problem-solving capabilities.",
+                    "language_style": "precise, logical, challenging"
+                }
+            },
+            "local_companies": [
+                {"name": "ADNOC", "sector": "Energy", "focus": "Oil, gas, and energy transition"},
+                {"name": "Etisalat (e&)", "sector": "Telecommunications", "focus": "Digital transformation"},
+                {"name": "Emirates", "sector": "Aviation", "focus": "Global air travel and hospitality"},
+                {"name": "Mubadala", "sector": "Investment", "focus": "Strategic investments and sovereign wealth"},
+                {"name": "Dubai Holding", "sector": "Investment", "focus": "Diversified investments and real estate"},
+                {"name": "Masdar", "sector": "Renewable Energy", "focus": "Clean energy and sustainable development"},
+                {"name": "ADCB", "sector": "Banking", "focus": "Financial services and digital banking"},
+                {"name": "Aldar Properties", "sector": "Real Estate", "focus": "Property development and management"}
+            ]
+        }
+        
+        # UAE-specific questions for various sectors
+        self.question_bank["UAE Government"] = [
+            "How does your experience align with UAE Vision 2030 goals?",
+            "Describe your understanding of Emiratization and its importance.",
+            "How would you contribute to digital government transformation?",
+            "Explain your experience working in multicultural teams.",
+            "How would you approach implementing policy changes in a government entity?",
+            "What experience do you have with UAE regulatory frameworks?",
+            "How would you handle a situation where traditional processes need modernization?"
+        ]
+        
+        self.question_bank["UAE Tech"] = [
+            "How would you contribute to UAE's goal of becoming a global AI hub?",
+            "Describe a technical project that could benefit UAE's smart city initiatives.",
+            "How would you approach technology implementation while respecting local values?",
+            "What experience do you have with tech solutions for desert environments?",
+            "How would you manage a team with diverse cultural backgrounds in the tech sector?",
+            "What cybersecurity considerations are unique to UAE operations?",
+            "How would you align technical solutions with UAE's innovation strategy?"
+        ]
+        
+        self.question_bank["UAE Education"] = [
+            "How would you balance international educational standards with UAE cultural values?",
+            "Describe your approach to teaching in multilingual environments.",
+            "How would you incorporate UAE history and culture into your curriculum?",
+            "What experience do you have with UAE's educational framework?",
+            "How would you engage with parents from diverse cultural backgrounds?",
+            "Describe how you would contribute to UAE's educational vision.",
+            "What approaches would you take to foster innovation in UAE classrooms?"
+        ]
+        
+        logger.info("UAE cultural data loaded successfully")
     
     def _load_questions(self):
         """Load interview questions from file or initialize defaults"""
@@ -100,13 +208,15 @@ class InterviewService:
         
         logger.info("Interview question bank loaded successfully")
     
-    def generate_interview_questions(self, role: str, num_questions: int = DEFAULT_NUM_QUESTIONS) -> List[str]:
+    def generate_interview_questions(self, role: str, num_questions: int = DEFAULT_NUM_QUESTIONS, sector_context: str = None, is_uae_focused: bool = False) -> List[str]:
         """
         Generate role-specific interview questions
         
         Args:
             role: Job role to generate questions for
             num_questions: Number of questions to generate
+            sector_context: Optional UAE sector context (government, tech, education)
+            is_uae_focused: Whether to include UAE-specific questions
             
         Returns:
             List of interview questions
@@ -121,8 +231,18 @@ class InterviewService:
         # Always include common questions
         common_questions = self.question_bank["common"]
         
+        # Add UAE-specific questions if requested
+        uae_questions = []
+        if is_uae_focused and sector_context:
+            uae_context_key = f"UAE {sector_context.capitalize()}"
+            if uae_context_key in self.question_bank:
+                uae_questions = self.question_bank[uae_context_key]
+                logger.info(f"Added UAE-specific questions for {sector_context} sector")
+            else:
+                logger.warning(f"No UAE-specific questions found for {sector_context} sector")
+        
         # Combine questions and select the required number
-        all_questions = common_questions + specific_questions
+        all_questions = common_questions + specific_questions + uae_questions
         
         if num_questions >= len(all_questions):
             return all_questions
@@ -131,6 +251,10 @@ class InterviewService:
             selected = []
             if specific_questions:
                 selected.append(random.choice(specific_questions))
+            
+            # Include at least one UAE-specific question if available and requested
+            if uae_questions and is_uae_focused:
+                selected.append(random.choice(uae_questions))
             
             # Always include "Tell me about yourself" as the first question
             about_yourself = "Tell me about yourself and your background."
@@ -154,7 +278,8 @@ class InterviewService:
             
             return selected
     
-    def start_interview_session(self, role: str, user_id: str, num_questions: int = DEFAULT_NUM_QUESTIONS) -> Dict[str, Any]:
+    def start_interview_session(self, role: str, user_id: str, num_questions: int = DEFAULT_NUM_QUESTIONS, 
+                               coach_persona: str = "zayd", sector_context: str = None) -> Dict[str, Any]:
         """
         Start a new interview session
         
@@ -162,6 +287,8 @@ class InterviewService:
             role: Job role for interview questions
             user_id: ID of the user conducting the interview
             num_questions: Number of questions to include
+            coach_persona: Selected coach persona ID
+            sector_context: Optional UAE sector context
             
         Returns:
             Dictionary with session details
@@ -169,8 +296,22 @@ class InterviewService:
         # Generate a session ID
         session_id = str(uuid.uuid4())
         
-        # Generate questions
-        questions = self.generate_interview_questions(role, num_questions)
+        # Generate questions (include UAE context if sector_context is provided)
+        questions = self.generate_interview_questions(
+            role, 
+            num_questions, 
+            sector_context=sector_context, 
+            is_uae_focused=sector_context is not None
+        )
+        
+        # Get coach persona details
+        coach = self.uae_cultural_data["coach_personas"].get(
+            coach_persona, 
+            self.uae_cultural_data["coach_personas"]["zayd"]
+        )
+        
+        # Get appropriate greeting for the coach
+        greeting = coach["greeting"]
         
         # Create session data
         session = {
@@ -182,7 +323,10 @@ class InterviewService:
             "answers": [],
             "emotion_analyses": [],
             "start_time": datetime.now().isoformat(),
-            "completed": False
+            "completed": False,
+            "coach_persona": coach_persona,
+            "sector_context": sector_context,
+            "greeting": greeting
         }
         
         # Store the session
@@ -194,8 +338,44 @@ class InterviewService:
             "role": role,
             "total_questions": len(questions),
             "current_question": 1,
-            "question": questions[0]
+            "question": questions[0],
+            "coach_persona": coach_persona,
+            "greeting": greeting
         }
+    
+    def get_uae_cultural_tips(self, sector: str) -> List[str]:
+        """
+        Get UAE cultural tips for a specific sector
+        
+        Args:
+            sector: Sector to get cultural tips for (general, government, tech, education)
+            
+        Returns:
+            List of cultural tips
+        """
+        if sector not in self.uae_cultural_data["cultural_tips"]:
+            logger.warning(f"Unknown sector: {sector}, using general cultural tips")
+            return self.uae_cultural_data["cultural_tips"]["general"]
+        
+        return self.uae_cultural_data["cultural_tips"][sector]
+    
+    def get_coach_personas(self) -> Dict[str, Dict[str, str]]:
+        """
+        Get all available coach personas
+        
+        Returns:
+            Dictionary of coach personas
+        """
+        return self.uae_cultural_data["coach_personas"]
+    
+    def get_local_companies(self) -> List[Dict[str, str]]:
+        """
+        Get list of prominent UAE companies
+        
+        Returns:
+            List of company data
+        """
+        return self.uae_cultural_data["local_companies"]
     
     def get_current_question(self, session_id: str) -> Dict[str, Any]:
         """

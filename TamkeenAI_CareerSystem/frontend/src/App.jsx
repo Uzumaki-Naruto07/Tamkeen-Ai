@@ -79,6 +79,8 @@ const Settings = lazyLoad(() => import('./pages/Settings'));
 const LinkedInAutomation = lazyLoad(() => import('./pages/LinkedinAutomation'));
 // Add Learning Resources component
 const LearningResources = lazyLoad(() => import('./pages/LearningResources'));
+// Add AI Recommendations component
+const AIRecommendations = lazyLoad(() => import('./pages/AIRecommendations'));
 
 // Suspense fallback component
 const SuspenseFallback = () => (
@@ -178,6 +180,13 @@ const router = createBrowserRouter(
         <Route 
           path="/learning" 
           element={<ProtectedRoute element={<LearningResources />} />} 
+          errorElement={<RouteErrorBoundary />}
+        />
+        
+        {/* Add AI Recommendations route */}
+        <Route 
+          path="/ai-recommendations" 
+          element={<ProtectedRoute element={<AIRecommendations />} />} 
           errorElement={<RouteErrorBoundary />}
         />
         

@@ -8,6 +8,7 @@ import { api } from './apiClient';
 
 // Base endpoint for ChatGPT requests - don't include /api as apiClient already adds it
 const CHATGPT_ENDPOINT = '/chatgpt';
+const AI_ENDPOINT = '/chat/ai';
 
 // Track API connection status
 let apiConnectionStatus = {
@@ -26,6 +27,89 @@ export const getConnectionStatus = () => {
 };
 
 /**
+ * Send a message to a specific AI provider for more flexible model selection
+ * @param {string} message - User message
+ * @param {string} context - Additional context for the conversation (optional)
+ * @param {string} type - Type of service (general, career, resume, recommendation)
+ * @param {string} provider - AI provider to use (openai, deepseek, llama3, groq, local)
+ * @param {string} model - Specific model to use (optional, provider-dependent)
+ * @param {string} language - Language code (en, ar)
+ * @returns {Promise} - Promise resolving to the AI response
+ */
+export const sendMessageWithProvider = async (
+  message, 
+  context = '', 
+  type = 'general', 
+  provider = 'openai', 
+  model = null,
+  language = 'en'
+) => {
+  apiConnectionStatus.connectionAttempts++;
+  
+  try {
+    console.log(`Sending request to AI provider ${provider}:`, { 
+      messageLength: message.length,
+      contextLength: context.length,
+      type,
+      provider,
+      model: model || 'default' 
+    });
+    
+    const response = await api.post(`${AI_ENDPOINT}/recommendation`, {
+      message,
+      context,
+      type,
+      provider,
+      model,
+      language
+    });
+    
+    // Update connection status
+    apiConnectionStatus.isConnected = true;
+    apiConnectionStatus.lastConnected = new Date();
+    apiConnectionStatus.errorMessage = null;
+    
+    console.log(`AI provider ${provider} response received:`, response);
+    
+    // Check if response has the expected structure, otherwise handle it gracefully
+    if (response && response.data) {
+      return {
+        response: response.data.response || "Response received but in unexpected format",
+        provider: response.data.provider || provider,
+        model: response.data.model || model,
+        timestamp: response.data.timestamp || new Date().toISOString(),
+        success: true
+      };
+    } else {
+      console.warn('AI provider response missing data structure:', response);
+      // Return standardized response with the raw response content if available
+      return {
+        response: "Response received but in unexpected format",
+        provider: provider,
+        model: model,
+        timestamp: new Date().toISOString(),
+        fromPartialData: true
+      };
+    }
+  } catch (error) {
+    console.error(`AI provider ${provider} error:`, error);
+    
+    // Update connection status
+    apiConnectionStatus.isConnected = false;
+    apiConnectionStatus.errorMessage = error.message || 'Connection failed';
+    
+    // Provide fallback response if API fails
+    return {
+      response: "I'm sorry, I couldn't connect to the AI service. Here's a helpful general response: Make sure your resume highlights your achievements and skills specifically relevant to the job you're applying for.",
+      provider: provider,
+      model: model,
+      timestamp: new Date().toISOString(),
+      fromFallback: true
+    };
+  }
+};
+
+/**
  * Send a message to ChatGPT and get a response
  * @param {string} message - User message
  * @param {string} context - Additional context for the conversation (optional)
@@ -34,6 +118,35 @@ export const getConnectionStatus = () => {
  * @returns {Promise} - Promise resolving to the ChatGPT response
  */
 export const sendMessage = async (message, context = '', serviceType = 'general', language = 'en') => {
+  // Try to use the new multi-provider endpoint if it's available
+  try {
+    // Map serviceType to type for the new endpoint
+    const typeMap = {
+      'general': 'general',
+      'resume': 'resume',
+      'cover_letter': 'resume',
+      'interview': 'career',
+      'career': 'career'
+    };
+    
+    const type = typeMap[serviceType] || 'general';
+    
+    // Default to OpenAI GPT-3.5 but this can be configured elsewhere
+    const response = await sendMessageWithProvider(message, context, type, 'openai', null, language);
+    
+    // If successful, return in the expected format
+    if (response && response.success) {
+      return {
+        response: response.response,
+        timestamp: response.timestamp
+      };
+    }
+  } catch (newApiError) {
+    console.warn('Failed to use new AI endpoint, falling back to legacy endpoint:', newApiError);
+    // Continue to legacy implementation
+  }
+  
+  // Legacy implementation as fallback
   apiConnectionStatus.connectionAttempts++;
   
   try {

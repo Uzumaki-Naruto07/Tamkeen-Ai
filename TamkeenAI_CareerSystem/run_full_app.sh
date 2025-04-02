@@ -53,6 +53,23 @@ chmod +x "${SCRIPT_DIR}/run_backend.sh"
 "${SCRIPT_DIR}/run_backend.sh" &
 BACKEND_PID=$!
 
+# Start interview API on port 5001
+echo -e "${BLUE}Starting interview API on port 5001...${NC}"
+chmod +x "${SCRIPT_DIR}/run_interview_api.sh"
+"${SCRIPT_DIR}/run_interview_api.sh" &
+INTERVIEW_API_PID=$!
+
+# Wait for the Interview API to start
+echo -e "${YELLOW}Waiting for Interview API to initialize... (3 seconds)${NC}"
+sleep 3
+
+# Check if interview API is running
+if ! ps -p $INTERVIEW_API_PID > /dev/null; then
+    echo -e "${RED}Error: Interview API failed to start. Please check logs above.${NC}"
+    kill $BACKEND_PID
+    exit 1
+fi
+
 # Wait for backend to start
 echo -e "${YELLOW}Waiting for backend to initialize... (5 seconds)${NC}"
 sleep 5
@@ -60,6 +77,7 @@ sleep 5
 # Check if backend is running
 if ! ps -p $BACKEND_PID > /dev/null; then
     echo -e "${RED}Error: Backend failed to start. Please check logs above.${NC}"
+    kill $INTERVIEW_API_PID
     exit 1
 fi
 
@@ -68,10 +86,19 @@ FRONTEND_ENV="${SCRIPT_DIR}/frontend/.env"
 if [ ! -f "$FRONTEND_ENV" ]; then
     echo -e "${YELLOW}Creating frontend .env file...${NC}"
     cat > "$FRONTEND_ENV" << EOL
-VITE_API_URL=http://localhost:5001/api
+# TamkeenAI Frontend Environment Variables
+VITE_API_URL=http://localhost:5001
+VITE_INTERVIEW_API_URL=http://localhost:5001
 VITE_ENABLE_MOCK_DATA=true
+VITE_ENABLE_BACKEND_CHECK=true
 EOL
     echo -e "${GREEN}Created frontend .env with API configuration${NC}"
+else
+    # Update existing .env file
+    echo -e "${YELLOW}Updating frontend .env file...${NC}"
+    sed -i.bak 's#VITE_API_URL=.*#VITE_API_URL=http://localhost:5001#g' "$FRONTEND_ENV"
+    sed -i.bak 's#VITE_INTERVIEW_API_URL=.*#VITE_INTERVIEW_API_URL=http://localhost:5001#g' "$FRONTEND_ENV"
+    echo -e "${GREEN}Updated frontend .env with API configuration${NC}"
 fi
 
 # Start frontend server
@@ -111,6 +138,7 @@ fi
 echo ""
 echo -e "${GREEN}TamkeenAI Career Intelligence System is now running!${NC}"
 echo -e "${BLUE}Backend URL: ${GREEN}http://localhost:5001/api${NC}"
+echo -e "${BLUE}Interview API URL: ${GREEN}http://localhost:5001/api/interviews${NC}"
 echo -e "${BLUE}Frontend URL: ${GREEN}http://localhost:3000${NC}"
 echo ""
 echo -e "${YELLOW}New features available:${NC}"
@@ -122,7 +150,7 @@ echo ""
 echo -e "${YELLOW}Press Ctrl+C to stop both servers${NC}"
 
 # Handle clean shutdown
-trap 'echo -e "\n${BLUE}Shutting down TamkeenAI Career System...${NC}"; kill $BACKEND_PID $FRONTEND_PID; echo -e "${GREEN}Servers stopped${NC}"; exit 0' INT
+trap 'echo -e "\n${BLUE}Shutting down TamkeenAI Career System...${NC}"; kill $BACKEND_PID $FRONTEND_PID $INTERVIEW_API_PID; echo -e "${GREEN}Servers stopped${NC}"; exit 0' INT
 
 # Wait for processes
 wait 

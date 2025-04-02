@@ -1,10 +1,214 @@
 import os
 import requests
 import json
-from typing import Optional
+from typing import Optional, Dict, Any, List
 
-# Get DeepSeek API key from environment variables
+# Get API keys from environment variables
 DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+
+def query_llm_provider(messages: List[Dict[str, str]], provider: str = 'openai', model: str = None, temperature: float = 0.7, max_tokens: int = 1000) -> Dict[Any, Any]:
+    """
+    Query different LLM providers based on the specified provider parameter.
+    
+    Parameters:
+    - messages: List of message dictionaries with 'role' and 'content' fields
+    - provider: Which AI provider to use ('openai', 'deepseek', 'llama3', 'local')
+    - model: Specific model to use (optional, provider-dependent)
+    - temperature: Creativity parameter (0.0 to 1.0)
+    - max_tokens: Maximum tokens in the response
+    
+    Returns:
+    - Dictionary with response text and metadata
+    """
+    provider = provider.lower()
+    
+    # Default response for errors
+    default_response = {
+        "content": "I'm sorry, I couldn't process your request due to a technical issue.",
+        "provider": provider,
+        "success": False,
+        "error": "Failed to connect to AI provider"
+    }
+    
+    try:
+        # OpenAI (GPT-3.5 or GPT-4)
+        if provider == 'openai':
+            # Default model if not specified
+            if not model:
+                model = "gpt-3.5-turbo"
+                
+            if not OPENAI_API_KEY:
+                return {**default_response, "error": "OpenAI API key not configured"}
+                
+            # Use direct API if we have the key
+            url = "https://api.openai.com/v1/chat/completions"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {OPENAI_API_KEY}"
+            }
+            payload = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            
+            response = requests.post(url, headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                result = response.json()
+                return {
+                    "content": result["choices"][0]["message"]["content"],
+                    "provider": "openai",
+                    "model": model,
+                    "success": True
+                }
+            else:
+                return {**default_response, "error": f"OpenAI API error: {response.text}"}
+        
+        # DeepSeek models
+        elif provider == 'deepseek':
+            if not model:
+                model = "deepseek-chat"
+                
+            if not DEEPSEEK_API_KEY:
+                return {**default_response, "error": "DeepSeek API key not configured"}
+                
+            url = "https://api.deepseek.com/v1/chat/completions"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
+            }
+            payload = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            
+            response = requests.post(url, headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                result = response.json()
+                return {
+                    "content": result["choices"][0]["message"]["content"],
+                    "provider": "deepseek",
+                    "model": model,
+                    "success": True
+                }
+            else:
+                return {**default_response, "error": f"DeepSeek API error: {response.text}"}
+        
+        # Llama3 or other models via OpenRouter
+        elif provider == 'openrouter' or provider == 'llama3':
+            # Default model if not specified
+            if not model:
+                model = "meta-llama/llama-3-8b-instruct" if provider == 'llama3' else "deepseek-ai/deepseek-coder"
+                
+            if not OPENROUTER_API_KEY:
+                return {**default_response, "error": "OpenRouter API key not configured"}
+                
+            url = "https://openrouter.ai/api/v1/chat/completions"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "HTTP-Referer": os.environ.get('APP_DOMAIN', 'https://tamkeen-ai.com'),
+                "X-Title": "Tamkeen AI Career System"
+            }
+            payload = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            
+            response = requests.post(url, headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                result = response.json()
+                return {
+                    "content": result["choices"][0]["message"]["content"],
+                    "provider": "openrouter",
+                    "model": model,
+                    "success": True
+                }
+            else:
+                return {**default_response, "error": f"OpenRouter API error: {response.text}"}
+        
+        # Groq API for fast responses
+        elif provider == 'groq':
+            # Default model if not specified
+            if not model:
+                model = "llama3-8b-8192"
+                
+            if not GROQ_API_KEY:
+                return {**default_response, "error": "Groq API key not configured"}
+                
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {GROQ_API_KEY}"
+            }
+            payload = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            
+            response = requests.post(url, headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                result = response.json()
+                return {
+                    "content": result["choices"][0]["message"]["content"],
+                    "provider": "groq",
+                    "model": model,
+                    "success": True
+                }
+            else:
+                return {**default_response, "error": f"Groq API error: {response.text}"}
+        
+        # Local Flask or Python server (assuming it follows OpenAI-like API)
+        elif provider == 'local':
+            local_url = os.environ.get('LOCAL_LLM_URL', 'http://localhost:8000')
+            url = f"{local_url}/v1/chat/completions"
+            
+            # Determine if we need authentication
+            local_api_key = os.environ.get('LOCAL_LLM_API_KEY', '')
+            headers = {"Content-Type": "application/json"}
+            if local_api_key:
+                headers["Authorization"] = f"Bearer {local_api_key}"
+                
+            payload = {
+                "model": model or "local-model",
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            
+            response = requests.post(url, headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                result = response.json()
+                return {
+                    "content": result["choices"][0]["message"]["content"],
+                    "provider": "local",
+                    "model": model or "local-model",
+                    "success": True
+                }
+            else:
+                return {**default_response, "error": f"Local LLM API error: {response.text}"}
+        
+        # Unknown provider
+        else:
+            return {**default_response, "error": f"Unknown provider: {provider}"}
+            
+    except Exception as e:
+        return {**default_response, "error": str(e)}
 
 def query_deepseek(query: str, lang: str = 'en') -> str:
     """Query the DeepSeek API for advanced career guidance"""
@@ -24,6 +228,23 @@ def query_deepseek(query: str, lang: str = 'en') -> str:
         Include salary ranges, job outlook, and work-life balance information when relevant."""
         user_prompt = f"Career question: {query}. Provide a detailed and helpful answer focused on practical steps."
 
+    # Prepare the messages in the format expected by query_llm_provider
+    messages = [
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": user_prompt}
+    ]
+    
+    # Try to use the multi-provider function first
+    try:
+        result = query_llm_provider(messages, provider="deepseek")
+        if result["success"]:
+            return result["content"]
+    except Exception as e:
+        print(f"Error using query_llm_provider: {e}")
+        # Fall back to original implementation
+        pass
+
+    # Original implementation as fallback
     # API endpoint
     url = "https://api.deepseek.com/v1/chat/completions"
 
