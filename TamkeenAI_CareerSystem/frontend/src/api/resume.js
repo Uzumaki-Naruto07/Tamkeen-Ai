@@ -82,6 +82,119 @@ const getResumeTemplates = async () => {
   }
 };
 
+// Analyze resume with ATS analyzer
+const analyzeResumeWithATS = async (file, jobTitle = '', jobDescription = '') => {
+  try {
+    // Create a FormData object to handle file upload
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    if (jobTitle) {
+      formData.append('job_title', jobTitle);
+    }
+    
+    if (jobDescription) {
+      formData.append('job_description', jobDescription);
+    }
+    
+    const response = await apiClient.post('/ats/analyze', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      timeout: 30000 // Increase timeout for PDF extraction
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('Error analyzing resume with ATS:', error);
+    
+    // Enhanced error reporting
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      if (error.response.status === 400 && error.response.data.error) {
+        throw new Error(`PDF extraction failed: ${error.response.data.error}`);
+      }
+    }
+    
+    throw error;
+  }
+};
+
+// Analyze resume with ATS and DeepSeek AI
+const analyzeResumeWithDeepSeek = async (file, jobTitle, jobDescription) => {
+  try {
+    // Create a FormData object to handle file upload
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('job_title', jobTitle || 'Unspecified Job');
+    formData.append('job_description', jobDescription);
+    
+    // Explicitly get API key from environment if available
+    const apiKey = window.ENV_VARS?.DEEPSEEK_API_KEY || process.env.REACT_APP_DEEPSEEK_API_KEY || '';
+    if (apiKey) {
+      formData.append('api_key', apiKey);
+    }
+    
+    const response = await apiClient.post('/ats/analyze-with-deepseek', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      timeout: 60000 // Increase timeout for DeepSeek analysis
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('Error analyzing resume with DeepSeek:', error);
+    
+    // Enhanced error handling
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      if (error.response.status === 400 && error.response.data.error) {
+        if (error.response.data.error.includes('PDF') || error.response.data.error.includes('extract')) {
+          throw new Error(`PDF extraction failed: ${error.response.data.error}`);
+        } else if (error.response.data.error.includes('API key') || error.response.data.error.includes('DeepSeek')) {
+          throw new Error(`DeepSeek AI issue: ${error.response.data.error}`);
+        }
+      }
+    }
+    
+    throw error;
+  }
+};
+
+// Extract keywords from resume and job description
+const extractKeywords = async (resumeText, jobDescription) => {
+  try {
+    const response = await apiClient.post('/ats/keywords', {
+      resume_text: resumeText,
+      job_description: jobDescription
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('Error extracting keywords:', error);
+    throw error;
+  }
+};
+
+// Get optimization suggestions for resume
+const getOptimizationSuggestions = async (resumeText, jobTitle, jobDescription) => {
+  try {
+    const formData = new FormData();
+    formData.append('resume_text', resumeText);
+    formData.append('job_title', jobTitle);
+    formData.append('job_description', jobDescription);
+    
+    const response = await apiClient.post('/ats/optimize', formData);
+    return response;
+  } catch (error) {
+    console.error('Error getting optimization suggestions:', error);
+    throw error;
+  }
+};
+
 // Export all functions
 const resumeApi = {
   getUserResumes,
@@ -90,7 +203,11 @@ const resumeApi = {
   updateResume,
   deleteResume,
   analyzeResume,
-  getResumeTemplates
+  getResumeTemplates,
+  analyzeResumeWithATS,
+  analyzeResumeWithDeepSeek,
+  extractKeywords,
+  getOptimizationSuggestions
 };
 
 export default resumeApi; 

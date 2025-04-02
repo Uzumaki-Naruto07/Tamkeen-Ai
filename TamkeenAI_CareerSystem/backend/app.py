@@ -36,6 +36,7 @@ from api.routes.auth_routes import auth_bp
 from api.routes.confidence_chart_routes import confidence_charts
 # Import the new interview controller
 from api.controllers.interview_controller import interview_bp as interview_coach_bp
+from api.routes.ats_routes import ats_bp
 
 # Configure logging
 logging.basicConfig(
@@ -94,7 +95,8 @@ def create_app():
         "http://127.0.0.1:3001",
         "*"  # For development only - remove in production
     ],
-         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With", 
+                       "X-Force-Real-API", "X-Skip-Mock"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
          expose_headers=["Content-Disposition"],
          supports_credentials=True)
@@ -114,6 +116,7 @@ def create_app():
     app.register_blueprint(confidence_charts)
     # Register the new interview coach blueprint
     app.register_blueprint(interview_coach_bp, url_prefix='/api/interviews')
+    app.register_blueprint(ats_bp)
     
     # Add a default response for OPTIONS requests globally
     @app.after_request
@@ -125,7 +128,7 @@ def create_app():
         if os.getenv('FLASK_ENV') != 'production' or app.debug:
             response.headers.add('Access-Control-Allow-Origin', origin or '*')
             response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Force-Real-API, X-Skip-Mock')
             response.headers.add('Access-Control-Allow-Credentials', 'true')
         else:
             # In production, only allow the configured frontend origins
@@ -140,7 +143,7 @@ def create_app():
             if origin and origin in allowed_origins:
                 response.headers.add('Access-Control-Allow-Origin', origin)
                 
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Force-Real-API, X-Skip-Mock')
         response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         response.headers.add('Access-Control-Expose-Headers', 'Content-Disposition')
@@ -256,6 +259,12 @@ def create_app():
                 "message": f"Failed to get data: {str(e)}"
             }), 500
     
+    @app.route('/health')
+    def health_check_new():
+        """Health check endpoint"""
+        return jsonify({"status": "healthy"})
+    
+    logger.info("Application initialized successfully")
     return app
 
 def parse_args():

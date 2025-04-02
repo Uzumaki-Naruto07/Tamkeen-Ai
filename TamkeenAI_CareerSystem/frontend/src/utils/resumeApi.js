@@ -143,10 +143,15 @@ const resumeApi = {
       formData.append('job_title', jobData.title);
       formData.append('job_description', jobData.description);
       
+      // Add a special flag to indicate we want to force real API usage and not fallback to mock
+      formData.append('force_real_api', 'true');
+      
+      // Set a longer timeout for this request since AI analysis takes time
       return api.post('/ats/analyze-with-deepseek', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
-        }
+        },
+        timeout: 30000 // Increase timeout to 30 seconds for LLM processing
       });
     },
     {

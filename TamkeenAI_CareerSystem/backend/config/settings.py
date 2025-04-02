@@ -218,3 +218,6 @@ if os.path.exists(ENV_SETTINGS_FILE):
 # Upload settings
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'uploads')
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt'}
+
+# AI and LLM integrations
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", None)

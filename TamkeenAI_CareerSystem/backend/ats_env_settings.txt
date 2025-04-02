@@ -1,0 +1,14 @@
+# Backend Environment Settings for ATS
+# Add these to your .env file or export as environment variables
+
+# Disable mock data for ATS
+ENABLE_REAL_ATS=true
+DISABLE_ATS_MOCK=true
+
+# Set your DeepSeek API key (required for real ATS analysis)
+DEEPSEEK_API_KEY=your_deepseek_api_key_here  # Replace with your actual DeepSeek API key
+
+# Instructions:
+# 1. Copy these settings to your backend .env file
+# 2. Replace the DeepSeek API key with your actual key
+# 3. Restart the backend server

@@ -50,8 +50,25 @@ fi
 # Install backend dependencies and start backend
 echo -e "${BLUE}Starting backend server...${NC}"
 chmod +x "${SCRIPT_DIR}/run_backend.sh"
+
+# Add DeepSeek API key to environment
+export DEEPSEEK_API_KEY="openai-route-deepseek-r1-free"
+echo -e "${GREEN}DeepSeek API key set for resume analysis${NC}"
+
+# Add ATS-specific environment variables to disable mock data
+export ENABLE_REAL_ATS=true
+export DISABLE_ATS_MOCK=true
+echo -e "${GREEN}ATS mock data disabled - using real resume analysis${NC}"
+
 "${SCRIPT_DIR}/run_backend.sh" &
 BACKEND_PID=$!
+
+# Comments about the improved backend
+echo -e "${YELLOW}Backend now configured with:${NC}"
+echo -e " - DeepSeek API for resume analysis"
+echo -e " - Real ATS analysis (no mock data)"
+echo -e " - Uvicorn server for faster performance"
+echo -e " - Optimized text extraction"
 
 # Start interview API on port 5001
 echo -e "${BLUE}Starting interview API on port 5001...${NC}"
@@ -91,6 +108,7 @@ VITE_API_URL=http://localhost:5001
 VITE_INTERVIEW_API_URL=http://localhost:5001
 VITE_ENABLE_MOCK_DATA=true
 VITE_ENABLE_BACKEND_CHECK=true
+VITE_DISABLE_ATS_MOCK_DATA=true
 EOL
     echo -e "${GREEN}Created frontend .env with API configuration${NC}"
 else
@@ -147,6 +165,30 @@ echo -e "- Speech Recognition${NC}"
 echo -e "- Emotion Detection${NC}"
 echo -e "- Sentiment Analysis${NC}"
 echo ""
+
+# Make ATS demo script executable
+chmod +x "${SCRIPT_DIR}/backend/api/services/ats/demo.py"
+
+# Add information about the ATS Analyzer demo
+echo -e "${YELLOW}ATS Analyzer Demo Available:${NC}"
+echo -e "${BLUE}You can use the ATS Analyzer directly with these commands:${NC}"
+echo -e ""
+echo -e "${GREEN}# List available sample jobs${NC}"
+echo -e "${SCRIPT_DIR}/backend/api/services/ats/demo.py --list-jobs"
+echo -e ""
+echo -e "${GREEN}# Analyze a resume with no job matching${NC}"
+echo -e "${SCRIPT_DIR}/backend/api/services/ats/demo.py path/to/resume.pdf"
+echo -e ""
+echo -e "${GREEN}# Analyze a resume against a specific job${NC}"
+echo -e "${SCRIPT_DIR}/backend/api/services/ats/demo.py path/to/resume.pdf --job \"Software Engineer\""
+echo -e ""
+echo -e "${GREEN}# Save analysis to JSON file${NC}"
+echo -e "${SCRIPT_DIR}/backend/api/services/ats/demo.py path/to/resume.pdf --job \"Data Scientist\" --output analysis.json"
+echo -e ""
+echo -e "${GREEN}# Analyze with DeepSeek AI (using environment API key)${NC}"
+echo -e "${SCRIPT_DIR}/backend/api/services/ats/demo.py path/to/resume.pdf --job \"Product Manager\""
+echo -e ""
+
 echo -e "${YELLOW}Press Ctrl+C to stop both servers${NC}"
 
 # Handle clean shutdown

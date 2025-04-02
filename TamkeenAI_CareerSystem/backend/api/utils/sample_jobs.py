@@ -1,278 +1,237 @@
-# Sample job descriptions for various roles
+"""
+Sample job descriptions for testing the ATS analyzer system.
+
+This module contains a collection of sample job descriptions across various
+industries and roles for testing the ATS analyzer functionality.
+"""
+
 sample_job_descriptions = {
-    "Data Scientist": """
-    We are looking for a Data Scientist to analyze large datasets and build predictive models.
-    Requirements:
-    - Advanced degree in Statistics, Mathematics, Computer Science or related field.
-    - 3+ years experience with Python, R, SQL.
-    - Experience with machine learning algorithms.
-    - Knowledge of TensorFlow, PyTorch, scikit-learn.
-    - Strong background in statistical analysis and data visualization.
-    """,
     "Software Engineer": """
-    We're hiring a Software Engineer to develop high-quality applications.
+    About the Role:
+    We are looking for a Software Engineer to join our dynamic team. The ideal candidate will design, develop, and maintain high-quality software solutions. You will collaborate with cross-functional teams to define, design, and ship new features.
+
     Requirements:
-    - Bachelor's degree in Computer Science or related field.
-    - 2+ years experience in software development.
-    - Proficiency in Java, Python, or C++.
-    - Experience with web frameworks and version control systems.
-    - Strong problem-solving skills.
+    - Bachelor's degree in Computer Science, Engineering, or related field
+    - 3+ years of experience in software development
+    - Proficiency in Python, JavaScript, and React
+    - Experience with RESTful APIs and microservices architecture
+    - Familiarity with AWS or other cloud platforms
+    - Knowledge of database systems (SQL and NoSQL)
+    - Strong problem-solving skills and attention to detail
+    - Excellent communication and teamwork abilities
+
+    Responsibilities:
+    - Design, build, and maintain efficient, reusable, and reliable code
+    - Implement new features and optimize existing ones
+    - Ensure the best performance, quality, and responsiveness of applications
+    - Identify and correct bottlenecks and fix bugs
+    - Help maintain code quality, organization, and automatization
     """,
-    "Marketing Manager": """
-    Seeking a Marketing Manager to develop and implement marketing strategies.
+
+    "Data Scientist": """
+    About the Role:
+    We are seeking a talented Data Scientist to help discover the information hidden in vast amounts of data, and help make smarter decisions to deliver even better products. Your primary focus will be applying data mining techniques, doing statistical analysis, and building high-quality prediction systems integrated with our products.
+
     Requirements:
-    - Bachelor's degree in Marketing or related field.
-    - 5+ years of marketing experience.
-    - Expertise in digital marketing, social media, and content creation.
-    - Experience with SEO/SEM and marketing analytics.
-    - Excellent communication and presentation skills.
+    - Master's or PhD in Statistics, Mathematics, Computer Science, or related field
+    - 2+ years of experience in data science or related field
+    - Strong programming skills in Python, R, or similar languages
+    - Experience with data visualization tools (e.g., Tableau, PowerBI)
+    - Proficiency in using query languages such as SQL
+    - Experience with machine learning frameworks (e.g., TensorFlow, PyTorch)
+    - Knowledge of statistical and data mining techniques
+    - Great communication skills
+
+    Responsibilities:
+    - Develop and implement data models and algorithms to apply to datasets
+    - Analyze large amounts of information to discover trends and patterns
+    - Present information using data visualization techniques
+    - Propose solutions and strategies to business challenges
+    - Collaborate with engineering and product development teams
     """,
-    "AI Engineer": """
-    We are seeking an AI Engineer to design and develop innovative AI models.
-    Requirements:
-    - Advanced degree in Computer Science, AI, or a related field.
-    - Strong programming skills in Python and experience with deep learning frameworks.
-    - Knowledge of neural networks, NLP, and computer vision.
-    - Proven experience in developing and deploying AI solutions.
-    """,
-    "Cybersecurity Analyst": """
-    We are looking for a Cybersecurity Analyst to safeguard our systems and data.
-    Requirements:
-    - Degree in Cybersecurity, Information Technology, or a related field.
-    - Experience with threat analysis, vulnerability assessments, and risk management.
-    - Proficiency with firewalls, SIEM tools, and security protocols.
-    - Strong analytical and problem-solving skills.
-    """,
-    "Data Analyst": """
-    We are hiring a Data Analyst to interpret complex data sets and provide actionable insights.
-    Requirements:
-    - Degree in Statistics, Mathematics, or a related field.
-    - Proficiency in SQL, Python or R, and data visualization tools.
-    - Strong analytical skills and attention to detail.
-    - Experience with data cleaning, mining, and reporting.
-    """,
-    "Full Stack Developer": """
-    Join our team as a Full Stack Developer to work on both front-end and back-end systems.
-    Requirements:
-    - Bachelor's degree in Computer Science or related field.
-    - Proficiency in HTML, CSS, JavaScript, and back-end languages like Python, Java, or Ruby.
-    - Experience with databases, APIs, and version control.
-    - Excellent problem-solving and communication skills.
-    """,
-    "UI/UX Designer": """
-    We are seeking a creative UI/UX Designer to enhance our user experience.
-    Requirements:
-    - Degree in Design, HCI, or a related field.
-    - Proficiency in design tools like Adobe XD, Sketch, or Figma.
-    - A strong portfolio demonstrating user-centered design.
-    - Excellent communication and collaboration skills.
-    """,
-    "HR Business Partner": """
-    Our HR Business Partner will support business units with strategic HR initiatives.
-    Requirements:
-    - Degree in Human Resources, Business Administration, or related field.
-    - Experience in HR management and employee relations.
-    - Strong communication and organizational skills.
-    - Ability to work in a dynamic, fast-paced environment.
-    """,
-    "Cloud Solutions Architect": """
-    We are looking for a Cloud Solutions Architect to design and implement our cloud strategies.
-    Requirements:
-    - Degree in Computer Science or related field.
-    - Proven experience with AWS, Azure, or Google Cloud Platform.
-    - Strong understanding of cloud architecture, security, and scalability.
-    - Excellent problem-solving and project management skills.
-    """,
-    "Software Tester": """
-    We are hiring a Software Tester to ensure the quality of our software products.
-    Requirements:
-    - Experience with software testing methodologies and tools.
-    - Ability to design and execute test cases.
-    - Familiarity with programming languages and automation tools.
-    - Strong analytical and troubleshooting skills.
-    """,
-    "Machine Learning Engineer": """
-    We are seeking a Machine Learning Engineer to build and deploy machine learning models.
-    Requirements:
-    - Degree in Computer Science, AI, or a related field.
-    - Proficiency in Python and machine learning libraries.
-    - Experience with deep learning frameworks and data analysis.
-    - Strong understanding of machine learning algorithms and techniques.
-    """,
-    "DevOps Engineer": """
-    Join our team as a DevOps Engineer to streamline our development and deployment processes.
-    Requirements:
-    - Experience with continuous integration/delivery tools.
-    - Knowledge of cloud platforms and containerization (Docker, Kubernetes).
-    - Strong scripting and automation skills.
-    - Excellent communication and teamwork abilities.
-    """,
-    "Front-End Developer": """
-    We are hiring a Front-End Developer to build responsive and engaging web interfaces.
-    Requirements:
-    - Proficiency in HTML, CSS, and JavaScript.
-    - Experience with frameworks like React, Angular, or Vue.
-    - Strong design sense and attention to detail.
-    - Ability to work collaboratively with designers and back-end developers.
-    """,
-    "Back-End Developer": """
-    We are seeking a Back-End Developer to design robust server-side applications.
-    Requirements:
-    - Proficiency in Python, Java, or C#.
-    - Experience with database systems, API development, and server architecture.
-    - Strong problem-solving skills and attention to detail.
-    - Familiarity with version control systems.
-    """,
-    "Database Administrator": """
-    We are looking for a Database Administrator to manage and optimize our databases.
-    Requirements:
-    - Degree in Computer Science or a related field.
-    - Experience with SQL databases, performance tuning, and backup strategies.
-    - Strong analytical and troubleshooting skills.
-    - Knowledge of database security and data integrity best practices.
-    """,
-    "IT Support Specialist": """
-    We are hiring an IT Support Specialist to provide technical assistance and troubleshooting.
-    Requirements:
-    - Experience in IT support and customer service.
-    - Knowledge of hardware, software, and networking fundamentals.
-    - Excellent communication and problem-solving skills.
-    - Ability to work under pressure and handle multiple tasks.
-    """,
+
     "Product Manager": """
-    We are seeking a Product Manager to oversee product development and lifecycle.
+    About the Role:
+    We are looking for an experienced Product Manager to join our team. You will be responsible for the product planning and execution throughout the Product Lifecycle, including gathering and prioritizing product and customer requirements, defining the product vision, and working closely with engineering, sales, marketing, and support to ensure revenue and customer satisfaction goals are met.
+
     Requirements:
-    - Degree in Business, Engineering, or a related field.
-    - Experience in product management and market research.
-    - Strong leadership and strategic planning skills.
-    - Ability to communicate effectively with cross-functional teams.
+    - Bachelor's degree in Business, Computer Science, or related field
+    - 4+ years of experience in product management
+    - Strong technical background with understanding of software development
+    - Excellent written and verbal communication skills
+    - Strong problem-solving skills and ability to think strategically
+    - Experience with Agile methodologies
+    - Customer-focused mindset
+
+    Responsibilities:
+    - Define the product strategy and roadmap
+    - Deliver MRDs and PRDs with prioritized features and corresponding justification
+    - Work with external customers and internal stakeholders to ensure alignment
+    - Act as a product evangelist to build awareness and understanding
+    - Represent the customer's needs and ensure products and features meet quality thresholds
     """,
-    "Business Intelligence Analyst": """
-    We are hiring a Business Intelligence Analyst to convert data into actionable insights.
+
+    "UX/UI Designer": """
+    About the Role:
+    We are seeking a UX/UI Designer to create amazing user experiences. The ideal candidate should have an eye for clean and artful design, possess superior UI skills, and be able to translate high-level requirements into interaction flows and artifacts.
+
     Requirements:
-    - Degree in Business, Statistics, or related field.
-    - Proficiency in BI tools, SQL, and data visualization.
-    - Strong analytical and problem-solving skills.
-    - Experience with data warehousing and reporting.
+    - Bachelor's degree in Design, Human-Computer Interaction, or related field
+    - 3+ years of experience in UX/UI design
+    - Strong portfolio of design projects
+    - Proficiency in design software such as Figma, Sketch, or Adobe XD
+    - Knowledge of wireframe tools (e.g., InVision, Balsamiq)
+    - Understanding of basic front-end development (HTML, CSS, JavaScript)
+    - Excellent visual design skills with sensitivity to user-system interaction
+    - Ability to present and defend design decisions
+
+    Responsibilities:
+    - Translate concepts into user flows, wireframes, mockups, and prototypes
+    - Design the overall architecture of the user interface
+    - Create original graphic designs (e.g., images, sketches, and tables)
+    - Prepare and present rough drafts to internal teams and key stakeholders
+    - Identify and troubleshoot UX problems
+    - Conduct layout adjustments based on user feedback
     """,
-    "IT Project Manager": """
-    We are looking for an IT Project Manager to lead and coordinate technology projects.
+
+    "Marketing Manager": """
+    About the Role:
+    We are looking for a Marketing Manager to promote our company's products and services. You will lead marketing campaigns from ideation to execution and develop strategies to enhance our brand awareness.
+
     Requirements:
-    - Degree in Information Technology or a related field.
-    - Experience in project management and Agile methodologies.
-    - Strong leadership, organizational, and communication skills.
-    - Ability to manage timelines and deliverables effectively.
+    - Bachelor's degree in Marketing, Business, or related field
+    - 5+ years of experience in marketing
+    - Experience developing marketing strategies and plans
+    - Solid knowledge of different marketing channels
+    - Experience with CRM and marketing automation tools
+    - Strong analytical skills to evaluate end-to-end customer experience
+    - Excellent communication and interpersonal skills
+
+    Responsibilities:
+    - Develop strategies and tactics to get the word out about our company
+    - Deploy successful marketing campaigns and own their implementation
+    - Prepare and monitor the marketing budget
+    - Track performance of marketing campaigns, gain insight, and assess against goals
+    - Experiment with a variety of organic and paid acquisition channels
+    - Analyze consumer behavior and adjust marketing campaigns accordingly
     """,
-    "Digital Marketing Specialist": """
-    Join our team as a Digital Marketing Specialist to drive online marketing efforts.
+
+    "DevOps Engineer": """
+    About the Role:
+    We are seeking a DevOps Engineer to help build and maintain our cloud infrastructure. The ideal candidate will have a strong background in Linux systems administration and be comfortable with cloud platforms, automation, and CI/CD pipelines.
+
     Requirements:
-    - Degree in Marketing or a related field.
-    - Experience in SEO/SEM, social media, and digital advertising.
-    - Proficiency with analytics and marketing tools.
-    - Strong creative and strategic thinking skills.
+    - Bachelor's degree in Computer Science, Engineering, or related field
+    - 3+ years of experience in DevOps, System Administration, or similar role
+    - Strong experience with AWS, Azure, or GCP
+    - Proficiency with infrastructure as code tools (e.g., Terraform, CloudFormation)
+    - Experience with containerization (Docker, Kubernetes)
+    - Knowledge of CI/CD pipelines (e.g., Jenkins, GitLab CI, GitHub Actions)
+    - Experience with monitoring and logging tools
+    - Strong scripting skills (Bash, Python)
+
+    Responsibilities:
+    - Design, implement, and maintain infrastructure on cloud platforms
+    - Automate and optimize deployment pipelines and processes
+    - Implement security best practices and ensure high availability
+    - Monitor systems and applications to ensure optimal performance
+    - Troubleshoot and resolve infrastructure issues
+    - Collaborate with development teams to improve development lifecycle
     """,
-    "Network Security Engineer": """
-    We are seeking a Network Security Engineer to protect and monitor our network infrastructure.
+
+    "Machine Learning Engineer": """
+    About the Role:
+    We are looking for a Machine Learning Engineer who will help us create machine learning models and redefine the future of AI. You will develop and optimize our machine learning systems and applications.
+
     Requirements:
-    - Degree in Computer Science, Cybersecurity, or a related field.
-    - Experience with firewalls, VPNs, and intrusion detection systems.
-    - Strong understanding of network security protocols.
-    - Excellent analytical and troubleshooting abilities.
+    - Master's or PhD in Computer Science, Engineering, or related field
+    - 3+ years of experience in machine learning engineering
+    - Strong programming skills in Python
+    - Experience with machine learning frameworks (TensorFlow, PyTorch, Keras)
+    - Deep understanding of data structures, data modeling, and software architecture
+    - Knowledge of deep learning, neural networks, and NLP
+    - Experience with cloud platforms (AWS, GCP, Azure)
+    - Good communication skills and ability to work in a team
+
+    Responsibilities:
+    - Design and implement machine learning algorithms and systems
+    - Run machine learning tests and experiments
+    - Implement appropriate ML algorithms and tools
+    - Develop machine learning applications according to requirements
+    - Select appropriate datasets and data representation methods
+    - Run machine learning tests and experiments
+    - Perform statistical analysis and fine-tuning using test results
     """,
-    "Penetration Tester (Ethical Hacker)": """
-    We are hiring a Penetration Tester to identify vulnerabilities in our systems.
-    Requirements:
-    - Degree in Cybersecurity or a related field.
-    - Proven experience with penetration testing and ethical hacking.
-    - Proficiency with testing tools and scripting languages.
-    - Strong analytical and communication skills.
-    """,
-    "Computer Vision Engineer": """
-    We are looking for a Computer Vision Engineer to develop image processing and recognition systems.
-    Requirements:
-    - Degree in Computer Science or a related field.
-    - Experience with computer vision libraries and deep learning frameworks.
-    - Proficiency in Python or C++.
-    - Strong analytical skills and creative problem solving.
-    """,
-    "NLP Engineer": """
-    We are seeking an NLP Engineer to work on language processing and understanding.
-    Requirements:
-    - Degree in Computer Science, Linguistics, or a related field.
-    - Experience with NLP libraries and models.
-    - Proficiency in Python.
-    - Strong understanding of language models and machine learning.
-    """,
-    "Scrum Master": """
-    We are hiring a Scrum Master to facilitate Agile processes within our teams.
-    Requirements:
-    - Certification in Scrum or Agile methodologies.
-    - Experience leading Agile teams.
-    - Excellent communication and conflict resolution skills.
-    - Ability to manage project timelines and adapt to changing requirements.
-    """,
-    "Mobile App Developer": """
-    Join our team as a Mobile App Developer to create innovative mobile applications.
-    Requirements:
-    - Proficiency in mobile development frameworks (Swift, Kotlin, or React Native).
-    - Experience with app design and user experience.
-    - Strong problem-solving and debugging skills.
-    - Ability to collaborate with designers and back-end developers.
-    """,
-    "Blockchain Developer": """
-    We are seeking a Blockchain Developer to build decentralized applications.
-    Requirements:
-    - Degree in Computer Science or a related field.
-    - Experience with blockchain technologies and smart contracts.
-    - Proficiency in Solidity or similar languages.
-    - Strong analytical skills and attention to detail.
-    """,
-    "Robotics Engineer": """
-    We are hiring a Robotics Engineer to design, develop, and maintain robotic systems.
-    Requirements:
-    - Degree in Robotics, Mechanical Engineering, or related field.
-    - Experience with robotic systems design and control.
-    - Proficiency in relevant programming languages.
-    - Excellent problem-solving and technical skills.
-    """,
-    "Technical Support Engineer": """
-    We are seeking a Technical Support Engineer to provide technical assistance to customers.
-    Requirements:
-    - Experience in technical support and troubleshooting.
-    - Knowledge of hardware, software, and networking.
-    - Excellent communication and customer service skills.
-    - Ability to work in a fast-paced environment.
-    """,
-    "Systems Administrator": """
-    We are hiring a Systems Administrator to manage and maintain our IT infrastructure.
-    Requirements:
-    - Experience with system administration and network management.
-    - Proficiency in Linux, Windows, or other operating systems.
-    - Strong technical and troubleshooting skills.
-    - Ability to work independently and manage multiple tasks.
-    """,
-    "IT Auditor": """
-    We are looking for an IT Auditor to evaluate our systems and ensure regulatory compliance.
-    Requirements:
-    - Degree in Information Systems, Accounting, or related field.
-    - Experience with IT audits and risk assessment.
-    - Strong analytical and communication skills.
-    - Knowledge of industry regulations and best practices.
-    """,
-    "Finance Manager": """
-    We are hiring a Finance Manager to oversee financial operations and strategic planning.
-    Requirements:
-    - Degree in Finance, Accounting, or a related field.
-    - Proven experience in financial management and budgeting.
-    - Strong analytical and leadership skills.
-    - Proficiency in financial software and reporting tools.
-    """,
+
     "Project Manager": """
-    We are seeking a Project Manager to coordinate projects across multiple departments.
+    About the Role:
+    We are seeking a Project Manager to plan and oversee projects to ensure they are completed in a timely fashion and within budget. You will coordinate people and processes to ensure that our projects are delivered on time and produce the desired results.
+
     Requirements:
-    - Degree in Business, Engineering, or related field.
-    - Experience in project management and team leadership.
-    - Excellent organizational and communication skills.
-    - Ability to manage timelines, resources, and stakeholder expectations.
+    - Bachelor's degree in Business, Engineering, or related field
+    - 4+ years of experience in project management
+    - PMP certification preferred
+    - Strong knowledge of project management methodologies
+    - Experience with project management software (e.g., MS Project, Jira, Asana)
+    - Strong leadership and organizational skills
+    - Excellent communication skills
+    - Problem-solving ability and critical thinking
+
+    Responsibilities:
+    - Coordinate internal resources and third parties for the flawless execution of projects
+    - Ensure that all projects are delivered on time, within scope and budget
+    - Develop project scopes and objectives, involving all relevant stakeholders
+    - Create and maintain comprehensive project documentation
+    - Use appropriate verification techniques to manage changes in project scope
+    - Create and maintain project schedules and resource allocation
+    - Manage project risks and issues and provide solutions
+    """,
+
+    "Front-End Developer": """
+    About the Role:
+    We are looking for a Front-End Developer responsible for building the 'client-side' of our web applications. You should be able to translate our company and customer needs into functional and appealing interactive applications.
+
+    Requirements:
+    - Bachelor's degree in Computer Science or related field
+    - 2+ years of experience as a Front-End Developer
+    - Proficiency in HTML, CSS, JavaScript, and front-end frameworks (React, Angular, or Vue)
+    - Experience with responsive and adaptive design
+    - Understanding of SEO principles
+    - Knowledge of version control systems (e.g., Git)
+    - Good understanding of cross-browser compatibility issues
+    - Familiarity with UI/UX design principles
+
+    Responsibilities:
+    - Develop new user-facing features
+    - Build reusable code and libraries for future use
+    - Ensure the technical feasibility of UI/UX designs
+    - Optimize applications for maximum speed and scalability
+    - Assure that all user input is validated before submitting to the back-end
+    - Collaborate with other team members and stakeholders
+    - Stay up-to-date with emerging technologies
+    """,
+
+    "Data Engineer": """
+    About the Role:
+    We are seeking a Data Engineer to build and maintain our data pipelines and infrastructure. The ideal candidate will have experience with data warehousing, ETL processes, and big data technologies.
+
+    Requirements:
+    - Bachelor's degree in Computer Science, Engineering, or related field
+    - 3+ years of experience in data engineering
+    - Strong SQL skills and experience with databases (PostgreSQL, MySQL, MongoDB)
+    - Experience with data warehousing and ETL tools
+    - Proficiency in Python or other programming languages
+    - Experience with big data tools (Hadoop, Spark, Hive)
+    - Knowledge of data modeling and design
+    - Understanding of data privacy and security standards
+
+    Responsibilities:
+    - Design, build, and maintain efficient data pipelines
+    - Develop, construct, test, and maintain architectures
+    - Ensure data quality and accessibility
+    - Build analytics tools that utilize the data pipeline
+    - Optimize data extraction, transformation, and loading processes
+    - Create and maintain optimal data pipeline architecture
+    - Identify, design, and implement internal process improvements
     """
 } 

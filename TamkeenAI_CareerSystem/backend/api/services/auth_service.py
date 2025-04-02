@@ -283,3 +283,38 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         # return user
     except JWTError:
         raise credentials_exception
+
+def get_user_from_token(token: str, db=None):
+    """
+    Get user from a token without throwing exceptions.
+    
+    Args:
+        token: The JWT token
+        db: Database session
+        
+    Returns:
+        The user object or None if not found/invalid
+    """
+    try:
+        # Decode the token without verification
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_signature": True}
+        )
+        
+        # Extract the user ID from the token
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+            
+        # If db is provided, get the user from the database
+        if db:
+            return get_user_by_id(user_id, db)
+        
+        # Otherwise, return a minimal user object with just the ID
+        return {"id": user_id}
+    except Exception as e:
+        logger.error(f"Error getting user from token: {e}")
+        return None

@@ -69,12 +69,16 @@ export MONGO_URI="mongodb://localhost:27017/"
 export MONGO_DB="tamkeen_db"
 export ENABLE_MOCK_DATA="true"
 
+# Set DeepSeek API Key for ATS analysis
+echo -e "${BLUE}Setting up DeepSeek API key for resume analysis...${NC}"
+export DEEPSEEK_API_KEY="openai-route-deepseek-r1-free"
+
 # Ensure we're in the backend directory
 cd "${SCRIPT_DIR}/backend" || { echo -e "${RED}Failed to change to backend directory${NC}"; exit 1; }
 
-# Start the backend
-echo -e "${BLUE}Starting backend server...${NC}"
-python app.py --host 0.0.0.0 --port 5001 --debug
+# Start the backend with uvicorn
+echo -e "${BLUE}Starting backend server with uvicorn...${NC}"
+python -m uvicorn main:app --reload --host 0.0.0.0 --port 5001
 
 # Deactivate virtual environment on exit
 deactivate 

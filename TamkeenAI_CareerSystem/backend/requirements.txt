@@ -31,6 +31,7 @@ openai>=1.1.0
 # Data visualization
 matplotlib==3.7.2
 seaborn==0.12.2
+wordcloud>=1.8.0  # For resume wordcloud visualization
 
 # Document processing
 python-docx>=0.8.11
@@ -39,6 +40,7 @@ pdfplumber==0.10.2
 odfpy==1.4.1
 pdfkit==1.0.0
 weasyprint==60.2
+docx2txt>=0.8  # For docx text extraction
 
 # Cloud storage
 boto3==1.28.38
@@ -62,6 +64,10 @@ bcrypt==4.0.1
 textblob==0.17.1
 transformers==4.25.1
 sentence-transformers==2.2.2
+spacy>=3.0.0  # For NER and linguistic analysis
+keybert>=0.7.0  # For advanced keyword extraction 
+nltk>=3.8.1
+scikit-learn>=1.0.0  # For TF-IDF and similarity metrics
 
 # Computer Vision
 opencv-python==4.8.0.74
@@ -112,3 +118,14 @@ keybert
 
 # Add PyJWT for token authentication
 PyJWT>=2.8.0
+
+# ATS Analyzer specific dependencies
+python-docx>=0.8.11  # For DOCX processing
+pdfplumber==0.10.2   # Advanced PDF text extraction
+docx2txt>=0.8        # Alternative DOCX text extraction
+spacy>=3.0.0         # NLP processing
+nltk>=3.8.1          # Natural language toolkit
+keybert>=0.7.0       # Keyword extraction using BERT
+scikit-learn>=1.0.0  # For TF-IDF and other ML algorithms
+numpy>=1.22.0        # Numerical operations
+regex>=2021.8.3      # Advanced regular expressions

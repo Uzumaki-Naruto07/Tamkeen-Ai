@@ -1,560 +1,532 @@
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
-from typing import Dict, List, Optional
-import io
-import os
-import pdfplumber
-import docx
-import re
-import spacy
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-import json
-from openai import OpenAI
-import os
-import logging
+"""
+ATS (Applicant Tracking System) API Routes
 
-from ..models.ats_models import ATSRequest, ATSAnalysisResult, KeywordAnalysis, ATSKeywordRequest
-from ..services.ats_service import (
-    extract_text_from_pdf, extract_text_from_docx, 
-    enhanced_ats_report, get_keywords_json, enhanced_ats_report_with_visuals
-)
-from ..services.auth_service import get_current_user
-from ..db.database import get_db
-from sqlalchemy.orm import Session
-from ..models.user_models import User
-from ..services.ats_history_service import save_ats_analysis, get_user_ats_history, get_ats_analysis_by_id
-from ..utils.sample_jobs import sample_job_descriptions
+This module implements API routes for the advanced CV analysis and ATS matching system.
+"""
+
+import os
+import io
+import json
+import tempfile
+import logging
+from typing import Dict, Any, List, Optional
+from datetime import datetime
+
+from flask import Blueprint, request, jsonify, current_app, send_file
+from werkzeug.utils import secure_filename
+
+# Import our ATS analysis services
+from ..services.ats.ats_analyzer import create_ats_analyzer
+from ..services.ats.resume_extractor import extract_text_from_resume
+
+# Create blueprint
+ats_bp = Blueprint('ats', __name__, url_prefix='/api/ats')
 
 # Setup logger
 logger = logging.getLogger(__name__)
 
-# Try to import KeyBERT, handle if not installed
-try:
-    from keybert import KeyBERT
-    keybert_model = KeyBERT()
-except ImportError:
-    keybert_model = None
-    logger.warning("KeyBERT not installed, falling back to simpler keyword extraction")
+# Sample jobs data for the frontend
+from ..utils.sample_jobs import sample_job_descriptions
 
-# Try to load spaCy model
-try:
-    nlp = spacy.load("en_core_web_sm")
-except:
-    nlp = None
-    logger.warning("spaCy model not loaded, falling back to simpler text processing")
-
-router = APIRouter(
-    prefix="/ats",
-    tags=["ats"]
-)
-
-@router.post("/analyze", response_model=ATSAnalysisResult)
-async def analyze_resume(
-    file: UploadFile = File(...),
-    job_title: str = Form(...),
-    job_description: str = Form(...),
-    include_llm: bool = Form(True),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Analyze a resume against a job description for ATS compatibility"""
-    try:
-        # Read file content
-        file_content = await file.read()
-        file_extension = os.path.splitext(file.filename)[1].lower()
-
-        # Extract text based on file type
-        if file_extension == '.pdf':
-            pdf_io = io.BytesIO(file_content)
-            cv_text = extract_text_from_pdf(pdf_io)
-        elif file_extension in ['.docx', '.doc']:
-            docx_io = io.BytesIO(file_content)
-            cv_text = extract_text_from_docx(docx_io)
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unsupported file format. Please upload a PDF or DOCX file."
-            )
-
-        if not cv_text or len(cv_text) < 50:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Could not extract sufficient text from the resume file."
-            )
-
-        # Generate enhanced ATS report
-        report = enhanced_ats_report(cv_text, job_description, job_title, include_llm)
-        
-        # Save analysis to database
-        save_ats_analysis(db, current_user.id, report, file.filename)
-        
-        return report
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to analyze resume: {str(e)}"
-        )
-
-@router.post("/analyze-with-visuals")
-async def analyze_resume_with_visuals(
-    file: UploadFile = File(...),
-    job_title: str = Form(...),
-    job_description: str = Form(...),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Analyze a resume and generate visual reports"""
-    try:
-        # Read file content
-        file_content = await file.read()
-        file_extension = os.path.splitext(file.filename)[1].lower()
-
-        # Extract text based on file type
-        if file_extension == '.pdf':
-            pdf_io = io.BytesIO(file_content)
-            cv_text = extract_text_from_pdf(pdf_io)
-        elif file_extension in ['.docx', '.doc']:
-            docx_io = io.BytesIO(file_content)
-            cv_text = extract_text_from_docx(docx_io)
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unsupported file format. Please upload a PDF or DOCX file."
-            )
-
-        # Generate enhanced ATS report with visuals
-        report = enhanced_ats_report_with_visuals(cv_text, job_description, job_title)
-        
-        return report
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to analyze resume with visuals: {str(e)}"
-        )
-
-@router.post("/analyze/text", response_model=ATSAnalysisResult)
-async def analyze_resume_text(
-    request: ATSRequest,
-    include_llm: bool = True,
-    current_user: User = Depends(get_current_user)
-):
-    """Analyze resume text against a job description (when text is already extracted)"""
-    try:
-        cv_text = request.resume_text if hasattr(request, 'resume_text') else ""
-        job_description = request.job_description
-        job_title = request.job_title
-
-        if not cv_text or len(cv_text) < 50:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Please provide sufficient resume text for analysis."
-            )
-
-        # Generate enhanced ATS report
-        report = enhanced_ats_report(cv_text, job_description, job_title, include_llm)
-        
-        return report
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to analyze resume text: {str(e)}"
-        )
-
-@router.post("/extract-keywords")
-async def extract_keywords(
-    request: ATSKeywordRequest,
-    current_user: User = Depends(get_current_user)
-):
-    """Extract keywords from resume and job description"""
-    try:
-        return get_keywords_json(request.resume_text, request.job_description)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to extract keywords: {str(e)}"
-        )
-
-@router.get("/history")
-async def get_ats_history(
-    limit: int = 10,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get user's ATS analysis history"""
-    try:
-        history = get_user_ats_history(db, current_user.id, limit)
-        
-        return {
-            "history": [
-                {
-                    "id": item.id,
-                    "job_title": item.job_title,
-                    "score": item.score,
-                    "assessment": item.assessment,
-                    "created_at": item.created_at,
-                    "resume_filename": item.resume_filename
-                }
-                for item in history
-            ]
-        }
-    
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get ATS history: {str(e)}"
-        )
-
-@router.get("/history/{analysis_id}")
-async def get_ats_analysis_detail(
-    analysis_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get detailed ATS analysis by ID"""
-    try:
-        analysis = get_ats_analysis_by_id(db, analysis_id, current_user.id)
-        
-        if not analysis:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Analysis not found"
-            )
-        
-        return {
-            "id": analysis.id,
-            "job_title": analysis.job_title,
-            "score": analysis.score,
-            "assessment": analysis.assessment,
-            "matching_keywords": analysis.matching_keywords,
-            "missing_keywords": analysis.missing_keywords,
-            "llm_analysis": analysis.llm_analysis,
-            "improvement_roadmap": analysis.improvement_roadmap,
-            "resume_filename": analysis.resume_filename,
-            "created_at": analysis.created_at
-        }
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get ATS analysis detail: {str(e)}"
-        )
-
-@router.get("/sample-jobs")
-async def get_sample_jobs():
+@ats_bp.route('/sample-jobs', methods=['GET'])
+def get_sample_jobs():
     """Get sample job descriptions for testing"""
-    return {
-        "jobs": [{"title": title, "description": desc} 
-                for title, desc in sample_job_descriptions.items()]
-    }
-
-@router.post("/analyze-with-deepseek")
-async def analyze_with_deepseek(
-    file: UploadFile = File(...),
-    job_title: str = Form(...),
-    job_description: str = Form(...),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Analyze a resume using DeepSeek AI for comprehensive analysis"""
     try:
-        # Read file content
-        file_content = await file.read()
-        file_extension = os.path.splitext(file.filename)[1].lower()
-
-        # Extract text based on file type
-        if file_extension == '.pdf':
-            try:
-                with pdfplumber.open(io.BytesIO(file_content)) as pdf:
-                    cv_text = ""
-                    for page in pdf.pages:
-                        cv_text += page.extract_text() or ""
-            except Exception as e:
-                logger.error(f"Error extracting text from PDF: {e}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to extract text from PDF: {str(e)}"
-                )
-        elif file_extension in ['.docx', '.doc']:
-            try:
-                doc = docx.Document(io.BytesIO(file_content))
-                cv_text = ""
-                for para in doc.paragraphs:
-                    cv_text += para.text + "\n"
-            except Exception as e:
-                logger.error(f"Error extracting text from DOCX: {e}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to extract text from DOCX: {str(e)}"
-                )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unsupported file format. Please upload a PDF or DOCX file."
-            )
-
-        if not cv_text or len(cv_text) < 50:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Could not extract sufficient text from the resume file."
-            )
-
-        # Perform basic analysis first
-        score = calculate_ats_score(cv_text, job_description)
+        # Convert sample job data to list of dicts
+        jobs = []
+        for title, description in sample_job_descriptions.items():
+            jobs.append({
+                "title": title,
+                "description": description
+            })
         
-        # Extract keywords
-        if keybert_model:
-            # Use KeyBERT for better keyword extraction
-            cv_keywords = extract_keywords_advanced(cv_text, method="keybert")
-            job_keywords = extract_keywords_advanced(job_description, method="keybert")
-        else:
-            # Fallback to basic keyword extraction
-            cv_keywords = extract_keywords_basic(cv_text)
-            job_keywords = extract_keywords_basic(job_description)
+        return jsonify({"jobs": jobs})
+    except Exception as e:
+        logger.error(f"Error getting sample jobs: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@ats_bp.route('/analyze', methods=['POST'])
+def analyze_resume():
+    """
+    Analyze a resume for ATS compatibility
+    
+    Expects:
+    - file: Resume file (PDF, DOCX, TXT)
+    - job_title: Optional job title
+    - job_description: Optional job description for matching
+    
+    Returns:
+        JSON with analysis results
+    """
+    try:
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+        
+        file = request.files['file']
+        
+        # Check if filename is empty
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Get job details
+        job_title = request.form.get('job_title', '')
+        job_description = request.form.get('job_description', '')
+        
+        # Get API key from environment
+        api_key = current_app.config.get('DEEPSEEK_API_KEY', None)
+        
+        # Create ATS analyzer
+        analyzer = create_ats_analyzer(api_key=api_key)
+        
+        # Save file to temporary location if needed
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp:
+            file.save(temp.name)
+            temp_path = temp.name
+        
+        try:
+            # Analyze resume
+            analysis_results = analyzer.analyze_resume(
+                temp_path,
+                job_description=job_description,
+                job_title=job_title,
+                use_semantic_matching=True,
+                use_contextual_analysis=True,
+                use_deepseek=bool(api_key)
+            )
             
-        matching_keywords = list(set(cv_keywords).intersection(set(job_keywords)))
-        missing_keywords = list(set(job_keywords) - set(cv_keywords))
+            # Clean up temporary file
+            os.unlink(temp_path)
+            
+            # Return results
+            return jsonify(analysis_results)
+            
+        except Exception as e:
+            # Clean up temporary file in case of error
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            raise e
+    
+    except Exception as e:
+        logger.error(f"Error analyzing resume: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@ats_bp.route('/analyze-with-deepseek', methods=['POST'])
+def analyze_resume_with_deepseek():
+    """
+    Analyze a resume with DeepSeek LLM integration
+    
+    Expects:
+    - file: Resume file (PDF, DOCX, TXT)
+    - job_title: Job title
+    - job_description: Job description for matching
+    
+    Returns:
+        JSON with analysis results and DeepSeek insights
+    """
+    try:
+        # Check for direct API request headers
+        force_real_api = request.headers.get('X-Force-Real-API', 'false').lower() == 'true'
+        skip_mock = request.headers.get('X-Skip-Mock', 'false').lower() == 'true'
         
-        # Get DeepSeek AI analysis
-        deepseek_analysis = analyze_resume_with_deepseek(cv_text, job_description)
+        # Log direct connection attempt
+        if force_real_api or skip_mock:
+            logger.info("Direct API connection requested - bypassing mock data")
         
-        # Get improvement roadmap
-        improvement_roadmap = get_improvement_roadmap(cv_text, job_description)
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            return jsonify({"error": "No file provided"}), 400
         
-        # Create assessment message
-        if score >= 80:
-            assessment = "Excellent! Your resume is highly compatible with this job."
-        elif score >= 60:
-            assessment = "Good. Your resume matches the job requirements reasonably well."
-        elif score >= 40:
-            assessment = "Average. Consider optimizing your resume for better matching."
+        file = request.files['file']
+        
+        # Check if filename is empty
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Get job details
+        job_title = request.form.get('job_title', '')
+        job_description = request.form.get('job_description', '')
+        force_real_api_form = request.form.get('force_real_api', 'false').lower() == 'true'
+        
+        # Combine force flags from headers and form data
+        force_real_api = force_real_api or force_real_api_form
+        
+        if not job_description:
+            return jsonify({"error": "Job description is required"}), 400
+        
+        # Get API key from environment
+        api_key = current_app.config.get('DEEPSEEK_API_KEY', None)
+        
+        # Print verbose debug info about API key
+        logger.info(f"DeepSeek API connection attempt - API Key present: {'Yes' if api_key else 'No'}")
+        if api_key:
+            # Show a masked version of the key for debugging (first 4 chars only)
+            masked_key = api_key[:4] + "*" * (len(api_key) - 4) if len(api_key) > 4 else "****"
+            logger.info(f"Using DeepSeek API Key (masked): {masked_key}")
         else:
-            assessment = "Low match. Your resume needs significant adjustments for this role."
+            logger.warning("No DeepSeek API key found in environment. Will use mock data.")
         
-        # Prepare the result
-        result = {
-            "score": score,
-            "job_title": job_title,
-            "matching_keywords": matching_keywords,
-            "missing_keywords": missing_keywords[:15] if len(missing_keywords) > 15 else missing_keywords,
-            "assessment": assessment,
-            "llm_analysis": deepseek_analysis,
-            "improvement_roadmap": improvement_roadmap
-        }
+        # If no API key or not forcing real API, check if we should generate a mock response
+        if not api_key:
+            if force_real_api or skip_mock:
+                # If explicitly requesting real API but no key available, return error
+                logger.error("Real API requested but no DeepSeek API key found")
+                return jsonify({
+                    "error": "DeepSeek API key is not configured. Please set the DEEPSEEK_API_KEY environment variable."
+                }), 500
+                
+            # If not forcing real API, fallback to mock data
+            logger.info("Using mock data because no API key is available")
+            
+            # Extract text from resume
+            temp_path = None
+            try:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp:
+                    file.save(temp.name)
+                    temp_path = temp.name
+                
+                # Extract text
+                resume_text = extract_text_from_resume(temp_path)
+                
+                # Clean up temporary file
+                os.unlink(temp_path)
+                
+                # Generate mock analysis with available tools
+                from ..services.ats.keyword_extractor import find_matching_keywords, calculate_similarity_score
+                
+                # Find matching keywords
+                keyword_matches = find_matching_keywords(resume_text, job_description)
+                matching_keywords = keyword_matches.get("matching_keywords", [])
+                missing_keywords = keyword_matches.get("missing_keywords", [])
+                
+                # Calculate similarity score
+                score = calculate_similarity_score(resume_text, job_description)
+                
+                # Create mock analysis
+                mock_analysis = {
+                    "score": round(score),
+                    "job_title": job_title,
+                    "matching_keywords": matching_keywords,
+                    "missing_keywords": missing_keywords,
+                    "assessment": _get_assessment_message(score),
+                    "llm_analysis": "DeepSeek analysis unavailable - API key not configured.",
+                    "improvement_roadmap": "Improvement roadmap unavailable - API key not configured.",
+                    "using_mock_data": True
+                }
+                
+                return jsonify(mock_analysis)
+                
+            except Exception as e:
+                # Clean up temporary file in case of error
+                if temp_path:
+                    try:
+                        os.unlink(temp_path)
+                    except:
+                        pass
+                raise e
         
-        # Save analysis to database
-        save_ats_analysis(db, current_user.id, result, file.filename)
+        # Log that we're using the real DeepSeek API
+        logger.info("Using real DeepSeek API for analysis")
         
-        return result
+        # Create ATS analyzer with API key
+        analyzer = create_ats_analyzer(api_key=api_key)
         
-    except Exception as e:
-        logger.error(f"Error in analyze_with_deepseek: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to analyze resume with DeepSeek: {str(e)}"
-        )
-
-# Helper functions for the DeepSeek analysis
-
-def preprocess_text(text):
-    """Clean and preprocess text."""
-    text = text.lower()
-    text = re.sub(r'[^\w\s]', ' ', text)
-    text = re.sub(r'\d+', ' ', text)
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
-
-def calculate_ats_score(cv_text, job_description):
-    """Calculate ATS compatibility score between CV and job description."""
-    cv_text_processed = preprocess_text(cv_text)
-    job_description_processed = preprocess_text(job_description)
-    vectorizer = TfidfVectorizer(stop_words='english')
-    vectors = vectorizer.fit_transform([cv_text_processed, job_description_processed])
-    similarity = cosine_similarity(vectors[0:1], vectors[1:2])[0][0]
-    return similarity * 100
-
-def extract_keywords_basic(text, max_keywords=30):
-    """Extract important keywords from text using basic methods."""
-    if nlp:
-        doc = nlp(text)
-        keywords = [token.text for token in doc if token.pos_ in ['NOUN', 'PROPN', 'ADJ'] and len(token.text) > 2]
-        keyword_freq = {}
-        for word in keywords:
-            keyword_freq[word] = keyword_freq.get(word, 0) + 1
-        sorted_keywords = sorted(keyword_freq.items(), key=lambda x: x[1], reverse=True)
-        return [word for word, freq in sorted_keywords[:max_keywords]]
-    else:
-        # Very basic fallback
-        words = text.lower().split()
-        stop_words = {'the', 'and', 'is', 'in', 'to', 'a', 'of', 'for', 'with', 'on', 'at', 'from', 'by'}
-        word_freq = {}
-        for word in words:
-            if word not in stop_words and len(word) > 2:
-                word_freq[word] = word_freq.get(word, 0) + 1
-        sorted_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)
-        return [word for word, freq in sorted_words[:max_keywords]]
-
-def extract_keywords_advanced(text, method="keybert", top_n=20):
-    """Extract keywords using advanced methods (KeyBERT)."""
-    if method == "keybert" and keybert_model:
-        # Use KeyBERT with more flexible extraction
-        keywords = keybert_model.extract_keywords(
-            text,
-            keyphrase_ngram_range=(1, 2),  # Extract 1-2 word phrases
-            stop_words='english',  # Remove common English stop words
-            top_n=top_n,  # Number of top keywords to extract
-            use_mmr=True,  # Use Maximal Marginal Relevance for diversity
-            diversity=0.5  # Balance between relevance and diversity
-        )
-        return [keyword for keyword, score in keywords]
-    else:
-        # Fallback to existing basic method
-        return extract_keywords_basic(text, max_keywords=top_n)
-
-def analyze_resume_with_deepseek(cv_text, job_description):
-    """Analyze resume using DeepSeek R1 with a comprehensive prompt."""
-    # Get the API key from environment
-    DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY')
+        # Save file to temporary location
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp:
+            file.save(temp.name)
+            temp_path = temp.name
+        
+        try:
+            # Analyze resume with DeepSeek
+            analysis_results = analyzer.analyze_resume(
+                temp_path,
+                job_description=job_description,
+                job_title=job_title,
+                use_semantic_matching=True,
+                use_contextual_analysis=True,
+                use_deepseek=True
+            )
+            
+            # Clean up temporary file
+            os.unlink(temp_path)
+            
+            # Return results
+            return jsonify(analysis_results)
+            
+        except Exception as e:
+            # Clean up temporary file in case of error
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            raise e
     
-    if not DEEPSEEK_API_KEY:
-        logger.warning("DeepSeek API key not found in environment variables")
-        return "DeepSeek analysis unavailable. Please configure the API key in environment variables."
-
-    # Truncate texts to manage token limits
-    cv_text_truncated = cv_text[:4000]  # Adjust as needed
-    job_description_truncated = job_description[:2000]
-
-    prompt = f"""You are an expert ATS (Applicant Tracking System) evaluator.
-Compare the following resume and job description with a critical and constructive approach.
-
-RESUME:
-{cv_text_truncated}
-
-JOB DESCRIPTION:
-{job_description_truncated}
-
-Provide a comprehensive analysis with the following structure:
-
-1. STRENGTHS 🟢
-- Highlight the top 5 strengths of the resume
-- Explain how these strengths align with the job description
-
-2. WEAKNESSES 🔴
-- Identify up to 5 key weaknesses or missing elements
-- Suggest specific improvements for each weakness
-
-3. KEYWORD ANALYSIS 🔍
-- Top 10 matching keywords
-- Top 5 missing keywords
-- Recommendations for incorporating missing keywords
-
-4. OVERALL MATCH 📊
-- Provide an estimated percentage match
-- Detailed reasoning behind the match percentage
-
-5. IMPROVEMENT SUGGESTIONS 🚀
-- Concrete, actionable recommendations to enhance resume
-- Specific edits to better align with job description
-
-Maintain a professional, constructive tone. Focus on helping the candidate improve their resume."""
-
-    try:
-        # Initialize DeepSeek client
-        deepseek_client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=DEEPSEEK_API_KEY
-        )
-        
-        response = deepseek_client.chat.completions.create(
-            model="deepseek/deepseek-r1:free",
-            messages=[
-                {"role": "system", "content": "You are an expert ATS evaluator providing detailed, constructive resume analysis."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            max_tokens=1500
-        )
-        return response.choices[0].message.content
     except Exception as e:
-        logger.error(f"Error using DeepSeek for analysis: {e}")
-        return "DeepSeek analysis unavailable. Please check your API configuration."
+        logger.error(f"Error analyzing resume with DeepSeek: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
-def get_improvement_roadmap(cv_text, job_description):
+@ats_bp.route('/analyze-with-visuals', methods=['POST'])
+def analyze_resume_with_visuals():
     """
-    Generate a comprehensive improvement roadmap using DeepSeek
-    """
-    # Get the API key from environment
-    DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY')
+    Analyze a resume and generate visualizations
     
-    if not DEEPSEEK_API_KEY:
-        logger.warning("DeepSeek API key not found in environment variables")
-        return "Improvement roadmap unavailable. Please configure the API key in environment variables."
-        
-    # Truncate texts to manage token limits
-    cv_text_truncated = cv_text[:4000]  # Adjust as needed
-    job_description_truncated = job_description[:2000]
-
-    prompt = f"""You are an expert career development advisor and AI system architect.
-Analyze the following resume and job description to provide a comprehensive, strategic improvement roadmap.
-
-RESUME:
-{cv_text_truncated}
-
-JOB DESCRIPTION:
-{job_description_truncated}
-
-Please provide a detailed analysis with the following structure:
-
-1. SKILL GAP ANALYSIS 🔍
-- Identify critical skills missing from the current resume
-- Compare current skills with job requirements
-- Rank skills by importance and difficulty to acquire
-
-2. LEARNING ROADMAP 📚
-- Recommended courses and certifications
-- Suggested learning platforms
-- Estimated time to skill proficiency
-- Specific resources for each skill gap
-
-3. CAREER DEVELOPMENT STRATEGY 🚀
-- Short-term (3-6 months) skill development plan
-- Medium-term (6-12 months) career positioning
-- Long-term career trajectory alignment
-
-4. TECHNICAL SKILL ENHANCEMENT 💻
-- Specific programming languages/tools to learn
-- Recommended projects to build practical experience
-- Industry-recognized certifications
-
-5. SOFT SKILLS DEVELOPMENT 🤝
-- Communication and interpersonal skill improvements
-- Leadership and collaboration skill enhancement
-- Emotional intelligence and adaptability training
-
-Provide actionable, specific, and motivational guidance that transforms the current skill set into a competitive, future-ready professional profile."""
-
+    Expects:
+    - file: Resume file (PDF, DOCX, TXT)
+    - job_title: Job title
+    - job_description: Job description for matching
+    
+    Returns:
+        JSON with analysis results and visualization data
+    """
     try:
-        # Initialize DeepSeek client
-        deepseek_client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=DEEPSEEK_API_KEY
-        )
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            return jsonify({"error": "No file provided"}), 400
         
-        response = deepseek_client.chat.completions.create(
-            model="deepseek/deepseek-r1:free",
-            messages=[
-                {"role": "system", "content": "You are an expert career development strategist providing comprehensive, personalized improvement guidance."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            max_tokens=1500
-        )
-        return response.choices[0].message.content
+        file = request.files['file']
+        
+        # Check if filename is empty
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Get job details
+        job_title = request.form.get('job_title', '')
+        job_description = request.form.get('job_description', '')
+        
+        if not job_description:
+            return jsonify({"error": "Job description is required"}), 400
+        
+        # Create ATS analyzer
+        analyzer = create_ats_analyzer()
+        
+        # Save file to temporary location
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp:
+            file.save(temp.name)
+            temp_path = temp.name
+        
+        try:
+            # Analyze resume
+            analysis_results = analyzer.analyze_resume(
+                temp_path,
+                job_description=job_description,
+                job_title=job_title,
+                use_semantic_matching=True,
+                use_contextual_analysis=True,
+                use_deepseek=False
+            )
+            
+            # Clean up temporary file
+            os.unlink(temp_path)
+            
+            # Return results
+            return jsonify(analysis_results)
+            
+        except Exception as e:
+            # Clean up temporary file in case of error
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            raise e
+    
     except Exception as e:
-        logger.error(f"Error generating improvement roadmap: {e}")
-        return "Analysis unavailable. Please check system configuration." 
+        logger.error(f"Error analyzing resume with visuals: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@ats_bp.route('/keywords', methods=['POST'])
+def get_keywords():
+    """
+    Extract keywords from resume and job description
+    
+    Expects:
+    - resume_text: Resume text content
+    - job_description: Job description text
+    
+    Returns:
+        JSON with extracted keywords
+    """
+    try:
+        data = request.json
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        resume_text = data.get('resume_text', '')
+        job_description = data.get('job_description', '')
+        
+        if not resume_text:
+            return jsonify({"error": "Resume text is required"}), 400
+        
+        # Extract and match keywords
+        from ..services.ats.keyword_extractor import find_matching_keywords
+        
+        keyword_matches = find_matching_keywords(resume_text, job_description)
+        
+        return jsonify(keyword_matches)
+        
+    except Exception as e:
+        logger.error(f"Error extracting keywords: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@ats_bp.route('/optimize', methods=['POST'])
+def optimize_resume():
+    """
+    Get optimization suggestions for resume
+    
+    Expects:
+    - resume_text: Resume text content
+    - job_title: Job title
+    - job_description: Job description
+    
+    Returns:
+        JSON with optimization suggestions
+    """
+    try:
+        data = request.form
+        
+        resume_text = data.get('resume_text', '')
+        job_title = data.get('job_title', '')
+        job_description = data.get('job_description', '')
+        
+        if not resume_text:
+            return jsonify({"error": "Resume text is required"}), 400
+        
+        if not job_description:
+            return jsonify({"error": "Job description is required"}), 400
+        
+        # Get API key for DeepSeek
+        api_key = current_app.config.get('DEEPSEEK_API_KEY', None)
+        
+        # Create ATS analyzer
+        analyzer = create_ats_analyzer(api_key=api_key)
+        
+        # Save resume text to temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.txt', mode='w') as temp:
+            temp.write(resume_text)
+            temp_path = temp.name
+        
+        try:
+            # Analyze resume
+            analysis_results = analyzer.analyze_resume(
+                temp_path,
+                job_description=job_description,
+                job_title=job_title,
+                use_semantic_matching=True,
+                use_contextual_analysis=True,
+                use_deepseek=bool(api_key)
+            )
+            
+            # Clean up temporary file
+            os.unlink(temp_path)
+            
+            # Extract optimization suggestions
+            optimization = {
+                "recommendations": analysis_results.get("recommendations", []),
+                "sections_analysis": analysis_results.get("sections_analysis", {}),
+                "matching_keywords": analysis_results.get("matching_keywords", []),
+                "missing_keywords": analysis_results.get("missing_keywords", []),
+                "ats_score": analysis_results.get("score", 0)
+            }
+            
+            if "llm_analysis" in analysis_results:
+                optimization["llm_analysis"] = analysis_results["llm_analysis"]
+            
+            return jsonify(optimization)
+            
+        except Exception as e:
+            # Clean up temporary file in case of error
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            raise e
+    
+    except Exception as e:
+        logger.error(f"Error optimizing resume: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+def _get_assessment_message(score: float) -> str:
+    """Get assessment message based on score"""
+    if score >= 80:
+        return "Excellent! Your resume is highly compatible with this job."
+    elif score >= 60:
+        return "Good. Your resume matches the job requirements reasonably well."
+    elif score >= 40:
+        return "Average. Consider optimizing your resume for better matching."
+    else:
+        return "Below average. Your resume needs significant improvements to match this job."
+
+# Add a new endpoint to test DeepSeek API connectivity
+@ats_bp.route('/test-deepseek-connection', methods=['GET'])
+def test_deepseek_connection():
+    """
+    Test the connection to DeepSeek API
+    
+    Returns:
+        JSON with connection status
+    """
+    try:
+        # Get API key from environment
+        api_key = current_app.config.get('DEEPSEEK_API_KEY', None)
+        
+        if not api_key:
+            logger.warning("No DeepSeek API key found in environment.")
+            return jsonify({
+                "connected": False,
+                "error": "No API key configured",
+                "message": "DeepSeek API key is not set in the environment"
+            })
+        
+        # Initialize OpenAI client with DeepSeek settings
+        try:
+            from openai import OpenAI
+            client = OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=api_key
+            )
+            
+            # Test with a simple prompt
+            response = client.chat.completions.create(
+                model="deepseek/deepseek-r1:free",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": "Say 'DeepSeek API connection successful!'"}
+                ],
+                max_tokens=20
+            )
+            
+            if response and response.choices and len(response.choices) > 0:
+                logger.info("DeepSeek API connection successful!")
+                return jsonify({
+                    "connected": True,
+                    "message": "DeepSeek API connection successful",
+                    "response": response.choices[0].message.content
+                })
+            else:
+                logger.error("DeepSeek API returned empty response")
+                return jsonify({
+                    "connected": False,
+                    "error": "Empty response",
+                    "message": "DeepSeek API returned empty response"
+                })
+                
+        except ImportError as e:
+            logger.error(f"OpenAI library not installed: {str(e)}")
+            return jsonify({
+                "connected": False,
+                "error": "Missing dependency",
+                "message": "OpenAI library not installed. Install with: pip install openai"
+            })
+        except Exception as e:
+            logger.error(f"DeepSeek API connection error: {str(e)}")
+            return jsonify({
+                "connected": False,
+                "error": str(e),
+                "message": "Failed to connect to DeepSeek API. Check your API key and network."
+            })
+    
+    except Exception as e:
+        logger.error(f"Error testing DeepSeek connection: {str(e)}")
+        return jsonify({"error": str(e)}), 500 

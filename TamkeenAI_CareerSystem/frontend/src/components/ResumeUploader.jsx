@@ -20,7 +20,7 @@ import {
   Delete 
 } from '@mui/icons-material';
 import { useUser } from '../context/AppContext';
-import apiEndpoints from '../utils/api';
+import resumeApi from '../utils/resumeApi';
 
 /**
  * Component for uploading resume files
@@ -72,7 +72,7 @@ const ResumeUploader = ({ onUploadSuccess }) => {
       formData.append('title', title);
       formData.append('userId', profile.id);
       
-      const response = await apiEndpoints.resumes.uploadResume(formData);
+      const response = await resumeApi.uploadResume(formData);
       
       setSuccess(true);
       setFile(null);
