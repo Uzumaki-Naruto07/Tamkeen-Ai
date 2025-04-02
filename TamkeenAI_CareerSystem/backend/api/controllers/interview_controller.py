@@ -77,8 +77,8 @@ if openai_api_key:
 else:
     logger.warning("OpenAI API key not found")
 
-# Create blueprint
-interview_bp = Blueprint('interview', __name__)
+# Create a Flask Blueprint for interviews with a unique name
+interview_bp = Blueprint('interview_coach', __name__)
 
 # Helper function for JSON serialization
 def json_serialize(obj):

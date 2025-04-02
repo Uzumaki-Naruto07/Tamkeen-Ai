@@ -96,7 +96,7 @@ def create_app():
         "*"  # For development only - remove in production
     ],
          allow_headers=["Content-Type", "Authorization", "X-Requested-With", 
-                       "X-Force-Real-API", "X-Skip-Mock"],
+                       "X-Force-Real-API", "X-Skip-Mock", "x-auth-token"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
          expose_headers=["Content-Disposition"],
          supports_credentials=True)
@@ -114,8 +114,8 @@ def create_app():
     app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(confidence_charts)
-    # Register the new interview coach blueprint
-    app.register_blueprint(interview_coach_bp, url_prefix='/api/interviews')
+    # Register the new interview coach blueprint with a unique name
+    app.register_blueprint(interview_coach_bp, url_prefix='/api/interviews', name='interview_coach')
     app.register_blueprint(ats_bp)
     
     # Add a default response for OPTIONS requests globally
@@ -128,7 +128,7 @@ def create_app():
         if os.getenv('FLASK_ENV') != 'production' or app.debug:
             response.headers.add('Access-Control-Allow-Origin', origin or '*')
             response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Force-Real-API, X-Skip-Mock')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Force-Real-API, X-Skip-Mock, x-auth-token')
             response.headers.add('Access-Control-Allow-Credentials', 'true')
         else:
             # In production, only allow the configured frontend origins
@@ -143,7 +143,7 @@ def create_app():
             if origin and origin in allowed_origins:
                 response.headers.add('Access-Control-Allow-Origin', origin)
                 
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Force-Real-API, X-Skip-Mock')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Force-Real-API, X-Skip-Mock, x-auth-token')
         response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         response.headers.add('Access-Control-Expose-Headers', 'Content-Disposition')

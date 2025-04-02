@@ -119,9 +119,24 @@ api.interceptors.request.use(async (config) => {
   // Handle authentication tokens without causing CORS preflight issues
   const token = localStorage.getItem('token');
   if (token) {
-    // Add token to auth header - use X-Auth-Token which doesn't trigger CORS preflight
-    // This is safer than using Authorization: Bearer which requires preflight for CORS
+    // Skip adding auth token for resume and ATS endpoints to avoid CORS issues
+    const skipAuthForEndpoints = [
+      '/resume/upload',
+      '/ats/analyze',
+      '/ats/analyze-with-deepseek',
+      '/ats/analyze-with-openai'
+    ];
+    
+    const shouldSkipAuth = skipAuthForEndpoints.some(endpoint => 
+      config.url.includes(endpoint)
+    );
+    
+    if (!shouldSkipAuth) {
+      // Add token to auth header - use X-Auth-Token
     config.headers['X-Auth-Token'] = token;
+    } else {
+      console.log('Skipping auth token for endpoint:', config.url);
+    }
   }
   
   // Always log the request URL for debugging

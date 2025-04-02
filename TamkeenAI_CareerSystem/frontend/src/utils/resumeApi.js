@@ -136,34 +136,127 @@ const resumeApi = {
     mockData.atsAnalysisWithVisuals
   ),
 
-  analyzeResumeWithDeepSeek: withMockFallback(
-    (resumeId, jobData) => {
-      const formData = new FormData();
-      formData.append('file', jobData.file);
-      formData.append('job_title', jobData.title);
-      formData.append('job_description', jobData.description);
+  analyzeResumeWithDeepSeek: async (resumeId, jobData) => {
+    // Make sure we have the file
+    if (!jobData.file) {
+      console.error('No file provided for analysis');
+      throw new Error('No file provided for analysis');
+    }
+    
+    console.log('File to analyze:', jobData.file.name, 'Size:', jobData.file.size, 'Type:', jobData.file.type);
+    
+    try {
+      // First try DeepSeek with a direct axios call that doesn't include auth headers
+      console.log('Attempting analysis with DeepSeek...');
+      // Remove '/api' from baseURL since we'll include it in the URL path
+      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
       
-      // Add a special flag to indicate we want to force real API usage and not fallback to mock
+      // Create a new FormData object
+      const formData = new FormData();
+      
+      // Log the file object for debugging
+      console.log('File object:', jobData.file);
+      
+      // Append file and job details to FormData
+      formData.append('file', jobData.file);
+      formData.append('job_title', jobData.title || 'Software Engineer');
+      formData.append('job_description', jobData.description || 'A software engineering position');
+      
+      // Force use of actual AI API, not mock data
       formData.append('force_real_api', 'true');
       
-      // Set a longer timeout for this request since AI analysis takes time
-      return api.post('/ats/analyze-with-deepseek', formData, {
+      // For debugging
+      for (let pair of formData.entries()) {
+        console.log('FormData contains:', pair[0], pair[1] instanceof File ? pair[1].name : pair[1]);
+      }
+      
+      // Log the URL being called - fix the double /api/ issue
+      const deepSeekUrl = `${baseURL}/ats/analyze-with-deepseek`;
+      console.log('Calling URL:', deepSeekUrl);
+      
+      const response = await axios({
+        method: 'post',
+        url: deepSeekUrl,
+        data: formData,
         headers: {
           'Content-Type': 'multipart/form-data'
+          // Explicitly NOT including auth header to avoid CORS issues
         },
-        timeout: 30000 // Increase timeout to 30 seconds for LLM processing
+        timeout: 45000 // Increased timeout for LLM processing
       });
-    },
-    {
-      score: 75,
-      job_title: "Software Engineer",
-      matching_keywords: ["JavaScript", "React", "API", "frontend", "development"],
-      missing_keywords: ["TypeScript", "Node.js", "AWS", "CI/CD", "Docker"],
-      assessment: "Good. Your resume matches the job requirements reasonably well.",
-      llm_analysis: "## STRENGTHS 🟢\n\n1. Strong frontend experience with React.js\n2. Demonstrated ability to build responsive web applications\n3. Experience with RESTful API integration\n4. Excellent communication skills\n5. Team collaboration experience\n\n## WEAKNESSES 🔴\n\n1. Limited backend experience\n2. No mention of cloud technologies\n3. Missing containerization skills\n4. Limited testing methodology experience\n5. Could improve quantifiable achievements\n\n## RECOMMENDATIONS 🚀\n\n- Add specific metrics to your accomplishments\n- Highlight any Node.js experience you may have\n- Consider gaining experience with AWS or similar cloud platforms\n- Include information about testing methodologies you've used",
-      improvement_roadmap: "# CAREER DEVELOPMENT ROADMAP\n\n## SKILL GAP ANALYSIS\n\n1. Cloud Technologies (AWS, Azure, GCP)\n2. Backend Development (Node.js, Python)\n3. Containerization (Docker, Kubernetes)\n4. Testing Frameworks (Jest, Cypress)\n\n## LEARNING PLAN\n\n1. Complete AWS Certified Developer Associate course (3 months)\n2. Build a full-stack application with Node.js backend (2 months)\n3. Learn Docker fundamentals and container orchestration (1 month)\n\n## CAREER POSITIONING\n\nWith these additional skills, you'll be positioned for Senior Developer roles with a full-stack focus."
+      
+      if (response && response.data) {
+        console.log('DeepSeek analysis successful');
+        return response;
+      }
+      throw new Error('Empty response from DeepSeek');
+    } catch (deepseekError) {
+      console.error('DeepSeek analysis failed:', deepseekError);
+      // Log more details about the error
+      if (deepseekError.response) {
+        console.error('Error status:', deepseekError.response.status);
+        console.error('Error data:', deepseekError.response.data);
+      } else if (deepseekError.request) {
+        console.error('No response received');
+      } else {
+        console.error('Error setting up request:', deepseekError.message);
+      }
+      
+      try {
+        // If DeepSeek fails, try OpenAI as fallback with direct axios call
+        console.log('Falling back to OpenAI...');
+        
+        // Create a new FormData for the OpenAI request
+        const openaiFormData = new FormData();
+        openaiFormData.append('file', jobData.file);
+        openaiFormData.append('job_title', jobData.title || 'Software Engineer');
+        openaiFormData.append('job_description', jobData.description || 'A software engineering position');
+        openaiFormData.append('use_openai_fallback', 'true');
+        
+        // For debugging
+        for (let pair of openaiFormData.entries()) {
+          console.log('OpenAI FormData contains:', pair[0], pair[1] instanceof File ? pair[1].name : pair[1]);
+        }
+        
+        // Remove '/api' from baseURL since we'll include it in the URL path
+        const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+        
+        // Log the URL being called - fix the double /api/ issue
+        const openaiUrl = `${baseURL}/ats/analyze-with-openai`;
+        console.log('Calling URL:', openaiUrl);
+        
+        const openaiResponse = await axios({
+          method: 'post',
+          url: openaiUrl,
+          data: openaiFormData,
+          headers: {
+            'Content-Type': 'multipart/form-data'
+            // Explicitly NOT including auth header to avoid CORS issues
+          },
+          timeout: 45000
+        });
+        
+        if (openaiResponse && openaiResponse.data) {
+          console.log('OpenAI fallback successful');
+          return openaiResponse;
+        }
+        throw new Error('Empty response from OpenAI');
+      } catch (openaiError) {
+        console.error('OpenAI fallback failed:', openaiError);
+        // Log more details about the error
+        if (openaiError.response) {
+          console.error('Error status:', openaiError.response.status);
+          console.error('Error data:', openaiError.response.data);
+        } else if (openaiError.request) {
+          console.error('No response received');
+        } else {
+          console.error('Error setting up request:', openaiError.message);
+        }
+        
+        throw new Error('Both DeepSeek and OpenAI analysis failed. Please try again later.');
+      }
     }
-  ),
+  },
 
   getSampleJobs: withMockFallback(
     () => api.get('/ats/sample-jobs'),

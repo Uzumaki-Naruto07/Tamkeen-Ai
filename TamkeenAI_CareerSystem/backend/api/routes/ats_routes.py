@@ -127,14 +127,6 @@ def analyze_resume_with_deepseek():
         JSON with analysis results and DeepSeek insights
     """
     try:
-        # Check for direct API request headers
-        force_real_api = request.headers.get('X-Force-Real-API', 'false').lower() == 'true'
-        skip_mock = request.headers.get('X-Skip-Mock', 'false').lower() == 'true'
-        
-        # Log direct connection attempt
-        if force_real_api or skip_mock:
-            logger.info("Direct API connection requested - bypassing mock data")
-        
         # Check if file was uploaded
         if 'file' not in request.files:
             return jsonify({"error": "No file provided"}), 400
@@ -148,97 +140,40 @@ def analyze_resume_with_deepseek():
         # Get job details
         job_title = request.form.get('job_title', '')
         job_description = request.form.get('job_description', '')
-        force_real_api_form = request.form.get('force_real_api', 'false').lower() == 'true'
-        
-        # Combine force flags from headers and form data
-        force_real_api = force_real_api or force_real_api_form
         
         if not job_description:
             return jsonify({"error": "Job description is required"}), 400
         
         # Get API key from environment
-        api_key = current_app.config.get('DEEPSEEK_API_KEY', None)
+        api_key = current_app.config.get('DEEPSEEK_API_KEY') or os.environ.get('DEEPSEEK_API_KEY')
         
-        # Print verbose debug info about API key
+        # Log API key status (safely)
         logger.info(f"DeepSeek API connection attempt - API Key present: {'Yes' if api_key else 'No'}")
-        if api_key:
-            # Show a masked version of the key for debugging (first 4 chars only)
-            masked_key = api_key[:4] + "*" * (len(api_key) - 4) if len(api_key) > 4 else "****"
-            logger.info(f"Using DeepSeek API Key (masked): {masked_key}")
-        else:
-            logger.warning("No DeepSeek API key found in environment. Will use mock data.")
         
-        # If no API key or not forcing real API, check if we should generate a mock response
         if not api_key:
-            if force_real_api or skip_mock:
-                # If explicitly requesting real API but no key available, return error
-                logger.error("Real API requested but no DeepSeek API key found")
-                return jsonify({
-                    "error": "DeepSeek API key is not configured. Please set the DEEPSEEK_API_KEY environment variable."
-                }), 500
-                
-            # If not forcing real API, fallback to mock data
-            logger.info("Using mock data because no API key is available")
-            
-            # Extract text from resume
-            temp_path = None
-            try:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp:
-                    file.save(temp.name)
-                    temp_path = temp.name
-                
-                # Extract text
-                resume_text = extract_text_from_resume(temp_path)
-                
-                # Clean up temporary file
-                os.unlink(temp_path)
-                
-                # Generate mock analysis with available tools
-                from ..services.ats.keyword_extractor import find_matching_keywords, calculate_similarity_score
-                
-                # Find matching keywords
-                keyword_matches = find_matching_keywords(resume_text, job_description)
-                matching_keywords = keyword_matches.get("matching_keywords", [])
-                missing_keywords = keyword_matches.get("missing_keywords", [])
-                
-                # Calculate similarity score
-                score = calculate_similarity_score(resume_text, job_description)
-                
-                # Create mock analysis
-                mock_analysis = {
-                    "score": round(score),
-                    "job_title": job_title,
-                    "matching_keywords": matching_keywords,
-                    "missing_keywords": missing_keywords,
-                    "assessment": _get_assessment_message(score),
-                    "llm_analysis": "DeepSeek analysis unavailable - API key not configured.",
-                    "improvement_roadmap": "Improvement roadmap unavailable - API key not configured.",
-                    "using_mock_data": True
-                }
-                
-                return jsonify(mock_analysis)
-                
-            except Exception as e:
-                # Clean up temporary file in case of error
-                if temp_path:
-                    try:
-                        os.unlink(temp_path)
-                    except:
-                        pass
-                raise e
-        
-        # Log that we're using the real DeepSeek API
-        logger.info("Using real DeepSeek API for analysis")
+            logger.error("No DeepSeek API key available")
+            return jsonify({
+                "error": "DeepSeek API key not configured. Set DEEPSEEK_API_KEY in environment variables.",
+                "status": "api_key_missing"
+            }), 500
         
         # Create ATS analyzer with API key
-        analyzer = create_ats_analyzer(api_key=api_key)
+        try:
+            analyzer = create_ats_analyzer(api_key=api_key)
+        except Exception as e:
+            logger.error(f"Failed to create ATS analyzer: {str(e)}")
+            return jsonify({
+                "error": f"Failed to initialize DeepSeek analyzer: {str(e)}",
+                "status": "analyzer_init_failed"
+            }), 500
         
         # Save file to temporary location
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp:
-            file.save(temp.name)
-            temp_path = temp.name
-        
+        temp_path = None
         try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp:
+                file.save(temp.name)
+                temp_path = temp.name
+            
             # Analyze resume with DeepSeek
             analysis_results = analyzer.analyze_resume(
                 temp_path,
@@ -249,23 +184,38 @@ def analyze_resume_with_deepseek():
                 use_deepseek=True
             )
             
+            # Add status for frontend tracking
+            analysis_results["api_used"] = "deepseek"
+            analysis_results["using_mock_data"] = False
+            
             # Clean up temporary file
-            os.unlink(temp_path)
+            if temp_path and os.path.exists(temp_path):
+                os.unlink(temp_path)
             
             # Return results
             return jsonify(analysis_results)
             
         except Exception as e:
             # Clean up temporary file in case of error
-            try:
-                os.unlink(temp_path)
-            except:
-                pass
-            raise e
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.unlink(temp_path)
+                except:
+                    pass
+            
+            logger.error(f"DeepSeek analysis failed: {str(e)}")
+            
+            return jsonify({
+                "error": f"DeepSeek analysis failed: {str(e)}",
+                "status": "deepseek_analysis_failed"
+            }), 500
     
     except Exception as e:
-        logger.error(f"Error analyzing resume with DeepSeek: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error in DeepSeek analysis route: {str(e)}")
+        return jsonify({
+            "error": f"Error in DeepSeek analysis: {str(e)}",
+            "status": "route_exception"
+        }), 500
 
 @ats_bp.route('/analyze-with-visuals', methods=['POST'])
 def analyze_resume_with_visuals():

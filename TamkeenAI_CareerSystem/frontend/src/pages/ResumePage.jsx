@@ -53,8 +53,7 @@ import {
   ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import { LinearProgress } from '@mui/material';
-
-// Import ATS components
+import { useUser } from "../context/AppContext";
 import ResumeAnalyzer from '../components/ResumeAnalyzer';
 import ATSResultsCard from '../components/ATSResultsCard';
 import ATSScoreVisualizer from '../components/ATSScoreVisualizer';
@@ -75,16 +74,18 @@ const NLP_LIBRARIES = {
 
 const ResumePage = () => {
   const [activeTab, setActiveTab] = useState(0);
-  const [resumeFile, setResumeFile] = useState(null);
-  const [jobDescription, setJobDescription] = useState('');
-  const [jobTitle, setJobTitle] = useState('');
-  const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [resumeId, setResumeId] = useState(null);
+  const [resumeFile, setResumeFile] = useState(null);
+  const [jobTitle, setJobTitle] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
+  const [analysis, setAnalysis] = useState(null);
+  const [confidenceScore, setConfidenceScore] = useState(85);
   const [useSemanticMatching, setUseSemanticMatching] = useState(true);
   const [useContextualAnalysis, setUseContextualAnalysis] = useState(true);
-  const [confidenceScore, setConfidenceScore] = useState(0);
+  const { profile } = useUser();
 
   // Calculate confidence score based on available data for analysis
   const calculateConfidenceScore = useMemo(() => {
@@ -109,23 +110,19 @@ const ResumePage = () => {
     setActiveTab(newValue);
   };
 
-  const handleResumeUpload = (resumeData) => {
-    // The ResumeUploader provides resumeData which contains info about the uploaded resume
-    console.log('Resume upload successful:', resumeData);
-    
-    // If we have a file object in the response data, use it
-    if (resumeData.file) {
-      setResumeFile(resumeData.file);
-    } else {
-      // Otherwise create a placeholder object with the info we have
-      setResumeFile({
-        name: resumeData.title || 'Uploaded Resume',
-        id: resumeData.id
-      });
-    }
-    
-    // Set the resumeId from the response for later API calls
-    setResumeId(resumeData.id);
+  // Handle resume upload success
+  const handleUploadSuccess = (data) => {
+    console.log('Resume upload successful:', data);
+    setResumeId(data.id || 'temp-id');
+    // Don't clear the resumeFile state - we need to keep it for analysis
+    // Switch to Analysis tab after successful upload
+    setActiveTab(1);
+  };
+
+  // Handle file selection for upload
+  const handleFileSelect = (file) => {
+    setResumeFile(file); // Save file object when selected
+    console.log('File selected for upload:', file.name);
   };
 
   const handleJobDescriptionChange = (event) => {
@@ -155,9 +152,9 @@ const ResumePage = () => {
       // This would be handled by the backend API, but we show the process here
       console.log('Extracting text from resume and processing with advanced NLP...');
       
-      // Call the API with DeepSeek integration enabled
+      // Call the API with DeepSeek integration enabled and pass the saved resumeFile
       const response = await resumeApi.analyzeResumeWithDeepSeek(resumeId, {
-        file: resumeFile,
+        file: resumeFile, // Use the stored file object
         title: jobTitle || 'Job Position',
         description: jobDescription,
         useSemanticMatching: useSemanticMatching,
@@ -392,7 +389,7 @@ const ResumePage = () => {
                   <Typography variant="body2" color="text.secondary" paragraph>
                     Upload your resume in PDF or DOCX format to analyze its ATS compatibility.
                   </Typography>
-                  <ResumeUploader onUploadSuccess={handleResumeUpload} />
+                  <ResumeUploader onUploadSuccess={handleUploadSuccess} onFileSelect={handleFileSelect} />
                   {resumeFile && (
                     <Alert severity="success" sx={{ mt: 2 }}>
                       Resume uploaded: {resumeFile.name}

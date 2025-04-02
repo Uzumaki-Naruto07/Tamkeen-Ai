@@ -845,4 +845,153 @@ def extract_skills_endpoint(current_user):
             
     except Exception as e:
         logger.error(f"Error extracting skills: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@resume_bp.route('/analyze-with-openai', methods=['POST'])
+def analyze_with_openai():
+    """Analyze a resume with OpenAI as fallback to DeepSeek"""
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+        
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+        
+    job_title = request.form.get('job_title', 'Unknown Position')
+    job_description = request.form.get('job_description', '')
+    
+    if not job_description:
+        return jsonify({"error": "Job description is required"}), 400
+    
+    # Save the file temporarily
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+        file.save(file_path)
+        
+        try:
+            # Extract text from the resume file
+            resume_text = extract_text_from_file(file_path)
+            
+            # Import OpenAI here to avoid global dependency
+            try:
+                from openai import OpenAI
+                client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+                
+                # Create a system message for resume analysis
+                system_message = """You are an expert ATS resume analyzer. Analyze the resume against the job description and provide:
+                1. A score from 0-100
+                2. Matching keywords found in both resume and job description
+                3. Important keywords from job description missing in resume
+                4. A detailed analysis with strengths, weaknesses, and recommendations
+                5. A career improvement roadmap
+                Format your response as JSON with these keys: score, matching_keywords, missing_keywords, assessment, llm_analysis, improvement_roadmap"""
+                
+                # Send to OpenAI for analysis
+                response = client.chat.completions.create(
+                    model="gpt-4",
+                    messages=[
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": f"Job Title: {job_title}\n\nJob Description: {job_description}\n\nResume: {resume_text}"}
+                    ],
+                    temperature=0.5,
+                    response_format={ "type": "json_object" }
+                )
+                
+                # Parse the response
+                result = json.loads(response.choices[0].message.content)
+                
+                # Include the complete evaluation data
+                evaluation_result = evaluate_resume_match(resume_text, job_description)
+                result.update({
+                    "job_title": job_title,
+                    "resume_keywords": evaluation_result.get("resume_keywords", []),
+                    "job_keywords": evaluation_result.get("job_keywords", []),
+                    "strengths": evaluation_result.get("strengths", []),
+                    "weaknesses": evaluation_result.get("weaknesses", []),
+                    "suggestions": evaluation_result.get("suggestions", [])
+                })
+                
+                return jsonify(result), 200
+                
+            except ImportError:
+                logger.error("OpenAI library not available")
+                return jsonify({"error": "OpenAI analysis not available"}), 500
+            except Exception as e:
+                logger.error(f"OpenAI analysis error: {str(e)}")
+                return jsonify({"error": f"OpenAI analysis failed: {str(e)}"}), 500
+                
+        except Exception as e:
+            logger.error(f"File processing error: {str(e)}")
+            return jsonify({"error": str(e)}), 500
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(file_path):
+                os.remove(file_path)
+    
+    return jsonify({"error": "File type not allowed"}), 400
+
+
+def extract_text_from_file(file_path):
+    """Extract text from uploaded resume file"""
+    file_ext = file_path.split('.')[-1].lower()
+    
+    try:
+        if file_ext == 'pdf':
+            try:
+                import PyPDF2
+                with open(file_path, 'rb') as file:
+                    reader = PyPDF2.PdfReader(file)
+                    text = ""
+                    for page in reader.pages:
+                        text += page.extract_text() + "\n"
+                    return text
+            except ImportError:
+                logger.warning("PyPDF2 not available, falling back to simple text extraction")
+                return "PDF text extraction not available"
+                
+        elif file_ext in ['docx', 'doc']:
+            try:
+                import docx2txt
+                return docx2txt.process(file_path)
+            except ImportError:
+                logger.warning("docx2txt not available, falling back to simple text extraction")
+                return "DOCX text extraction not available"
+                
+        elif file_ext == 'txt':
+            with open(file_path, 'r', encoding='utf-8') as file:
+                return file.read()
+                
+        else:
+            return "Unsupported file format"
+            
+    except Exception as e:
+        logger.error(f"Text extraction error: {str(e)}")
+        return f"Error extracting text: {str(e)}"
+
+
+@resume_bp.route('/test-upload', methods=['POST'])
+def test_upload():
+    """Simple test upload endpoint"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file part"}), 400
+            
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+        
+        # Just return success without actually saving the file
+        return jsonify({
+            "success": True,
+            "message": "File received successfully",
+            "filename": file.filename,
+            "upload_time": datetime.now().isoformat()
+        }), 201
+    except Exception as e:
+        logger.error(f"Error in test upload: {str(e)}")
         return jsonify({"error": str(e)}), 500 

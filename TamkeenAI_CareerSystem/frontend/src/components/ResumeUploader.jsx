@@ -20,12 +20,12 @@ import {
   Delete 
 } from '@mui/icons-material';
 import { useUser } from '../context/AppContext';
-import resumeApi from '../utils/resumeApi';
+import axios from 'axios';
 
 /**
  * Component for uploading resume files
  */
-const ResumeUploader = ({ onUploadSuccess }) => {
+const ResumeUploader = ({ onUploadSuccess, onFileSelect }) => {
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
@@ -57,6 +57,11 @@ const ResumeUploader = ({ onUploadSuccess }) => {
       setTitle(selectedFile.name.split('.')[0]);
       setError(null);
       setOpen(true);
+      
+      // Notify parent component about file selection
+      if (onFileSelect) {
+        onFileSelect(selectedFile);
+      }
     }
   };
   
@@ -72,16 +77,28 @@ const ResumeUploader = ({ onUploadSuccess }) => {
       formData.append('title', title);
       formData.append('userId', profile.id);
       
-      const response = await resumeApi.uploadResume(formData);
+      // Use direct axios call to avoid auth token issues
+      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await axios({
+        method: 'post',
+        url: `${baseURL}/resume/upload`,
+        data: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data'
+          // Explicitly NOT including auth header to avoid CORS issues
+        }
+      });
       
       setSuccess(true);
-      setFile(null);
-      setTitle('');
       setOpen(false);
       
       // Callback to parent component with the new resume
+      // Note: We're not clearing the file here so it can be used for analysis
       if (onUploadSuccess) {
-        onUploadSuccess(response.data);
+        onUploadSuccess({
+          ...response.data,
+          file: file  // Also pass the file object back to parent
+        });
       }
     } catch (err) {
       setError('Failed to upload resume: ' + (err.response?.data?.message || err.message || 'Unknown error'));
