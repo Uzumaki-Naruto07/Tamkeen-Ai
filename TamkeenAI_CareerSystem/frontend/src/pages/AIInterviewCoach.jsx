@@ -595,6 +595,15 @@ const AIInterviewCoach = () => {
   const [topicMenuAnchorEl, setTopicMenuAnchorEl] = useState(null);
   const [questionMenuAnchorEl, setQuestionMenuAnchorEl] = useState(null);
   const [currentTab, setCurrentTab] = useState(0);
+  
+  // Add missing state variables
+  const [currentPage, setCurrentPage] = useState(1);
+  const [coachName, setCoachName] = useState(coachPersonas[0]?.name || 'NooraGPT');
+  const [messageHistory, setMessageHistory] = useState([]);
+  const [behavioralPatterns, setBehavioralPatterns] = useState([]); // Add this missing state
+  const [messageContainerHeight, setMessageContainerHeight] = useState(window.innerHeight - 280);
+  const [vocabularySuggestions, setVocabularySuggestions] = useState([]); // Add this missing state
+  
   const [feedbackDetails, setFeedbackDetails] = useState(null);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [mockInterviewDialogOpen, setMockInterviewDialogOpen] = useState(false);
@@ -736,7 +745,8 @@ const AIInterviewCoach = () => {
             role: 'assistant',
             content: selectedCoach.greeting,
             timestamp: new Date().toISOString(),
-            model: selectedCoach.id === 'ahmed' ? 'DeepSeek-AI' : 'LLaMA-3'
+            model: selectedCoach.id === 'ahmed' ? 'DeepSeek-AI' : 'LLaMA-3',
+            mode: 'ai_assistant'
           };
           
           setMessages([greeting]);
@@ -962,7 +972,8 @@ const AIInterviewCoach = () => {
     const userMsg = {
       role: 'user',
       content: inputMessage.trim(),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      mode: isAIMode ? 'ai_assistant' : 'interview_coach' // Add mode to user messages too
     };
     
     // Debug log message object
@@ -1052,10 +1063,14 @@ const AIInterviewCoach = () => {
           role: 'assistant',
           content: response.data.message || response.data.content || "I'm not sure how to respond to that.",
           timestamp: new Date().toISOString(),
-          model: isAIMode ? 'DeepSeek-AI' : (selectedCoachPersona === 'ahmed' ? 'DeepSeek-AI' : 'LLaMA-3')
+          model: isAIMode ? 'DeepSeek-AI' : (selectedCoachPersona === 'ahmed' ? 'DeepSeek-AI' : 'LLaMA-3'),
+          mode: isAIMode ? 'ai_assistant' : 'interview_coach' // Add mode field for filtering
         };
         
-        setMessages(prevMessages => [...prevMessages, aiResponse]);
+        // Ensure we're adding the response to the correct mode's conversation
+        if ((isAIMode && messageMode === 'ai_assistant') || (!isAIMode && messageMode === 'interview_coach')) {
+          setMessages(prevMessages => [...prevMessages, aiResponse]);
+        }
         
         // Only do analysis in interview coach mode
         if (!isAIMode) {
@@ -1166,6 +1181,9 @@ const AIInterviewCoach = () => {
     setError(null);
     
     try {
+      // Clear existing messages before starting a new conversation
+      setMessages([]);
+      
       const response = await apiEndpoints.interviews.createConversation(profile.id);
       
       setConversationId(response.data.conversationId);
@@ -1177,7 +1195,8 @@ const AIInterviewCoach = () => {
           role: 'assistant',
           content: "Hello! I'm your AI Assistant powered by DeepSeek. I can answer questions on any topic. How can I help you today?",
           timestamp: new Date().toISOString(),
-          model: 'DeepSeek-AI'
+          model: 'DeepSeek-AI',
+          mode: 'ai_assistant'
         };
         
         setMessages([greeting]);
@@ -1303,35 +1322,103 @@ const AIInterviewCoach = () => {
     }
     
     try {
-      // Create a new conversation
-      const response = await apiEndpoints.interviews.createConversation(profile.id);
-      setConversationId(response.data.conversationId);
+      // Check if setCurrentPage exists (might be used for page navigation)
+      if (typeof setCurrentPage === 'function') {
+        setCurrentPage(2);
+      }
       
-      // Use our new handleCoachSelect function to properly set up the coach
-      const coachObj = {
-        name: newCoach.name,
-        field: newCoach.title
-      };
-      handleCoachSelect(coachObj);
+      // Set up a local conversation immediately to improve UX
+      // Reset conversation data - with safeguards
+      try {
+        setMessages([]);
+        
+        // Safely handle state updates with existence checks
+        if (typeof setFeedbackData === 'function') {
+          setFeedbackData({
+            responseLength: 0,
+            verboseScore: 0,
+            starCompliance: 0,
+            confidenceScore: 0,
+            keywordMatchPercentage: 0
+          });
+        }
+        
+        // Only call these functions if they exist
+        try {
+          // This function is causing the error - wrap in a separate try/catch
+          if (typeof setBehavioralPatterns === 'function') {
+            setBehavioralPatterns([]);
+          }
+        } catch (stateError) {
+          console.warn('Non-critical state update error:', stateError);
+        }
+        
+        try {
+          if (typeof setVocabularySuggestions === 'function') {
+            setVocabularySuggestions([]);
+          }
+        } catch (stateError) {
+          console.warn('Non-critical state update error:', stateError);
+        }
+      } catch (stateUpdateError) {
+        console.warn('Error resetting conversation state:', stateUpdateError);
+        // Continue anyway
+      }
       
-      // Save the greeting to the backend
-      await apiEndpoints.interviews.sendMessage(response.data.conversationId, {
+      // Add welcome message from coach
+      const welcomeMessage = {
         role: 'assistant',
         content: `Hi! I'm ${newCoach.name}, your ${newCoach.title} interview coach. How can I help you prepare for your interview today?`,
-        userId: profile.id
-      });
+        timestamp: new Date().toISOString(),
+        model: newCoach.id === 'ahmed' ? 'DeepSeek-AI' : 'LLaMA-3'
+      };
+      setMessages([welcomeMessage]);
       
-      // Reset other conversation state
-      setUserMessageHistory([]);
-      setDetectedPatterns([]);
-      setSuggestedVocabulary([]);
-      setFeedbackData({
-        responseLength: 0,
-        verboseScore: 0,
-        starCompliance: 0,
-        confidenceScore: 0,
-        keywordMatchPercentage: 0
-      });
+      let conversationResponse;
+      try {
+        // Create a new conversation
+        conversationResponse = await apiEndpoints.interviews.createConversation(profile.id);
+        setConversationId(conversationResponse.data.conversationId);
+        
+        // Save the greeting to the backend
+        await apiEndpoints.interviews.sendMessage(conversationResponse.data.conversationId, {
+          role: 'assistant',
+          content: welcomeMessage.content,
+          userId: profile.id,
+          mode: 'interview_coach',
+          model: newCoach.id === 'ahmed' ? 'deepseek' : 'llama3'
+        });
+      } catch (apiError) {
+        console.error('API error changing coach persona:', apiError);
+        // Create a fallback local conversation ID if API fails
+        const fallbackId = `local-${Date.now()}`;
+        setConversationId(fallbackId);
+        setSnackbarMessage('Connected in offline mode. Some features may be limited.');
+        setSnackbarOpen(true);
+      }
+      
+      // Reset other conversation state regardless of API success
+      try {
+        if (typeof setMessageHistory === 'function') {
+          setMessageHistory([welcomeMessage]);
+        }
+        
+        setUserMessageHistory([]);
+        
+        if (typeof setDetectedPatterns === 'function') {
+          setDetectedPatterns([]);
+        }
+        
+        if (typeof setSuggestedVocabulary === 'function') {
+          setSuggestedVocabulary([]);
+        }
+      } catch (stateError) {
+        console.warn('Non-critical state update error:', stateError);
+      }
+      
+      // Show success message
+      setSnackbarMessage(`Switched to ${newCoach.name} as your interview coach.`);
+      setSnackbarOpen(true);
       
     } catch (err) {
       console.error('Error changing coach persona:', err);
@@ -1870,7 +1957,23 @@ const AIInterviewCoach = () => {
                   },
                   overflow: 'hidden'
                 }}
-                onClick={() => changeCoachPersona(coach.id)}
+                onClick={() => {
+                  // Provide visual feedback immediately
+                  setLoading(true);
+                  
+                  // Delay the API call slightly to ensure UI updates
+                  setTimeout(() => {
+                    try {
+                      changeCoachPersona(coach.id);
+                      setShowCoachSelection(false); // Close the selection after choosing
+                    } catch (error) {
+                      console.error("Error selecting coach:", error);
+                      setSnackbarMessage('Failed to select coach. Please try again.');
+                      setSnackbarOpen(true);
+                      setLoading(false);
+                    }
+                  }, 100);
+                }}
               >
                 <Box sx={{ bgcolor: 'grey.200', height: 150, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                   <Typography variant="h1" sx={{ color: 'grey.400', fontSize: '5rem' }}>
@@ -1945,7 +2048,8 @@ const AIInterviewCoach = () => {
   
   // Render feedback component - modified to include premium feedback
   const renderFeedback = () => {
-    if (!feedbackData.responseLength) return null;
+    // Enhanced null check to avoid the error
+    if (!feedbackData || !feedbackData.responseLength) return null;
     
     return (
       <Accordion sx={{ mb: 2, borderRadius: 1, overflow: 'hidden' }}>
@@ -3040,17 +3144,28 @@ const AIInterviewCoach = () => {
   }, []);
   
   const handleCoachSelect = (coach) => {
-    setSelectedCoach(coach);
+    // Use coachName (which we added) instead of relying on setSelectedCoach
     setCoachName(coach.name);
-    setCurrentPage(2);
+    
+    // Check if setCurrentPage exists
+    if (typeof setCurrentPage === 'function') {
+      setCurrentPage(2);
+    }
 
     // Reset conversation when changing coaches
     setMessages([]);
-    setFeedbackData(null);
-    setBehavioralPatterns([]);
-    setVocabularySuggestions([]);
-    setKnowledgeGaps([]);
-    setMessageContainerHeight(window.innerHeight - 280);
+    if (typeof setFeedbackData === 'function') {
+      setFeedbackData(null);
+    }
+    if (typeof setBehavioralPatterns === 'function') {
+      setBehavioralPatterns([]);
+    }
+    if (typeof setVocabularySuggestions === 'function') {
+      setVocabularySuggestions([]);
+    }
+    if (typeof setMessageContainerHeight === 'function') {
+      setMessageContainerHeight(window.innerHeight - 280);
+    }
 
     // Add welcome message from coach
     const welcomeMessage = {
@@ -3059,7 +3174,9 @@ const AIInterviewCoach = () => {
       timestamp: new Date().toISOString(),
     };
     setMessages([welcomeMessage]);
-    setMessageHistory([welcomeMessage]);
+    if (typeof setMessageHistory === 'function') {
+      setMessageHistory([welcomeMessage]);
+    }
   };
   
   // Toggle AI mode
@@ -3071,23 +3188,70 @@ const AIInterviewCoach = () => {
     try {
       setLoading(true);
       
-      // Create a new conversation
-      const response = await apiEndpoints.interviews.createConversation(profile.id);
-      setConversationId(response.data.conversationId);
+      // Clear existing messages to prevent overlap between modes
+      setMessages([]);
+      
+      // Create a new conversation - with fallback handling
+      let conversationId;
+      try {
+        const response = await apiEndpoints.interviews.createConversation(profile.id);
+        conversationId = response.data.conversationId;
+        setConversationId(conversationId);
+      } catch (apiError) {
+        console.error('Failed to create new conversation via API:', apiError);
+        // Create a fallback local conversation ID
+        conversationId = 'local-' + Date.now();
+        setConversationId(conversationId);
+        setSnackbarMessage('Connected in offline mode. Some features may be limited.');
+        setSnackbarOpen(true);
+      }
       
       // Reset conversation state
-      setUserMessageHistory([]);
-      setDetectedPatterns([]);
-      setSuggestedVocabulary([]);
+      try {
+        if (typeof setUserMessageHistory === 'function') {
+          setUserMessageHistory([]);
+        }
+        if (typeof setDetectedPatterns === 'function') {
+          setDetectedPatterns([]);
+        }
+        if (typeof setSuggestedVocabulary === 'function') {
+          setSuggestedVocabulary([]);
+        }
+        if (typeof setFeedbackData === 'function') {
+          setFeedbackData({
+            responseLength: 0,
+            verboseScore: 'moderate',
+            starCompliance: 0,
+            confidenceScore: 0,
+            keywordMatchPercentage: 0
+          });
+        }
+      } catch (stateError) {
+        console.warn('Non-critical state reset error:', stateError);
+      }
+      
+      // Find the appropriate coach for greeting
+      let selectedCoach;
+      try {
+        selectedCoach = coachPersonas.find(coach => coach.id === selectedCoachPersona) || coachPersonas[0];
+      } catch (error) {
+        console.warn('Error finding coach persona:', error);
+        selectedCoach = {
+          name: 'Coach',
+          greeting: "Hello! I'm your AI Interview Coach. How can I help you prepare for your interview today?",
+          id: 'noora'
+        };
+      }
       
       // Add appropriate greeting based on mode
       const greeting = {
         role: 'assistant',
         content: newMode 
           ? "Hello! I'm your AI Assistant powered by DeepSeek. I can answer questions on any topic. How can I help you today?" 
-          : coachPersonas.find(coach => coach.id === selectedCoachPersona)?.greeting || "Hello! I'm your AI Interview Coach. How can I help you prepare for your interview today?",
+          : selectedCoach.greeting || "Hello! I'm your AI Interview Coach. How can I help you prepare for your interview today?",
         timestamp: new Date().toISOString(),
-        model: newMode ? 'DeepSeek-AI' : (selectedCoachPersona === 'ahmed' ? 'DeepSeek-AI' : 'LLaMA-3')
+        model: newMode ? 'DeepSeek-AI' : (selectedCoach.id === 'ahmed' ? 'DeepSeek-AI' : 'LLaMA-3'),
+        mode: newMode ? 'ai_assistant' : 'interview_coach' // Add mode field to distinguish messages
       };
       
       // Reset messages to only show the greeting
@@ -3095,36 +3259,46 @@ const AIInterviewCoach = () => {
       setHasLoadedMessages(true);
       
       // Save the greeting to the backend with explicit mode parameters
-      await apiEndpoints.interviews.sendMessage(response.data.conversationId, {
-        message: greeting.content,
-        role: 'assistant',
-        userId: profile.id,
-        mode: newMode ? 'ai_assistant' : 'interview_coach',
-        model: newMode ? 'deepseek' : (selectedCoachPersona === 'ahmed' ? 'deepseek' : 'llama3'),
-        systemInstruction: newMode 
-          ? "You are a helpful AI assistant that can answer any question on any topic." 
-          : "You are an AI interview coach helping prepare for job interviews."
-      });
+      try {
+        await apiEndpoints.interviews.sendMessage(conversationId, {
+          message: greeting.content,
+          role: 'assistant',
+          userId: profile.id,
+          mode: newMode ? 'ai_assistant' : 'interview_coach',
+          model: newMode ? 'deepseek' : (selectedCoach.id === 'ahmed' ? 'deepseek' : 'llama3'),
+          systemInstruction: newMode 
+            ? "You are a helpful AI assistant that can answer any question on any topic." 
+            : "You are an AI interview coach helping prepare for job interviews."
+        });
+        
+        // Show success message for mode change
+        setSnackbarMessage(newMode 
+          ? 'Switched to AI Assistant mode - ask me anything!' 
+          : 'Switched to Interview Coach mode - practice for your interviews!');
+        setSnackbarOpen(true);
+        
+      } catch (apiError) {
+        console.error('Error saving greeting message:', apiError);
+        // We already have the local message showing, so no need for further fallback
+      }
       
     } catch (err) {
       console.error('Error creating new conversation for AI mode:', err);
-      // Fall back to local state changes only if the API call fails
-      const fallbackConversationId = 'local-' + Date.now();
-      setConversationId(fallbackConversationId);
-      
+      // Most basic fallback if everything else fails
       const greeting = {
         role: 'assistant',
         content: newMode 
           ? "Hello! I'm your AI Assistant powered by DeepSeek. I can answer questions on any topic. How can I help you today?" 
           : "Hello! I'm your AI Interview Coach. How can I help you prepare for your interview today?",
         timestamp: new Date().toISOString(),
-        model: newMode ? 'DeepSeek-AI' : 'LLaMA-3'
+        model: newMode ? 'DeepSeek-AI' : 'LLaMA-3',
+        mode: newMode ? 'ai_assistant' : 'interview_coach'
       };
       
       setMessages([greeting]);
       setHasLoadedMessages(true);
       
-      setSnackbarMessage('Connected in offline mode. Some features may be limited.');
+      setSnackbarMessage('Connected in offline mode with limited features.');
       setSnackbarOpen(true);
     } finally {
       setLoading(false);
@@ -3347,7 +3521,11 @@ const AIInterviewCoach = () => {
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 {/* AI Mode Toggle */}
-                <Tooltip title={isAIMode ? "Switch to Interview Coach Mode" : "Switch to AI Assistant Mode"}>
+                <Tooltip title={
+                  isAIMode 
+                  ? "Currently in AI Assistant Mode - I can answer any questions about any topic" 
+                  : "Currently in Interview Coach Mode - I'll help you practice interview questions and improve your skills"
+                }>
                   <FormControlLabel
                     control={
                       <Switch
@@ -3365,9 +3543,12 @@ const AIInterviewCoach = () => {
                       />
                     }
                     label={
-                      <Typography variant="body2" sx={{ color: 'white', display: 'flex', alignItems: 'center' }}>
-                        {isAIMode ? <Code sx={{ ml: 0.5, fontSize: 16 }} /> : <School sx={{ ml: 0.5, fontSize: 16 }} />}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="body2" sx={{ color: 'white', display: 'flex', alignItems: 'center', mr: 1 }}>
+                          {isAIMode ? <Code sx={{ mr: 0.5, fontSize: 16 }} /> : <School sx={{ mr: 0.5, fontSize: 16 }} />}
+                          {isAIMode ? "AI Assistant" : "Interview Coach"}
+                        </Typography>
+                      </Box>
                     }
                     sx={{ mr: 1 }}
                   />
@@ -3443,6 +3624,9 @@ const AIInterviewCoach = () => {
                     // Filter out system messages
                     if (msg.role === 'system') return null;
                     if (msg.content && msg.content.includes('Coach persona changed to')) return null;
+                    
+                    // Filter messages based on current mode
+                    if (msg.mode && msg.mode !== (isAIMode ? 'ai_assistant' : 'interview_coach')) return null;
                     
                     const isUser = msg.role === 'user';
                     const showAvatar = !isUser; // Only show coach avatar
@@ -3544,13 +3728,50 @@ const AIInterviewCoach = () => {
 
             {/* Show feedback data, knowledge booster, behavioral pattern feedback, and vocabulary suggestions */}
             <Box sx={{ p: 2 }}>
-              {!isAIMode && (
+              {!loading && hasLoadedMessages && (
                 <>
-                  {renderVocabularySuggestions()}
-                  {renderBehavioralPatternFeedback()}
+                  {/* Mode info banner */}
+                  <Paper 
+                    elevation={0} 
+                    sx={{ 
+                      p: 1.5, 
+                      mb: 2, 
+                      borderRadius: 2,
+                      background: isAIMode 
+                        ? 'linear-gradient(135deg, rgba(200, 240, 255, 0.2), rgba(255, 255, 255, 0.5))' 
+                        : 'linear-gradient(135deg, rgba(200, 220, 255, 0.2), rgba(255, 255, 255, 0.5))',
+                      border: '1px solid',
+                      borderColor: isAIMode ? 'info.200' : 'primary.200',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <Avatar 
+                      sx={{ 
+                        bgcolor: isAIMode ? 'info.main' : 'primary.main',
+                        width: 28, 
+                        height: 28,
+                        mr: 1.5
+                      }}
+                    >
+                      {isAIMode ? <Code fontSize="small" /> : <School fontSize="small" />}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle2" color={isAIMode ? 'info.dark' : 'primary.dark'}>
+                        {isAIMode ? 'AI Assistant Mode' : 'Interview Coach Mode'}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {isAIMode 
+                          ? 'Ask me anything! I can help with general knowledge, coding, writing, and more.' 
+                          : 'I\'ll help you practice interview questions and provide feedback on your responses.'}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                  
                   {renderFeedback()}
-                  {renderKnowledgeBooster()}
-                  {renderAIAnalysis()}
+                  {showKnowledgeBooster && renderKnowledgeBooster()}
+                  {detectedPatterns.length > 0 && renderBehavioralPatternFeedback()}
+                  {suggestedVocabulary.length > 0 && renderVocabularySuggestions()}
                 </>
               )}
             </Box>
