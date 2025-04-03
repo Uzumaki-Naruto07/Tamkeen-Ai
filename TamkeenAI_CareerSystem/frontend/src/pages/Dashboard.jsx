@@ -87,6 +87,10 @@ import OpportunityAlertCard from '../components/Dashboard/OpportunityAlertCard';
 import LearningRoadmap from '../components/Dashboard/LearningRoadmap';
 import ProfileCompletionPrompt from '../components/Dashboard/ProfileCompletionPrompt';
 import ResumeExpertPrompt from '../components/Dashboard/ResumeExpertPrompt';
+import SkillTransitionChart from '../components/Dashboard/SkillTransitionChart';
+import EmiratiJourneyMap from '../components/Dashboard/EmiratiJourneyMap';
+import DashboardReportExporter from '../components/Dashboard/DashboardReportExporter';
+import WinnerVibeBanner from '../components/Dashboard/WinnerVibeBanner';
 
 // Import context
 import { useUser } from '../context/AppContext';
@@ -114,10 +118,10 @@ const widgetMap = {
     defaultSize: { xs: 12, md: 6 },
     defaultOrder: 2
   },
-  aiRecommendation: {
-    id: 'aiRecommendation',
-    title: 'AI Recommendations',
-    component: AIRecommendationCard,
+  skillTransition: {
+    id: 'skillTransition',
+    title: 'Skill Transition',
+    component: SkillTransitionChart,
     defaultSize: { xs: 12, md: 6 },
     defaultOrder: 3
   },
@@ -128,61 +132,68 @@ const widgetMap = {
     defaultSize: { xs: 12, md: 8 },
     defaultOrder: 4
   },
+  emiratiJourney: {
+    id: 'emiratiJourney',
+    title: 'Emirati Career Path',
+    component: EmiratiJourneyMap,
+    defaultSize: { xs: 12, md: 8 },
+    defaultOrder: 5
+  },
   badges: {
     id: 'badges',
     title: 'Achievements',
     component: BadgesSection,
     defaultSize: { xs: 12, md: 4 },
-    defaultOrder: 5
+    defaultOrder: 6
   },
   careerPrediction: {
     id: 'careerPrediction',
     title: 'Career Predictions',
     component: CareerPredictionSection,
     defaultSize: { xs: 12, md: 6 },
-    defaultOrder: 6
+    defaultOrder: 7
   },
   learningPaths: {
     id: 'learningPaths',
     title: 'Learning Paths',
     component: PersonalizedLearningPaths,
     defaultSize: { xs: 12, md: 6 },
-    defaultOrder: 7
+    defaultOrder: 8
   },
   marketInsights: {
     id: 'marketInsights',
     title: 'Market Insights',
     component: MarketInsightsSection,
     defaultSize: { xs: 12, md: 8 },
-    defaultOrder: 8
+    defaultOrder: 9
   },
   leaderboard: {
     id: 'leaderboard',
     title: 'Leaderboard',
     component: LeaderboardWidget,
     defaultSize: { xs: 12, md: 4 },
-    defaultOrder: 9
+    defaultOrder: 10
   },
   activityLog: {
     id: 'activityLog',
     title: 'Recent Activities',
     component: ActivityLogSection,
     defaultSize: { xs: 12, md: 4 },
-    defaultOrder: 10
+    defaultOrder: 11
   },
   opportunityAlert: {
     id: 'opportunityAlert',
     title: 'Opportunity Alerts',
     component: OpportunityAlertCard,
     defaultSize: { xs: 12, md: 8 },
-    defaultOrder: 11
-  },
-  learningRoadmap: {
-    id: 'learningRoadmap',
-    title: 'Learning Roadmap',
-    component: LearningRoadmap,
-    defaultSize: { xs: 12, md: 8 },
     defaultOrder: 12
+  },
+  dashboardReport: {
+    id: 'dashboardReport',
+    title: 'Career Report',
+    component: DashboardReportExporter,
+    defaultSize: { xs: 12, md: 4 },
+    defaultOrder: 13
   }
 };
 
@@ -215,18 +226,20 @@ const itemVariants = {
 
 // Widget card styling - use this for all widget Paper components
 const widgetCardStyles = {
-  p: 2,
+  p: 0, // Remove padding from the Paper to allow internal gradient headers
   display: 'flex',
   flexDirection: 'column',
-  borderRadius: 2.5,
+  borderRadius: 3,
   position: 'relative',
   overflow: 'hidden',
   height: '100%',
   boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  border: '1px solid rgba(0,0,0,0.04)',
   '&:hover': {
     transform: 'translateY(-4px)',
-    boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
+    boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+    borderColor: 'rgba(25, 118, 210, 0.1)'
   }
 };
 
@@ -235,9 +248,35 @@ const widgetHeaderStyles = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  mb: 2,
-  pb: 1.5,
-  borderBottom: '1px solid rgba(0,0,0,0.08)'
+  mb: 0,
+  p: 2.5,
+  pb: 2,
+  background: 'linear-gradient(145deg, rgba(25, 118, 210, 0.05) 0%, rgba(25, 118, 210, 0.15) 100%)',
+  borderBottom: '1px solid rgba(0,0,0,0.06)'
+};
+
+// Widget content styling
+const widgetContentStyles = {
+  p: 2.5,
+  flexGrow: 1,
+  display: 'flex',
+  flexDirection: 'column'
+};
+
+// Function to generate a gradient background based on widget ID
+const getWidgetGradient = (widgetId) => {
+  const gradients = {
+    userProgress: 'linear-gradient(145deg, rgba(25, 118, 210, 0.05) 0%, rgba(25, 118, 210, 0.15) 100%)',
+    resumeScore: 'linear-gradient(145deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.15) 100%)',
+    skillGap: 'linear-gradient(145deg, rgba(245, 158, 11, 0.05) 0%, rgba(245, 158, 11, 0.15) 100%)',
+    skillTransition: 'linear-gradient(145deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.15) 100%)',
+    careerJourney: 'linear-gradient(145deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.15) 100%)',
+    emiratiJourney: 'linear-gradient(145deg, rgba(236, 72, 153, 0.05) 0%, rgba(236, 72, 153, 0.15) 100%)',
+    badges: 'linear-gradient(145deg, rgba(239, 68, 68, 0.05) 0%, rgba(239, 68, 68, 0.15) 100%)',
+    default: 'linear-gradient(145deg, rgba(25, 118, 210, 0.05) 0%, rgba(25, 118, 210, 0.15) 100%)'
+  };
+  
+  return gradients[widgetId] || gradients.default;
 };
 
 const Dashboard = () => {
@@ -365,12 +404,42 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [checkAiServiceStatus]);
   
+  // Initialize dashboard when profile or auth changes
   useEffect(() => {
     // Initialize dashboard
     if (isAuthenticated && profile) {
       fetchDashboardData();
     }
   }, [isAuthenticated, profile]);
+
+  // Add a new effect to update dashboard when application state changes
+  useEffect(() => {
+    // This will handle updates when returning to the dashboard from other pages
+    const handleFocus = () => {
+      // Only refetch if we're authenticated and have loaded once before
+      if (isAuthenticated && dashboardData) {
+        console.log('Window focused, refreshing dashboard data');
+        fetchDashboardData();
+      }
+    };
+
+    // Listen for page focus events - this will update the dashboard when returning from other tabs
+    window.addEventListener('focus', handleFocus);
+    
+    // Set up polling for very frequent data (like notifications)
+    const pollInterval = setInterval(() => {
+      // Only update for critical real-time data, not the entire dashboard
+      if (isAuthenticated) {
+        // You could implement a lightweight update function here
+        // For example, just updating notifications count
+      }
+    }, 60000); // Check every minute
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(pollInterval);
+    };
+  }, [isAuthenticated, dashboardData]);
   
   useEffect(() => {
     // Check profile completion and show prompts if needed
@@ -424,26 +493,214 @@ const Dashboard = () => {
     setLoading(true);
     try {
       console.log('Fetching dashboard data...');
-      const response = await api.get('/dashboard/data');
-      console.log('Dashboard API response:', response);
       
-      // Check if we have valid data in the expected structure
-      if (response && response.data && response.data.success === true) {
-        console.log('Valid dashboard data received:', response.data.data);
-        setDashboardData(response.data.data);
-        setError(null);
-      } else if (response && response.data) {
-        // Fallback to direct data if not in the success wrapper format
-        console.log('Using direct data response format');
-        setDashboardData(response.data);
-        setError(null);
-      } else {
-        console.warn('Invalid dashboard data format received');
-        // Fall back to mock data
-        console.log('Falling back to mock dashboard data');
-        setDashboardData(mockDashboardData);
-        setError('Could not load dashboard data from API. Using mock data.');
+      // Initialize a data object that will combine all sources of data
+      let combinedData = {
+        _source: 'integrated', // Track that this is integrated data
+        last_updated: new Date().toISOString() // Add timestamp
+      };
+      
+      try {
+        // 1. First attempt to get dashboard data from API
+        const response = await api.get('/dashboard/data');
+        console.log('Dashboard API response:', response);
+        
+        // Check if we have valid data in the expected structure
+        if (response && response.data && response.data.success === true) {
+          console.log('Valid dashboard data received:', response.data.data);
+          combinedData = { 
+            ...response.data.data,
+            _source: 'api', // Mark that this came from the API
+            last_updated: new Date().toISOString()
+          };
+        } else if (response && response.data) {
+          // Fallback to direct data if not in the success wrapper format
+          console.log('Using direct data response format');
+          combinedData = { 
+            ...response.data,
+            _source: 'api', // Mark that this came from the API
+            last_updated: new Date().toISOString()
+          };
+        }
+      } catch (error) {
+        console.warn('Could not load dashboard data from API:', error);
+        // Continue with collecting data from other sources
       }
+      
+      // 2. Fetch and integrate data from other parts of the application
+      try {
+        // A. Get user profile data
+        if (profile) {
+          combinedData.userProfile = profile;
+          
+          // Extract and organize profile data
+          if (profile.resumeScore) {
+            combinedData.resumeScore = {
+              overall: profile.resumeScore,
+              sections: profile.resumeScoreDetails || { content: 0, format: 0, keywords: 0, impact: 0 },
+              scores: [
+                { name: 'Content', value: profile.resumeScoreDetails?.content || 0 },
+                { name: 'Format', value: profile.resumeScoreDetails?.format || 0 },
+                { name: 'Keywords', value: profile.resumeScoreDetails?.keywords || 0 },
+                { name: 'Impact', value: profile.resumeScoreDetails?.impact || 0 }
+              ]
+            };
+          }
+          
+          // Extract skills data
+          if (profile.skills && Array.isArray(profile.skills)) {
+            combinedData.currentSkills = profile.skills.map(skill => ({
+              name: skill.name || skill,
+              level: skill.level || 0,
+              category: skill.category || 'General'
+            }));
+          }
+          
+          // Set up progress data
+          combinedData.progress = {
+            overall: profile.completionPercentage || 0,
+            resume: profile.resumeScore || 0,
+            skills: profile.skillsProgress || 0,
+            applications: profile.applicationCount || 0,
+            interviews: profile.interviewCount || 0,
+            networking: profile.networkingScore || 0,
+            level: profile.careerLevel || 1,
+            rank: profile.careerRank || 'Beginner',
+            xp: profile.careerPoints || 0,
+            completedGoals: profile.completedGoals || 0,
+            goals: profile.goals || [],
+            nextSteps: profile.nextSteps || [],
+            skillsProgress: profile.skillsProgress || 0
+          };
+        }
+        
+        // B. Fetch user's job applications
+        try {
+          const applicationsResponse = await api.get('/jobs/applications');
+          if (applicationsResponse && applicationsResponse.data) {
+            const applications = Array.isArray(applicationsResponse.data) 
+              ? applicationsResponse.data 
+              : (applicationsResponse.data.data || []);
+            
+            // Add application data
+            combinedData.applications = {
+              total: applications.length,
+              active: applications.filter(app => app.status === 'active' || app.status === 'pending').length,
+              interviews: applications.filter(app => app.status === 'interview').length,
+              offers: applications.filter(app => app.status === 'offer').length,
+              rejected: applications.filter(app => app.status === 'rejected').length
+            };
+            
+            // Add upcoming interviews
+            combinedData.upcomingInterviews = applications
+              .filter(app => app.status === 'interview' && app.interviewDate)
+              .map(app => ({
+                company: app.company || 'Company',
+                position: app.position || app.jobTitle || 'Position',
+                date: app.interviewDate,
+                type: app.interviewType || 'In-person'
+              }))
+              .sort((a, b) => new Date(a.date) - new Date(b.date))
+              .slice(0, 5); // Show most recent 5
+          }
+        } catch (err) {
+          console.warn('Failed to fetch applications data:', err);
+        }
+        
+        // C. Fetch resume data
+        try {
+          const resumeResponse = await api.get('/resume');
+          if (resumeResponse && resumeResponse.data) {
+            const resumes = Array.isArray(resumeResponse.data) 
+              ? resumeResponse.data 
+              : (resumeResponse.data.data || []);
+              
+            if (resumes.length > 0) {
+              // Get the latest resume history for the resume chart
+              const resumeVersions = resumes
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                .slice(0, 5)
+                .map(resume => ({
+                  date: resume.createdAt,
+                  score: resume.score || 0
+                }))
+                .reverse();
+                
+              combinedData.resumeHistory = resumeVersions;
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to fetch resume data:', err);
+        }
+        
+        // D. Fetch saved jobs
+        try {
+          const savedJobsResponse = await api.get('/jobs/saved');
+          if (savedJobsResponse && savedJobsResponse.data) {
+            const savedJobs = Array.isArray(savedJobsResponse.data) 
+              ? savedJobsResponse.data 
+              : (savedJobsResponse.data.data || []);
+              
+            // Add to opportunities section
+            if (!combinedData.opportunities) {
+              combinedData.opportunities = { jobs: [], courses: [] };
+            }
+            
+            combinedData.opportunities.jobs = savedJobs.map(job => ({
+              id: job.id,
+              title: job.title,
+              company: job.company,
+              location: job.location,
+              salary: job.salary,
+              matchScore: job.matchScore || Math.floor(Math.random() * 40) + 60, // Random 60-100% if not provided
+              url: `/jobs/${job.id}`,
+              postedDate: job.postedDate || job.createdAt
+            }));
+          }
+        } catch (err) {
+          console.warn('Failed to fetch saved jobs:', err);
+        }
+        
+        // E. Fetch recent activity
+        try {
+          const activitiesResponse = await api.get('/user/activities');
+          if (activitiesResponse && activitiesResponse.data) {
+            const activities = Array.isArray(activitiesResponse.data) 
+              ? activitiesResponse.data 
+              : (activitiesResponse.data.data || []);
+              
+            combinedData.recentActivities = activities.map(activity => ({
+              id: activity.id,
+              type: activity.type,
+              description: activity.description,
+              timestamp: activity.timestamp || activity.createdAt,
+              relatedEntityId: activity.relatedEntityId,
+              relatedEntityType: activity.relatedEntityType
+            })).slice(0, 10); // Show only latest 10 activities
+          }
+        } catch (err) {
+          console.warn('Failed to fetch user activities:', err);
+        }
+      } catch (error) {
+        console.error('Error fetching integrated dashboard data:', error);
+      }
+      
+      // 3. Merge with mock data for any missing sections, but prioritize real data
+      // This ensures all widgets have at least some data to display
+      if (mockDashboardData) {
+        // Create a merged dataset where real data takes precedence
+        const mergedData = {
+          ...mockDashboardData,
+          ...combinedData,
+        };
+        
+        // Set the final dashboard data
+        setDashboardData(mergedData);
+      } else {
+        setDashboardData(combinedData);
+      }
+      
+      setError(null);
       
       // Load saved layout if available
       const savedLayout = localStorage.getItem('dashboardLayout');
@@ -462,19 +719,18 @@ const Dashboard = () => {
       if (savedHidden) {
         setHiddenWidgets(JSON.parse(savedHidden));
       }
-      
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      setError('Failed to load dashboard data. Using mock data.');
+      setError('Failed to load dashboard data. Using mock data as fallback.');
       setDashboardData(mockDashboardData);
-      setLoading(false);
       
       // Setup default layout even when error occurs
       const defaultLayout = Object.values(widgetMap)
         .sort((a, b) => a.defaultOrder - b.defaultOrder)
         .map(widget => widget.id);
       setDashboardLayout(defaultLayout);
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -519,31 +775,8 @@ const Dashboard = () => {
   // Refresh dashboard data
   const refreshDashboard = async () => {
     setLoading(true);
-    try {
-      // Attempt to get fresh data from API
-      try {
-        const response = await api.get('dashboard/data');
-        console.log('Refreshed dashboard data:', response); // Log the entire response
-        if (response && response.data) {
-          // Handle different response structures - the server may return data directly or nested under data property
-          const dashboardData = response.data.data || response.data;
-          setDashboardData(dashboardData);
-        }
-      } catch (err) {
-        console.warn('Using mock data due to API error:', err);
-        // Fall back to mock data
-        setDashboardData({
-          ...mockDashboardData,
-          refreshed: true,
-          last_updated: new Date().toISOString()
-        });
-      }
-    } catch (err) {
-      console.error('Error refreshing dashboard data:', err);
-      setError('Failed to refresh dashboard data. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
+    await fetchDashboardData();
+    setLoading(false);
   };
   
   // Additional functions for other widgets
@@ -849,6 +1082,48 @@ const Dashboard = () => {
     setActiveTab(newValue);
   };
   
+  // Utility function to show data sources - useful for development/debugging
+  const getDataSourceInfo = () => {
+    if (!dashboardData) return {};
+    
+    // Create a map of which data came from where
+    const dataSources = {
+      fromAPI: false,
+      fromProfile: false,
+      fromResume: false,
+      fromApplications: false,
+      fromSavedJobs: false,
+      fromActivities: false,
+      usingMockData: false
+    };
+    
+    // Check if we have API data
+    dataSources.fromAPI = dashboardData && dashboardData._source === 'api';
+    
+    // Check if we have profile data
+    dataSources.fromProfile = dashboardData && dashboardData.userProfile;
+    
+    // Check if we have resume data
+    dataSources.fromResume = dashboardData && dashboardData.resumeHistory && dashboardData.resumeHistory.length > 0;
+    
+    // Check if we have applications data
+    dataSources.fromApplications = dashboardData && dashboardData.applications && dashboardData.applications.total > 0;
+    
+    // Check if we have saved jobs
+    dataSources.fromSavedJobs = dashboardData && dashboardData.opportunities && 
+                               dashboardData.opportunities.jobs && 
+                               dashboardData.opportunities.jobs.length > 0;
+    
+    // Check if we have activity data
+    dataSources.fromActivities = dashboardData && dashboardData.recentActivities && 
+                                dashboardData.recentActivities.length > 0;
+    
+    // Check if we're using mock data
+    dataSources.usingMockData = sessionStorage.getItem('usingMockDashboardData') === 'true';
+    
+    return dataSources;
+  };
+  
   // Debugging component to show any errors
   const renderDebugInfo = () => (
     <Box sx={{ mt: 4, p: 2, border: '1px dashed grey', borderRadius: 1 }}>
@@ -864,6 +1139,19 @@ const Dashboard = () => {
       <Typography variant="subtitle2" sx={{ mt: 1 }}>
         User info: {user ? JSON.stringify(user) : 'Not logged in'}
       </Typography>
+      
+      {/* Add data sources information */}
+      <Typography variant="subtitle2" sx={{ mt: 1 }}>
+        Data sources:
+      </Typography>
+      <Box sx={{ mt: 1, ml: 2 }}>
+        {Object.entries(getDataSourceInfo()).map(([source, isActive]) => (
+          <Typography key={source} variant="body2" sx={{ color: isActive ? 'success.main' : 'text.disabled' }}>
+            {source}: {isActive ? '✓' : '✗'}
+          </Typography>
+        ))}
+      </Box>
+      
       <Box sx={{ mt: 1, maxHeight: '200px', overflow: 'auto' }}>
         <pre>{JSON.stringify(dashboardData, null, 2)}</pre>
       </Box>
@@ -1004,7 +1292,20 @@ const Dashboard = () => {
         { id: 1, name: 'Fatima Al Mansoori', avatar: '/avatars/emirati-woman-1.jpg', points: 1250, position: 1 },
         { id: 5, name: 'Omar Al Shamsi', avatar: '/avatars/emirati-man-2.jpg', points: 820, position: 4 },
         { id: 6, name: 'Mariam Al Zaabi', avatar: '/avatars/emirati-woman-3.jpg', points: 765, position: 5 }
-      ]
+      ],
+      // Add data for new components
+      skillTransitionData: null,
+      emiratiJourneyData: null,
+      dashboardReportData: {
+        userData: profile,
+        reportSections: [
+          'skillProgress', 
+          'careerPath', 
+          'jobApplications', 
+          'skillGaps', 
+          'marketInsights'
+        ]
+      }
     };
     
     // Merge default data with actual data
@@ -1025,10 +1326,12 @@ const Dashboard = () => {
           requiredSkills: safeData.requiredSkills || defaultData.requiredSkills,
           targetRole: safeData.targetRole || defaultData.targetRole
         };
-      case 'aiRecommendation':
-        return { recommendations: safeData.recommendations || defaultData.recommendations };
+      case 'skillTransition':
+        return { data: safeData.skillTransitionData || null };
       case 'careerJourney':
         return { milestones: safeData.careerMilestones || defaultData.careerMilestones };
+      case 'emiratiJourney':
+        return { data: safeData.emiratiJourneyData || null };
       case 'badges':
         return { badges: safeData.badges || defaultData.badges };
       case 'careerPrediction':
@@ -1057,8 +1360,8 @@ const Dashboard = () => {
         return { activities: safeData.recentActivities || defaultData.recentActivities };
       case 'opportunityAlert':
         return { opportunities: safeData.opportunities || defaultData.opportunities };
-      case 'learningRoadmap':
-        return { roadmap: safeData.learningRoadmap || defaultData.learningRoadmap };
+      case 'dashboardReport':
+        return { userData: defaultData.dashboardReportData.userData, reportSections: defaultData.dashboardReportData.reportSections };
       default:
         return {};
     }
@@ -1205,7 +1508,7 @@ const Dashboard = () => {
             variant="contained" 
             color="warning"
             size="small"
-            onClick={() => navigate('/resume-builder')}
+            onClick={() => navigate('/resumePage')}
             sx={{ 
               fontWeight: 'bold',
               borderRadius: 20,
@@ -1220,6 +1523,7 @@ const Dashboard = () => {
         </Paper>
       )}
       
+      {/* Header and welcome message */}
       <Box
         sx={{
           mb: 3,
@@ -1235,7 +1539,9 @@ const Dashboard = () => {
             Your Career Dashboard
           </Typography>
           <Typography variant="subtitle1" color="text.secondary" sx={{ mt: -1 }}>
-            Welcome back, {profile?.firstName || 'there'}! Your career journey awaits.
+            Welcome back, {profile?.firstName || 'there'}! {dashboardData?.lastLogin && 
+              `Last visit was ${formatDistance(new Date(dashboardData.lastLogin), new Date(), { addSuffix: true })}.`
+            }
           </Typography>
         </Box>
         
@@ -1300,6 +1606,11 @@ const Dashboard = () => {
         </Box>
       </Box>
       
+      {/* Winner Vibe Banner */}
+      <Box sx={{ mb: 3 }}>
+        <WinnerVibeBanner />
+      </Box>
+      
       {/* Quick stats */}
       <Paper sx={{ 
         p: 2, 
@@ -1330,6 +1641,9 @@ const Dashboard = () => {
                 </Typography>
                 <Typography variant="body1" sx={{ opacity: 0.9 }}>
                   {dashboardData?.progress?.rank || 'Career Explorer'} - Level {dashboardData?.progress?.level || 1}
+                </Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8, display: 'block', mt: 0.5 }}>
+                  {dashboardData?.progress?.nextMilestone || 'Complete your profile to see your next career milestone'}
                 </Typography>
               </Box>
             </Box>
@@ -1459,6 +1773,30 @@ const Dashboard = () => {
                 </Box>
               </Grid>
             </Grid>
+            
+            {/* Skills Progress - Mini Bar */}
+            <Box sx={{ mt: 2, p: 1, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                  Top Skills Progress
+                </Typography>
+                <Typography variant="caption">
+                  {Math.round((dashboardData?.progress?.skillsProgress || 0) * 100) / 100}%
+                </Typography>
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={dashboardData?.progress?.skillsProgress || 0} 
+                sx={{ 
+                  height: 6, 
+                  borderRadius: 5,
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                  '& .MuiLinearProgress-bar': {
+                    bgcolor: 'white'
+                  }
+                }}
+              />
+            </Box>
           </Grid>
         </Grid>
       </Paper>
@@ -1517,7 +1855,12 @@ const Dashboard = () => {
                           variants={itemVariants}
                         >
                           <Paper sx={widgetCardStyles}>
-                            <Box sx={widgetHeaderStyles}>
+                            <Box 
+                              sx={{
+                                ...widgetHeaderStyles,
+                                background: getWidgetGradient(widgetId)
+                              }}
+                            >
                               <Typography variant="h6" fontWeight="bold">
                                 {widget.title}
                               </Typography>
@@ -1535,7 +1878,7 @@ const Dashboard = () => {
                               </Box>
                             </Box>
                             
-                            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                            <Box sx={widgetContentStyles}>
                               <WidgetComponent {...widgetProps} />
                             </Box>
                           </Paper>

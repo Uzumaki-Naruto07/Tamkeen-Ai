@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Typography, Paper, IconButton, Alert, Tooltip, CircularProgress } from '@mui/material';
+import { Box, Typography, Paper, IconButton, Alert, Tooltip, CircularProgress, Button } from '@mui/material';
 import { Videocam, VideocamOff, Refresh, Info } from '@mui/icons-material';
 import apiEndpoints from '../utils/api';
 
-const EmotionDetector = ({ onEmotionDetected, interval = 15000 }) => {
+const EmotionDetector = ({ onEmotionDetected, interval = 10000, size = 'normal', showVideo = true }) => {
   const [emotion, setEmotion] = useState('neutral');
   const [confidence, setConfidence] = useState(0);
   const [isDetecting, setIsDetecting] = useState(false);
@@ -13,6 +13,7 @@ const EmotionDetector = ({ onEmotionDetected, interval = 15000 }) => {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const timerRef = useRef(null);
+  const [cameraStatus, setCameraStatus] = useState('inactive'); // 'inactive', 'requesting', 'active', 'error'
 
   // Emotion colors and descriptions
   const emotionInfo = {
@@ -30,15 +31,50 @@ const EmotionDetector = ({ onEmotionDetected, interval = 15000 }) => {
     try {
       setLoading(true);
       setError(null);
+      setCameraStatus('requesting');
       
-      // Request camera permission
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user', width: 320, height: 240 }
-      });
+      // Request camera permission with explicit constraints
+      const constraints = { 
+        video: { 
+          facingMode: 'user', 
+          width: { ideal: 320 }, 
+          height: { ideal: 240 },
+          frameRate: { ideal: 15 }
+        }
+      };
+      
+      console.log('Requesting camera access with constraints:', constraints);
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+        .catch(err => {
+          console.error('Detailed camera access error:', err);
+          // Try fallback to any camera if user-facing camera fails
+          if (err.name === 'OverconstrainedError') {
+            console.log('Falling back to any available camera');
+            return navigator.mediaDevices.getUserMedia({ video: true });
+          }
+          throw err;
+        });
+      
+      console.log('Camera access granted, stream:', stream);
       
       // Set up video stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          console.log('Video metadata loaded');
+          videoRef.current.play()
+            .then(() => {
+              console.log('Video playback started successfully');
+              setCameraStatus('active');
+            })
+            .catch(playErr => {
+              console.error('Error starting video playback:', playErr);
+              setCameraStatus('error');
+              setError(`Error starting video: ${playErr.message}`);
+            });
+        };
+        
         streamRef.current = stream;
       }
       
@@ -50,7 +86,8 @@ const EmotionDetector = ({ onEmotionDetected, interval = 15000 }) => {
     } catch (err) {
       console.error('Camera permission error:', err);
       setPermissionDenied(true);
-      setError('Camera access is required for emotion detection');
+      setCameraStatus('error');
+      setError(`Camera access denied: ${err.name} - ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -66,7 +103,10 @@ const EmotionDetector = ({ onEmotionDetected, interval = 15000 }) => {
     
     // Stop all video tracks
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        console.log('Stopping track:', track.label);
+        track.stop();
+      });
       streamRef.current = null;
     }
     
@@ -75,6 +115,7 @@ const EmotionDetector = ({ onEmotionDetected, interval = 15000 }) => {
       videoRef.current.srcObject = null;
     }
     
+    setCameraStatus('inactive');
     setIsDetecting(false);
   };
 
@@ -91,26 +132,72 @@ const EmotionDetector = ({ onEmotionDetected, interval = 15000 }) => {
 
   // Capture image and detect emotion
   const detectEmotion = async () => {
-    if (!videoRef.current || !streamRef.current) return;
+    if (!videoRef.current || !streamRef.current) {
+      console.log('Video reference or stream not available, skipping emotion detection');
+      return;
+    }
     
     try {
       setLoading(true);
+      
+      // Check if video is actually playing and has dimensions
+      if (videoRef.current.videoWidth === 0 || videoRef.current.videoHeight === 0) {
+        console.warn('Video dimensions are zero, camera may not be working properly');
+        throw new Error('Video stream not available');
+      }
       
       // Create a canvas and draw the current video frame
       const canvas = document.createElement('canvas');
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
+      
       const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Failed to get canvas context');
+      }
+      
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       
       // Convert canvas to blob (image data)
-      const imageBlob = await new Promise(resolve => {
-        canvas.toBlob(resolve, 'image/jpeg');
+      const imageBlob = await new Promise((resolve, reject) => {
+        try {
+          canvas.toBlob(blob => {
+            if (blob) resolve(blob);
+            else reject(new Error('Failed to create blob from canvas'));
+          }, 'image/jpeg', 0.8);
+        } catch (e) {
+          reject(e);
+        }
       });
       
       // Create form data with image
       const formData = new FormData();
       formData.append('image', imageBlob, 'emotion-capture.jpg');
+      
+      // Use mock emotion detection if API is not available
+      if (!apiEndpoints || !apiEndpoints.assessments || typeof apiEndpoints.assessments.detectEmotion !== 'function') {
+        console.log('Using mock emotion detection');
+        const mockEmotions = ['neutral', 'happy', 'sad', 'angry', 'surprised', 'stressed', 'anxious'];
+        const randomEmotion = mockEmotions[Math.floor(Math.random() * mockEmotions.length)];
+        const mockResponse = {
+          data: {
+            emotion: randomEmotion,
+            confidence: Math.random() * 0.5 + 0.5 // Random confidence between 0.5 and 1.0
+          }
+        };
+        
+        // Update state with mock emotion
+        setEmotion(mockResponse.data.emotion.toLowerCase());
+        setConfidence(mockResponse.data.confidence || 0);
+        
+        // Notify parent component
+        if (onEmotionDetected) {
+          onEmotionDetected(mockResponse.data.emotion.toLowerCase());
+        }
+        
+        setLoading(false);
+        return;
+      }
       
       // Call emotion detection API
       try {
@@ -127,42 +214,55 @@ const EmotionDetector = ({ onEmotionDetected, interval = 15000 }) => {
           }
         }
       } catch (apiError) {
-        console.error('Emotion API error:', apiError);
-        
-        // For demo/development - alternate between emotions randomly 
-        // if the actual API is not available
-        const mockEmotions = ['neutral', 'happy', 'stressed', 'anxious', 'neutral', 'sad'];
+        console.error('API error in emotion detection:', apiError);
+        // Use fallback random emotion if API fails
+        const mockEmotions = ['neutral', 'happy', 'sad'];
         const randomEmotion = mockEmotions[Math.floor(Math.random() * mockEmotions.length)];
-        const randomConfidence = Math.floor(Math.random() * 30) + 70; // 70-100%
         
         setEmotion(randomEmotion);
-        setConfidence(randomConfidence);
+        setConfidence(0.7);
         
-        // Notify parent component
         if (onEmotionDetected) {
           onEmotionDetected(randomEmotion);
         }
       }
     } catch (err) {
-      console.error('Error during emotion detection:', err);
-      setError('Failed to detect emotion. Please try again.');
+      console.error('Error in emotion detection:', err);
+      setError(`Failed to process video frame: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // Cleanup on component unmount
+  // Auto-start on mount if showVideo is true
   useEffect(() => {
+    if (showVideo) {
+      startDetection();
+    }
+    
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
+      stopDetection();
     };
-  }, []);
+  }, [showVideo]);
+
+  // Generate emotion display style
+  const getEmotionStyle = () => {
+    const emotionColor = emotionInfo[emotion]?.color || '#9e9e9e';
+    
+    return {
+      color: emotionColor,
+      borderColor: emotionColor,
+      backgroundColor: `${emotionColor}1A`, // 10% opacity
+    };
+  };
+  
+  // Refresh camera if it's in error state
+  const handleRefreshCamera = () => {
+    stopDetection();
+    setTimeout(() => {
+      startDetection();
+    }, 1000);
+  };
 
   return (
     <Paper elevation={1} sx={{ p: 2, borderRadius: 2 }}>
@@ -177,7 +277,7 @@ const EmotionDetector = ({ onEmotionDetected, interval = 15000 }) => {
         </Typography>
         
         {isDetecting ? (
-          <IconButton onClick={stopDetection} color="error">
+          <IconButton onClick={stopDetection} color="error" disabled={loading}>
             <VideocamOff />
           </IconButton>
         ) : (
@@ -189,11 +289,30 @@ const EmotionDetector = ({ onEmotionDetected, interval = 15000 }) => {
             {loading ? <CircularProgress size={24} /> : <Videocam />}
           </IconButton>
         )}
+        
+        {(cameraStatus === 'error' || error) && (
+          <IconButton 
+            onClick={handleRefreshCamera} 
+            color="primary"
+            disabled={loading}
+            title="Refresh camera"
+          >
+            <Refresh />
+          </IconButton>
+        )}
       </Box>
       
       {permissionDenied ? (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          Camera access is needed for emotion detection. Please allow camera access and refresh.
+          Camera access is needed for emotion detection. Please allow camera access in your browser settings.
+          <Button 
+            variant="outlined" 
+            size="small" 
+            sx={{ mt: 1 }}
+            onClick={startDetection}
+          >
+            Try Again
+          </Button>
         </Alert>
       ) : error ? (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -201,53 +320,104 @@ const EmotionDetector = ({ onEmotionDetected, interval = 15000 }) => {
         </Alert>
       ) : null}
       
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-        {isDetecting && (
-          <Box 
-            component="video"
-            ref={videoRef} 
-            autoPlay 
+      {showVideo && (
+        <Box 
+          sx={{ 
+            position: 'relative', 
+            width: '100%',
+            height: size === 'small' ? 120 : 240,
+            backgroundColor: '#f0f0f0',
+            borderRadius: 1,
+            overflow: 'hidden',
+            mb: 2
+          }}
+        >
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
             muted
-            sx={{ 
-              width: 160,
-              height: 120,
-              borderRadius: 1,
-              bgcolor: 'black'
+            style={{ 
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: isDetecting ? 'block' : 'none',
             }}
           />
-        )}
-        
-        <Box sx={{ flexGrow: 1 }}>
-          {isDetecting ? (
-            <>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Typography variant="body2" sx={{ mr: 1 }}>
-                  Detected emotion:
-                </Typography>
-                <Typography 
-                  variant="body1" 
-                  fontWeight="medium"
-                  sx={{ 
-                    color: emotionInfo[emotion]?.color || 'text.primary',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  {emotion.charAt(0).toUpperCase() + emotion.slice(1)}
-                  {loading && <CircularProgress size={16} sx={{ ml: 1 }} />}
-                </Typography>
-              </Box>
-              
+          
+          {!isDetecting && (
+            <Box 
+              sx={{ 
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.1)'
+              }}
+            >
               <Typography variant="body2" color="text.secondary">
-                {emotionInfo[emotion]?.description || 'Your emotional state is being monitored'}
+                Camera off
               </Typography>
-            </>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              Enable emotion detection to adapt the assessment to your emotional state. Your privacy is important - data is processed locally and not stored.
-            </Typography>
+            </Box>
+          )}
+          
+          {loading && (
+            <Box 
+              sx={{ 
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                p: 1
+              }}
+            >
+              <CircularProgress size={20} />
+            </Box>
           )}
         </Box>
+      )}
+      
+      <Box 
+        sx={{ 
+          p: 1.5, 
+          border: '1px solid', 
+          borderRadius: 2,
+          transition: 'all 0.3s ease',
+          ...getEmotionStyle()
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
+            Current Emotion:
+          </Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', textTransform: 'capitalize' }}>
+            {emotion}
+          </Typography>
+        </Box>
+        
+        <Typography variant="body2" sx={{ mt: 0.5 }}>
+          {emotionInfo[emotion]?.description || 'Analyzing your emotional state...'}
+        </Typography>
+        
+        {confidence > 0 && (
+          <Box sx={{ mt: 1, display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ width: '100%', mr: 1 }}>
+              <Box 
+                sx={{
+                  height: 5,
+                  borderRadius: 5,
+                  background: `linear-gradient(to right, ${emotionInfo[emotion]?.color || '#9e9e9e'} ${confidence * 100}%, #e0e0e0 ${confidence * 100}%)`,
+                }}
+              />
+            </Box>
+            <Typography variant="caption" sx={{ minWidth: 35 }}>
+              {Math.round(confidence * 100)}%
+            </Typography>
+          </Box>
+        )}
       </Box>
     </Paper>
   );

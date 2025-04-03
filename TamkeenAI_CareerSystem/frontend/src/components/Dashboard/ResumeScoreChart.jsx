@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, Typography, Box, LinearProgress, Chip, Button, 
          List, ListItem, ListItemText, Tooltip, Dialog, DialogTitle, 
          DialogContent, DialogActions, CircularProgress } from '@mui/material';
@@ -7,28 +7,56 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import { useNavigate } from 'react-router-dom';
 
 const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
+  // Add navigate hook
+  const navigate = useNavigate();
+  
+  // State to hold resume analysis history from localStorage
+  const [analysisHistory, setAnalysisHistory] = useState([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [improvementOpen, setImprovementOpen] = useState(false);
+  const [generatedImprovements, setGeneratedImprovements] = useState(null);
+  
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    try {
+      const storedHistory = localStorage.getItem('resumeAnalysisHistory');
+      if (storedHistory) {
+        const parsedHistory = JSON.parse(storedHistory);
+        setAnalysisHistory(parsedHistory);
+      }
+    } catch (error) {
+      console.error('Error loading from localStorage:', error);
+    }
+  }, []);
+
   // Safely handle undefined resumeData with default values
   const { 
     scores = [], 
     average_improvement = 0, 
-    latest_score = 0, 
+    latest_score = analysisHistory.length > 0 ? analysisHistory[0].score : 0, 
     total_versions = 0, 
     keywordMatches = [], 
     missingKeywords = [] 
   } = resumeData || {};
   
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [improvementOpen, setImprovementOpen] = useState(false);
-  const [generatedImprovements, setGeneratedImprovements] = useState(null);
-  
   // Format data for chart - ensure scores has items before mapping
-  const chartData = scores && scores.length > 0 ? scores.map(score => ({
-    name: `V${score.version}`,
-    score: score.score,
-    date: new Date(score.date).toLocaleDateString()
-  })) : [];
+  const chartData = analysisHistory.length > 0 
+    ? analysisHistory.map((entry, index) => ({
+        name: `V${analysisHistory.length - index}`,
+        score: entry.score,
+        date: new Date(entry.created_at).toLocaleDateString(),
+        jobTitle: entry.job_title
+      })).reverse()
+    : scores && scores.length > 0 
+      ? scores.map(score => ({
+          name: `V${score.version}`,
+          score: score.score,
+          date: new Date(score.date).toLocaleDateString()
+        })) 
+      : [];
   
   // Determine trend icon
   const getTrendIcon = () => {
@@ -52,6 +80,9 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
           <Typography variant="body2">{`Version: ${label}`}</Typography>
           <Typography variant="body2">{`Date: ${payload[0].payload.date}`}</Typography>
           <Typography variant="body2" color="primary">{`Score: ${payload[0].value}`}</Typography>
+          {payload[0].payload.jobTitle && (
+            <Typography variant="body2">{`Job: ${payload[0].payload.jobTitle}`}</Typography>
+          )}
         </Box>
       );
     }
@@ -59,18 +90,9 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
     return null;
   };
   
-  // Handle AI improvement generation
-  const handleGenerateImprovement = async () => {
-    setIsGenerating(true);
-    try {
-      const improvements = await onGenerateImprovement();
-      setGeneratedImprovements(improvements);
-      setImprovementOpen(true);
-    } catch (error) {
-      console.error("Error generating improvements:", error);
-    } finally {
-      setIsGenerating(false);
-    }
+  // Handle navigation to ResumePage
+  const handleNavigateToResumePage = () => {
+    navigate('/resumePage');
   };
   
   // Get color based on match score
@@ -82,7 +104,7 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
   };
 
   // If no data available, show a message
-  if (!resumeData || !scores || scores.length === 0) {
+  if ((!resumeData || !scores || scores.length === 0) && analysisHistory.length === 0) {
     return (
       <Card sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <CardContent>
@@ -97,6 +119,9 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
     );
   }
   
+  // Get the most recent analysis for color and assessment
+  const latestAnalysis = analysisHistory.length > 0 ? analysisHistory[0] : null;
+  
   return (
     <Card sx={{ height: '100%' }}>
       <CardContent>
@@ -104,8 +129,12 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
           <Typography variant="h6">Resume ATS Score</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Chip 
-              label={`Latest: ${latest_score}/100`} 
-              color={latest_score > 80 ? "success" : latest_score > 60 ? "primary" : "warning"} 
+              label={`Latest: ${latestAnalysis ? latestAnalysis.score : latest_score}/100`} 
+              color={
+                latestAnalysis 
+                  ? (latestAnalysis.score > 80 ? "success" : latestAnalysis.score > 60 ? "primary" : latestAnalysis.score > 40 ? "warning" : "error")
+                  : (latest_score > 80 ? "success" : latest_score > 60 ? "primary" : "warning")
+              } 
               sx={{ mr: 1 }}
             />
             <Chip 
@@ -117,7 +146,26 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
           </Box>
         </Box>
         
-        {scores.length > 0 ? (
+        {/* Show latest assessment if available */}
+        {latestAnalysis && latestAnalysis.assessment && (
+          <Box 
+            sx={{ 
+              p: 2, 
+              mb: 2, 
+              borderRadius: 1, 
+              bgcolor: latestAnalysis.color === 'green' ? 'success.light' : 
+                        latestAnalysis.color === 'blue' ? 'primary.light' : 
+                        latestAnalysis.color === 'orange' ? 'warning.light' : 'error.light',
+              color: 'text.primary'
+            }}
+          >
+            <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+              {latestAnalysis.assessment}
+            </Typography>
+          </Box>
+        )}
+        
+        {chartData.length > 0 ? (
           <>
             <Box sx={{ height: 300, mb: 2 }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -152,13 +200,17 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
             
             <LinearProgress 
               variant="determinate" 
-              value={latest_score} 
+              value={latestAnalysis ? latestAnalysis.score : latest_score} 
               sx={{ 
                 height: 10, 
                 borderRadius: 5,
                 backgroundColor: '#e0e0e0',
                 '& .MuiLinearProgress-bar': {
-                  backgroundColor: latest_score > 80 ? 'success.main' : latest_score > 60 ? 'primary.main' : 'warning.main',
+                  backgroundColor: latestAnalysis 
+                    ? (latestAnalysis.score > 80 ? 'success.main' : 
+                       latestAnalysis.score > 60 ? 'primary.main' : 
+                       latestAnalysis.score > 40 ? 'warning.main' : 'error.main')
+                    : (latest_score > 80 ? 'success.main' : latest_score > 60 ? 'primary.main' : 'warning.main'),
                 },
               }} 
             />
@@ -231,17 +283,16 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
               </Box>
             )}
             
-            {/* AI Resume Fix Button */}
+            {/* AI Resume Fix Button - Modified to navigate to ResumePage */}
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <Button
                 variant="contained"
                 color="primary"
-                startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : <AutoFixHighIcon />}
-                onClick={handleGenerateImprovement}
-                disabled={isGenerating}
+                startIcon={<AutoFixHighIcon />}
+                onClick={handleNavigateToResumePage}
                 sx={{ borderRadius: 2 }}
               >
-                {isGenerating ? 'Generating Improvements...' : 'AI Resume Fix'}
+                AI Resume Fix
               </Button>
             </Box>
             

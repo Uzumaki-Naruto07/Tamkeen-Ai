@@ -478,3 +478,50 @@ TamkeenAI was built to serve Emirati students, graduates, and professionals to a
 Built with ❤️ by حصة المازمي — CEO of Solo Anonymous, Sharjah Capability Winner 🏆
 
 Date Generated: March 29, 2025
+
+## New Feature: AI-Powered Emotion Detection
+
+We've added advanced real-time emotion detection to the interview and assessment modules. The system now analyzes facial expressions using TensorFlow.js with face-api.js, providing immediate feedback and emotional intelligence insights.
+
+### Key Benefits
+
+- **Enhanced Interview Analysis**: Provides objective feedback on emotional responses during mock interviews
+- **Privacy-Focused**: All facial analysis is processed directly in the browser - no images are sent to servers
+- **Flexible Implementation**: Falls back gracefully to server-side analysis or mock data if client-side detection isn't available
+- **Accurate Recognition**: Detects 7 key emotions: happy, sad, angry, surprised, fearful, disgusted, and neutral
+
+### Technical Implementation
+
+- Built with face-api.js (TensorFlow.js)
+- Uses pre-trained models for face detection and emotion recognition
+- Processes video frames in real-time with optimized performance
+- Implemented with React hooks and context for state management
+
+For detailed implementation instructions, see the [frontend README](/TamkeenAI_CareerSystem/frontend/README.md).
+
+## Project Overview
+
+Tamkeen AI is a comprehensive career development platform that helps job seekers prepare for interviews, assess their skills, and find suitable career opportunities.
+
+## Setup Instructions
+
+1. Clone the repository
+2. See individual READMEs in each directory for specific setup instructions:
+   - [Frontend Setup](/TamkeenAI_CareerSystem/frontend/README.md)
+   - [Backend Setup](/TamkeenAI_CareerSystem/backend/README.md)
+
+## Features
+
+- **Career Assessment Tools**: Skills assessment, personality tests, and career fit analysis
+- **Interview Preparation**: AI-powered mock interviews with feedback
+- **Job Matching**: Smart job recommendations based on skills and preferences
+- **Learning Resources**: Curated resources for skill development
+- **Resume Builder**: AI-assisted resume creation and optimization
+
+## Technology Stack
+
+- **Frontend**: React, Material UI
+- **Backend**: Python, FastAPI
+- **Data Processing**: TensorFlow, NLP models
+- **Database**: PostgreSQL, MongoDB
+- **Deployment**: Docker, Kubernetes

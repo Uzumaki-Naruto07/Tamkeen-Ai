@@ -24,7 +24,7 @@ import {
 } from '@mui/icons-material';
 import AIRecommendationCard from '../components/ai/AIRecommendationCard';
 import PageHeader from '../components/common/PageHeader';
-import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 
 /**
  * AIRecommendations Page Component

@@ -82,7 +82,7 @@ const NotFound = () => {
               </Button>
             </Grid>
             <Grid item>
-              <Button onClick={() => navigate('/resume-builder')}>
+              <Button onClick={() => navigate('/resumePage')}>
                 Resume Builder
               </Button>
             </Grid>

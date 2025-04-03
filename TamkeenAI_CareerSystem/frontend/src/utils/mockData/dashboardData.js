@@ -33,7 +33,7 @@ const mockDashboardData = {
     // Additional fields for component compatibility
     overall: 65,
     resume: 80,
-    skills: 70,
+    skillsProgress: 70,
     applications: 50, 
     interviews: 60,
     networking: 55,
@@ -43,7 +43,8 @@ const mockDashboardData = {
       { id: 3, name: 'Update resume', progress: 80, completed: "false", unlocked: "true" }
     ],
     nextSteps: ['Update LinkedIn profile', 'Practice interview skills'],
-    completedGoals: 8
+    completedGoals: 8,
+    nextMilestone: 'Complete 10 job applications'
   },
   
   // Resume score data

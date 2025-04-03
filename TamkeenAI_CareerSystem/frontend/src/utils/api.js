@@ -44,6 +44,16 @@ const interviewApi = axios.create({
 let isBackendAvailable = false;
 let backendCheckInProgress = false;
 
+// Use CORS proxy in development mode
+const useCorsProxy = process.env.NODE_ENV === 'development';
+const corsProxyUrl = 'http://localhost:8080/';
+
+// Helper to get base URL with optional CORS proxy
+const getBaseUrl = () => {
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+  return useCorsProxy ? `${corsProxyUrl}${baseUrl}` : baseUrl;
+};
+
 // Helper function to get consistent avatar numbers from user IDs
 export const getConsistentAvatarUrl = (userId) => {
   // Helper function to hash a string to a number
@@ -276,27 +286,35 @@ const apiEndpoints = {
   // Add interview coach endpoints
   interviews: {
     createOrLoadConversation: async (userId) => {
+      console.log('Attempting to load conversation for user', userId);
       try {
-        // Use axios directly to avoid authorization headers and CORS issues
-        const response = await axios({
-          method: 'post',
-          url: `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/interviews/conversation`, 
-          data: { userId },
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-            // Explicitly NOT including Authorization header to avoid CORS preflight
-          },
-          withCredentials: false
-        });
-        return response.data;
+        // Try direct connection first
+        const response = await axios.post(
+          `${getBaseUrl()}/api/interviews/conversation`, 
+          { userId },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          }
+        );
+        return response;
       } catch (error) {
         console.error('Error creating conversation:', error);
-        // Use mock data as fallback
-        return {
-          conversationId: 'mock-convo-' + Date.now(),
-          messages: []
-        };
+        
+        // If CORS error or connection error, try DeepSeek direct
+        if (error.message.includes('Network Error') || error.message.includes('CORS')) {
+          console.log('Using fallback for conversation creation');
+          // Return fallback conversation data
+          return {
+            data: {
+              conversationId: `local-${Date.now()}`,
+              messages: []
+            }
+          };
+        }
+        throw error;
       }
     },
     getPreviousConversations: (userId) => interviewApi.get(`/interviews/conversations/${userId}`).catch(error => {
@@ -352,51 +370,60 @@ const apiEndpoints = {
       });
     }),
     sendMessage: async (conversationId, message) => {
-      try {
-        console.log('API sendMessage received:', JSON.stringify(message));
+      console.log('API sendMessage received:', JSON.stringify(message));
+      
+      // If in offline or development mode, use fallback
+      if (!conversationId || conversationId.startsWith('local-') || process.env.NODE_ENV === 'development') {
+        console.log('Sending message to API:', JSON.stringify(message));
         
-        // Ensure message is not empty
-        if (!message) {
-          console.warn('Empty message detected, adding default content');
-          message = 'Please provide advice about this interview question.';
-        } else if (typeof message === 'object') {
-          // Make sure we have either message.message or message.content
-          if (!message.message && !message.content) {
-            console.warn('Empty message object detected, adding default content');
-            message.message = 'Please provide advice about this interview question.';
-          }
-        }
-        
-        // First try with OpenAI
-        let response;
         try {
-          console.log('Sending message to API:', JSON.stringify(message));
-          response = await interviewApi.post('/interviews/message', {
+          // First attempt to call the backend API
+          const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/interviews/message`, {
             conversationId,
             message,
             useOpenAI: true
           });
-        } catch (openaiError) {
-          console.log('OpenAI request failed, falling back to DeepSeek', openaiError);
-          // If OpenAI fails, try DeepSeek
-          response = await interviewApi.post('/interviews/message', {
-            conversationId,
-            message,
-            useOpenAI: false,
-            useDeepSeek: message.useDeepSeek || true
-          });
-        }
-        return response;
-      } catch (error) {
-        console.log('Error sending message, using fallback', error);
-        // Fallback when API fails
-        return {
-          data: {
-            role: 'assistant',
-            content: "I understand your question about interview preparation. To provide the best advice, I'd recommend focusing on understanding the job description thoroughly, preparing specific examples from your experience, and practicing answers to common questions in your field.",
-            timestamp: new Date().toISOString()
+          return response;
+        } catch (apiError) {
+          // If DeepSeek is requested, use a fallback response
+          if (message.useDeepSeek || message.model === 'deepseek') {
+            console.log('OpenAI request failed, falling back to DeepSeek', apiError);
+            
+            // Create a mock DeepSeek response
+            return {
+              data: {
+                message: handleDeepSeekFallback(message.message, message.mode),
+                source: 'fallback',
+                model: 'DeepSeek-AI (Offline)'
+              },
+              status: 200,
+              statusText: 'OK (Fallback)',
+              headers: {}
+            };
+          } else {
+            // Standard fallback for other models
+            console.log('Error sending message, using fallback', apiError);
+            
+            return {
+              data: {
+                message: getCoachFallbackResponse(message.message, message.mode),
+                source: 'fallback',
+                model: message.model === 'llama3' ? 'LLaMA-3 (Offline)' : 'AI Assistant (Offline)'
+              },
+              status: 200,
+              statusText: 'OK (Fallback)',
+              headers: {}
+            };
           }
-        };
+        }
+      } else {
+        // Regular API call for production with real conversation ID
+        console.log('Sending message to API:', JSON.stringify(message));
+        return axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/interviews/message`, {
+          conversationId,
+          message,
+          useOpenAI: true
+        });
       }
     },
     loadConversation: async (convoId) => {
@@ -418,14 +445,21 @@ const apiEndpoints = {
     },
     createConversation: async (userId) => {
       try {
-        const response = await interviewApi.post('/interviews/conversation/new', { userId });
+        const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/interviews/conversation/new`, { userId });
         return response;
       } catch (error) {
-        console.log('Error creating new conversation, using fallback', error);
+        console.error('Error creating new conversation, using fallback', error);
+        // Return a fallback conversation
         return {
           data: {
-            conversationId: 'mock-new-session-' + Date.now()
-          }
+            conversationId: `local-${Date.now()}`,
+            userId: userId || '0',
+            createdAt: new Date().toISOString(),
+            messages: []
+          },
+          status: 200,
+          statusText: 'OK (Fallback)',
+          headers: {}
         };
       }
     },
@@ -511,6 +545,37 @@ const apiEndpoints = {
           }
         };
       }
+    },
+    forceDeepSeekCall: async (message, systemInstruction, isInterviewMode) => {
+      console.log('Making direct DeepSeek call via backend');
+      try {
+        // Create request data object
+        const requestData = {
+          message,
+          systemInstruction,
+          mode: isInterviewMode ? 'interview_coach' : 'ai_assistant',
+          force_real_api: true  // This signals to use actual DeepSeek API
+        };
+        
+        console.log('DeepSeek request data:', JSON.stringify(requestData));
+        
+        // Call the backend's deepseek direct endpoint
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/interviews/deepseek-direct`, 
+          requestData,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            timeout: 30000  // Longer timeout for DeepSeek calls (30 seconds)
+          }
+        );
+        
+        return response;
+      } catch (error) {
+        console.error('Error making direct DeepSeek call via backend:', error);
+        throw error;
+      }
     }
   },
 
@@ -560,6 +625,79 @@ const defaultMockQuestions = (jobTitle, count = 5) => {
   ];
   
   return questions.slice(0, count);
+};
+
+// Add this new function to handle DeepSeek API calls with proper error handling
+const withErrorHandling = async (apiCall, fallbackData) => {
+  try {
+    const response = await apiCall();
+    return response;
+  } catch (error) {
+    console.error('API call failed:', error.message || 'Unknown error');
+    // Return fallback data with proper structure
+    return { 
+      data: typeof fallbackData === 'function' ? fallbackData() : fallbackData,
+      status: 200,
+      statusText: 'OK (Fallback)',
+      error: error.message || 'API connection error'
+    };
+  }
+};
+
+// Helper function to generate realistic DeepSeek fallback responses
+const handleDeepSeekFallback = (userMessage, mode) => {
+  // Simple keyword matching for more realistic responses
+  const message = userMessage.toLowerCase();
+  
+  // Check if this is a greeting
+  if (message.match(/hi|hello|hey|greetings|good morning|good afternoon|good evening|salam|salaam|assalam/i)) {
+    return "Hello! I'm your AI Assistant powered by DeepSeek. I'm currently operating in offline mode, but I'll do my best to help you. What can I assist you with today?";
+  }
+  
+  // Check if asking about capabilities
+  if (message.match(/what can you do|your capabilities|help me with|assist me|your features/i)) {
+    return "As an AI assistant, I can help with information, answer questions, provide explanations, assist with creative tasks, and much more. However, in offline mode my capabilities are somewhat limited. What specific area would you like assistance with?";
+  }
+  
+  // Check if question is about careers/jobs
+  if (message.match(/job|career|resume|interview|cv|cover letter|application/i)) {
+    return "Career development is an important topic. I'd typically offer advice on resume building, interview preparation, and career planning based on your specific situation. However, I'm currently in offline mode with limited access to my knowledge base. Could you try again when online connectivity is restored?";
+  }
+  
+  // Default response for AI mode
+  return "I apologize, but I'm currently having trouble connecting to my full knowledge base. I'm operating in offline mode with limited capabilities. Please try again later when connection is restored, or ask me a different question I might be able to help with.";
+};
+
+// Helper function to get coach fallback responses
+const getCoachFallbackResponse = (userMessage, mode) => {
+  // Only for interview coach mode
+  if (mode !== 'interview_coach') {
+    return "I apologize, but I'm having trouble connecting to my knowledge base right now. Please try again in a moment.";
+  }
+  
+  const message = userMessage.toLowerCase();
+  
+  // Interview related fallbacks
+  const interviewResponses = [
+    "When preparing for an interview, it's essential to research the company thoroughly. Understanding their values, products, and culture will help you tailor your responses.",
+    "For behavioral questions, I recommend using the STAR method: Situation, Task, Action, and Result. This structure helps you provide complete, concise answers.",
+    "Confidence is key in interviews. Practice your responses aloud, maintain good posture, and remember to speak clearly and at a moderate pace.",
+    "Prepare thoughtful questions to ask the interviewer. This demonstrates your interest and helps you determine if the role is a good fit for you.",
+    "When discussing weaknesses, show self-awareness and focus on what you're doing to improve. This demonstrates growth mindset and professionalism."
+  ];
+  
+  // If asking about technical interviews
+  if (message.match(/technical|coding|programming|software|developer|engineer/i)) {
+    return "In technical interviews, focus on demonstrating your problem-solving process rather than rushing to a solution. Think aloud, ask clarifying questions, and explain your approach step by step.";
+  }
+  
+  // If asking about salary negotiation
+  if (message.match(/salary|compensation|negotiate|offer|package|benefits/i)) {
+    return "When negotiating salary, research industry standards for your role and location. Emphasize your value with specific achievements, and consider the entire compensation package including benefits and growth opportunities.";
+  }
+  
+  // Default response for interview coach mode
+  return interviewResponses[Math.floor(Math.random() * interviewResponses.length)];
 };
 
 export default apiEndpoints;

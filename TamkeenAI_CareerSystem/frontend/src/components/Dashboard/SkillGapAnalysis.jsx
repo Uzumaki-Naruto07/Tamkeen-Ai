@@ -33,7 +33,14 @@ import {
   Legend,
   ResponsiveContainer,
   Cell,
-  LabelList
+  LabelList,
+  LineChart,
+  Line,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar
 } from 'recharts';
 import CodeIcon from '@mui/icons-material/Code';
 import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
@@ -118,373 +125,188 @@ const resourceTypeIcons = {
 };
 
 const SkillGapAnalysis = ({ skillData, targetRole }) => {
-  const [largestGapCategory, setLargestGapCategory] = useState(null);
-  const [aiPlan, setAiPlan] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-  const [aiInsights, setAiInsights] = useState('');
+  const [assessmentHistory, setAssessmentHistory] = useState([]);
+  const [latestAssessment, setLatestAssessment] = useState(null);
   const [error, setError] = useState(null);
-  const [huggingfaceStatus, setHuggingfaceStatus] = useState('unknown');
   
-  // Process skill data for chart display
-  const chartData = useMemo(() => {
-    if (!skillData || !skillData.categories) return [];
-    
-    return Object.entries(skillData.categories).map(([category, data]) => {
-      const current = data.average_level || 0;
-      const required = data.required_level || 0;
-      const gap = Math.max(0, required - current);
-      
-      // Determine color based on gap size
-      let color = '#4caf50'; // Small gap (green)
-      if (gap > 2) color = '#f44336'; // Large gap (red)
-      else if (gap > 1) color = '#ff9800'; // Medium gap (orange)
-      
-      return {
-        name: category,
-        gap: gap.toFixed(1),
-        current,
-        required,
-        color,
-        skillCount: data.skills?.length || 0
-      };
-    }).sort((a, b) => b.gap - a.gap); // Sort by gap size descending
-  }, [skillData]);
-  
-  // Find the category with the largest skill gap
+  // Load assessment data from localStorage on component mount
   useEffect(() => {
-    if (chartData.length > 0) {
-      setLargestGapCategory(chartData[0]);
-      fetchAIPlan(chartData[0].name);
-    }
-  }, [chartData]);
-  
-  // Fetch AI-generated plan for closing the gap
-  const fetchAIPlan = async (category) => {
-    setLoading(true);
     try {
-      // In a real app, you would fetch the plan from your API
-      // const response = await DashboardAPI.getSkillGapPlan({
-      //   category,
-      //   targetRole,
-      //   currentLevel: largestGapCategory?.current || 0,
-      //   requiredLevel: largestGapCategory?.required || 0
-      // });
-      // setAiPlan(response.plan);
-      
-      // Simulated API response
-      setTimeout(() => {
-        setAiPlan({
-          category,
-          gap: parseFloat(chartData[0].gap),
-          timeline: "3 months",
-          description: `Based on your current profile and target role as ${targetRole}, I've identified that filling the gap in ${category} skills would have the highest impact on your career progression.`,
-          approach: "A combination of structured learning, hands-on practice, and mentor guidance will help you bridge this gap efficiently.",
-          steps: [
-            { 
-              title: "Complete fundamental coursework", 
-              description: "Start with structured learning to build theoretical knowledge",
-              timeline: "Weeks 1-3",
-              priority: "High" 
-            },
-            { 
-              title: "Build a small project", 
-              description: "Apply your knowledge to a real-world scenario to solidify understanding",
-              timeline: "Weeks 4-7",
-              priority: "High" 
-            },
-            { 
-              title: "Get code review from senior developer", 
-              description: "Receive feedback on your implementation and learn best practices",
-              timeline: "Week 8",
-              priority: "Medium" 
-            },
-            { 
-              title: "Contribute to open source", 
-              description: "Practice collaborating and working with existing codebases",
-              timeline: "Weeks 9-12",
-              priority: "Medium" 
-            }
-          ],
-          resources: [
-            {
-              title: `Complete ${category} Fundamentals Course`,
-              type: "course",
-              provider: "Udemy",
-              url: "https://www.udemy.com",
-              duration: "20 hours"
-            },
-            {
-              title: `Modern ${category} Development`,
-              type: "book",
-              provider: "O'Reilly",
-              url: "https://www.oreilly.com",
-              duration: "8 hours reading"
-            },
-            {
-              title: `${category} Best Practices`,
-              type: "video",
-              provider: "YouTube",
-              url: "https://www.youtube.com",
-              duration: "3 hours"
-            },
-            {
-              title: `${category} Practice Projects`,
-              type: "practice",
-              provider: "GitHub",
-              url: "https://github.com",
-              duration: "30 hours"
-            }
-          ],
-          outcomes: [
-            "Enhanced technical proficiency in key aspects of " + category,
-            "Portfolio projects demonstrating your new skills",
-            "Confidence in technical interviews when discussing " + category,
-            "Ability to contribute to projects requiring " + category + " skills"
-          ]
-        });
-        setLoading(false);
-      }, 1000);
+      const storedHistory = localStorage.getItem('skillAssessmentHistory');
+      if (storedHistory) {
+        const parsedHistory = JSON.parse(storedHistory);
+        setAssessmentHistory(parsedHistory);
+        
+        // Set latest assessment
+        if (parsedHistory.length > 0) {
+          setLatestAssessment(parsedHistory[0]);
+        }
+      }
     } catch (error) {
-      console.error("Error fetching AI plan:", error);
-      setLoading(false);
+      console.error('Error loading assessment data from localStorage:', error);
+      setError('Failed to load assessment history.');
     }
-  };
-  
-  // Get key skills with gaps in the category
-  const getKeySkillsWithGaps = (category) => {
-    if (!skillData || !skillData.categories || !skillData.categories[category]) {
-      return [];
-    }
-    
-    return skillData.categories[category].skills
-      .filter(skill => skill.required_level > skill.current_level)
-      .sort((a, b) => 
-        (b.required_level - b.current_level) - (a.required_level - a.current_level)
-      )
-      .slice(0, 4); // Top 4 skills with gaps
-  };
-
-  useEffect(() => {
-    // Check Hugging Face API status (simulated)
-    const checkHuggingFaceStatus = async () => {
-      try {
-        // In a real implementation, you would make an API call to check status
-        // For now, we'll randomly simulate connection status
-        const statusCheck = Math.random() > 0.3;
-        setHuggingfaceStatus(statusCheck ? 'connected' : 'disconnected');
-      } catch (err) {
-        console.error('Error checking Hugging Face status:', err);
-        setHuggingfaceStatus('disconnected');
-      }
-    };
-    
-    checkHuggingFaceStatus();
   }, []);
-
-  const fetchAIInsights = async () => {
-    if (aiInsights) {
-      setExpanded(!expanded);
-      return;
-    }
-    
-    setLoading(true);
-    setError(null);
-    setExpanded(true);
-    
-    try {
-      // Craft prompt for skill gap analysis
-      const prompt = `
-I have these current skills: ${skillData.categories[largestGapCategory.name].skills.map(s => s.name).join(', ')}.
-For the role of ${targetRole}, these skills are required: ${skillData.categories[largestGapCategory.name].skills.map(s => s.name).join(', ')}.
-Provide a brief analysis of my skill gap and suggestions for how to bridge it.
-`;
-      
-      // Call ChatGPT API to get AI insights
-      const response = await chatService.sendMessage(prompt, '', 'career');
-      setAiInsights(response.response);
-      
-      // In a real implementation, also call Hugging Face API for enhanced analysis
-      if (huggingfaceStatus === 'connected') {
-        console.log('Calling Hugging Face API for enhanced skill matching');
-        // This would be an actual API call in production
-        // enhanceWithHuggingFace(currentSkills, requiredSkills, targetRole);
-      }
-    } catch (err) {
-      console.error('Error fetching AI insights:', err);
-      setError('Failed to get AI insights. Please try again.');
-      
-      // Fallback insights
-      setAiInsights(
-        `Based on your current skills and the requirements for ${targetRole}, 
-        you should focus on acquiring the missing skills listed above. 
-        Consider taking online courses or hands-on projects to develop these skills.`
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
   
+  // Prepare data for radar chart showing strengths vs areas for improvement
+  const radarChartData = useMemo(() => {
+    if (!latestAssessment) return [];
+    
+    // Example data structure for radar chart
+    const strengths = latestAssessment.strengths || [];
+    const weaknesses = latestAssessment.weaknesses || [];
+    
+    const data = [];
+    
+    // Add strengths with high scores
+    strengths.forEach((strength, index) => {
+      data.push({
+        subject: strength,
+        A: Math.min(90 + index * 2, 100), // High scores for strengths
+        fullMark: 100
+      });
+    });
+    
+    // Add weaknesses with lower scores
+    weaknesses.forEach((weakness, index) => {
+      data.push({
+        subject: weakness,
+        A: Math.max(40 - index * 5, 20), // Lower scores for weaknesses
+        fullMark: 100
+      });
+    });
+    
+    return data;
+  }, [latestAssessment]);
+  
+  // Render the latest assessment result with radar chart
+  const renderLatestAssessment = () => {
+    if (!latestAssessment) return null;
+    
+    return (
+      <Paper elevation={3} sx={{ mb: 4, p: 3, borderRadius: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          Latest Assessment: {latestAssessment.categoryName}
+        </Typography>
+        
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Box sx={{ position: 'relative', display: 'inline-flex', mb: 2 }}>
+                <CircularProgress
+                  variant="determinate"
+                  value={latestAssessment.score}
+                  size={120}
+                  thickness={5}
+                  color={
+                    latestAssessment.score > 80 ? 'success' :
+                    latestAssessment.score > 60 ? 'primary' :
+                    latestAssessment.score > 40 ? 'warning' : 'error'
+                  }
+                />
+                <Box
+                  sx={{
+                    top: 0,
+                    left: 0,
+                    bottom: 0,
+                    right: 0,
+                    position: 'absolute',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexDirection: 'column'
+                  }}
+                >
+                  <Typography variant="h4" component="div">
+                    {latestAssessment.score}%
+                  </Typography>
+                  <Typography variant="caption" component="div" color="text.secondary">
+                    Score
+                  </Typography>
+                </Box>
+              </Box>
+              
+              <Typography variant="body2" color="text.secondary">
+                {new Date(latestAssessment.timestamp).toLocaleDateString()}
+              </Typography>
+              
+              <Typography variant="body1" sx={{ mt: 2 }}>
+                {latestAssessment.correctAnswers} of {latestAssessment.totalQuestions} correct
+              </Typography>
+            </Box>
+          </Grid>
+          
+          <Grid item xs={12} md={8}>
+            <Typography variant="subtitle1" gutterBottom>
+              Skills Profile
+            </Typography>
+            
+            <Box sx={{ height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarChartData}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="subject" />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                  <Radar name="Skill Level" dataKey="A" stroke="#8884d8" 
+                    fill="#8884d8" fillOpacity={0.6} />
+                  <Legend />
+                </RadarChart>
+              </ResponsiveContainer>
+            </Box>
+          </Grid>
+        </Grid>
+        
+        <Divider sx={{ my: 3 }} />
+        
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" gutterBottom>
+              Strengths
+            </Typography>
+            
+            <List dense>
+              {latestAssessment.strengths.map((strength, index) => (
+                <ListItem key={index}>
+                  <ListItemIcon>
+                    <CheckCircleIcon color="success" />
+                  </ListItemIcon>
+                  <ListItemText primary={strength} />
+                </ListItem>
+              ))}
+            </List>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" gutterBottom>
+              Areas for Improvement
+            </Typography>
+            
+            <List dense>
+              {latestAssessment.weaknesses.map((weakness, index) => (
+                <ListItem key={index}>
+                  <ListItemIcon>
+                    <PriorityHighIcon color="warning" />
+                  </ListItemIcon>
+                  <ListItemText primary={weakness} />
+                </ListItem>
+              ))}
+            </List>
+          </Grid>
+        </Grid>
+      </Paper>
+    );
+  };
+
   return (
     <Box sx={{ height: '100%' }}>
-      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <StarsIcon color="primary" sx={{ mr: 1 }} />
-          <Typography variant="h6">Skill Gap Analysis</Typography>
-          
-          {/* Hugging Face Status Indicator */}
-          <Tooltip title={`Hugging Face AI: ${huggingfaceStatus}`}>
-            <Box component="span" sx={{ ml: 1, display: 'flex', alignItems: 'center' }}>
-              {huggingfaceStatus === 'connected' ? 
-                <CloudDoneIcon fontSize="small" color="success" /> : 
-                <CloudOffIcon fontSize="small" color="action" />
-              }
-            </Box>
-          </Tooltip>
-        </Box>
-        <Typography variant="body2" color="textSecondary">
-          Target: {targetRole || 'Not specified'}
-        </Typography>
-      </Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
       
-      <Paper sx={{ p: 2, mb: 2 }} elevation={1}>
-        <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-          Skills Match
-          <Tooltip title="Based on required skills for this role">
-            <InfoIcon fontSize="small" sx={{ ml: 1, opacity: 0.6 }} />
-          </Tooltip>
-        </Typography>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <Box sx={{ flexGrow: 1, mr: 2 }}>
-            <LinearProgress 
-              variant="determinate" 
-              value={Math.round((largestGapCategory?.current || 0 / largestGapCategory?.required || 0) * 100)} 
-              sx={{ 
-                height: 10, 
-                borderRadius: 5,
-                bgcolor: 'grey.200',
-                '& .MuiLinearProgress-bar': {
-                  bgcolor: Math.round((largestGapCategory?.current || 0 / largestGapCategory?.required || 0) * 100) < 40 ? 'error.main' : Math.round((largestGapCategory?.current || 0 / largestGapCategory?.required || 0) * 100) < 70 ? 'warning.main' : 'success.main',
-                  borderRadius: 5,
-                }
-              }} 
-            />
-          </Box>
-          <Typography 
-            variant="h6" 
-            color={Math.round((largestGapCategory?.current || 0 / largestGapCategory?.required || 0) * 100) < 40 ? 'error' : Math.round((largestGapCategory?.current || 0 / largestGapCategory?.required || 0) * 100) < 70 ? 'warning.main' : 'success.main'}
-          >
-            {Math.round((largestGapCategory?.current || 0 / largestGapCategory?.required || 0) * 100)}%
-          </Typography>
-        </Box>
-      </Paper>
-      
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.5 }}
-        >
-          <Paper sx={{ p: 2 }} elevation={1}>
-            <Typography variant="subtitle1" gutterBottom>
-              Matched Skills ({largestGapCategory?.skillCount})
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {largestGapCategory?.skillCount > 0 ? getKeySkillsWithGaps(largestGapCategory.name).map((skill, index) => (
-                <Chip 
-                  key={index} 
-                  label={skill.name} 
-                  color="success" 
-                  size="small" 
-                  variant="outlined"
-                />
-              )) : (
-                <Typography variant="body2" color="text.secondary">No matched skills yet.</Typography>
-              )}
-            </Box>
-          </Paper>
-        </motion.div>
-        
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
-          <Paper sx={{ p: 2 }} elevation={1}>
-            <Typography variant="subtitle1" gutterBottom>
-              Missing Skills ({skillData?.categories && largestGapCategory 
-                ? skillData.categories[largestGapCategory.name]?.skills.length - largestGapCategory.skillCount 
-                : 0})
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {skillData?.categories && largestGapCategory && skillData.categories[largestGapCategory.name]?.skills
-                .filter(s => s.required_level > s.current_level).map((skill, index) => (
-                <Chip 
-                  key={index} 
-                  label={skill.name} 
-                  color="error" 
-                  size="small" 
-                  variant="outlined"
-                  deleteIcon={<AddIcon />}
-                  onDelete={() => console.log(`Add ${skill.name} to learning plan`)}
-                />
-              ))}
-            </Box>
-          </Paper>
-        </motion.div>
-        
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        >
-          <Paper sx={{ p: 2 }} elevation={1}>
-            <Typography variant="subtitle1" gutterBottom>
-              Additional Skills ({skillData?.categories && largestGapCategory 
-                ? skillData.categories[largestGapCategory.name]?.skills.length - largestGapCategory.skillCount 
-                : 0})
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {skillData?.categories && largestGapCategory && skillData.categories[largestGapCategory.name]?.skills
-                .filter(s => s.required_level < s.current_level).map((skill, index) => (
-                <Chip 
-                  key={index} 
-                  label={skill.name} 
-                  color="primary" 
-                  size="small" 
-                  variant="outlined"
-                />
-              ))}
-            </Box>
-          </Paper>
-        </motion.div>
-      </Box>
-      
-      <Paper sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: expanded ? 2 : 0 }}>
-          <Typography variant="subtitle1">
-            AI-Powered Insights
-          </Typography>
-          <IconButton 
-            onClick={fetchAIInsights}
-            disabled={loading}
-            size="small"
-          >
-            {loading ? <CircularProgress size={16} /> : expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </IconButton>
-        </Box>
-        
-        <Collapse in={expanded}>
-          {error ? (
-            <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              {aiInsights}
-            </Typography>
-          )}
-        </Collapse>
-      </Paper>
+      {/* Render only the latest assessment component */}
+      {latestAssessment && renderLatestAssessment()}
     </Box>
   );
 };

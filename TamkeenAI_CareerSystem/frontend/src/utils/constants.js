@@ -110,7 +110,7 @@ export const ROUTES = {
     DASHBOARD: '/dashboard',
     JOBS: '/jobs',
     AI_COACH: '/ai-coach',
-    RESUME_BUILDER: '/resume-builder',
+    RESUME_BUILDER: '/resumePage',
     SKILL_BUILDER: '/skill-builder',
     ACHIEVEMENTS: '/achievements',
     SETTINGS: '/settings',

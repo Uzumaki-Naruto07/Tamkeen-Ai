@@ -81,10 +81,10 @@ const Settings = lazyLoad(() => import('./pages/Settings'));
 const LinkedInAutomation = lazyLoad(() => import('./pages/LinkedinAutomation'));
 // Add Learning Resources component
 const LearningResources = lazyLoad(() => import('./pages/LearningResources'));
-// Add AI Recommendations component
-const AIRecommendations = lazyLoad(() => import('./pages/AIRecommendations'));
 // Add InterviewResults component
 const InterviewResults = lazyLoad(() => import('./pages/InterviewResults'));
+// Add ApplicationTips component
+const ApplicationTips = lazyLoad(() => import('./pages/ApplicationTips'));
 
 // Suspense fallback component
 const SuspenseFallback = () => (
@@ -173,6 +173,13 @@ const router = createBrowserRouter(
           errorElement={<RouteErrorBoundary />}
         />
         
+        {/* Add Resources routes */}
+        <Route 
+          path="/resources/application-tips" 
+          element={<ProtectedRoute element={<ApplicationTips />} />} 
+          errorElement={<RouteErrorBoundary />}
+        />
+        
         {/* Add LinkedIn Automation route */}
         <Route 
           path="/automation-linkedin" 
@@ -187,11 +194,10 @@ const router = createBrowserRouter(
           errorElement={<RouteErrorBoundary />}
         />
         
-        {/* Add AI Recommendations route */}
+        {/* Redirect AI Recommendations to Mock Interview */}
         <Route 
           path="/ai-recommendations" 
-          element={<ProtectedRoute element={<AIRecommendations />} />} 
-          errorElement={<RouteErrorBoundary />}
+          element={<Navigate to="/ai-coach/mock-interview" replace />} 
         />
         
         {/* Admin routes */}

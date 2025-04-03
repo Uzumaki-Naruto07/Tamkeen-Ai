@@ -1,5 +1,6 @@
 import { api } from './apiClient';
 import axios from 'axios';
+import { getProxyUrl } from './apiClient';
 
 /**
  * ChatGPT API integration for the TamkeenAI Career System
@@ -10,6 +11,18 @@ import axios from 'axios';
 // Base endpoint for ChatGPT requests - don't include /api as apiClient already adds it
 const CHATGPT_ENDPOINT = '/chatgpt';
 const AI_ENDPOINT = '/chat/ai';
+
+// Development environment detection
+const isDevelopment = import.meta.env.DEV;
+
+// Get the base URL for API requests depending on environment
+const getBaseUrl = () => {
+  if (isDevelopment) {
+    // For development, use the proxy on port 8000
+    return 'http://localhost:8000';
+  }
+  return import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+};
 
 // Track API connection status
 let apiConnectionStatus = {
@@ -56,10 +69,13 @@ export const sendMessageWithProvider = async (
       model: model || 'default' 
     });
     
+    // Use the proxy URL
+    const baseUrl = getBaseUrl();
+    
     // Use direct axios call without authorization headers to avoid CORS preflight issues
     const response = await axios({
       method: 'post',
-      url: `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}${AI_ENDPOINT}/recommendation`,
+      url: `${baseUrl}${AI_ENDPOINT}/recommendation`,
       data: {
         message,
         context,
@@ -168,10 +184,13 @@ export const sendMessage = async (message, context = '', serviceType = 'general'
       language 
     });
     
+    // Use the proxy URL
+    const baseUrl = getBaseUrl();
+    
     // Use direct axios call without authorization headers to avoid CORS preflight issues
     const response = await axios({
       method: 'post',
-      url: `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}${CHATGPT_ENDPOINT}/message`,
+      url: `${baseUrl}${CHATGPT_ENDPOINT}/message`,
       data: {
         message,
         context,

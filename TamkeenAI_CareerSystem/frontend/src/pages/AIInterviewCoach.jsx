@@ -1,3967 +1,681 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Box, Paper, Typography, TextField, Button, Divider,
-  Chip, Card, CardContent, IconButton, Avatar,
-  List, ListItem, ListItemText, ListItemButton,
-  CircularProgress, Alert, Dialog, DialogTitle,
-  DialogContent, DialogActions, Tooltip, Grid,
-  Accordion, AccordionSummary, AccordionDetails,
-  Menu, MenuItem, InputAdornment, Tabs, Tab,
-  Snackbar, Badge, LinearProgress, Fab, Container,
-  Select, FormControl, InputLabel, FormHelperText,
-  Rating, Stack, Stepper, Step, StepLabel, Autocomplete,
-  FormControlLabel, Switch, Collapse
+  Container, Grid, Paper, Typography, Box, TextField,
+  List, ListItem, Button, Avatar, Chip, CircularProgress,
+  Divider, InputAdornment, Tabs, Tab
 } from '@mui/material';
 import {
-  Send, Psychology, QuestionAnswer, Save,
-  ContentCopy, Download, Mic, MicOff, 
-  RecordVoiceOver, QuestionMark, ArrowForward,
-  FormatQuote, CheckCircle, Cancel, Error,
-  Refresh, ExpandMore, Info, Star, StarBorder,
-  PlayArrow, Pause, Stop, NavigateNext, NavigateBefore,
-  MoreVert, Sort, FormatListBulleted, Category,
-  Search, ThumbUp, ThumbDown, BusinessCenter,
-  VideoLibrary, School, Assignment, Lightbulb,
-  AccessTime, EmojiEmotions, FilterList,
-  Brush, TipsAndUpdates, SportsScore, LocalLibrary,
+  QuestionAnswer, School, Search, Category, FormatListBulleted,
   Shield, Explore, EmojiEvents, FlagCircle, Timer,
   BarChart, AddTask, TaskAlt, ExpandLess, VolumeUp,
-  PeopleAlt, Code, Public, Face, Business, Chat
+  PeopleAlt, Code, Public, Face, Business, Chat, Person
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../context/AppContext';
-import apiEndpoints from '../utils/api';
-import LoadingSpinner from '../components/LoadingSpinner';
-import AIRecommendationCard from '../components/ai/AIRecommendationCard';
+import OllamaDeepSeekChatbot from '../components/ai/OllamaDeepSeekChatbot';
 
-// Add mock endpoints
-if (!apiEndpoints.interviews) {
-  apiEndpoints.interviews = {
-    createOrLoadConversation: async (userId) => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/interviews/conversation`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId }),
-        });
-        return await response.json();
-      } catch (error) {
-        console.error('Error creating conversation:', error);
-        throw error;
-      }
-    },
-    getPreviousConversations: async (userId) => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/interviews/conversations/${userId}`);
-        return await response.json();
-      } catch (error) {
-        console.error('Error fetching previous conversations:', error);
-        throw error;
-      }
-    },
-    getInterviewTopics: async () => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/interviews/topics`);
-        return await response.json();
-      } catch (error) {
-        console.error('Error fetching interview topics:', error);
-        throw error;
-      }
-    },
-    getSuggestedQuestions: async (userId) => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/interviews/suggested-questions/${userId}`);
-        return await response.json();
-      } catch (error) {
-        console.error('Error fetching suggested questions:', error);
-        throw error;
-      }
-    },
-    sendMessage: async (conversationId, message) => {
-      try {
-        // Determine if this is an AI Assistant mode request
-        const isAIAssistant = message.mode === 'ai_assistant';
-        
-        // If in AI assistant mode, use a more capable endpoint
-        const endpoint = isAIAssistant 
-          ? `${process.env.REACT_APP_API_URL}/api/ai/chat` 
-          : `${process.env.REACT_APP_API_URL}/api/interviews/message`;
-        
-        // Prepare request body based on mode
-        const requestBody = isAIAssistant 
-          ? {
-              message: message.message,
-              userId: message.userId,
-              model: 'deepseek', // Always use deepseek for AI assistant
-              systemPrompt: "You are a helpful AI assistant that can answer any question on any topic. Provide detailed, accurate information.",
-            }
-          : { 
-              conversationId, 
-              message 
-            };
-            
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
-        });
-        
-        return await response.json();
-      } catch (error) {
-        console.error('Error sending message:', error);
-        throw error;
-      }
-    },
-    loadConversation: async (convoId) => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/interviews/conversation/${convoId}`);
-        return await response.json();
-      } catch (error) {
-        console.error('Error loading conversation:', error);
-        throw error;
-      }
-    },
-    createConversation: async (userId) => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/interviews/conversation/new`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId }),
-        });
-        return await response.json();
-      } catch (error) {
-        console.error('Error creating new conversation:', error);
-        throw error;
-      }
-    },
-    getCategoryQuestions: async (categoryId) => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/interviews/category-questions/${categoryId}`);
-        return await response.json();
-      } catch (error) {
-        console.error('Error fetching category questions:', error);
-        throw error;
-      }
-    },
-    createMockInterview: async (setupData) => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/interviews/mock-interview`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(setupData),
-        });
-        return await response.json();
-      } catch (error) {
-        console.error('Error creating mock interview:', error);
-        throw error;
-      }
-    },
-    createMockInterviewSetup: async (mockInterviewId, setupData) => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/interviews/mock-interview-setup`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ mockInterviewId, ...setupData }),
-        });
-        return await response.json();
-      } catch (error) {
-        console.error('Error setting up mock interview:', error);
-        throw error;
-      }
-    },
-    getPremiumFeedback: async (data) => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/interviews/premium-feedback`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-        });
-        return await response.json();
-      } catch (error) {
-        console.error('Error getting premium feedback:', error);
-        throw error;
-      }
-    },
-    saveFeedbackToDashboard: async (data) => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/interviews/save-feedback`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-        });
-        return await response.json();
-      } catch (error) {
-        console.error('Error saving feedback:', error);
-        throw error;
-      }
-    },
-    getRoleFitAnalysis: async (data) => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/interviews/role-fit-analysis`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-        });
-        return await response.json();
-      } catch (error) {
-        console.error('Error getting role fit analysis:', error);
-        throw error;
-      }
-    }
-  };
-}
-
-// Add coach personas data
-const coachPersonas = [
-  {
-    id: 'noora',
-    name: 'NooraGPT',
-    title: 'Government Sector Interview Specialist 🇦🇪',
-    avatar: '/avatars/noora-professional.png',
-    description: 'Specializes in UAE government hiring practices and Emiratization policies.',
-    experience: [
-      '10+ years in UAE public sector recruitment',
-      'Former HR Director at Ministry of Human Resources',
-      'Expert in Emiratization policy implementation'
-    ],
-    greeting: 'Al salam alaikum! I\'m Noora, your UAE government sector interview specialist. With 10+ years of experience in public sector recruitment, I\'m here to help you prepare for your government career journey. How can I assist you today?',
-    tips: [
-      'Government roles in the UAE often value cultural understanding and bilingual skills.',
-      'Emiratization policies give UAE nationals priority in certain positions.',
-      'UAE government interviews may focus on your alignment with national vision and values.'
-    ]
-  },
-  {
-    id: 'ahmed',
-    name: 'AhmedGPT',
-    title: 'Tech Industry Senior Manager',
-    avatar: '/avatars/ahmed-tech.png',
-    description: 'Tech-focused interview coach with expertise in programming and system design.',
-    experience: [
-      'Former CTO at Dubai Technology Partners',
-      '15+ years leading tech teams across MENA region',
-      'AI and machine learning implementation specialist'
-    ],
-    greeting: 'Marhaba! I\'m Ahmed, your tech industry interview guide. With over 15 years of leadership experience in tech companies across the MENA region, I\'m here to prepare you for technical and managerial interviews. How can I help you showcase your technical skills today?',
-    tips: [
-      'UAE tech roles often require both technical excellence and cultural adaptability.',
-      'Be prepared to discuss your experience with regional tech challenges.',
-      'Knowledge of Arabic can be advantageous in tech roles with client-facing components.'
-    ]
-  },
-  {
-    id: 'fatima',
-    name: 'FatimaGPT',
-    title: 'Female Empowerment & Career Strategist',
-    avatar: '/avatars/fatima.png',
-    description: 'Specializes in helping women navigate career opportunities in the UAE.',
-    experience: [
-      'Founder of Women in UAE Leadership program',
-      'Professional career coach for executive women',
-      'Former Director of Diversity & Inclusion at multinational firm'
-    ],
-    greeting: 'Ahlan wa sahlan! I\'m Fatima, dedicated to empowering women in their UAE career journeys. As the founder of Women in UAE Leadership program, I specialize in helping you navigate interview processes with confidence. How can I support your preparation today?',
-    tips: [
-      'The UAE has strong initiatives supporting women in leadership roles.',
-      'Consider highlighting your adaptability to multicultural work environments.',
-      'Achievements that show independence and leadership are particularly valuable.'
-    ]
-  },
-  {
-    id: 'zayd',
-    name: 'ZaydGPT',
-    title: 'AI-driven Logic and Brainy Questions Bot',
-    avatar: '/avatars/zayd.png',
-    description: 'Analytical and thorough interviewer focused on problem-solving skills.',
-    experience: [
-      'Advanced AI system trained on 10,000+ technical interviews',
-      'Logic and problem-solving assessment specialist',
-      'Expert in quantitative and qualitative candidate evaluation'
-    ],
-    greeting: 'As-salamu alaykum. I am Zayd, designed to challenge your analytical thinking and problem-solving abilities. My database contains questions from thousands of technical interviews across multiple industries. How would you like to test your interview skills today?',
-    tips: [
-      'Logical thinking and analytical skills are highly valued across UAE industries.',
-      'Be prepared for scenario-based questions that test your decision-making.',
-      'Quantify your achievements with data when possible.'
-    ]
-  }
-];
-
-// UAE-specific cultural context and tips by sector
-const uaeCulturalContext = {
-  general: [
-    'In the UAE market, showcasing adaptability and multilingual communication can make a difference.',
-    'Understanding of UAE Vision 2030 can demonstrate your alignment with national goals.',
-    'Highlighting experience with diverse teams shows cultural adaptability valued in the UAE.'
-  ],
-  government: [
-    'Knowledge of UAE government structures and Emiratization policies is valuable.',
-    'Highlighting Arabic language skills can be advantageous for government positions.',
-    'Understanding of UAE Vision 2030 and national priorities is important.'
-  ],
-  tech: [
-    'The UAE is investing heavily in AI, blockchain, and smart city technologies.',
-    'Experience with regional tech implementations can set you apart.',
-    'Familiarity with UAE tech regulations and compliance may be relevant.'
-  ],
-  education: [
-    'UAE education sector values international experience and multilingual abilities.',
-    'Knowledge of UAE educational frameworks and cultural sensitivities is important.',
-    'Experience with diverse student populations is highly regarded.'
-  ]
-};
-
-// Gamified coaching missions data
-const coachingMissions = [
-  {
-    id: 'confidence',
-    title: 'Speak with Confidence',
-    icon: <Shield />,
-    description: 'Complete 3 answers without using filler words like "um," "like," "I think," etc.',
-    progress: 0,
-    maxProgress: 3,
-    reward: 'Confidence Badge',
-    completed: false
-  },
-  {
-    id: 'star',
-    title: 'Lead the Narrative',
-    icon: <Explore />,
-    description: 'Tell a full STAR story (Situation, Task, Action, Result) in under 90 seconds',
-    progress: 0,
-    maxProgress: 1,
-    reward: 'Storyteller Badge',
-    completed: false
-  },
-  {
-    id: 'quantify',
-    title: 'Data-Driven Communicator',
-    icon: <BarChart />,
-    description: 'Include at least 3 quantifiable achievements in your answers',
-    progress: 0,
-    maxProgress: 3,
-    reward: 'Data Expert Badge',
-    completed: false
-  }
-];
-
-// Behavioral patterns to detect
-const behavioralPatterns = [
-  {
-    id: 'filler',
-    pattern: /\b(um|uh|like|you know|sort of|kind of|basically|actually|literally|i think|i guess)\b/gi,
-    feedback: "You tend to use filler words like 'um' or 'I think' – consider using more assertive language."
-  },
-  {
-    id: 'negative',
-    pattern: /\b(can't|won't|couldn't|wouldn't|never|fail|bad|terrible|horrible|awful|problem|issue|difficult)\b/gi,
-    feedback: "Your language includes several negative terms. Try focusing on positive outcomes and solutions instead."
-  },
-  {
-    id: 'passive',
-    pattern: /\b(was done|were made|been|is being|are being|was being|were being)\b/gi,
-    feedback: "You're using passive voice. Try using active voice to sound more confident and take ownership."
-  },
-  {
-    id: 'vague',
-    pattern: /\b(things|stuff|something|good|nice|great|lot|many|several|few)\b/gi,
-    feedback: "Try using more specific language instead of vague terms like 'things' or 'stuff'."
-  }
-];
-
-// Role-play company data
-const roleplayCompanies = [
-  {
-    id: 'adnoc',
-    name: 'ADNOC',
-    industry: 'Energy',
-    logo: '/companies/adnoc.png',
-    description: 'Abu Dhabi National Oil Company - major energy producer',
-    expectations: [
-      'Technical proficiency in petroleum engineering or related fields',
-      'Understanding of UAE energy sector and transition goals',
-      'Strong safety-first mindset and adherence to protocols'
-    ]
-  },
-  {
-    id: 'etisalat',
-    name: 'Etisalat (e&)',
-    industry: 'Telecommunications',
-    logo: '/companies/etisalat.png',
-    description: 'Leading telecom provider in UAE and beyond',
-    expectations: [
-      'Innovation mindset and digital transformation experience',
-      'Customer-centric approach to telecom solutions',
-      'Adaptability to rapidly changing tech landscape'
-    ]
-  },
-  {
-    id: 'emirates',
-    name: 'Emirates Group',
-    industry: 'Aviation/Hospitality',
-    logo: '/companies/emirates.png',
-    description: 'Global aviation leader and luxury travel provider',
-    expectations: [
-      'Excellence in customer service and attention to detail',
-      'Cultural adaptability and global mindset',
-      'Operational efficiency and problem-solving skills'
-    ]
-  },
-  {
-    id: 'dubaiholding',
-    name: 'Dubai Holding',
-    industry: 'Investment',
-    logo: '/companies/dubaiholding.png',
-    description: 'Global investment company with diverse portfolio',
-    expectations: [
-      'Strategic thinking and investment analysis expertise',
-      'Vision alignment with UAE economic diversification goals',
-      'Project management and execution capabilities'
-    ]
-  }
-];
-
-// Job role data
-const jobRoles = [
-  { title: 'Data Scientist', field: 'Analytics' },
-  { title: 'Software Engineer', field: 'Technology' },
-  { title: 'Project Manager', field: 'Management' },
-  { title: 'HR Manager', field: 'Human Resources' },
-  { title: 'Financial Analyst', field: 'Finance' },
-  { title: 'Marketing Specialist', field: 'Marketing' },
-  { title: 'Operations Manager', field: 'Operations' },
-  { title: 'AI Engineer', field: 'Technology' },
-  { title: 'UX/UI Designer', field: 'Design' },
-  { title: 'Business Analyst', field: 'Business Analytics' }
-];
-
-// Power words for vocabulary enhancement
-const powerVocabulary = {
-  action: [
-    'achieved', 'administered', 'advanced', 'analyzed', 'built', 'championed',
-    'collaborated', 'coordinated', 'created', 'delivered', 'developed', 'directed',
-    'drove', 'established', 'executed', 'facilitated', 'fostered', 'generated',
-    'implemented', 'improved', 'increased', 'initiated', 'innovated', 'integrated',
-    'led', 'managed', 'orchestrated', 'pioneered', 'reduced', 'revitalized',
-    'spearheaded', 'streamlined', 'strengthened', 'transformed', 'unified', 'leveraged'
-  ],
-  result: [
-    'accelerated', 'achieved', 'amplified', 'boosted', 'capitalized', 'delivered',
-    'enhanced', 'exceeded', 'expanded', 'generated', 'improved', 'increased',
-    'maximized', 'outperformed', 'reduced', 'revitalized', 'saved', 'stimulated',
-    'strengthened', 'surpassed', 'transformed', 'upgraded', 'valued', 'yielded'
-  ],
-  attribute: [
-    'adaptable', 'analytical', 'collaborative', 'committed', 'detail-oriented',
-    'diligent', 'dynamic', 'efficient', 'entrepreneurial', 'experienced', 'expert',
-    'innovative', 'knowledgeable', 'methodical', 'motivated', 'multilingual',
-    'organized', 'proactive', 'professional', 'resourceful', 'results-driven',
-    'skilled', 'strategic', 'tactical', 'team-oriented', 'versatile'
-  ]
-};
-
-// Create SmartTipCard component
-const SmartTipCard = ({ icon, title, text, severity = 'info' }) => {
-  const severityColors = {
-    success: { bg: 'success.50', border: 'success.200', text: 'success.dark' },
-    warning: { bg: 'warning.50', border: 'warning.200', text: 'warning.dark' },
-    error: { bg: 'error.50', border: 'error.200', text: 'error.dark' },
-    info: { bg: 'info.50', border: 'info.200', text: 'info.dark' }
-  };
-  
-  const colors = severityColors[severity] || severityColors.info;
-  
-  return (
-    <Box 
-      sx={{ 
-        p: 2, 
-        mb: 2,
-        bgcolor: colors.bg, 
-        borderRadius: 1, 
-        border: '1px solid', 
-        borderColor: colors.border,
-        display: 'flex',
-        alignItems: 'flex-start'
-      }}
-    >
-      <Box sx={{ mr: 1.5, mt: 0.25, color: colors.text }}>
-        {icon}
-      </Box>
-      <Box>
-        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: colors.text, mb: 0.5 }}>
-          {title}
-        </Typography>
-        <Typography variant="body2" sx={{ color: colors.text }}>
-          {text}
-        </Typography>
-      </Box>
-    </Box>
-  );
-};
-
-// Define categorized question data structure
-const categorizedQuestions = [
-  {
-    category: "Behavioral",
-    icon: <Psychology />,
-    questions: [
-      { text: "Tell me about a time you resolved a conflict.", difficulty: "intermediate", tags: ["soft-skills", "teamwork"] },
-      { text: "Describe a situation where you had to work under pressure.", difficulty: "beginner", tags: ["stress-management", "time-management"] },
-      { text: "How do you handle feedback?", difficulty: "beginner", tags: ["growth-mindset", "soft-skills"] },
-      { text: "Tell me about a failure and what you learned from it.", difficulty: "intermediate", tags: ["learning", "resilience"] }
-    ]
-  },
-  {
-    category: "Leadership",
-    icon: <PeopleAlt />,
-    questions: [
-      { text: "How do you motivate a team?", difficulty: "intermediate", tags: ["team-management", "motivation"] },
-      { text: "Describe a time you influenced decision-making.", difficulty: "advanced", tags: ["leadership", "communication"] },
-      { text: "How do you delegate tasks?", difficulty: "intermediate", tags: ["management", "trust"] },
-      { text: "Tell me about a challenging leadership situation.", difficulty: "advanced", tags: ["leadership", "problem-solving"] }
-    ]
-  },
-  {
-    category: "Technical",
-    icon: <Code />,
-    questions: [
-      { text: "Explain a complex project you've worked on.", difficulty: "intermediate", tags: ["projects", "technical"] },
-      { text: "How do you approach debugging?", difficulty: "intermediate", tags: ["problem-solving", "technical"] },
-      { text: "Tell me about your experience with [technology].", difficulty: "beginner", tags: ["technical", "skills"] },
-      { text: "How do you stay updated with industry trends?", difficulty: "beginner", tags: ["learning", "industry-knowledge"] }
-    ]
-  },
-  {
-    category: "UAE-Specific",
-    icon: <Public />,
-    questions: [
-      { text: "How would you contribute to UAE Vision 2030?", difficulty: "intermediate", tags: ["uae", "vision-2030"] },
-      { text: "What does Emiratization mean to you in a workplace?", difficulty: "intermediate", tags: ["emiratization", "culture"] },
-      { text: "How do you adapt to multicultural work environments?", difficulty: "beginner", tags: ["diversity", "culture"] },
-      { text: "What attracts you to working in the UAE?", difficulty: "beginner", tags: ["motivation", "culture"] }
-    ]
-  }
-];
-
-// Job role specific questions
-const jobRoleQuestions = {
-  "Data Scientist": [
-    { text: "Explain a data cleaning process you've implemented.", difficulty: "intermediate", tags: ["data-science", "technical"] },
-    { text: "How do you approach feature selection?", difficulty: "advanced", tags: ["machine-learning", "technical"] }
-  ],
-  "Software Engineer": [
-    { text: "Describe your experience with CI/CD pipelines.", difficulty: "intermediate", tags: ["devops", "technical"] },
-    { text: "How do you ensure code quality?", difficulty: "intermediate", tags: ["quality", "technical"] }
-  ],
-  "Project Manager": [
-    { text: "How do you handle scope creep?", difficulty: "intermediate", tags: ["project-management", "problem-solving"] },
-    { text: "Describe your approach to risk management.", difficulty: "advanced", tags: ["risk", "planning"] }
-  ],
-  "UX/UI Designer": [
-    { text: "How do you incorporate user feedback into your designs?", difficulty: "intermediate", tags: ["design", "user-feedback"] },
-    { text: "Describe your design process from concept to implementation.", difficulty: "intermediate", tags: ["process", "design"] }
-  ]
-};
-
-const AIInterviewCoach = () => {
-  // Initialize state variables
+function AIInterviewCoach() {
   const [messages, setMessages] = useState([]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [conversationId, setConversationId] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [topicCategories, setTopicCategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [categoryQuestions, setCategoryQuestions] = useState([]);
-  const [previousConversations, setPreviousConversations] = useState([]);
-  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
-  const [topicMenuAnchorEl, setTopicMenuAnchorEl] = useState(null);
-  const [questionMenuAnchorEl, setQuestionMenuAnchorEl] = useState(null);
-  const [currentTab, setCurrentTab] = useState(0);
-  
-  // Add missing state variables
-  const [currentPage, setCurrentPage] = useState(1);
-  const [coachName, setCoachName] = useState(coachPersonas[0]?.name || 'NooraGPT');
-  const [messageHistory, setMessageHistory] = useState([]);
-  const [behavioralPatterns, setBehavioralPatterns] = useState([]); // Add this missing state
-  const [messageContainerHeight, setMessageContainerHeight] = useState(window.innerHeight - 280);
-  const [vocabularySuggestions, setVocabularySuggestions] = useState([]); // Add this missing state
-  
-  const [feedbackDetails, setFeedbackDetails] = useState(null);
-  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
-  const [mockInterviewDialogOpen, setMockInterviewDialogOpen] = useState(false);
-  const [mockInterviewMode, setMockInterviewMode] = useState(false);
-  const [mockInterviewQuestions, setMockInterviewQuestions] = useState([]);
-  const [currentMockQuestionIndex, setCurrentMockQuestionIndex] = useState(0);
-  const [mockInterviewSetupData, setMockInterviewSetupData] = useState({
-    jobRole: '',
-    difficulty: 'intermediate',
-    duration: 20,
-    questionsCount: 7
-  });
-  const [selectedCoachPersona, setSelectedCoachPersona] = useState('noora');
-  const [sectorContext, setSectorContext] = useState('general');
-  const [suggestedQuestions, setSuggestedQuestions] = useState([
-    "Tell me about your experience with teamwork in previous roles.",
-    "What are your key strengths as a professional?",
-    "How do you handle tight deadlines and pressure?",
-    "Describe a challenging situation you faced at work and how you resolved it.",
-    "What are your career goals for the next 3-5 years?",
-    "Tell me about a project you're particularly proud of."
-  ]);
-  
-  // Add AI Assistant Mode
-  const [isAIMode, setIsAIMode] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [speechRecognition, setSpeechRecognition] = useState(null);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [showCulturalTips, setShowCulturalTips] = useState(false);
-  const [feedbackData, setFeedbackData] = useState({
-    responseLength: 0,
-    verboseScore: 'moderate',
-    starCompliance: 0,
-    confidenceScore: 0,
-    keywordMatchPercentage: 0
-  });
-  const [showKnowledgeBooster, setShowKnowledgeBooster] = useState(false);
-  const [boosterType, setBoosterType] = useState(null);
-  const [boosterContent, setBoosterContent] = useState([]);
-  const [isThinking, setIsThinking] = useState(false);
-  const [detectedPatterns, setDetectedPatterns] = useState([]);
-  const [activeMissions, setActiveMissions] = useState(coachingMissions);
-  const [missionDialogOpen, setMissionDialogOpen] = useState(false);
-  const [selectedMission, setSelectedMission] = useState(null);
-  const [missionCompleted, setMissionCompleted] = useState(false);
-  const [userMessageHistory, setUserMessageHistory] = useState([]);
-  const [roleplayMode, setRoleplayMode] = useState(false);
-  const [roleplaySetupOpen, setRoleplaySetupOpen] = useState(false);
-  const [roleplayConfig, setRoleplayConfig] = useState({
-    company: null,
-    jobRole: '',
-    difficulty: 'medium',
-    pressure: 'medium',
-    time: 30 // seconds per answer
-  });
-  const [activeRoleplay, setActiveRoleplay] = useState(null);
-  const [roleplayQuestion, setRoleplayQuestion] = useState('');
-  const [roleplayTimer, setRoleplayTimer] = useState(0);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [suggestedVocabulary, setSuggestedVocabulary] = useState([]);
-  const [vocabularyCategory, setVocabularyCategory] = useState('action');
-  const [vocabularyDialogOpen, setVocabularyDialogOpen] = useState(false);
-  
-  // Add new state for AI analysis feature
-  const [showAnalysis, setShowAnalysis] = useState(false);
-  
-  // Add state for role fit analysis feature
-  const [roleFitAnalysis, setRoleFitAnalysis] = useState(null);
-  const [useDeepSeekForAnalysis, setUseDeepSeekForAnalysis] = useState(true);
-  
-  // Add new state for premium feedback toggle
-  const [usePremiumFeedback, setUsePremiumFeedback] = useState(false);
-  const [feedbackSource, setFeedbackSource] = useState('basic');
-  const [savedFeedbacks, setSavedFeedbacks] = useState([]);
-  const [isSavingFeedback, setIsSavingFeedback] = useState(false);
-  const [premiumFeedbackResponse, setPremiumFeedbackResponse] = useState(null);
-  const [premiumAnalysisLoading, setPremiumAnalysisLoading] = useState(false);
-  
-  // Add new state variables for question filtering and categorization
-  const [questionFilter, setQuestionFilter] = useState("");
-  const [selectedTags, setSelectedTags] = useState([]);
-  const [difficultyFilter, setDifficultyFilter] = useState("all");
-  const [expandedCategories, setExpandedCategories] = useState({});
-  const [roleSpecificQuestions, setRoleSpecificQuestions] = useState([]);
-  const [showVoicePrompt, setShowVoicePrompt] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [hasLoadedMessages, setHasLoadedMessages] = useState(false);
-  
-  // Add missing state variables
-  const [showCoachSelection, setShowCoachSelection] = useState(false);
-  const [contextSelectorOpen, setContextSelectorOpen] = useState(false);
-  
-  const chatEndRef = useRef(null);
-  const chatContainerRef = useRef(null);
-  const timerRef = useRef(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const messagesEndRef = useRef(null);
   const navigate = useNavigate();
-  const { profile } = useUser();
   
-  // Initialize the page and load conversation data
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      if (!profile?.id) {
-        setLoading(false);
-        return;
-      }
-      
-      setLoading(true);
-      setError(null);
-      
-      try {
-        // Initialize or fetch existing conversation
-        const conversationResponse = await apiEndpoints.interviews.createOrLoadConversation(profile.id);
-        
-        // Handle response data
-        if (!conversationResponse || !conversationResponse.data) {
-          console.error("Error loading conversation data from API");
-          setError('Failed to load conversation data');
-          return;
-        }
-        
-        // Process API response
-        const responseData = conversationResponse.data;
-        
-        // Get conversation ID
-        const sessionId = responseData.conversationId || responseData.id || responseData.session_id;
-        setConversationId(sessionId);
-        
-        const initialMessages = responseData.messages || [];
-        
-        // Set messages if we got some or if the array is empty
-        if (initialMessages.length > 0) {
-          setMessages(initialMessages);
-          setHasLoadedMessages(true);
-        } else {
-          // Add initial greeting if no messages exist
-          const selectedCoach = coachPersonas.find(coach => coach.id === selectedCoachPersona) || coachPersonas[0];
-          const greeting = {
-            role: 'assistant',
-            content: selectedCoach.greeting,
-            timestamp: new Date().toISOString(),
-            model: selectedCoach.id === 'ahmed' ? 'DeepSeek-AI' : 'LLaMA-3',
-            mode: 'ai_assistant'
-          };
-          
-          setMessages([greeting]);
-          setHasLoadedMessages(true);
-          
-          // Save the greeting to the database
-          if (sessionId) {
-            await apiEndpoints.interviews.sendMessage(sessionId, {
-              message: greeting.content,
-              role: 'assistant',
-              userId: profile.id
-            });
-          }
-        }
-        
-        // Fetch previous conversations
-        try {
-          const previousConversationsResponse = await apiEndpoints.interviews.getPreviousConversations(profile.id);
-          if (previousConversationsResponse?.data) {
-            setPreviousConversations(previousConversationsResponse.data);
-          }
-        } catch (err) {
-          console.warn('Error fetching previous conversations:', err);
-        }
-        
-        // Fetch topic categories
-        try {
-          const topicCategoriesResponse = await apiEndpoints.interviews.getInterviewTopics();
-          if (topicCategoriesResponse?.data) {
-            setTopicCategories(topicCategoriesResponse.data);
-          }
-        } catch (err) {
-          console.warn('Error fetching interview topics:', err);
-        }
-        
-        // Fetch suggested questions
-        try {
-          const suggestedQuestionsResponse = await apiEndpoints.interviews.getSuggestedQuestions(profile.id);
-          if (suggestedQuestionsResponse?.data && Array.isArray(suggestedQuestionsResponse.data)) {
-            setSuggestedQuestions(suggestedQuestionsResponse.data);
-          } else {
-            // Default questions if API doesn't return an array
-            setSuggestedQuestions([
-              "Tell me about your experience with teamwork in previous roles.",
-              "What are your key strengths as a professional?",
-              "How do you handle tight deadlines and pressure?",
-              "Describe a challenging situation you faced at work and how you resolved it.",
-              "What are your career goals for the next 3-5 years?",
-              "Tell me about a project you're particularly proud of."
-            ]);
-          }
-        } catch (err) {
-          console.warn('Error fetching suggested questions:', err);
-          // Set default questions on error
-          setSuggestedQuestions([
-            "Tell me about your experience with teamwork in previous roles.",
-            "What are your key strengths as a professional?",
-            "How do you handle tight deadlines and pressure?",
-            "Describe a challenging situation you faced at work and how you resolved it.",
-            "What are your career goals for the next 3-5 years?",
-            "Tell me about a project you're particularly proud of."
-          ]);
-        }
-        
-        // Initialize Speech Recognition if available
-        if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-          setSpeechRecognition(new SpeechRecognition());
-        }
-      } catch (err) {
-        console.error('Error initializing interview coach:', err);
-        setError('Failed to initialize interview coach. Please check your connection and try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchInitialData();
-    
-    // Clean up speech recognition on component unmount
-    return () => {
-      if (speechRecognition) {
-        speechRecognition.stop();
-      }
-    };
-  }, [profile, selectedCoachPersona, messages.length]);
-  
-  // Scroll to bottom of chat when messages change
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-  
-  // Configure speech recognition
-  useEffect(() => {
-    if (speechRecognition) {
-      speechRecognition.continuous = true;
-      speechRecognition.interimResults = false;
-      speechRecognition.lang = 'en-US';
-      
-      speechRecognition.onresult = (event) => {
-        const transcript = event.results[event.results.length - 1][0].transcript;
-        setInputMessage((prev) => prev + ' ' + transcript);
-      };
-      
-      speechRecognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        setIsListening(false);
-      };
-      
-      speechRecognition.onend = () => {
-        setIsListening(false);
-      };
-    }
-  }, [speechRecognition]);
-  
-  // Toggle speech recognition
-  const toggleListening = () => {
-    if (!speechRecognition) {
-      setSnackbarMessage('Speech recognition is not supported in your browser');
-      setSnackbarOpen(true);
-      return;
-    }
-    
-    if (isListening) {
-      speechRecognition.stop();
-      setIsListening(false);
-    } else {
-      speechRecognition.start();
-      setIsListening(true);
-    }
+  const selectedCoach = {
+    name: 'Interview Coach',
+    avatar: '/assets/coach-avatar.png',
   };
-  
-  // Add a new function to request premium feedback from OpenAI
-  const requestPremiumFeedback = async (userInput) => {
-    if (!userInput || userInput.trim().length < 10) {
-      setSnackbarMessage('Please provide a longer response for detailed analysis');
-      setSnackbarOpen(true);
-      return;
-    }
 
-    setPremiumAnalysisLoading(true);
-    
-    try {
-      // This would call our API endpoint that forwards to OpenAI
-      const response = await apiEndpoints.interviews.getPremiumFeedback({
-        userId: profile.id,
-        userInput,
-        feedbackTypes: ['softSkills', 'starPattern', 'confidencePhrasing'],
-        model: 'gpt-4'  // Using GPT-4 via openrouter.ai
-      });
-      
-      if (response.data) {
-        setPremiumFeedbackResponse(response.data);
-        
-        // Update our feedback data with the premium insights
-        setFeedbackData(prevData => ({
-          ...prevData,
-          premiumInsights: response.data,
-          starCompliance: response.data.starRating || prevData.starCompliance,
-          confidenceScore: response.data.confidenceScore || prevData.confidenceScore
-        }));
-      }
-    } catch (err) {
-      console.error('Error getting premium feedback:', err);
-      setSnackbarMessage('Failed to get premium feedback. Using basic analysis instead.');
-      setSnackbarOpen(true);
-      // Fallback to basic feedback
-      setFeedbackSource('basic');
-      setUsePremiumFeedback(false);
-    } finally {
-      setPremiumAnalysisLoading(false);
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  // Sample suggested questions
+  const suggestedQuestions = [
+    "Tell me about yourself and your experience.",
+    "What are your greatest strengths as a professional?",
+    "What do you consider to be your weaknesses?",
+    "Why are you interested in this position?",
+    "Where do you see yourself in 5 years?",
+  ];
+
+  // Sample categorized questions with icons
+const categorizedQuestions = [
+    { category: 'Technical', icon: <Code fontSize="small" />, questions: [
+      { text: "Explain the difference between REST and GraphQL." },
+      { text: "What is your experience with cloud technologies?" },
+      { text: "How do you approach debugging a complex issue?" },
+    ]},
+    { category: 'Behavioral', icon: <Face fontSize="small" />, questions: [
+      { text: "Describe a challenging situation you faced at work and how you handled it." },
+      { text: "How do you handle conflicts with team members?" },
+      { text: "Tell me about a time you had to learn something quickly." },
+    ]},
+    { category: 'Leadership', icon: <PeopleAlt fontSize="small" />, questions: [
+      { text: "How do you motivate your team members?" },
+      { text: "Describe your leadership style." },
+      { text: "How do you delegate responsibilities?" },
+    ]},
+    { category: 'Company', icon: <Business fontSize="small" />, questions: [
+      { text: "What do you know about our company?" },
+      { text: "Why do you want to work for us specifically?" },
+      { text: "How do you see yourself contributing to our company culture?" },
+    ]},
+    { category: 'Adaptability', icon: <ExpandLess fontSize="small" />, questions: [
+      { text: "Describe a time when you had to learn something entirely new in 24 hours." },
+      { text: "Tell me about a situation when project priorities shifted unexpectedly." },
+      { text: "As a team leader, how have you helped your team adapt to a major organizational change?" },
+    ]},
+    { category: 'Critical Thinking', icon: <TaskAlt fontSize="small" />, questions: [
+      { text: "Share an example of a problem that required you to think critically." },
+      { text: "Describe a complex work problem and how you analyzed it to find a solution." },
+      { text: "Give an example of using data to change someone's mind or improve a decision." },
+    ]},
+    { category: 'Innovation', icon: <Explore fontSize="small" />, questions: [
+      { text: "Describe a creative idea you suggested that improved a process." },
+      { text: "Tell me about a product or process improvement you initiated at work." },
+      { text: "What is the most innovative project you've led, and how did you foster creativity?" },
+    ]},
+    { category: 'Prioritization', icon: <Timer fontSize="small" />, questions: [
+      { text: "How do you manage your time when facing multiple assignments or deadlines?" },
+      { text: "Describe a time when conflicting priorities forced you to choose one task over another." },
+      { text: "As a manager, how do you balance strategic initiatives with day-to-day operations?" },
+    ]},
+    { category: 'Communication', icon: <VolumeUp fontSize="small" />, questions: [
+      { text: "How do you ensure your message is clear when explaining technical details to non-technical people?" },
+      { text: "Describe how you handled a situation where a customer was frustrated by a product issue." },
+      { text: "How do you adjust your communication style when working with an international team?" },
+    ]},
+    { category: 'Self-Awareness', icon: <Shield fontSize="small" />, questions: [
+      { text: "What is one area you've identified for improvement, and what steps are you taking?" },
+      { text: "Describe a failure you experienced and what you learned from it." },
+      { text: "How do you proactively seek feedback, and how has it helped you improve?" },
+    ]},
+    { category: 'UAE', icon: <Public fontSize="small" />, questions: [
+      { text: "How do your personal goals align with the UAE Vision 2030?" },
+      { text: "What's your perspective on Emiratization, and how do you see yourself contributing?" },
+      { text: "How would you use your skills to help the UAE achieve sustainability goals?" },
+      { text: "UAE ranks high in innovation. How would you help sustain that position?" },
+      { text: "How have UAE youth programs helped shape your career?" },
+      { text: "How can technology help preserve Emirati heritage?" },
+      { text: "What role does AI play in transforming UAE's education sector?" },
+      { text: "How do you see yourself contributing to UAE's government digital transformation?" },
+      { text: "What role should AI play in UAE's emergency response systems?" },
+      { text: "How do you ensure ethical AI in the UAE context?" },
+      { text: "How can the UAE encourage more women in AI and tech fields?" },
+      { text: "How important is Arabic NLP for the UAE's tech future?" },
+      { text: "What role can AI play in supporting UAE's smart transportation goals?" },
+      { text: "How would you use AI to build a startup that serves UAE society?" },
+      { text: "How can UAE ensure digital inclusion for all citizens?" },
+      { text: "How could you use emerging technologies to enhance tourism in the UAE?" },
+      { text: "What's your view on managing sensitive data in AI systems in the UAE?" },
+      { text: "How can blockchain improve trust in public services?" },
+      { text: "How should UAE prepare its digital infrastructure for the future of remote work?" },
+      { text: "What is one AI solution you would deploy to solve a UAE-specific societal issue?" },
+    ]},
+  ];
+
+  // Function to load questions from a specific category
+  const loadCategoryQuestions = (category) => {
+    const selectedCategoryData = categorizedQuestions.find(cat => cat.category === category);
+    if (selectedCategoryData) {
+      setCategoryQuestions(selectedCategoryData.questions);
+      setSelectedCategory(category);
     }
   };
 
-  // Add function to save feedback to dashboard
-  const saveFeedbackToDashboard = async () => {
-    if (!profile?.id) return;
+  // Function to send a predefined question
+  const sendPredefinedQuestion = (questionText) => {
+    if (isLoading) return;
     
-    setIsSavingFeedback(true);
+    // Format current time for timestamp
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
-    try {
-      const feedbackToSave = {
-        userId: profile.id,
-        timestamp: new Date().toISOString(),
-        userInput: userMessageHistory[userMessageHistory.length - 1] || '',
-        feedbackData: {
-          ...feedbackData,
-          source: feedbackSource,
-          premiumInsights: premiumFeedbackResponse
-        },
-        conversationId
-      };
-      
-      const response = await apiEndpoints.interviews.saveFeedbackToDashboard(feedbackToSave);
-      
-      if (response.data?.success) {
-        setSnackbarMessage('Feedback saved to your dashboard');
-        setSnackbarOpen(true);
-        
-        // Add to local state to avoid another API call
-        setSavedFeedbacks(prev => [...prev, feedbackToSave]);
-      }
-    } catch (err) {
-      console.error('Error saving feedback to dashboard:', err);
-      setSnackbarMessage('Failed to save feedback to dashboard');
-      setSnackbarOpen(true);
-    } finally {
-      setIsSavingFeedback(false);
-    }
-  };
-  
-  // Send a message
-  const sendMessage = async () => {
-    if (!inputMessage.trim() || isTyping) return;
-    
-    // Debug logging
-    console.log('Attempting to send message:', inputMessage.trim());
-    console.log('Current state - isTyping:', isTyping, 'isAIMode:', isAIMode);
-    
-    setIsTyping(true);
-    
-    // Create new message
-    const userMsg = {
-      role: 'user',
-      content: inputMessage.trim(),
-      timestamp: new Date().toISOString(),
-      mode: isAIMode ? 'ai_assistant' : 'interview_coach' // Add mode to user messages too
+    // Add user message
+    const userMessage = {
+      type: 'user',
+      text: questionText,
+      timestamp
     };
     
-    // Debug log message object
-    console.log('User message object:', userMsg);
+    setMessages(prevMessages => [...prevMessages, userMessage]);
+    setIsLoading(true);
     
-    // Add the message to the local state immediately for better UX
-    setMessages(prevMessages => [...prevMessages, userMsg]);
-    
-    // Add message to user history for analysis
-    setUserMessageHistory(prev => [...prev, inputMessage.trim()]);
-    
-    // Clear the input
-    setInputMessage('');
-    
-    // Scroll to bottom
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    
-    try {
-      setIsThinking(true);
-      
-      // Decide which mode to use
-      const messageMode = isAIMode ? 'ai_assistant' : 'interview_coach';
-      
-      // Analyze message patterns in interview coach mode
-      if (!isAIMode) {
-        analyzeMessagePatterns(userMsg.content, userMessageHistory);
-      }
-      
-      // Different instructions based on mode
-      const systemInstruction = isAIMode 
-        ? "You are a helpful AI assistant that can answer any question on any topic."
-        : "You are an AI interview coach helping prepare for job interviews.";
-      
-      // Pick model based on coach persona or AI mode
-      const selectedModel = isAIMode 
-        ? 'deepseek' // Always use DeepSeek for general AI mode
-        : (selectedCoachPersona === 'ahmed' ? 'deepseek' : 'llama3');
-      
-      console.log(`Sending message in ${messageMode} mode using ${selectedModel} model`);
-      
-      // Debug API request parameters
-      const requestParams = {
-        message: userMsg.content,
-        role: 'user',
-        userId: profile?.id || 0,
-        mode: messageMode,
-        model: selectedModel,
-        useDeepSeek: isAIMode || selectedCoachPersona === 'ahmed',
-        systemInstruction: systemInstruction
-      };
-      console.log('API request parameters:', requestParams);
-      
-      // Send message to backend
-      const response = await apiEndpoints.interviews.sendMessage(conversationId, requestParams);
-      
-      // Analyze input for vocabulary suggestions
-      if (!isAIMode && userMsg.content.length > 15) {
-        // Generate vocabulary suggestions for longer messages
-        const weakWords = ['did', 'made', 'worked', 'good', 'helped', 'tried', 'thought', 'got', 'handled'];
-        let needsSuggestions = false;
-        
-        weakWords.forEach(word => {
-          if (userMsg.content.toLowerCase().includes(` ${word} `)) {
-            needsSuggestions = true;
-          }
-        });
-        
-        if (needsSuggestions) {
-          const actionVerbs = [
-            'achieved', 'implemented', 'led', 'developed', 'coordinated',
-            'launched', 'optimized', 'spearheaded', 'transformed', 'resolved'
-          ];
-          
-          // Show 3 random suggestions
-          const suggestions = [];
-          while (suggestions.length < 3 && actionVerbs.length > 0) {
-            const idx = Math.floor(Math.random() * actionVerbs.length);
-            suggestions.push(actionVerbs.splice(idx, 1)[0]);
-          }
-          
-          setSuggestedVocabulary(suggestions);
-        }
-      }
-      
-      if (response && response.data) {
-        const aiResponse = {
-          role: 'assistant',
-          content: response.data.message || response.data.content || "I'm not sure how to respond to that.",
-          timestamp: new Date().toISOString(),
-          model: isAIMode ? 'DeepSeek-AI' : (selectedCoachPersona === 'ahmed' ? 'DeepSeek-AI' : 'LLaMA-3'),
-          mode: isAIMode ? 'ai_assistant' : 'interview_coach' // Add mode field for filtering
-        };
-        
-        // Ensure we're adding the response to the correct mode's conversation
-        if ((isAIMode && messageMode === 'ai_assistant') || (!isAIMode && messageMode === 'interview_coach')) {
-          setMessages(prevMessages => [...prevMessages, aiResponse]);
-        }
-        
-        // Only do analysis in interview coach mode
-        if (!isAIMode) {
-          // Analyze AI response for feedback metrics
-          const responseText = aiResponse.content;
-          
-          // Simple metrics for real-time feedback
-          const words = responseText.split(/\s+/).length;
-          const sentences = responseText.split(/[.!?]+/).length - 1;
-          const avgWordLength = responseText.length / words;
-          
-          // Star pattern compliance check (look for keywords)
-          const starKeywords = ['situation', 'task', 'action', 'result'];
-          const starMatches = starKeywords.filter(keyword => 
-            responseText.toLowerCase().includes(keyword)
-          ).length;
-          
-          const starScore = Math.round((starMatches / starKeywords.length) * 100);
-          
-          // Confidence language check
-          const uncertainPhrases = ['i think', 'perhaps', 'maybe', 'possibly', 'i believe', 'might'];
-          const confidentPhrases = ['definitely', 'certainly', 'absolutely', 'clearly', 'without doubt'];
-          
-          const uncertainCount = uncertainPhrases.filter(phrase => 
-            responseText.toLowerCase().includes(phrase)
-          ).length;
-          
-          const confidentCount = confidentPhrases.filter(phrase => 
-            responseText.toLowerCase().includes(phrase)
-          ).length;
-          
-          const confidenceScore = Math.max(0, Math.min(100, 
-            50 + (confidentCount * 10) - (uncertainCount * 10)
-          ));
-          
-          // Update feedback data
-          setFeedbackData({
-            responseLength: words,
-            verboseScore: avgWordLength > 5 ? 'high' : 'moderate',
-            starCompliance: starScore,
-            confidenceScore: confidenceScore,
-            keywordMatchPercentage: 75 // Default value when not calculated
-          });
-          
-          // Check for mission completion
-          updateMissionProgress(userMsg.content);
-        }
-        
-        // If premium feedback is enabled, automatically request it
-        if (usePremiumFeedback && !isAIMode) {
-          await requestPremiumFeedback(userMsg.content);
-          setFeedbackSource('premium');
-        } else {
-          setFeedbackSource('basic');
-        }
-      }
-    } catch (err) {
-      console.error('Error sending message:', err);
-      
-      // Add fallback response in case of error
-      const fallbackMessage = {
-        role: 'assistant',
-        content: isAIMode 
-          ? "I'm your AI Assistant powered by DeepSeek. I apologize for the connection issue. Please try again with your question." 
-          : "I'm your Interview Coach. I apologize for the connection issue. Please try again with your question.",
-        timestamp: new Date().toISOString(),
-        model: isAIMode ? 'DeepSeek-AI (Fallback)' : 'Coach AI (Fallback)'
-      };
-      
-      setMessages((prevMessages) => [...prevMessages, fallbackMessage]);
-    } finally {
-      setIsTyping(false);
-      setIsThinking(false);
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-  
-  // Handle key press (Enter to send)
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-  
-  // Load a previous conversation
-  const loadConversation = async (convoId) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await apiEndpoints.interviews.loadConversation(convoId);
-      
-      setConversationId(convoId);
-      setMessages(response.data.messages || []);
-    } catch (err) {
-      setError('Failed to load conversation');
-      console.error('Error loading conversation:', err);
-    } finally {
-      setLoading(false);
-      setMenuAnchorEl(null);
-    }
-  };
-  
-  // Start a new conversation
-  const startNewConversation = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Clear existing messages before starting a new conversation
-      setMessages([]);
-      
-      const response = await apiEndpoints.interviews.createConversation(profile.id);
-      
-      setConversationId(response.data.conversationId);
-      
-      // Add initial greeting based on current mode
-      if (isAIMode) {
-        // AI assistant greeting
-        const greeting = {
-          role: 'assistant',
-          content: "Hello! I'm your AI Assistant powered by DeepSeek. I can answer questions on any topic. How can I help you today?",
-          timestamp: new Date().toISOString(),
-          model: 'DeepSeek-AI',
-          mode: 'ai_assistant'
-        };
-        
-        setMessages([greeting]);
-        setHasLoadedMessages(true);
-        
-        // Save the greeting to the backend using AI mode
-        await apiEndpoints.interviews.sendMessage(response.data.conversationId, {
-          message: greeting.content,
-          role: 'assistant',
-          userId: profile.id,
-          mode: 'ai_assistant',
-          model: 'deepseek',
-          systemInstruction: "You are a helpful AI assistant that can answer any question on any topic."
-        });
-      } else {
-        // Coach greeting
-        const selectedCoach = coachPersonas.find(coach => coach.id === selectedCoachPersona) || coachPersonas[0];
-        const greeting = {
-          role: 'assistant',
-          content: selectedCoach.greeting,
-          timestamp: new Date().toISOString(),
-          model: selectedCoach.id === 'ahmed' ? 'DeepSeek-AI' : 'LLaMA-3'
-        };
-        
-        setMessages([greeting]);
-        setHasLoadedMessages(true);
-        
-        // Save the greeting to the backend using interview coach mode
-        await apiEndpoints.interviews.sendMessage(response.data.conversationId, {
-          message: greeting.content,
-          role: 'assistant',
-          userId: profile.id,
-          mode: 'interview_coach',
-          model: selectedCoach.id === 'ahmed' ? 'deepseek' : 'llama3',
-          systemInstruction: "You are an AI interview coach helping prepare for job interviews."
-        });
-      }
-    } catch (err) {
-      setError('Failed to start new conversation');
-      console.error('Error starting new conversation:', err);
-    } finally {
-      setLoading(false);
-      setMenuAnchorEl(null);
-    }
-  };
-  
-  // Load questions for a category
-  const loadCategoryQuestions = async (category) => {
-    setSelectedCategory(category);
-    setTopicMenuAnchorEl(null);
-    
-    try {
-      const response = await apiEndpoints.interviews.getCategoryQuestions(category.id);
-      setCategoryQuestions(response.data || []);
-    } catch (err) {
-      console.error('Error loading category questions:', err);
-      setCategoryQuestions([]);
-    }
-  };
-  
-  // Send a predefined question
-  const sendPredefinedQuestion = (question) => {
-    setInputMessage(question);
-    setQuestionMenuAnchorEl(null);
-  };
-  
-  // Setup and start a mock interview
-  const setupMockInterview = async () => {
-    setMockInterviewDialogOpen(false);
-    setLoading(true);
-    
-    try {
-      const response = await apiEndpoints.interviews.createMockInterview({
-        userId: profile.id,
-        ...mockInterviewSetupData
-      });
-      
-      setMockInterviewQuestions(response.data.questions || []);
-      setCurrentMockQuestionIndex(0);
-      setMockInterviewMode(true);
-      
-      // Clear existing messages
-      setMessages([]);
-      
-      // Add initial greeting from the coach
-      const greeting = {
-        role: 'assistant',
-        content: "Hello! I'm your AI Interview Coach. I'm starting your mock interview. Let's get started.",
-        timestamp: new Date().toISOString()
-      };
-      
-      setMessages([greeting]);
-      
-      // Save the mock interview setup data to the backend
-      await apiEndpoints.interviews.createMockInterviewSetup(response.data.mockInterviewId, mockInterviewSetupData);
-    } catch (err) {
-      setError('Failed to setup mock interview');
-      console.error('Error setting up mock interview:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Handle mock interview navigation
-  const handleMockInterviewNavigation = (direction) => {
-    if (direction === 'previous') {
-      setCurrentMockQuestionIndex(prevIndex => prevIndex - 1);
-    } else if (direction === 'next') {
-      setCurrentMockQuestionIndex(prevIndex => prevIndex + 1);
-    }
-  };
-  
-  // Change coach persona
-  const changeCoachPersona = async (personaId) => {
-    setSelectedCoachPersona(personaId);
-    setLoading(true);
-    
-    // Find the new coach
-    const newCoach = coachPersonas.find(coach => coach.id === personaId);
-    if (!newCoach) {
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      // Check if setCurrentPage exists (might be used for page navigation)
-      if (typeof setCurrentPage === 'function') {
-        setCurrentPage(2);
-      }
-      
-      // Set up a local conversation immediately to improve UX
-      // Reset conversation data - with safeguards
-      try {
-        setMessages([]);
-        
-        // Safely handle state updates with existence checks
-        if (typeof setFeedbackData === 'function') {
-          setFeedbackData({
-            responseLength: 0,
-            verboseScore: 0,
-            starCompliance: 0,
-            confidenceScore: 0,
-            keywordMatchPercentage: 0
-          });
-        }
-        
-        // Only call these functions if they exist
-        try {
-          // This function is causing the error - wrap in a separate try/catch
-          if (typeof setBehavioralPatterns === 'function') {
-            setBehavioralPatterns([]);
-          }
-        } catch (stateError) {
-          console.warn('Non-critical state update error:', stateError);
-        }
-        
-        try {
-          if (typeof setVocabularySuggestions === 'function') {
-            setVocabularySuggestions([]);
-          }
-        } catch (stateError) {
-          console.warn('Non-critical state update error:', stateError);
-        }
-      } catch (stateUpdateError) {
-        console.warn('Error resetting conversation state:', stateUpdateError);
-        // Continue anyway
-      }
-      
-      // Add welcome message from coach
-      const welcomeMessage = {
-        role: 'assistant',
-        content: `Hi! I'm ${newCoach.name}, your ${newCoach.title} interview coach. How can I help you prepare for your interview today?`,
-        timestamp: new Date().toISOString(),
-        model: newCoach.id === 'ahmed' ? 'DeepSeek-AI' : 'LLaMA-3'
-      };
-      setMessages([welcomeMessage]);
-      
-      let conversationResponse;
-      try {
-        // Create a new conversation
-        conversationResponse = await apiEndpoints.interviews.createConversation(profile.id);
-        setConversationId(conversationResponse.data.conversationId);
-        
-        // Save the greeting to the backend
-        await apiEndpoints.interviews.sendMessage(conversationResponse.data.conversationId, {
-          role: 'assistant',
-          content: welcomeMessage.content,
-          userId: profile.id,
-          mode: 'interview_coach',
-          model: newCoach.id === 'ahmed' ? 'deepseek' : 'llama3'
-        });
-      } catch (apiError) {
-        console.error('API error changing coach persona:', apiError);
-        // Create a fallback local conversation ID if API fails
-        const fallbackId = `local-${Date.now()}`;
-        setConversationId(fallbackId);
-        setSnackbarMessage('Connected in offline mode. Some features may be limited.');
-        setSnackbarOpen(true);
-      }
-      
-      // Reset other conversation state regardless of API success
-      try {
-        if (typeof setMessageHistory === 'function') {
-          setMessageHistory([welcomeMessage]);
-        }
-        
-        setUserMessageHistory([]);
-        
-        if (typeof setDetectedPatterns === 'function') {
-          setDetectedPatterns([]);
-        }
-        
-        if (typeof setSuggestedVocabulary === 'function') {
-          setSuggestedVocabulary([]);
-        }
-      } catch (stateError) {
-        console.warn('Non-critical state update error:', stateError);
-      }
-      
-      // Show success message
-      setSnackbarMessage(`Switched to ${newCoach.name} as your interview coach.`);
-      setSnackbarOpen(true);
-      
-    } catch (err) {
-      console.error('Error changing coach persona:', err);
-      setSnackbarMessage('Failed to change coach. Please try again.');
-      setSnackbarOpen(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Change sector context
-  const changeSectorContext = (sector) => {
-    setSectorContext(sector);
-    setShowCulturalTips(true);
-    
+    // Simulate AI response after a short delay
     setTimeout(() => {
-      setShowCulturalTips(false);
-    }, 8000);
-  };
-  
-  // Analyze message for behavioral patterns
-  const analyzeMessagePatterns = (message, messageHistory) => {
-    // Reset detected patterns
-    const newDetectedPatterns = [];
-    
-    // Check for patterns in current message
-    behavioralPatterns.forEach(pattern => {
-      const matches = (message.match(pattern.pattern) || []).length;
-      if (matches > 0) {
-        newDetectedPatterns.push(pattern);
-      }
-    });
-    
-    // Only show patterns if we have enough user messages (at least 3)
-    if (messageHistory.length >= 3) {
-      // Check for repeated patterns across message history
-      const allText = messageHistory.join(' ');
-      
-      behavioralPatterns.forEach(pattern => {
-        const totalMatches = (allText.match(pattern.pattern) || []).length;
-        // Only add repeated patterns that weren't caught in the current message
-        if (totalMatches >= 3 && !newDetectedPatterns.some(p => p.id === pattern.id)) {
-          newDetectedPatterns.push(pattern);
-        }
-      });
-      
-      // Add multi-input prediction using both text and tags
-      const extractedTags = extractTags(allText);
-      const textAndTagsAnalysis = analyzeTextAndTags(allText, extractedTags);
-      
-      if (textAndTagsAnalysis.detectedPatterns.length > 0) {
-        // Add unique patterns from the text+tags analysis
-        textAndTagsAnalysis.detectedPatterns.forEach(pattern => {
-          if (!newDetectedPatterns.some(p => p.id === pattern.id)) {
-            newDetectedPatterns.push(pattern);
-          }
-        });
-      }
-    }
-    
-    // Limit to 2 pattern feedbacks to avoid overwhelming the user
-    setDetectedPatterns(newDetectedPatterns.slice(0, 2));
-  };
-  
-  // Extract tags from text for multi-input prediction
-  const extractTags = (text) => {
-    const commonSkillTags = [
-      'leadership', 'communication', 'teamwork', 'problem-solving',
-      'project-management', 'technical', 'analytical', 'research',
-      'creative', 'attention-to-detail', 'time-management', 'adaptability'
-    ];
-    
-    const foundTags = [];
-    commonSkillTags.forEach(tag => {
-      if (text.toLowerCase().includes(tag.toLowerCase())) {
-        foundTags.push(tag);
-      }
-    });
-    
-    return foundTags;
-  };
-  
-  // Analyze text and tags together for multi-input prediction
-  const analyzeTextAndTags = (text, tags) => {
-    // This function would be connected to DeepSeek or LLaMA-3 in production
-    const result = {
-      detectedPatterns: [],
-      reasons: []
-    };
-    
-    // Example logic for pattern detection based on combinations of text and tags
-    if (tags.includes('leadership') && text.includes('team')) {
-      result.detectedPatterns.push({
-        id: 'leadership-focus',
-        feedback: "Your responses focus on leadership skills. Try highlighting specific team achievements and how you guided others."
-      });
-      result.reasons.push("Your text mentions teams while your skills indicate leadership focus");
-    }
-    
-    if (tags.includes('technical') && (text.includes('problem') || text.includes('solution'))) {
-      result.detectedPatterns.push({
-        id: 'technical-problem-solver',
-        feedback: "You emphasize technical problem-solving. Consider quantifying your impact with metrics."
-      });
-      result.reasons.push("Your response combines technical skills with problem-solution narratives");
-    }
-    
-    return result;
-  };
-  
-  // Generate role fit analysis with explainable results
-  const generateRoleFitAnalysis = async (selectedRole) => {
-    // Show loading state
-    setIsThinking(true);
-    
-    const role = selectedRole || (roleFitAnalysis ? roleFitAnalysis.role : jobRoles[0].title);
-    
-    try {
-      // Combine all user messages for analysis
-      const userText = userMessageHistory.join(' ');
-      
-      // Call the actual backend API with the selected model
-      const response = await apiEndpoints.interviews.getRoleFitAnalysis({
-        userId: profile.id,
-        userInput: userText,
-        jobRole: role,
-        provider: useDeepSeekForAnalysis ? 'deepseek' : 'llama3',
-        language: 'en', // For multilingual support
-        sectorContext: sectorContext || 'general'
-      });
-      
-      if (response.data) {
-        setRoleFitAnalysis({
-          ...response.data,
-          analysisSource: useDeepSeekForAnalysis ? 'DeepSeek AI' : 'LLAMA-3'
-        });
-      } else {
-        throw new Error("Invalid response from the API");
-      }
-    } catch (error) {
-      console.error("Error generating role fit analysis:", error);
-      
-      // Fallback to local simulation if API fails
-      const extractedTags = extractTags(userText);
-      
-      // Calculate simulated fit score based on message content and tags
-      let fitScore = 60; // Default baseline
-      
-      // Adjust score based on skills match
-      extractedTags.forEach(tag => {
-        if (['leadership', 'management'].includes(tag) && role.includes('Manager')) {
-          fitScore += 5;
-        }
-        if (['technical', 'analytical'].includes(tag) && 
-            (role.includes('Engineer') || role.includes('Developer') || role.includes('Scientist'))) {
-          fitScore += 5;
-        }
-        if (['communication', 'teamwork'].includes(tag)) {
-          fitScore += 3; // These are good for any role
-        }
-      });
-      
-      // Sample reasons for fit, customized to role
-      const reasons = [];
-      const improvementAreas = [];
-      
-      // Generate tailored reasons based on role and extracted data
-      if (role.includes('Data Scientist')) {
-        if (extractedTags.includes('analytical')) {
-          reasons.push("Your strong analytical skills align well with the data analysis requirements of this role.");
-        } else {
-          improvementAreas.push("Emphasize your analytical skills and experience with data analysis techniques.");
-        }
-        
-        if (userText.toLowerCase().includes('python') || userText.toLowerCase().includes('sql')) {
-          reasons.push("Your technical expertise in Python and/or SQL is directly applicable to data science workflows.");
-        } else {
-          improvementAreas.push("Highlight your proficiency with data science tools like Python, R, or SQL.");
-        }
-      } 
-      else if (role.includes('Software Engineer')) {
-        if (extractedTags.includes('problem-solving')) {
-          reasons.push("Your problem-solving approach demonstrates the critical thinking needed for software engineering challenges.");
-        } else {
-          improvementAreas.push("Focus more on your problem-solving methodology when discussing technical challenges.");
-        }
-        
-        if (userText.toLowerCase().includes('code') || userText.toLowerCase().includes('develop')) {
-          reasons.push("Your coding experience and development background meet the technical requirements of this position.");
-        } else {
-          improvementAreas.push("Provide more concrete examples of your coding projects and development experience.");
-        }
-      }
-      else if (role.includes('Project Manager')) {
-        if (extractedTags.includes('leadership')) {
-          reasons.push("Your leadership experience aligns with the team management requirements of this project manager role.");
-        } else {
-          improvementAreas.push("Emphasize your experience leading teams and managing project workflows.");
-        }
-        
-        if (userText.toLowerCase().includes('deadline') || userText.toLowerCase().includes('budget')) {
-          reasons.push("Your experience managing deadlines and budgets demonstrates key project management capabilities.");
-        } else {
-          improvementAreas.push("Highlight specific examples of delivering projects on time and within budget constraints.");
-        }
-      }
-      else {
-        // Generic reasons for other roles
-        if (extractedTags.length > 2) {
-          reasons.push(`Your diverse skill set including ${extractedTags.slice(0, 3).join(', ')} provides a strong foundation for this role.`);
-        }
-        
-        if (userText.length > 300) {
-          reasons.push("Your detailed responses show thoughtfulness and communication skills valuable in this position.");
-        } else {
-          improvementAreas.push("Provide more comprehensive responses to showcase your expertise depth.");
-        }
-      }
-      
-      // Add UAE-specific context if available
-      if (sectorContext && sectorContext !== 'general') {
-        reasons.push(`Your understanding of the ${sectorContext} sector in the UAE context adds valuable regional perspective.`);
-      } else {
-        improvementAreas.push("Include UAE-specific knowledge or cultural awareness to stand out in the local job market.");
-      }
-      
-      // Ensure we have at least 2 reasons and improvement areas
-      if (reasons.length < 2) {
-        reasons.push("Your communication style demonstrates professionalism suitable for this position.");
-      }
-      
-      if (improvementAreas.length < 2) {
-        improvementAreas.push("Quantify your achievements with specific metrics to strengthen your candidacy.");
-      }
-      
-      // Set the analysis result with fallback data
-      setRoleFitAnalysis({
-        role,
-        field: jobRoles.find(r => r.title === role)?.field || "",
-        fitScore: Math.min(98, fitScore), // Cap at 98 to be realistic
-        reasons,
-        improvementAreas,
-        tags: extractedTags,
-        analysisSource: useDeepSeekForAnalysis ? 'DeepSeek AI (Fallback)' : 'LLAMA-3 (Fallback)'
-      });
-      
-      setSnackbarMessage("Using offline analysis mode due to API issues");
-      setSnackbarOpen(true);
-    } finally {
-      setIsThinking(false);
-    }
-  };
-  
-  // Update mission progress based on user message
-  const updateMissionProgress = (message) => {
-    const newMissions = [...activeMissions];
-    let missionJustCompleted = false;
-    let completedMission = null;
-    
-    // Check confidence mission (no filler words)
-    const confidenceMission = newMissions.find(m => m.id === 'confidence');
-    if (confidenceMission && !confidenceMission.completed) {
-      const fillerPattern = behavioralPatterns.find(p => p.id === 'filler');
-      const hasFillerWords = fillerPattern.pattern.test(message);
-      
-      if (!hasFillerWords) {
-        confidenceMission.progress += 1;
-        
-        if (confidenceMission.progress >= confidenceMission.maxProgress) {
-          confidenceMission.completed = true;
-          missionJustCompleted = true;
-          completedMission = confidenceMission;
-        }
-      }
-    }
-    
-    // Check STAR narrative mission
-    const starMission = newMissions.find(m => m.id === 'star');
-    if (starMission && !starMission.completed) {
-      // Check if message contains elements of the STAR method
-      const hasSituation = /\b(situation|context|background|scenario)\b/i.test(message);
-      const hasTask = /\b(task|objective|goal|assignment|responsibility)\b/i.test(message);
-      const hasAction = /\b(action|approach|steps|implemented|executed|performed)\b/i.test(message);
-      const hasResult = /\b(result|outcome|impact|achievement|accomplishment)\b/i.test(message);
-      
-      // If message has all STAR components and is reasonably concise (under ~90 seconds of talking)
-      if (hasSituation && hasTask && hasAction && hasResult && message.length < 1500) {
-        starMission.progress = 1;
-        starMission.completed = true;
-        missionJustCompleted = true;
-        completedMission = starMission;
-      }
-    }
-    
-    // Check quantify mission
-    const quantifyMission = newMissions.find(m => m.id === 'quantify');
-    if (quantifyMission && !quantifyMission.completed) {
-      // Look for numbers and percentages as evidence of quantification
-      const numberPattern = /\b(\d+%|\d+\s*percent|\$\s*\d+|\d+\s*dollars|\d+\s*people|\d+\s*users|\d+\s*customers|\d+\s*hours|\d+\s*days|\d+\s*months|\d+\s*years)\b/gi;
-      const matches = message.match(numberPattern) || [];
-      
-      if (matches.length > 0) {
-        quantifyMission.progress += 1;
-        
-        if (quantifyMission.progress >= quantifyMission.maxProgress) {
-          quantifyMission.completed = true;
-          missionJustCompleted = true;
-          completedMission = quantifyMission;
-        }
-      }
-    }
-    
-    setActiveMissions(newMissions);
-    
-    // Show mission completion dialog
-    if (missionJustCompleted && completedMission) {
-      setSelectedMission(completedMission);
-      setMissionCompleted(true);
-      setMissionDialogOpen(true);
-    }
-  };
-  
-  // Timer effect for roleplay mode
-  useEffect(() => {
-    if (timerRunning && roleplayTimer > 0) {
-      timerRef.current = setTimeout(() => {
-        setRoleplayTimer(prev => prev - 1);
-      }, 1000);
-    } else if (timerRunning && roleplayTimer === 0) {
-      // Time's up
-      setTimerRunning(false);
-      setSnackbarMessage("Time's up! Try to provide a concise answer.");
-      setSnackbarOpen(true);
-    }
-    
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [timerRunning, roleplayTimer]);
-  
-  // Generate suggested vocabulary based on input
-  useEffect(() => {
-    if (inputMessage && inputMessage.length > 10) {
-      // Check if input contains certain trigger words
-      const weakWords = ['did', 'made', 'worked', 'good', 'helped', 'tried', 'thought', 'got', 'handled'];
-      const shouldSuggest = weakWords.some(word => inputMessage.toLowerCase().includes(` ${word} `));
-      
-      if (shouldSuggest) {
-        // Select random words from the vocabulary bank
-        const category = Math.random() > 0.5 ? 'action' : 'result';
-        setVocabularyCategory(category);
-        
-        const suggestions = [];
-        const availableWords = [...powerVocabulary[category]];
-        
-        // Get 3-5 random words
-        const numSuggestions = Math.floor(Math.random() * 3) + 3;
-        for (let i = 0; i < numSuggestions; i++) {
-          if (availableWords.length === 0) break;
-          
-          const randomIndex = Math.floor(Math.random() * availableWords.length);
-          suggestions.push(availableWords[randomIndex]);
-          availableWords.splice(randomIndex, 1);
-        }
-        
-        setSuggestedVocabulary(suggestions);
-      } else {
-        setSuggestedVocabulary([]);
-      }
-    } else {
-      setSuggestedVocabulary([]);
-    }
-  }, [inputMessage]);
-  
-  // Setup roleplay interview
-  const setupRoleplay = () => {
-    if (!roleplayConfig.company || !roleplayConfig.jobRole) {
-      setSnackbarMessage('Please select both company and job role');
-      setSnackbarOpen(true);
-      return;
-    }
-    
-    const company = typeof roleplayConfig.company === 'string' 
-      ? roleplayCompanies.find(c => c.id === roleplayConfig.company) 
-      : roleplayConfig.company;
-    
-    // Create active roleplay
-    const newRoleplay = {
-      company: company,
-      jobRole: roleplayConfig.jobRole,
-      difficulty: roleplayConfig.difficulty,
-      pressure: roleplayConfig.pressure,
-      timePerQuestion: roleplayConfig.time,
-      questions: [
-        `Tell me about your experience that's relevant to the ${roleplayConfig.jobRole} position at ${company.name}.`,
-        `Why are you interested in joining ${company.name} specifically?`,
-        `How would you contribute to our ${company.industry} industry goals?`,
-        `Describe a challenge in your previous role and how you overcame it.`,
-        `How do your skills align with our expectation of ${company.expectations[0]}?`
-      ],
-      currentQuestion: 0
-    };
-    
-    setActiveRoleplay(newRoleplay);
-    setRoleplayQuestion(newRoleplay.questions[0]);
-    setRoleplayTimer(newRoleplay.timePerQuestion);
-    setTimerRunning(true);
-    setRoleplayMode(true);
-    setRoleplaySetupOpen(false);
-    
-    // Add system message indicating the roleplay start
-    const roleplayStartMessage = {
-      role: 'system',
-      content: `Starting interview roleplay for ${roleplayConfig.jobRole} position at ${company.name}. Difficulty: ${roleplayConfig.difficulty}, Pressure: ${roleplayConfig.pressure}`,
-      timestamp: new Date().toISOString()
-    };
-    
-    // Add interviewer message
-    const interviewerMessage = {
-      role: 'assistant',
-      content: `I'll be interviewing you as a hiring manager from ${company.name}. ${
-        roleplayConfig.pressure === 'high' 
-          ? "Your time is limited, and I'll be evaluating your clarity, impact, and alignment with our company values." 
-          : "Let's have a conversation about your experience and fit for the role."
-      }\n\nFirst question: ${newRoleplay.questions[0]}`,
-      timestamp: new Date().toISOString()
-    };
-    
-    setMessages((prevMessages) => [...prevMessages, roleplayStartMessage, interviewerMessage]);
-  };
-  
-  // Next roleplay question
-  const nextRoleplayQuestion = () => {
-    if (!activeRoleplay) return;
-    
-    const nextQuestionIndex = activeRoleplay.currentQuestion + 1;
-    
-    if (nextQuestionIndex < activeRoleplay.questions.length) {
-      const updatedRoleplay = {
-        ...activeRoleplay,
-        currentQuestion: nextQuestionIndex
+        const aiResponse = {
+        type: 'ai',
+        text: generateAIResponse(questionText),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       
-      setActiveRoleplay(updatedRoleplay);
-      setRoleplayQuestion(updatedRoleplay.questions[nextQuestionIndex]);
-      setRoleplayTimer(updatedRoleplay.timePerQuestion);
-      setTimerRunning(true);
+          setMessages(prevMessages => [...prevMessages, aiResponse]);
+      setIsLoading(false);
+    }, 1500);
+  };
+  
+  // Simulate AI response based on question
+  const generateAIResponse = (question) => {
+    // In a real app, this would be an API call to your AI service
+    const responses = {
+      "Tell me about yourself and your experience.": 
+        "When answering this question, focus on sharing a brief professional summary followed by your most relevant accomplishments. Keep it concise (60-90 seconds) and tailor it to the position. Avoid reciting your entire resume or sharing overly personal information. Instead, highlight your unique value proposition and end with why you're excited about this opportunity.",
       
-      // Add interviewer message with next question
-      const interviewerMessage = {
-        role: 'assistant',
-        content: updatedRoleplay.questions[nextQuestionIndex],
-        timestamp: new Date().toISOString()
-      };
+      "What are your greatest strengths as a professional?": 
+        "When discussing your strengths, choose 2-3 that are directly relevant to the job. For each strength, provide a specific example that demonstrates how you've used it effectively. Focus on qualities that add value to the organization, and make sure they align with the job requirements. Be authentic but not arrogant, and avoid generic answers like 'I'm a hard worker.'",
       
-      setMessages((prevMessages) => [...prevMessages, interviewerMessage]);
-    } else {
-      // End of roleplay
-      endRoleplay();
+      "What do you consider to be your weaknesses?": 
+        "The best approach to this question is to mention a genuine weakness that isn't critical to the job, explain how you recognized it, and describe the specific steps you're taking to improve. Show self-awareness and a commitment to growth. Avoid the 'strengths disguised as weaknesses' approach (like 'I work too hard') or claiming you have no weaknesses.",
+      
+      "Why are you interested in this position?": 
+        "Your answer should demonstrate that you've researched the company and understand the role. Explain how your skills and experience align with the position's requirements, and show enthusiasm for the company's mission, culture, or products. Be specific about what attracts you to this particular role and organization, rather than giving generic reasons that could apply anywhere.",
+      
+      "Where do you see yourself in 5 years?": 
+        "When answering this question, show ambition while remaining realistic and relevant to the role. Discuss how you hope to grow and develop within the organization, taking on more responsibilities that align with both the company's needs and your career goals. Avoid mentioning goals that have nothing to do with the position or suggesting you plan to leave quickly.",
+      
+      // Adaptability questions
+      "Describe a time when you had to learn something entirely new in 24 hours.": 
+        "When answering this question, emphasize the urgency of the situation and your approach to rapid learning. Start by explaining the context—what you needed to learn and why the timeframe was so tight. Outline your prioritization strategy: how you identified the most critical aspects to focus on first. Describe your learning methods: what resources you used, how you practiced, and how you sought feedback. Include a specific example like: 'At my internship, I had to present a Power BI dashboard with only 24 hours to learn the tool. I focused first on understanding the data structure, then quickly learned essential charts through tutorials, avoiding complex customizations to save time. I delivered a clean dashboard that met all requirements, and my manager later asked me to document my process for other interns.'",
+      
+      "Tell me about a situation when project priorities shifted unexpectedly.": 
+        "This question tests your flexibility and ability to re-prioritize under pressure. Begin by describing the original project and its priorities, then explain what caused the sudden shift. Detail your response: how you remained calm, reassessed tasks based on new priorities, and communicated changes to stakeholders. Focus on your methodical approach: how you reorganized resources, adjusted timelines, and maintained team focus during the transition. Include a specific outcome like: 'While coordinating a marketing campaign, our VP suddenly shifted focus to a new product launch. I immediately held a team meeting to realign priorities, reassigned roles based on strengths, and updated our project timeline. We successfully launched the product on time, and the team appreciated the clear communication during the change.'",
+      
+      "As a team leader, how have you helped your team adapt to a major organizational change?": 
+        "This leadership question assesses your change management skills. Describe a significant organizational change (restructuring, new technology, merger) and its potential impact on your team. Focus on your proactive leadership: how you communicated transparently about the change, addressed concerns, and provided a clear vision of the future state. Detail your support strategies: how you offered additional training, created new processes, or adjusted goals to facilitate the transition. Include specific results: 'During a company-wide restructuring, I held regular forums to address concerns, organized training sessions for new systems, and redefined our team goals to align with the new organization. As a result, our team maintained productivity throughout the transition and even exceeded performance targets under the new structure.'",
+      
+      // Critical Thinking questions
+      "Share an example of a problem that required you to think critically.": 
+        "This question assesses your analytical approach to problem-solving. Select a meaningful problem that showcases your reasoning process. Describe the situation clearly, then walk through your systematic approach: how you gathered relevant information, identified potential causes, developed multiple solutions, evaluated options using clear criteria, and implemented your chosen solution. Focus on your thought process rather than just outcomes. Include measurable results: 'During a class project, our prototype wasn't functioning correctly. I systematically tested each component, identified a sensor calibration error through process of elimination, adjusted the settings based on manufacturer specifications, and got our device working perfectly. This methodical approach earned us the highest grade and taught me the value of breaking complex problems into testable components.'",
+      
+      "Describe a complex work problem and how you analyzed it to find a solution.": 
+        "This question explores your structured analytical process in a professional context. Begin by clearly defining the complex problem and why standard approaches were insufficient. Detail your analytical methodology: how you gathered and organized relevant data, identified patterns or root causes, generated alternative solutions, and evaluated options against clear criteria. Focus on the systematic nature of your approach rather than intuition. Include specific metrics: 'As a supply chain analyst, I investigated recurring delivery delays by mapping the entire process and analyzing time data at each stage. This revealed that production scheduling was the primary bottleneck. I proposed adjusting inventory forecasts and implementing new scheduling protocols, which improved on-time deliveries by 30% within three months.'",
+      
+      "Give an example of using data to change someone's mind or improve a decision.": 
+        "This question examines your ability to leverage data for persuasive purposes. Describe a situation where opinions or intuition were initially guiding a decision. Explain your data-driven approach: how you identified relevant metrics, collected and analyzed information, and presented compelling evidence. Focus on how you communicated your findings effectively to influence others, addressing potential objections. Include tangible results: 'At my previous company, I convinced management to refactor an underperforming software module by presenting performance benchmarks, error rate trends, and user feedback data. I created visualizations that clearly showed the performance issues and potential ROI of refactoring. After implementing the changes based on my data-driven recommendation, application speed improved by 20% and error rates dropped significantly.'",
+      
+      // Innovation questions
+      "Describe a creative idea you suggested that improved a process.": 
+        "This question examines your innovative thinking in practical situations. Begin by explaining the existing process and its limitations. Then describe your creative insight: what inspired it and why it was different from conventional approaches. Detail how you developed and presented your idea, addressing potential resistance or skepticism. Include specific improvements: 'At my internship, I noticed our team spent hours manually compiling social media analytics. I proposed using interactive polls to engage customers instead of just static posts, creating a dashboard that automatically aggregated results. This creative approach not only saved 5 hours weekly but also increased customer engagement by 40%. The department later adopted this method for all campaigns, showing how a fresh perspective can transform routine processes.'",
+      
+      "Tell me about a product or process improvement you initiated at work.": 
+        "This question assesses your proactive approach to innovation. Start by identifying the product or process that needed improvement and how you recognized this opportunity. Explain your systematic approach: how you researched potential solutions, developed your improvement plan, and secured necessary support from stakeholders. Detail the implementation process, including how you overcame obstacles. Include measurable impact: 'As a logistics coordinator, I noticed our manual data entry process was error-prone and time-consuming. I researched options and designed a custom spreadsheet macro that automated the most repetitive tasks. After testing and refining the solution, I trained the team on the new system. This initiative reduced processing time by 20 hours weekly, improved data accuracy by 95%, and was subsequently adopted by other departments.'",
+      
+      "What is the most innovative project you've led, and how did you foster creativity?": 
+        "This leadership question explores how you cultivate innovation in teams. Begin by describing the innovative project, explaining what made it unique or groundbreaking. Then focus on your leadership approach: how you created psychological safety for creative risk-taking, facilitated effective brainstorming, encouraged diverse perspectives, and balanced creativity with practical execution. Detail specific techniques you used to overcome creative blocks or resistance. Include tangible outcomes: 'As a product director, I led an AR app development that allowed customers to visualize products in their homes. To foster creativity, I organized cross-functional innovation workshops, implemented a 'no criticism' rule during ideation, and created a rapid prototyping process to test ideas quickly. I also established regular 'demo days' where team members could showcase experimental features. This approach not only resulted in a flagship product that increased customer engagement by 50% but also created a collaborative innovation culture that continued beyond the project.'",
+      
+      // Prioritization questions
+      "How do you manage your time when facing multiple assignments or deadlines?": 
+        "When managing multiple deadlines, focus on your systematic approach to prioritization. Explain how you assess tasks based on urgency, importance, and alignment with key goals. Describe your organizational tools and techniques, such as creating detailed to-do lists, using time-blocking in your calendar, or employing the Eisenhower Matrix to distinguish between urgent and important tasks. Include how you build in buffer time for unexpected issues and regularly reassess priorities as circumstances change. Provide a specific example of how this approach helped you successfully manage competing deadlines.",
+      
+      "Describe a time when conflicting priorities forced you to choose one task over another.": 
+        "When answering this question, demonstrate your decision-making process under pressure. Describe a specific situation with genuinely competing priorities where you couldn't do both tasks. Explain the criteria you used to make your decision—such as business impact, stakeholder needs, resource requirements, and strategic importance. Detail how you communicated your decision to affected parties, managed expectations, and mitigated any negative consequences of the deprioritized task. Focus on showing that you made a thoughtful, well-reasoned choice rather than just picking the easier option.",
+      
+      "As a manager, how do you balance strategic initiatives with day-to-day operations?": 
+        "This question tests your ability to manage both long-term vision and immediate needs. Explain your approach to time allocation, such as dedicating specific days or time blocks to strategic planning versus operational management. Describe your delegation strategy—how you develop team members' capabilities to handle routine operations while creating space for strategic thinking. Emphasize your communication methods for connecting daily activities to long-term objectives, so your team understands how their work contributes to the bigger picture. Include how you measure success in both areas to ensure neither is neglected.",
+      
+      // Communication questions
+      "How do you ensure your message is clear when explaining technical details to non-technical people?": 
+        "When explaining technical concepts to non-technical audiences, focus on using simple language, relevant analogies, and visual aids. Start by assessing your audience's baseline knowledge and adjust accordingly. Avoid jargon and acronyms, or define them clearly if necessary. Use concrete examples that relate to their experience, and check for understanding throughout your explanation. For instance, when explaining a complex database structure, you might compare it to an organized library system that the audience is familiar with.",
+      
+      "Describe how you handled a situation where a customer was frustrated by a product issue.": 
+        "When handling a frustrated customer, demonstrate empathy, active listening, and problem-solving skills. Begin by acknowledging their frustration without becoming defensive. Ask clarifying questions to fully understand the issue, and maintain a calm, professional demeanor throughout. Clearly communicate the steps you'll take to resolve the problem, set realistic expectations about timeline and solutions, and follow up to ensure satisfaction. In your answer, include how you turned the negative situation into a positive customer experience.",
+      
+      "How do you adjust your communication style when working with an international team?": 
+        "When working with international teams, demonstrate cultural awareness and communication flexibility. Explain how you use clear, simple language free of idioms and slang, provide written summaries after verbal discussions, and respect time zone differences when scheduling meetings. Mention how you research cultural communication norms before engaging with international colleagues and modify your approach accordingly. Include how these adaptations have led to more effective collaboration and stronger team relationships.",
+      
+      // Self-Awareness questions
+      "What is one area you've identified for improvement, and what steps are you taking?": 
+        "When discussing self-improvement, choose a genuine development area that's relevant but not critical to the job. Explain how you identified this improvement need—whether through feedback, self-assessment, or performance evaluation. Detail your specific action plan, including resources you're using, mentorship you've sought, or training you're undergoing. Describe how you're measuring progress and any improvements already achieved. Show that you view professional development as ongoing, and that you're proactive rather than waiting for others to highlight your weaknesses.",
+      
+      "Describe a failure you experienced and what you learned from it.": 
+        "When discussing failure, choose a genuine professional setback and demonstrate accountability without making excuses. The focus should be on your response to the failure: how you analyzed what went wrong, the specific lessons you extracted, and most importantly, how you applied those insights to improve your future performance. End with a tangible example of how this learning experience made you more effective, showing that you view failures as growth opportunities. This demonstrates resilience, self-awareness, and a commitment to continuous improvement.",
+      
+      "How do you proactively seek feedback, and how has it helped you improve?": 
+        "When answering this question, demonstrate your commitment to continuous improvement through external input. Describe your systematic approach to gathering feedback from diverse sources—managers, peers, direct reports, and clients. Explain how you create conditions where people feel comfortable giving honest feedback, such as asking specific questions rather than general ones. Detail your process for analyzing feedback patterns and distinguishing between actionable insights and outlier opinions. Include a specific example of how you implemented feedback to improve a skill or process, showing that you not only collect input but actually act on it.",
+      
+      // UAE questions
+      "How do your personal goals align with the UAE Vision 2030?": 
+        "This question assesses your knowledge of national priorities and your ability to connect personal ambitions with national progress. Start by demonstrating your understanding of key UAE Vision 2030 pillars—knowledge economy, sustainability, and innovation. Then articulate how your career goals contribute to these national objectives. Be specific about which aspect of the vision you're most passionate about, whether it's digital transformation, renewable energy, or cultural preservation. For example: 'My goal to become an AI engineer directly supports the UAE's vision of creating a knowledge-based economy. I'm currently developing smart city solutions that align with the Smart Government pillar of Vision 2030, helping create more efficient public services while reducing environmental impact.'",
+      
+      "What's your perspective on Emiratization, and how do you see yourself contributing?": 
+        "This question explores your understanding of national workforce development priorities. Begin by acknowledging the importance of building local capacity and empowering Emirati talent. Describe specific ways you contribute or would contribute, such as mentoring, knowledge transfer, or skills development. Show that you view Emiratization as a strategic advantage rather than merely a quota. Include a concrete example like: 'I volunteered to lead workshops teaching coding basics to fellow Emiratis at my university. By raising digital literacy within local communities, I'm directly supporting Emiratization goals while helping build the technical foundation needed for our knowledge economy. I believe sustainable development requires cultivating expertise locally rather than relying indefinitely on imported talent.'",
+      
+      "How would you use your skills to help the UAE achieve sustainability goals?": 
+        "This question tests your awareness of UAE's environmental commitments, particularly Net Zero 2050, and your ability to apply your expertise to sustainability challenges. Begin by acknowledging the UAE's leadership in sustainable development. Then propose a specific application of your skills to environmental goals—whether through green technology, optimizing resource consumption, or creating awareness. Include a practical example: 'As a data scientist, I would apply machine learning to optimize energy consumption in commercial buildings. I've already built a prototype sensor system for my university that reduced electricity usage by 15%. By scaling this approach across government buildings, we could significantly reduce carbon emissions while generating data to support the UAE's climate action commitments. This directly contributes to both Smart City initiatives and Net Zero 2050 targets.'",
+      
+      "UAE ranks high in innovation. How would you help sustain that position?": 
+        "This question assesses your understanding of the UAE's innovation ecosystem and your potential contribution to it. Begin by acknowledging the UAE's achievements in global innovation rankings. Then focus on how your specific expertise can contribute to continued innovation leadership, whether through research, entrepreneurship, or process improvements. Reference relevant national innovation programs or hubs. Include a specific example: 'I would help maintain the UAE's innovation leadership by developing Arabic-language AI tools that fill regional technology gaps. My current project on Arabic text summarization addresses a specific need in the region's media and educational markets. By creating technology tailored to local requirements rather than importing solutions, we can establish the UAE as not just an adopter but a creator of cutting-edge technology, enhancing our position in global innovation indexes.'",
+      
+      "How have UAE youth programs helped shape your career?": 
+        "This question explores your engagement with national talent development initiatives. Start by referencing specific UAE youth programs—whether the Arab Youth Center, Youth Hubs, or other government initiatives—that have influenced your development. Explain how these programs provided skills, networks, or opportunities that shaped your career trajectory. Show appreciation for the investment in youth while demonstrating how you've leveraged these opportunities meaningfully. Include a specific example: 'The Arab Youth Fellowship introduced me to the intersection of policy and technology, opening my eyes to career paths I hadn't considered. Through mentorship and hands-on projects, I developed an interest in AI ethics, which now forms the foundation of my research in responsible government AI systems. These programs don't just provide theoretical knowledge but create practical pathways for youth to contribute to national development.'",
+      
+      "How can technology help preserve Emirati heritage?": 
+        "This question assesses your ability to bridge innovation with cultural preservation. Begin by acknowledging the importance of Emirati heritage and traditions to national identity. Then propose specific technological approaches that can document, digitize, or revitalize cultural elements—from language to crafts, architecture to oral traditions. Focus on both preservation and accessibility for future generations. Include a specific example: 'I'm working on developing an augmented reality application that allows users to virtually explore traditional pearl diving techniques or ancient craft-making. By digitizing these practices with input from cultural experts, we create an engaging way for younger generations to connect with their heritage. This technology doesn't replace traditional cultural transmission but complements it by making heritage accessible through platforms that youth already use daily.'",
+      
+      "What role does AI play in transforming UAE's education sector?": 
+        "This question tests your understanding of AI applications in education and the UAE's education transformation goals. Begin by acknowledging national educational priorities like personalized learning, digital literacy, and future skills development. Then explain how AI can address specific educational challenges through adaptive learning, automated assessment, educational chatbots, or learning analytics. Reference relevant UAE educational initiatives when possible. Include a specific example: 'I've designed an AI-powered tutoring system that helps students practice mathematical concepts in both Arabic and English, providing immediate feedback and adapting difficulty based on performance. This aligns with the UAE's Smart Learning goals by providing personalized education that meets individual learner needs while respecting cultural and linguistic context. Such technology can help prepare students for a knowledge economy while improving educational outcomes across diverse learning needs.'",
+      
+      "How do you see yourself contributing to UAE's government digital transformation?": 
+        "This question explores your understanding of UAE's smart government initiatives and your potential contribution. Begin by acknowledging key governmental digital transformation programs like TAMM, Dubai Now, or UAE Pass. Then outline specific ways your skills could enhance public service delivery, citizen engagement, or government efficiency. Show awareness of both technical considerations and user needs. Include a specific example: 'I would contribute to digital transformation by improving accessibility of government platforms like the UAE Pass. My background in natural language processing could help implement voice interfaces in Arabic dialects, making digital services accessible to elderly citizens or those with limited literacy. This advances the premise that digital government should be inclusive and available to all segments of society, aligning with the UAE's goal of achieving 100% digital government services.'",
+      
+      "What role should AI play in UAE's emergency response systems?": 
+        "This question assesses your understanding of critical infrastructure and AI's potential in crisis management. Begin by acknowledging the UAE's investments in safety and security. Then explain how AI can enhance emergency preparedness, detection, response, or recovery through predictive analytics, real-time monitoring, resource optimization, or automated alerts. Balance technological possibilities with ethical considerations. Include a specific example: 'I would develop an AI system that integrates data from social media, weather forecasts, and IoT sensors to provide early warning of flooding in urban areas. The system would filter misinformation during emergencies and provide verified, localized alerts to residents. This supports the UAE's commitment to deploying technology for public safety while ensuring resilience against increasing climate-related events. The key is creating systems that augment human decision-making rather than replacing it during critical situations.'",
+      
+      "How do you ensure ethical AI in the UAE context?": 
+        "This question tests your awareness of responsible AI practices in the local context. Begin by referencing UAE's AI ethics principles or relevant regulatory frameworks. Then outline specific approaches to building ethical AI systems—addressing fairness, transparency, privacy, and cultural context. Show understanding of both technical safeguards and governance structures. Include a specific example: 'I incorporate ethical considerations from the design phase by using SHAP (SHapley Additive exPlanations) in model testing to detect potential biases in features, particularly those that might affect different demographic groups in the UAE's diverse population. I would advocate for making this type of analysis mandatory for all government AI systems to ensure equitable decisions. Additionally, I believe in creating diverse development teams that include cultural and linguistic experts to ensure AI systems respect local cultural norms and values while serving all segments of society.'",
+      
+      "How can the UAE encourage more women in AI and tech fields?": 
+        "This question explores your understanding of gender diversity in technology within the UAE context. Begin by acknowledging the UAE's progress in women's empowerment while recognizing remaining challenges in tech fields specifically. Then propose concrete strategies to increase women's participation—through education, mentorship, policy, workplace culture, or visibility initiatives. Balance institutional and grassroots approaches. Include a specific example: 'I volunteer with coding clubs for high school girls, helping create early technical foundation and confidence. For the UAE to lead in this area, we could implement mentorship programs connecting female university students with women already successful in tech roles, while ensuring tech companies adopt flexible policies that accommodate family responsibilities. Highlighting Emirati women already excelling in technology through media campaigns would create visible role models and change perceptions about who belongs in tech fields. These combined approaches would strengthen national talent development while advancing gender equality goals.'",
+      
+      "How important is Arabic NLP for the UAE's tech future?": 
+        "This question tests your understanding of language technology in the local context. Begin by acknowledging the cultural and practical importance of Arabic language in the region. Then explain the strategic value of developing Arabic natural language processing capabilities—for digital sovereignty, accessibility, cultural preservation, and market opportunities. Balance technological aspects with social impact. Include a specific example: 'I've worked on fine-tuning an Arabic sentiment analysis model for local social media and news, achieving significantly better results than general-purpose models trained primarily on Western data. Developing robust Arabic NLP is critical for the UAE not just for practical applications like virtual assistants and customer service, but as a matter of digital sovereignty. It ensures we can build technology that truly serves our population without losing linguistic and cultural nuance. Leading in Arabic language AI also creates commercial opportunities across the MENA region's 400 million Arabic speakers, positioning the UAE as a key player in this specialized field.'",
+      
+      "What role can AI play in supporting UAE's smart transportation goals?": 
+        "This question examines your understanding of mobility challenges and the UAE's smart transportation vision. Begin by referencing relevant UAE transportation initiatives like Dubai Autonomous Transportation Strategy or RTA smart mobility projects. Then explain how AI can enhance transportation through traffic optimization, safety improvements, maintenance prediction, or passenger experience enhancements. Balance innovation with practical implementation considerations. Include a specific example: 'I designed a predictive model that uses GPS data and historical patterns to forecast traffic congestion 30 minutes in advance with 85% accuracy. This could be integrated with RTA systems to dynamically reroute public buses and provide real-time guidance to drivers, potentially reducing commute times and emissions. As the UAE moves toward autonomous vehicles, such AI systems create the intelligent infrastructure layer needed for safe operation. The key is implementing these technologies to complement human needs rather than forcing behavioral changes—making transportation more intuitive, efficient, and accessible to all residents.'",
+      
+      "How would you use AI to build a startup that serves UAE society?": 
+        "This question assesses your entrepreneurial thinking and social impact orientation. Begin by identifying a specific challenge or opportunity in UAE society that's suitable for an AI solution. Then outline your startup concept—the problem, solution, technology approach, and potential impact. Show awareness of market realities while emphasizing social benefit. Include a specific example: 'I would create an AI-powered platform that matches job seekers with training opportunities based on personalized skill gaps analysis and emerging industry needs. The platform would offer services in Arabic and English, analyzing both current job market data and future projections from economic planning documents to recommend specific educational paths. This addresses the national priority of workforce development while helping individuals make more informed career decisions. The business model would combine government partnerships for placement metrics with subscription services for continuous learning, creating sustainable impact while supporting Emiratization and economic diversification goals.'",
+      
+      "How can UAE ensure digital inclusion for all citizens?": 
+        "This question explores your understanding of accessibility and equitable technology. Begin by acknowledging potential digital divides—whether related to age, ability, language, geography, or socioeconomic factors. Then propose specific approaches to ensure universal digital access through infrastructure, design, education, or policy interventions. Balance technological solutions with human-centered considerations. Include a specific example: 'I've worked on developing voice-enabled applications with Arabic dialect recognition to make digital government services accessible to elderly citizens and those with limited literacy or visual impairments. To achieve true digital inclusion, the UAE should focus on three areas: adaptive interfaces that accommodate diverse needs, digital literacy programs targeting underserved populations, and affordable connectivity solutions for remote regions. This human-centered approach ensures technology advancement benefits all segments of society rather than reinforcing existing advantages, supporting the UAE's commitment to leaving no one behind in its digital transformation.'",
+      
+      "How could you use emerging technologies to enhance tourism in the UAE?": 
+        "This question assesses your creative application of technology to a major economic sector. Begin by acknowledging tourism's importance to the UAE economy and current technological trends. Then propose innovative applications of technologies like AR/VR, AI, blockchain, or IoT to enhance visitor experiences, cultural understanding, logistical efficiency, or personalization. Balance novelty with practical implementation considerations. Include a specific example: 'I would develop an immersive VR experience that allows virtual tours of historical sites like Al Fahidi district, with interactive elements explaining cultural significance in multiple languages. This technology could be deployed in museums, hotels, and tourism offices, while also being accessible remotely to potential visitors worldwide. The application would combine historical accuracy with engaging storytelling techniques, potentially increasing interest in cultural tourism and education while preserving digital records of heritage sites. By blending virtual and physical tourism experiences, we can create more memorable, accessible visitor journeys while encouraging deeper appreciation of Emirati culture.'",
+      
+      "What's your view on managing sensitive data in AI systems in the UAE?": 
+        "This question tests your understanding of data privacy, sovereignty, and security in the local context. Begin by referencing relevant UAE data protection regulations and principles. Then explain your approach to responsible data management—addressing collection, storage, processing, sharing, and disposal considerations. Balance innovation needs with privacy and security imperatives. Include a specific example: 'I believe in applying privacy-by-design principles from the outset, particularly for health or financial applications. For example, I've implemented federated learning techniques for healthcare AI that allows model training across multiple hospitals without sharing sensitive patient data. For the UAE context, I advocate maintaining data sovereignty by hosting critical information within national borders while implementing strong encryption and access controls. This is particularly important as we build smart city infrastructure, where the volume of citizen data collected requires robust governance frameworks that reflect both international best practices and local cultural values regarding privacy.'",
+      
+      "How can blockchain improve trust in public services?": 
+        "This question explores your understanding of blockchain applications beyond cryptocurrency. Begin by referencing relevant UAE blockchain initiatives like the Dubai Blockchain Strategy. Then explain how blockchain can enhance public services through immutable record-keeping, transparent processes, reduced intermediaries, or citizen ownership of data. Balance technological capabilities with implementation considerations. Include a specific example: 'I would implement blockchain for land registry and property transactions, creating an immutable, transparent record system that reduces disputes and simplifies verification. Citizens could access their property documents instantly through a secure digital identity, while government departments would have a single source of truth for property ownership. This aligns with Dubai's goal of becoming the first blockchain-powered government by increasing efficiency, reducing paper waste, and enhancing trust in fundamental services. The key to successful implementation is ensuring an intuitive user experience that makes the underlying technology invisible to citizens while delivering tangible benefits in transaction speed and security.'",
+      
+      "How should UAE prepare its digital infrastructure for the future of remote work?": 
+        "This question assesses your understanding of digital transformation for workforce flexibility. Begin by acknowledging the acceleration of remote work trends and the UAE's positioning as a digital business hub. Then outline critical infrastructure components needed—from connectivity and cybersecurity to digital identity verification and collaboration tools. Balance technological needs with policy and cultural considerations. Include a specific example: 'I would prioritize implementing a robust digital identity framework that enables secure verification for remote onboarding and official processes. This would support both government services and private sector employment, allowing seamless authentication while maintaining appropriate security protocols. Additionally, investing in cybersecurity infrastructure with AI-powered threat detection is essential as more work moves online. The UAE has the opportunity to become a global leader in remote work infrastructure by creating digital free zones with specialized regulatory frameworks and technical support for distributed teams, attracting global talent while maintaining security standards appropriate for sensitive information.'",
+      
+      "What is one AI solution you would deploy to solve a UAE-specific societal issue?": 
+        "This question tests your ability to apply AI to local challenges. Begin by identifying a specific challenge relevant to UAE society—whether related to healthcare, education, environment, or public services. Then propose a focused AI solution, explaining the approach, expected impact, and implementation considerations. Balance innovation with cultural sensitivity and practical constraints. Include a specific example: 'I would develop an AI system to predict and reduce food waste in hospitality and retail, a significant issue given the UAE's large tourism and service industry. The system would analyze historical sales data, upcoming events, and even weather patterns to optimize purchasing and identify surplus food for redistribution to food banks before it expires. This addresses both sustainability goals by reducing waste sent to landfills and supports community welfare initiatives. The solution could integrate with existing inventory systems and would require collaboration between technology providers, businesses, and non-profits to create the necessary redistribution network. This approach transforms an environmental challenge into a community benefit while supporting multiple national priorities.'",
+    };
+    
+    return responses[question] || 
+      "That's an excellent question. When preparing your answer, focus on being concise, authentic, and relevant to the position. Use the STAR method (Situation, Task, Action, Result) for behavioral questions, and provide specific examples from your experience. Tailor your response to highlight skills and qualities the employer is seeking, and practice your answer beforehand without memorizing it word-for-word.";
+  };
+
+  // Scroll to bottom when messages update
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  };
-  
-  // End roleplay
-  const endRoleplay = () => {
-    setRoleplayMode(false);
-    setActiveRoleplay(null);
-    setTimerRunning(false);
-    
-    // Add system message indicating the roleplay end
-    const roleplayEndMessage = {
-      role: 'system',
-      content: 'Interview roleplay completed.',
-      timestamp: new Date().toISOString()
-    };
-    
-    // Add feedback message
-    const feedbackMessage = {
-      role: 'assistant',
-      content: "Thank you for completing the interview roleplay. Here's a summary of your performance:\n\n" +
-        "Strengths:\n" +
-        "• You provided detailed answers with specific examples\n" +
-        "• Your responses were well-structured\n" +
-        "• You demonstrated good knowledge of the role\n\n" +
-        "Areas for improvement:\n" +
-        "• Try to be more concise in some answers\n" +
-        "• Emphasize more on relevant achievements\n" +
-        "• Demonstrate more company-specific knowledge\n\n" +
-        "Would you like to try another roleplay or focus on specific questions?",
-      timestamp: new Date().toISOString()
-    };
-    
-    setMessages((prevMessages) => [...prevMessages, roleplayEndMessage, feedbackMessage]);
-  };
-  
-  // Handle vocabulary suggestion click
-  const handleVocabSuggestionClick = (word) => {
-    setInputMessage(prev => {
-      // Find a weak word to replace, or just append
-      const weakWords = ['did', 'made', 'worked', 'good', 'helped', 'tried', 'thought', 'got', 'handled'];
-      for (const weakWord of weakWords) {
-        if (prev.toLowerCase().includes(` ${weakWord} `)) {
-          return prev.replace(new RegExp(`\\b${weakWord}\\b`, 'i'), word);
-        }
-      }
-      return `${prev} ${word}`;
-    });
-    
-    // Reset suggestions
-    setSuggestedVocabulary([]);
-  };
-  
-  // Render coach selection component
-  const renderCoachSelection = () => {
+  }, [messages]);
+
     return (
-      <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2, background: 'rgba(246, 248, 255, 0.8)' }}>
-        <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', textAlign: 'center', mb: 3 }}>
-          Choose Your Interview Coach
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+        AI Interview Assistant
         </Typography>
-        <Grid container spacing={3} justifyContent="center">
-          {coachPersonas.map((coach) => (
-            <Grid item xs={12} sm={6} md={3} key={coach.id}>
-              <Card 
-                sx={{ 
-                  cursor: 'pointer', 
-                  borderRadius: '16px',
-                  borderColor: selectedCoachPersona === coach.id ? 'primary.main' : 'transparent',
-                  borderWidth: 3,
-                  borderStyle: 'solid',
-                  transition: 'all 0.2s ease',
-                  boxShadow: selectedCoachPersona === coach.id ? '0 8px 20px rgba(25, 118, 210, 0.2)' : '0 4px 12px rgba(0,0,0,0.05)',
-                  '&:hover': {
-                    transform: 'translateY(-8px)',
-                    boxShadow: '0 12px 20px rgba(0,0,0,0.1)'
-                  },
-                  overflow: 'hidden'
-                }}
-                onClick={() => {
-                  // Provide visual feedback immediately
-                  setLoading(true);
-                  
-                  // Delay the API call slightly to ensure UI updates
-                  setTimeout(() => {
-                    try {
-                      changeCoachPersona(coach.id);
-                      setShowCoachSelection(false); // Close the selection after choosing
-                    } catch (error) {
-                      console.error("Error selecting coach:", error);
-                      setSnackbarMessage('Failed to select coach. Please try again.');
-                      setSnackbarOpen(true);
-                      setLoading(false);
-                    }
-                  }, 100);
-                }}
-              >
-                <Box sx={{ bgcolor: 'grey.200', height: 150, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                  <Typography variant="h1" sx={{ color: 'grey.400', fontSize: '5rem' }}>
-                    {coach.name.charAt(0)}
-                  </Typography>
-                </Box>
-                <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                  <Typography variant="h5" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
-                    {coach.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    {coach.title}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </Paper>
-    );
-  };
-  
-  // Render cultural context selector
-  const renderCulturalContextSelector = () => {
-    return (
-      <Paper elevation={2} sx={{ p: 2, mb: 3, borderRadius: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          UAE Job Sector Context 🇦🇪
-        </Typography>
-        <FormControl fullWidth size="small" sx={{ mb: 1 }}>
-          <InputLabel id="sector-context-label">Select Job Sector</InputLabel>
-          <Select
-            labelId="sector-context-label"
-            id="sector-context"
-            value={sectorContext}
-            label="Select Job Sector"
-            onChange={(e) => changeSectorContext(e.target.value)}
-          >
-            <MenuItem value="general">General UAE Context</MenuItem>
-            <MenuItem value="government">Government Sector</MenuItem>
-            <MenuItem value="tech">Technology Industry</MenuItem>
-            <MenuItem value="education">Education Sector</MenuItem>
-          </Select>
-          <FormHelperText>
-            Get culturally-relevant interview tips for your sector
-          </FormHelperText>
-        </FormControl>
-        
-        {showCulturalTips && (
-          <Box sx={{ mt: 2, p: 1.5, bgcolor: 'info.50', borderRadius: 1, border: '1px solid', borderColor: 'info.200' }}>
-            <Typography variant="subtitle2" sx={{ mb: 1, color: 'info.dark', fontWeight: 'bold' }}>
-              UAE Cultural Tips for {sectorContext.charAt(0).toUpperCase() + sectorContext.slice(1)} Sector:
-            </Typography>
-            <List dense disablePadding>
-              {uaeCulturalContext[sectorContext].map((tip, index) => (
-                <ListItem key={index} disablePadding sx={{ mb: 0.5 }}>
-                  <ListItemText 
-                    primary={tip} 
-                    primaryTypographyProps={{ 
-                      variant: 'body2', 
-                      color: 'info.dark' 
-                    }} 
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Box>
-        )}
-      </Paper>
-    );
-  };
-  
-  // Render feedback component - modified to include premium feedback
-  const renderFeedback = () => {
-    // Enhanced null check to avoid the error
-    if (!feedbackData || !feedbackData.responseLength) return null;
-    
-    return (
-      <Accordion sx={{ mb: 2, borderRadius: 1, overflow: 'hidden' }}>
-        <AccordionSummary
-          expandIcon={<ExpandMore />}
-          sx={{ bgcolor: feedbackSource === 'premium' ? 'secondary.50' : 'primary.50' }}
+      
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={handleTabChange} 
+          indicatorColor="primary"
+          textColor="primary"
+          sx={{ '& .MuiTab-root': { fontWeight: 600 } }}
         >
-          <Typography sx={{ display: 'flex', alignItems: 'center' }}>
-            <SportsScore sx={{ mr: 1 }} /> 
-            {feedbackSource === 'premium' ? 'Premium AI Analysis' : 'Performance Analysis'} 
-            {premiumAnalysisLoading && <CircularProgress size={16} sx={{ ml: 1 }} />}
-          </Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={usePremiumFeedback}
-                  onChange={(e) => setUsePremiumFeedback(e.target.checked)}
-                  color="secondary"
-                />
-              }
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ mr: 1 }}>Premium AI Feedback</Typography>
-                  {usePremiumFeedback && (
-                    <Chip 
-                      label="GPT-4 Powered" 
-                      size="small" 
-                      color="secondary" 
-                      variant="outlined" 
-                    />
-                  )}
-                </Box>
-              }
-            />
-            
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<Save />}
-              onClick={saveFeedbackToDashboard}
-              disabled={isSavingFeedback}
-            >
-              {isSavingFeedback ? 'Saving...' : 'Save to Dashboard'}
-            </Button>
-          </Box>
-          
-          {feedbackSource === 'premium' && feedbackData.premiumInsights && (
-            <Paper elevation={0} sx={{ p: 2, mb: 2, bgcolor: 'secondary.50', borderRadius: 1 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Premium GPT-4 Analysis
-              </Typography>
-              
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                  Soft Skills Assessment:
-                </Typography>
-                <Typography variant="body2">
-                  {feedbackData.premiumInsights.softSkills || 'Your communication style is clear and professional. Consider using more confident language to convey authority.'}
-                </Typography>
-              </Box>
-              
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                  STAR Pattern Analysis:
-                </Typography>
-                <Typography variant="body2">
-                  {feedbackData.premiumInsights.starPattern || 'Your answer includes some STAR elements but could be strengthened by clearly separating Situation, Task, Action, and Result sections.'}
-                </Typography>
-              </Box>
-              
-              <Box>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                  Suggested Improvements:
-                </Typography>
-                <Typography variant="body2">
-                  {feedbackData.premiumInsights.suggestions || 'Be more specific about measurable results. Replace phrases like "I think" with more confident statements like "I demonstrated" or "I achieved".'}
-                </Typography>
-              </Box>
-            </Paper>
-          )}
-          
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Response Length
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Box sx={{ width: '70%', mr: 1 }}>
-                    <LinearProgress 
-                      variant="determinate" 
-                      value={Math.min(100, (feedbackData.responseLength / 150) * 100)} 
-                      sx={{ height: 10, borderRadius: 5 }}
-                    />
-                  </Box>
-                  <Typography variant="body2">
-                    {feedbackData.responseLength} words
-                  </Typography>
-                </Box>
-              </Box>
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  STAR Compliance
-                </Typography>
-                <Rating 
-                  value={feedbackData.starCompliance} 
-                  readOnly 
-                  max={5}
-                  emptyIcon={<StarBorder fontSize="inherit" />}
-                />
-              </Box>
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  AI Confidence Analysis
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Box sx={{ width: '70%', mr: 1 }}>
-                    <LinearProgress 
-                      variant="determinate" 
-                      value={feedbackData.confidenceScore * 10} 
-                      color={feedbackData.confidenceScore > 7 ? "success" : feedbackData.confidenceScore > 4 ? "warning" : "error"} 
-                      sx={{ height: 10, borderRadius: 5 }}
-                    />
-                  </Box>
-                  <Typography variant="body2">
-                    {feedbackData.confidenceScore}/10
-                  </Typography>
-                </Box>
-              </Box>
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Job Keyword Match
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Box sx={{ width: '70%', mr: 1 }}>
-                    <LinearProgress 
-                      variant="determinate" 
-                      value={feedbackData.keywordMatchPercentage} 
-                      color={feedbackData.keywordMatchPercentage > 80 ? "success" : feedbackData.keywordMatchPercentage > 60 ? "warning" : "error"} 
-                      sx={{ height: 10, borderRadius: 5 }}
-                    />
-                  </Box>
-                  <Typography variant="body2">
-                    {feedbackData.keywordMatchPercentage}%
-                  </Typography>
-                </Box>
-              </Box>
-            </Grid>
-          </Grid>
-          
-          {feedbackData.starCompliance < 3 && (
-            <SmartTipCard 
-              icon={<Psychology />}
-              title="Pro Tip: Improve Your STAR Format"
-              text="Try reframing your answer using the STAR method: Situation, Task, Action, Result to provide more structure and clarity."
-              severity="warning"
-            />
-          )}
-          
-          {feedbackData.confidenceScore < 5 && (
-            <SmartTipCard 
-              icon={<Psychology />}
-              title="Confidence Booster"
-              text="Your language includes tentative phrases like 'I think' or 'maybe.' Try using more assertive language like 'I implemented' or 'I achieved.'"
-              severity="warning"
-            />
-          )}
-        </AccordionDetails>
-      </Accordion>
-    );
-  };
-  
-  // Render AI Knowledge Booster component
-  const renderKnowledgeBooster = () => {
-    if (!showKnowledgeBooster) return null;
-    
-    let title, icon;
-    
-    switch (boosterType) {
-      case 'examples':
-        title = "Sample Answers";
-        icon = <FormatQuote />;
-        break;
-      case 'strategy':
-        title = "Answer Strategy";
-        icon = <LocalLibrary />;
-        break;
-      case 'vocabulary':
-        title = "Power Words";
-        icon = <Brush />;
-        break;
-      default:
-        title = "AI Tips";
-        icon = <TipsAndUpdates />;
-    }
-    
-    return (
-      <Paper elevation={2} sx={{ p: 2, mb: 3, borderRadius: 2, bgcolor: 'background.paper' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', color: 'primary.main' }}>
-            {icon} <Box sx={{ ml: 1 }}>{title}</Box>
-          </Typography>
-          <IconButton size="small" onClick={() => setShowKnowledgeBooster(false)}>
-            <Cancel fontSize="small" />
-          </IconButton>
-        </Box>
-        <Divider sx={{ mb: 2 }} />
-        
-        {boosterType === 'vocabulary' ? (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {boosterContent.map((word, index) => (
-              <Chip 
-                key={index} 
-                label={word} 
-                color="primary" 
-                variant="outlined" 
-                onClick={() => setInputMessage(prev => prev + ' ' + word)} 
-                sx={{ cursor: 'pointer' }}
-              />
-            ))}
-          </Box>
-        ) : (
-          <List dense disablePadding>
-            {boosterContent.map((item, index) => (
-              <ListItem key={index} disablePadding sx={{ mb: 1 }}>
-                <ListItemText 
-                  primary={`${index + 1}. ${item}`} 
-                  primaryTypographyProps={{ variant: 'body2' }} 
-                />
-              </ListItem>
-            ))}
-          </List>
-        )}
-        
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-          <Button 
-            size="small" 
-            startIcon={<ContentCopy />}
-            onClick={() => {
-              if (boosterType === 'vocabulary') {
-                navigator.clipboard.writeText(boosterContent.join(', '));
-              } else {
-                navigator.clipboard.writeText(boosterContent.map((item, i) => `${i + 1}. ${item}`).join('\n'));
-              }
-              setSnackbarMessage('Copied to clipboard!');
-              setSnackbarOpen(true);
-            }}
-          >
-            Copy to Clipboard
-          </Button>
-        </Box>
-      </Paper>
-    );
-  };
-  
-  // Render behavioral pattern feedback
-  const renderBehavioralPatternFeedback = () => {
-    if (detectedPatterns.length === 0) return null;
-    
-    return (
-      <Box sx={{ mb: 3 }}>
-        {detectedPatterns.map((pattern, index) => (
-          <SmartTipCard 
-            key={index}
-            icon={<Face />}
-            title="Communication Pattern Detected"
-            text={pattern.feedback}
-            severity="info"
+          <Tab 
+            label="Interview Coach" 
+            icon={<School />} 
+            iconPosition="start" 
+            sx={{ mr: 2 }} 
           />
-        ))}
-      </Box>
-    );
-  };
-  
-  // Render vocabulary suggestions
-  const renderVocabularySuggestions = () => {
-    if (suggestedVocabulary.length === 0) return null;
-    
-    return (
-      <Box sx={{ mb: 2 }}>
-        <Paper
-          variant="outlined"
-          sx={{
-            p: 1.5,
-            borderRadius: 1,
-            borderColor: 'primary.light',
-            bgcolor: 'primary.50'
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Brush fontSize="small" color="primary" sx={{ mr: 1 }} />
-            <Typography variant="subtitle2" color="primary">
-              Suggested {vocabularyCategory === 'action' ? 'Action Verbs' : 'Result Words'}:
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-            {suggestedVocabulary.map((word, index) => (
-              <Chip
-                key={index}
-                label={word}
-                size="small"
-                color="primary"
-                variant="outlined"
-                onClick={() => handleVocabSuggestionClick(word)}
-                sx={{ cursor: 'pointer' }}
-              />
-            ))}
-            <Chip
-              icon={<MoreVert fontSize="small" />}
-              label="More"
-              size="small"
-              variant="outlined"
-              onClick={() => setVocabularyDialogOpen(true)}
-            />
-          </Box>
-        </Paper>
-      </Box>
-    );
-  };
-  
-  // Render roleplay timer
-  const renderRoleplayTimer = () => {
-    if (!roleplayMode || !timerRunning) return null;
-    
-    const timerColor = roleplayTimer > 10 ? 'success.main' : roleplayTimer > 5 ? 'warning.main' : 'error.main';
-    
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center',
-        justifyContent: 'center',
-        mb: 2,
-        p: 1,
-        bgcolor: 'background.paper',
-        borderRadius: 1,
-        boxShadow: 1
-      }}>
-        <Timer sx={{ color: timerColor, mr: 1 }} />
-        <Typography variant="h6" sx={{ color: timerColor, fontWeight: 'bold' }}>
-          {roleplayTimer}
-        </Typography>
-        <Typography variant="subtitle2" sx={{ ml: 1, color: 'text.secondary' }}>
-          seconds remaining
-        </Typography>
-      </Box>
-    );
-  };
-  
-  // Render roleplay setup dialog
-  const renderRoleplaySetupDialog = () => {
-    return (
-      <Dialog
-        open={roleplaySetupOpen}
-        onClose={() => setRoleplaySetupOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <BusinessCenter sx={{ mr: 1 }} />
-            AI Interview Roleplay Simulator
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ pb: 4 }}>
-          <Typography variant="subtitle1" color="text.secondary" paragraph sx={{ mt: 1 }}>
-            Customize your interview simulation to practice with specific companies and roles.
-          </Typography>
-          
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>
-                Company Selection
-              </Typography>
-              <FormControl fullWidth sx={{ mb: 3 }}>
-                <Autocomplete
-                  options={roleplayCompanies}
-                  getOptionLabel={(option) => typeof option === 'string' ? option : option.name}
-                  value={roleplayConfig.company}
-                  onChange={(e, newValue) => setRoleplayConfig(prev => ({ ...prev, company: newValue }))}
-                  renderInput={(params) => <TextField {...params} label="Select Company" />}
-                  isOptionEqualToValue={(option, value) => 
-                    option.id === value.id || option.name === value.name
-                  }
-                  renderOption={(props, option) => (
-                    <Box component="li" {...props} sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Avatar
-                        src={option.logo}
-                        alt={option.name}
-                        sx={{ width: 24, height: 24, mr: 1 }}
-                      />
-                      {option.name} - {option.industry}
-                    </Box>
-                  )}
-                />
-              </FormControl>
-              
-              {roleplayConfig.company && (
-                <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Company Expectations:
-                  </Typography>
-                  <List dense disablePadding>
-                    {typeof roleplayConfig.company === 'object' && roleplayConfig.company.expectations.map((exp, idx) => (
-                      <ListItem key={idx} sx={{ py: 0.5 }}>
-                        <ListItemText
-                          primary={exp}
-                          primaryTypographyProps={{ variant: 'body2' }}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Paper>
-              )}
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>
-                Job Role Details
-              </Typography>
-              <FormControl fullWidth sx={{ mb: 3 }}>
-                <Autocomplete
-                  options={jobRoles}
-                  getOptionLabel={(option) => typeof option === 'string' ? option : option.title}
-                  onChange={(e, newValue) => setRoleplayConfig(prev => ({ 
-                    ...prev, 
-                    jobRole: typeof newValue === 'string' ? newValue : newValue?.title || '' 
-                  }))}
-                  isOptionEqualToValue={(option, value) => 
-                    option.title === value.title || option.title === value
-                  }
-                  renderInput={(params) => <TextField {...params} label="Job Title" />}
-                  renderOption={(props, option) => (
-                    <Box component="li" {...props}>
-                      {option.title} - {option.field}
-                    </Box>
-                  )}
-                />
-              </FormControl>
-              
-              <Typography variant="subtitle1" gutterBottom>
-                Interview Settings
-              </Typography>
-              
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Difficulty</InputLabel>
-                    <Select
-                      value={roleplayConfig.difficulty}
-                      label="Difficulty"
-                      onChange={(e) => setRoleplayConfig(prev => ({ ...prev, difficulty: e.target.value }))}
-                    >
-                      <MenuItem value="easy">Easy</MenuItem>
-                      <MenuItem value="medium">Medium</MenuItem>
-                      <MenuItem value="hard">Hard</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                
-                <Grid item xs={12} sm={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Pressure</InputLabel>
-                    <Select
-                      value={roleplayConfig.pressure}
-                      label="Pressure"
-                      onChange={(e) => setRoleplayConfig(prev => ({ ...prev, pressure: e.target.value }))}
-                    >
-                      <MenuItem value="low">Low</MenuItem>
-                      <MenuItem value="medium">Medium</MenuItem>
-                      <MenuItem value="high">High</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                
-                <Grid item xs={12} sm={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Timer (sec)</InputLabel>
-                    <Select
-                      value={roleplayConfig.time}
-                      label="Timer (sec)"
-                      onChange={(e) => setRoleplayConfig(prev => ({ ...prev, time: e.target.value }))}
-                    >
-                      <MenuItem value={20}>20 sec</MenuItem>
-                      <MenuItem value={30}>30 sec</MenuItem>
-                      <MenuItem value={45}>45 sec</MenuItem>
-                      <MenuItem value={60}>60 sec</MenuItem>
-                      <MenuItem value={90}>90 sec</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-              </Grid>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setRoleplaySetupOpen(false)}>
-            Cancel
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={setupRoleplay}
-            startIcon={<PlayArrow />}
-            disabled={!roleplayConfig.company || !roleplayConfig.jobRole}
-          >
-            Start Roleplay
-          </Button>
-        </DialogActions>
-      </Dialog>
-    );
-  };
-  
-  // Render vocabulary dialog
-  const renderVocabularyDialog = () => {
-    return (
-      <Dialog
-        open={vocabularyDialogOpen}
-        onClose={() => setVocabularyDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Brush sx={{ mr: 1 }} />
-            Interview Power Vocabulary
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Tabs
-            value={vocabularyCategory}
-            onChange={(e, newValue) => setVocabularyCategory(newValue)}
-            sx={{ mb: 2 }}
-          >
-            <Tab label="Action Verbs" value="action" />
-            <Tab label="Result Words" value="result" />
-            <Tab label="Attributes" value="attribute" />
+          <Tab 
+            label="DeepSeek AI Chat" 
+            icon={<QuestionAnswer />} 
+            iconPosition="start" 
+          />
           </Tabs>
-          
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-            {powerVocabulary[vocabularyCategory].map((word, index) => (
-              <Chip
-                key={index}
-                label={word}
-                color="primary"
-                variant="outlined"
-                onClick={() => {
-                  handleVocabSuggestionClick(word);
-                  setVocabularyDialogOpen(false);
-                }}
-                sx={{ cursor: 'pointer' }}
-              />
-            ))}
           </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setVocabularyDialogOpen(false)}>
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-    );
-  };
-  
-  // Render missions component
-  const renderMissions = () => {
-    // This function is now empty because we're removing the Coaching Missions
-    return null;
-  };
-  
-  // Render AI Analysis Card - updated to use Hugging Face and DeepSeek
-  const renderAIAnalysis = () => {
-    return (
-      <Box sx={{ mt: 4, mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">AI-Powered Multi-Model Interview Analysis</Typography>
-          <Button 
-            variant="outlined" 
-            color="primary"
-            startIcon={showAnalysis ? <ExpandMore /> : <BarChart />}
-            onClick={() => setShowAnalysis(!showAnalysis)}
-          >
-            {showAnalysis ? 'Hide Analysis' : 'Get Multi-Model Analysis'}
-          </Button>
-        </Box>
-        
-        {showAnalysis && (
-          <Box sx={{ mt: 2 }}>
-            <AIRecommendationCard 
-              title="Multi-Provider Interview Analysis" 
-              description="Get a comprehensive analysis using OpenAI, Hugging Face, and DeepSeek models for different perspectives"
-              placeholder="Paste your interview transcript or summarize your interview answers here..."
-              type="interview"
-              modelOptions={[
-                { id: 'openai', name: 'OpenAI GPT-4', description: 'Comprehensive interview feedback with detailed suggestions' },
-                { id: 'huggingface', name: 'Hugging Face LLAMA-3', description: 'Strong reasoning about interview improvements' },
-                { id: 'deepseek', name: 'DeepSeek Coder', description: 'Specialized for technical interview responses' }
-              ]}
-              context="Analyze this interview content and provide detailed feedback on communication skills, answer structure, key strengths, and improvement areas. Include specific tips to help the candidate improve."
-              saveToDashboard={true}
-            />
-            
-            {/* Add new Role Fit Analysis */}
-            <Paper elevation={3} sx={{ mt: 3, p: 2, borderRadius: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                <Business sx={{ mr: 1, verticalAlign: 'middle' }} />
-                "Why You Fit This Role" Analysis
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Analyze your responses against specific job requirements to see why you're a good match for various roles.
+
+      {activeTab === 0 ? (
+        <>
+          <Typography variant="body1" paragraph sx={{ mb: 3 }}>
+            Practice your interview skills with our AI-powered coach. Select from the suggested questions or categories to get started.
               </Typography>
               
-              <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    select
-                    label="Select Job Role"
-                    value={roleFitAnalysis ? roleFitAnalysis.role : ''}
-                    onChange={(e) => generateRoleFitAnalysis(e.target.value)}
-                    SelectProps={{
-                      MenuProps: {
-                        PaperProps: {
-                          style: {
-                            maxHeight: 300
-                          }
-                        }
-                      }
-                    }}
-                  >
-                    {jobRoles.map((role) => (
-                      <MenuItem key={role.title} value={role.title}>
-                        {role.title} - {role.field}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ display: 'flex', height: '100%', alignItems: 'center' }}>
-                    <Button
-                      variant="contained"
-                      startIcon={<Business />}
-                      disabled={!userMessageHistory.length}
-                      onClick={() => generateRoleFitAnalysis()}
-                      sx={{ mr: 1 }}
-                    >
-                      Analyze Fit
-                    </Button>
-                    <FormControlLabel
-                      control={
-                        <Switch 
-                          checked={useDeepSeekForAnalysis} 
-                          onChange={() => setUseDeepSeekForAnalysis(!useDeepSeekForAnalysis)}
-                        />
-                      }
-                      label={
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Typography variant="body2">Use DeepSeek</Typography>
-                          {useDeepSeekForAnalysis && <Chip size="small" label="AI" color="secondary" sx={{ ml: 1 }} />}
-                        </Box>
-                      }
-                    />
-                  </Box>
-                </Grid>
-              </Grid>
-              
-              {roleFitAnalysis && (
-                <Box sx={{ mt: 2 }}>
+          {/* Main layout */}
+          <Grid container spacing={3}>
+            {/* Left sidebar with question categories and suggested questions */}
+            <Grid item xs={12} md={4}>
                   <Paper 
-                    variant="outlined"
+                elevation={3} 
                     sx={{
                       p: 2,
                       borderRadius: 2,
-                      bgcolor: 'background.paper',
-                      borderLeft: '4px solid',
-                      borderColor: 'primary.main'
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-                        <CheckCircle />
-                      </Avatar>
-                      <Box>
-                        <Typography variant="h6">
-                          {roleFitAnalysis.role}
+                  height: '100%',
+                  background: 'linear-gradient(to bottom, rgba(245,248,255,0.8), rgba(240,245,255,0.9))'
+                }}
+              >
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', color: 'primary.main' }}>
+                  <QuestionAnswer sx={{ mr: 1 }} color="primary" />
+                  Interview Questions
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Fit Score: <strong>{roleFitAnalysis.fitScore}%</strong> match for this role
-                        </Typography>
-                      </Box>
-                    </Box>
-                    
-                    <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', mt: 2 }}>
-                      Why You Fit This Role:
-                    </Typography>
-                    <Box component="ul" sx={{ pl: 2 }}>
-                      {roleFitAnalysis.reasons.map((reason, index) => (
-                        <Typography component="li" key={index} variant="body2" paragraph sx={{ mb: 1 }}>
-                          {reason}
-                        </Typography>
-                      ))}
-                    </Box>
-                    
-                    <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', mt: 2 }}>
-                      Areas to Emphasize:
-                    </Typography>
-                    <Box component="ul" sx={{ pl: 2 }}>
-                      {roleFitAnalysis.improvementAreas.map((area, index) => (
-                        <Typography component="li" key={index} variant="body2" paragraph sx={{ mb: 1 }}>
-                          {area}
-                        </Typography>
-                      ))}
-                    </Box>
-                  </Paper>
-                </Box>
-              )}
-            </Paper>
-          </Box>
-        )}
-      </Box>
-    );
-  };
-  
-  // Get job role specific questions when job role changes
-  useEffect(() => {
-    if (mockInterviewSetupData.jobRole) {
-      const roleQuestions = jobRoleQuestions[mockInterviewSetupData.jobRole] || [];
-      setRoleSpecificQuestions(roleQuestions);
-    }
-  }, [mockInterviewSetupData.jobRole]);
-  
-  // Toggle category expansion
-  const toggleCategory = (category) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [category]: !prev[category]
-    }));
-  };
-  
-  // Filter questions based on search, tags, and difficulty
-  const getFilteredQuestions = (questions) => {
-    return questions.filter(q => {
-      // Filter by search text
-      const matchesSearch = questionFilter === "" || 
-        q.text.toLowerCase().includes(questionFilter.toLowerCase());
-      
-      // Filter by tags
-      const matchesTags = selectedTags.length === 0 || 
-        selectedTags.some(tag => q.tags.includes(tag));
-      
-      // Filter by difficulty
-      const matchesDifficulty = difficultyFilter === "all" || 
-        q.difficulty === difficultyFilter;
-      
-      return matchesSearch && matchesTags && matchesDifficulty;
-    });
-  };
-  
-  // Speak a question using text-to-speech
-  const speakQuestion = (question) => {
-    if ('speechSynthesis' in window) {
-      setIsSpeaking(true);
-      
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
-      
-      const utterance = new SpeechSynthesisUtterance(question);
-      
-      // Determine the language for the utterance
-      // Check if the question has Arabic characters
-      const hasArabic = /[\u0600-\u06FF]/.test(question);
-      utterance.lang = hasArabic ? 'ar-SA' : 'en-US';
-      
-      // Set voice (attempt to find appropriate voice based on language)
-      const voices = window.speechSynthesis.getVoices();
-      
-      if (hasArabic) {
-        // Try to find Arabic voice
-        const arabicVoice = voices.find(voice => 
-          voice.lang.includes('ar') || 
-          voice.name.includes('Arabic')
-        );
-        if (arabicVoice) {
-          utterance.voice = arabicVoice;
-        }
-      } else {
-        // For English, prefer female voice as default
-        const preferredVoice = voices.find(voice => 
-          (voice.name.includes('Female') || voice.name.includes('Samantha')) && 
-          voice.lang.includes('en')
-        );
-        if (preferredVoice) {
-          utterance.voice = preferredVoice;
-        }
-      }
-      
-      // Adjust speech properties for better experience
-      utterance.rate = 0.95; // Slightly slower for better comprehension
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-      
-      utterance.onend = () => {
-        setIsSpeaking(false);
-      };
-      
-      utterance.onerror = (event) => {
-        console.error('TTS Error:', event);
-        setIsSpeaking(false);
-        setSnackbarMessage('Text-to-speech error occurred. Please try again.');
-        setSnackbarOpen(true);
-      };
-      
-      window.speechSynthesis.speak(utterance);
-      
-    } else {
-      setSnackbarMessage('Text-to-speech is not supported in your browser');
-      setSnackbarOpen(true);
-    }
-  };
-  
-  // Add a new function to speak AI responses with TTS
-  const speakAIResponse = (text) => {
-    if (!text) return;
-    
-    speakQuestion(text); // Reuse the TTS function
-  };
-  
-  // Get all unique tags from questions
-  const getAllTags = () => {
-    const tags = new Set();
-    
-    categorizedQuestions.forEach(category => {
-      category.questions.forEach(question => {
-        question.tags.forEach(tag => tags.add(tag));
-      });
-    });
-    
-    Object.values(jobRoleQuestions).flat().forEach(question => {
-      question.tags.forEach(tag => tags.add(tag));
-    });
-    
-    return Array.from(tags);
-  };
-  
-  // Render difficulty badge
-  const renderDifficultyBadge = (difficulty) => {
-    const difficultyMap = {
-      beginner: { icon: "🟢", label: "Beginner" },
-      intermediate: { icon: "🟡", label: "Intermediate" },
-      advanced: { icon: "🔴", label: "Advanced" }
-    };
-    
-    return (
-      <Tooltip title={difficultyMap[difficulty]?.label || ""}>
-        <Box component="span" sx={{ mr: 1 }} key={`difficulty-icon-${difficulty}`}>
-          {difficultyMap[difficulty]?.icon || ""}
-        </Box>
-      </Tooltip>
-    );
-  };
-  
-  // Render suggested questions section - Updated with 3D effects
-  const renderSuggestedQuestions = () => {
-    // Ensure suggestedQuestions is an array before filtering
-    const questionsList = Array.isArray(suggestedQuestions) ? suggestedQuestions : [];
-    
-    // Filter questions based on search and difficulty
-    const filteredSuggestions = questionsList.filter(question => 
-      typeof question === 'string' && question.toLowerCase().includes(questionFilter.toLowerCase())
-    );
-    
-    return (
-      <Paper 
-        elevation={6} 
-        sx={{ 
-          p: 3, 
-          borderRadius: 4, 
-          position: 'sticky',
-          top: 20,
-          transition: 'all 0.3s ease',
-          background: 'linear-gradient(to bottom, #ffffff, #f7faff)',
-          backdropFilter: 'blur(20px)',
-          '&:hover': {
-            boxShadow: '0 15px 35px rgba(50,50,93,0.1), 0 5px 15px rgba(0,0,0,0.07)'
-          }
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <QuestionAnswer color="primary" sx={{ mr: 1 }} />
-          <Typography variant="h6" component="h2" sx={{ 
-            fontWeight: 600,
-            backgroundImage: 'linear-gradient(90deg, #2575fc, #6a11cb)',
-            backgroundClip: 'text',
-            textFillColor: 'transparent',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}>
-            Suggested Questions
-          </Typography>
-        </Box>
-        <Divider sx={{ mb: 2 }} />
-        
-        {/* Search bar */}
+                
         <TextField
           fullWidth
           placeholder="Search questions..."
+                  variant="outlined"
           size="small"
-          value={questionFilter}
-          onChange={(e) => setQuestionFilter(e.target.value)}
+                  sx={{ mb: 2 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <Search fontSize="small" color="primary" />
+                        <Search fontSize="small" />
               </InputAdornment>
             ),
           }}
-          sx={{ 
-            mb: 2,
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 3,
-              transition: 'all 0.3s ease',
-              '&:hover, &.Mui-focused': {
-                boxShadow: '0 4px 10px rgba(0,0,0,0.07)'
-              }
-            }
-          }}
-        />
-        
-        {/* Filter buttons */}
-        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Chip 
-            label="All"
-            clickable
-            color={difficultyFilter === 'all' ? 'primary' : 'default'}
-            onClick={() => setDifficultyFilter('all')}
-            sx={{ 
-              transition: 'all 0.2s ease',
-              transform: difficultyFilter === 'all' ? 'scale(1.05)' : 'scale(1)',
-              fontWeight: difficultyFilter === 'all' ? 600 : 400,
-              boxShadow: difficultyFilter === 'all' ? '0 2px 5px rgba(0,0,0,0.1)' : 'none'
-            }}
-          />
-          <Chip 
-            label="Beginner"
-            clickable
-            color={difficultyFilter === 'beginner' ? 'success' : 'default'}
-            onClick={() => setDifficultyFilter('beginner')}
-            sx={{ 
-              transition: 'all 0.2s ease',
-              transform: difficultyFilter === 'beginner' ? 'scale(1.05)' : 'scale(1)',
-              fontWeight: difficultyFilter === 'beginner' ? 600 : 400,
-              boxShadow: difficultyFilter === 'beginner' ? '0 2px 5px rgba(0,0,0,0.1)' : 'none'
-            }}
-          />
-          <Chip 
-            label="Intermediate"
-            clickable
-            color={difficultyFilter === 'intermediate' ? 'warning' : 'default'}
-            onClick={() => setDifficultyFilter('intermediate')}
-            sx={{ 
-              transition: 'all 0.2s ease',
-              transform: difficultyFilter === 'intermediate' ? 'scale(1.05)' : 'scale(1)',
-              fontWeight: difficultyFilter === 'intermediate' ? 600 : 400,
-              boxShadow: difficultyFilter === 'intermediate' ? '0 2px 5px rgba(0,0,0,0.1)' : 'none'
-            }}
-          />
-          <Chip 
-            label="Advanced"
-            clickable
-            color={difficultyFilter === 'advanced' ? 'error' : 'default'}
-            onClick={() => setDifficultyFilter('advanced')}
-            sx={{ 
-              transition: 'all 0.2s ease',
-              transform: difficultyFilter === 'advanced' ? 'scale(1.05)' : 'scale(1)',
-              fontWeight: difficultyFilter === 'advanced' ? 600 : 400,
-              boxShadow: difficultyFilter === 'advanced' ? '0 2px 5px rgba(0,0,0,0.1)' : 'none'
-            }}
-          />
-        </Box>
-        
-        {/* Questions list */}
-        <List 
-          sx={{ 
-            maxHeight: '55vh', 
-            overflowY: 'auto',
-            p: 0,
-            '&::-webkit-scrollbar': { width: 8 },
-            '&::-webkit-scrollbar-track': { bgcolor: 'rgba(0,0,0,0.05)' }, 
-            '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 4 }
-          }}
-        >
-          {filteredSuggestions.length > 0 ? (
-            <Box>
-              <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
-                Recommended for you
+                />
+
+                <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                  <Category fontSize="small" sx={{ mr: 1 }} />
+                  Categories
               </Typography>
-              {filteredSuggestions.map((question, index) => (
-                <Paper 
+
+                <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {categorizedQuestions.map((category, index) => (
+                  <Chip 
                   key={index} 
-                  elevation={1} 
+                      icon={category.icon}
+                      label={category.category}
+                      onClick={() => loadCategoryQuestions(category.category)}
+                      color={selectedCategory === category.category ? "primary" : "default"}
                   sx={{ 
-                    mb: 2, 
-                    overflow: 'hidden',
-                    transition: 'all 0.2s ease',
+                        m: 0.5, 
                     '&:hover': {
-                      transform: 'translateY(-2px) scale(1.01)',
-                      boxShadow: '0 5px 15px rgba(0,0,0,0.1)'
-                    }
-                  }}
-                >
-                  <ListItemButton 
-                    onClick={() => sendPredefinedQuestion(question)}
-                    sx={{ 
-                      borderLeft: '3px solid',
-                      borderColor: 'primary.main',
-                    }}
-                  >
-                    <ListItemText 
-                      primary={question} 
-                      primaryTypographyProps={{ 
-                        variant: 'body2',
-                        fontWeight: 500,
-                        sx: { lineHeight: 1.4 }
+                          boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                          bgcolor: 'primary.lighter' 
+                        } 
                       }}
-                    />
-                  </ListItemButton>
-                </Paper>
+              />
               ))}
             </Box>
-          ) : (
-            <Paper 
-              elevation={0} 
-              sx={{ 
-                p: 3, 
-                textAlign: 'center', 
-                bgcolor: 'rgba(25, 118, 210, 0.05)',
-                borderRadius: 2
-              }}
-            >
-              <Info color="primary" sx={{ fontSize: 40, opacity: 0.6, mb: 1 }} />
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
-                Try a different search term
-              </Typography>
-              <Button 
-                variant="outlined" 
-                size="small" 
-                onClick={() => setQuestionFilter('')}
-                startIcon={<Refresh />}
-              >
-                Reset Search
-              </Button>
-            </Paper>
-          )}
-        </List>
-      </Paper>
-    );
-  };
 
-  // Use useEffect to prevent scrolling on focus
-  useEffect(() => {
-    const preventScroll = (e) => {
-      const target = e.target;
-      // Check if the target is a text input or similar control that needs keyboard focus
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-        // Prevent the automatic scrolling behavior
-        setTimeout(() => {
-          window.scrollTo({
-            top: window.scrollY,
-            behavior: 'auto'
-          });
-        }, 0);
-      }
-    };
+                <Divider sx={{ my: 2 }} />
 
-    // Add the event listener for focus events
-    document.addEventListener('focus', preventScroll, true);
-    
-    // Clean up
-    return () => {
-      document.removeEventListener('focus', preventScroll, true);
-    };
-  }, []);
-  
-  const handleCoachSelect = (coach) => {
-    // Use coachName (which we added) instead of relying on setSelectedCoach
-    setCoachName(coach.name);
-    
-    // Check if setCurrentPage exists
-    if (typeof setCurrentPage === 'function') {
-      setCurrentPage(2);
-    }
-
-    // Reset conversation when changing coaches
-    setMessages([]);
-    if (typeof setFeedbackData === 'function') {
-      setFeedbackData(null);
-    }
-    if (typeof setBehavioralPatterns === 'function') {
-      setBehavioralPatterns([]);
-    }
-    if (typeof setVocabularySuggestions === 'function') {
-      setVocabularySuggestions([]);
-    }
-    if (typeof setMessageContainerHeight === 'function') {
-      setMessageContainerHeight(window.innerHeight - 280);
-    }
-
-    // Add welcome message from coach
-    const welcomeMessage = {
-      role: 'assistant',
-      content: `Hi! I'm ${coach.name}, your ${coach.field} interview coach. How can I help you prepare for your interview today?`,
-      timestamp: new Date().toISOString(),
-    };
-    setMessages([welcomeMessage]);
-    if (typeof setMessageHistory === 'function') {
-      setMessageHistory([welcomeMessage]);
-    }
-  };
-  
-  // Toggle AI mode
-  const toggleAIMode = async () => {
-    const newMode = !isAIMode;
-    setIsAIMode(newMode);
-    
-    // Create a new conversation when switching modes
-    try {
-      setLoading(true);
-      
-      // Clear existing messages to prevent overlap between modes
-      setMessages([]);
-      
-      // Create a new conversation - with fallback handling
-      let conversationId;
-      try {
-        const response = await apiEndpoints.interviews.createConversation(profile.id);
-        conversationId = response.data.conversationId;
-        setConversationId(conversationId);
-      } catch (apiError) {
-        console.error('Failed to create new conversation via API:', apiError);
-        // Create a fallback local conversation ID
-        conversationId = 'local-' + Date.now();
-        setConversationId(conversationId);
-        setSnackbarMessage('Connected in offline mode. Some features may be limited.');
-        setSnackbarOpen(true);
-      }
-      
-      // Reset conversation state
-      try {
-        if (typeof setUserMessageHistory === 'function') {
-          setUserMessageHistory([]);
-        }
-        if (typeof setDetectedPatterns === 'function') {
-          setDetectedPatterns([]);
-        }
-        if (typeof setSuggestedVocabulary === 'function') {
-          setSuggestedVocabulary([]);
-        }
-        if (typeof setFeedbackData === 'function') {
-          setFeedbackData({
-            responseLength: 0,
-            verboseScore: 'moderate',
-            starCompliance: 0,
-            confidenceScore: 0,
-            keywordMatchPercentage: 0
-          });
-        }
-      } catch (stateError) {
-        console.warn('Non-critical state reset error:', stateError);
-      }
-      
-      // Find the appropriate coach for greeting
-      let selectedCoach;
-      try {
-        selectedCoach = coachPersonas.find(coach => coach.id === selectedCoachPersona) || coachPersonas[0];
-      } catch (error) {
-        console.warn('Error finding coach persona:', error);
-        selectedCoach = {
-          name: 'Coach',
-          greeting: "Hello! I'm your AI Interview Coach. How can I help you prepare for your interview today?",
-          id: 'noora'
-        };
-      }
-      
-      // Add appropriate greeting based on mode
-      const greeting = {
-        role: 'assistant',
-        content: newMode 
-          ? "Hello! I'm your AI Assistant powered by DeepSeek. I can answer questions on any topic. How can I help you today?" 
-          : selectedCoach.greeting || "Hello! I'm your AI Interview Coach. How can I help you prepare for your interview today?",
-        timestamp: new Date().toISOString(),
-        model: newMode ? 'DeepSeek-AI' : (selectedCoach.id === 'ahmed' ? 'DeepSeek-AI' : 'LLaMA-3'),
-        mode: newMode ? 'ai_assistant' : 'interview_coach' // Add mode field to distinguish messages
-      };
-      
-      // Reset messages to only show the greeting
-      setMessages([greeting]);
-      setHasLoadedMessages(true);
-      
-      // Save the greeting to the backend with explicit mode parameters
-      try {
-        await apiEndpoints.interviews.sendMessage(conversationId, {
-          message: greeting.content,
-          role: 'assistant',
-          userId: profile.id,
-          mode: newMode ? 'ai_assistant' : 'interview_coach',
-          model: newMode ? 'deepseek' : (selectedCoach.id === 'ahmed' ? 'deepseek' : 'llama3'),
-          systemInstruction: newMode 
-            ? "You are a helpful AI assistant that can answer any question on any topic." 
-            : "You are an AI interview coach helping prepare for job interviews."
-        });
-        
-        // Show success message for mode change
-        setSnackbarMessage(newMode 
-          ? 'Switched to AI Assistant mode - ask me anything!' 
-          : 'Switched to Interview Coach mode - practice for your interviews!');
-        setSnackbarOpen(true);
-        
-      } catch (apiError) {
-        console.error('Error saving greeting message:', apiError);
-        // We already have the local message showing, so no need for further fallback
-      }
-      
-    } catch (err) {
-      console.error('Error creating new conversation for AI mode:', err);
-      // Most basic fallback if everything else fails
-      const greeting = {
-        role: 'assistant',
-        content: newMode 
-          ? "Hello! I'm your AI Assistant powered by DeepSeek. I can answer questions on any topic. How can I help you today?" 
-          : "Hello! I'm your AI Interview Coach. How can I help you prepare for your interview today?",
-        timestamp: new Date().toISOString(),
-        model: newMode ? 'DeepSeek-AI' : 'LLaMA-3',
-        mode: newMode ? 'ai_assistant' : 'interview_coach'
-      };
-      
-      setMessages([greeting]);
-      setHasLoadedMessages(true);
-      
-      setSnackbarMessage('Connected in offline mode with limited features.');
-      setSnackbarOpen(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      {/* Page Title */}
-      <Typography 
-        variant="h4" 
-        gutterBottom 
-        sx={{ 
-          mb: 3, 
-          fontWeight: 700,
-          backgroundImage: 'linear-gradient(90deg, #2575fc, #6a11cb)',
-          backgroundClip: 'text',
-          textFillColor: 'transparent',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          textAlign: 'center'
-        }}
-      >
-        AI Interview Coach
+                <Typography variant="subtitle1" sx={{ my: 1.5, fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                  <FormatListBulleted fontSize="small" sx={{ mr: 1 }} />
+                  Suggested Questions
       </Typography>
 
-      {/* Coach Profile Card - New section above the chat */}
-      <Paper 
-        elevation={6} 
-        sx={{ 
-          mb: 3, 
-          borderRadius: 4, 
-          backgroundImage: 'linear-gradient(to right, #f6f9ff, #f0f7ff)',
-          overflow: 'hidden',
-          transition: 'all 0.3s ease',
-          boxShadow: '0 8px 20px rgba(0,0,0,0.08)'
-        }}
-      >
-        <Grid container>
-          {/* Coach Avatar and Info */}
-          <Grid item xs={12} md={3} 
+                <List sx={{ 
+                  mt: 1, 
+                  maxHeight: '400px', 
+                  overflowY: 'auto',
+                  '&::-webkit-scrollbar': {
+                    width: '6px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    backgroundColor: 'rgba(0,0,0,0.05)',
+                    borderRadius: '8px',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: 'rgba(0,0,0,0.1)',
+                    borderRadius: '8px',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0,0,0,0.2)',
+                    },
+                  },
+                }}>
+                  {suggestedQuestions.map((question, index) => (
+                    <ListItem 
+                      key={index} 
+                      disablePadding
+                      sx={{ mb: 1.5 }}
+                    >
+              <Button 
+            fullWidth
+                variant="outlined" 
+                color="primary"
+                        onClick={() => sendPredefinedQuestion(question)}
             sx={{ 
-              background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
-              display: 'flex',
-              flexDirection: { xs: 'row', md: 'column' },
-              alignItems: 'center',
-              justifyContent: { xs: 'flex-start', md: 'center' },
-              p: 3
-            }}
-          >
-            <Box 
-              sx={{ 
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                bgcolor: 'rgba(255,255,255,0.2)',
-                color: 'white',
-                fontSize: '3.5rem',
-                fontWeight: 'bold',
-                mb: { xs: 0, md: 2 },
-                mr: { xs: 2, md: 0 },
-                border: '4px solid rgba(255,255,255,0.4)',
-                boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
-              }}
-            >
-              {coachPersonas.find(coach => coach.id === selectedCoachPersona)?.name.charAt(0)}
-            </Box>
-            <Box sx={{ color: 'white', textAlign: { xs: 'left', md: 'center' } }}>
-              <Typography variant="h5" fontWeight="bold">
-                {coachPersonas.find(coach => coach.id === selectedCoachPersona)?.name}
-              </Typography>
-              <Typography variant="body1" sx={{ opacity: 0.9, mb: 1 }}>
-                {coachPersonas.find(coach => coach.id === selectedCoachPersona)?.title}
-              </Typography>
-              <Chip 
-                label={selectedCoachPersona === 'ahmed' ? 'DeepSeek-AI' : 'LLaMA-3'} 
-                size="small"
-                sx={{ 
-                  bgcolor: 'rgba(255,255,255,0.2)', 
-                  color: 'white',
-                  fontWeight: 'bold'
-                }} 
-              />
-            </Box>
-          </Grid>
-          
-          {/* Coach Details and Controls */}
-          <Grid item xs={12} md={9} sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-              <Typography variant="h6" color="primary.main" fontWeight="bold">Coach Profile</Typography>
-              <Box>
-                <Tooltip title="Change Coach">
-                  <IconButton 
-                    color="primary" 
-                    onClick={() => setShowCoachSelection(!showCoachSelection)}
-                    sx={{ mr: 1 }}
-                  >
-                    <Psychology />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="New Conversation">
-                  <IconButton 
-                    color="primary" 
-                    onClick={startNewConversation}
-                    sx={{ mr: 1 }}
-                  >
-                    <Refresh />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Cultural Context">
-                  <IconButton 
-                    color="primary" 
-                    onClick={() => setContextSelectorOpen(!contextSelectorOpen)}
-                  >
-                    <Business />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            </Box>
-            
-            <Typography variant="body1" paragraph>
-              {coachPersonas.find(coach => coach.id === selectedCoachPersona)?.description}
+                          justifyContent: 'flex-start',
+                          textAlign: 'left',
+                          p: 1.5,
+                          borderRadius: 2,
+                          borderWidth: '1px',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                            borderColor: 'primary.main',
+                            borderWidth: '1px',
+                            bgcolor: 'primary.lighter'
+                          }
+                        }}
+                      >
+                        {question}
+                      </Button>
+                    </ListItem>
+                  ))}
+                  
+                  {categoryQuestions.length > 0 && (
+                    <>
+                      <Divider sx={{ my: 2 }} />
+                      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                        {selectedCategory || "Category"} Questions
             </Typography>
             
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle1" color="primary.main" fontWeight="bold" gutterBottom>
-                Experience:
-              </Typography>
-              <Grid container spacing={1}>
-                {coachPersonas.find(coach => coach.id === selectedCoachPersona)?.experience.map((exp, index) => (
-                  <Grid item xs={12} sm={4} key={index}>
-                    <Paper 
+                      {categoryQuestions.map((question, index) => (
+                        <ListItem 
+                          key={`category-${index}`} 
+                          disablePadding
+                          sx={{ mb: 1.5 }}
+                        >
+                          <Button 
+                fullWidth
+                          variant="outlined"
+                          color="secondary"
+                          onClick={() => sendPredefinedQuestion(question.text)}
                       sx={{ 
+                            justifyContent: 'flex-start',
+                            textAlign: 'left',
                         p: 1.5, 
-                        display: 'flex',
-                        alignItems: 'center',
-                        bgcolor: 'rgba(37, 117, 252, 0.05)',
-                        borderRadius: 2
-                      }}
-                    >
-                      <CheckCircle color="primary" fontSize="small" sx={{ mr: 1 }} />
-                      <Typography variant="body2">{exp}</Typography>
+                            borderRadius: 2, 
+                            borderWidth: '1px',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                              transform: 'translateY(-2px)',
+                              boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                              borderColor: 'secondary.main',
+                              borderWidth: '1px',
+                              bgcolor: 'secondary.lighter'
+                            }
+                          }}
+                        >
+                          {question.text}
+                </Button>
+                        </ListItem>
+                      ))}
+                    </>
+              )}
+            </List>
                     </Paper>
                   </Grid>
-                ))}
-              </Grid>
-            </Box>
-            
-            <Box>
-              <Typography variant="subtitle1" color="primary.main" fontWeight="bold" gutterBottom>
-                Coaching Tips:
-              </Typography>
-              <Grid container spacing={1}>
-                {coachPersonas.find(coach => coach.id === selectedCoachPersona)?.tips.map((tip, index) => (
-                  <Grid item xs={12} key={index}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 0.5 }}>
-                      <TipsAndUpdates color="warning" fontSize="small" sx={{ mr: 1, mt: 0.3 }} />
-                      <Typography variant="body2">{tip}</Typography>
-                    </Box>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* Coach selection panel */}
-      <Collapse in={showCoachSelection}>
-        {renderCoachSelection()}
-      </Collapse>
-
-      {/* Cultural context selector */}
-      <Collapse in={contextSelectorOpen}>
-        {renderCulturalContextSelector()}
-      </Collapse>
-      
-      {/* Main layout */}
-      <Grid container spacing={3}>
-        {/* Chat area */}
+              
+            {/* Main chat area */}
         <Grid item xs={12} md={8}>
           <Paper 
-            elevation={6} 
+              elevation={3} 
             sx={{ 
-              borderRadius: 4, 
-              overflow: 'hidden',
-              position: 'relative',
-              transition: 'all 0.3s ease-in-out',
-              background: 'linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(245,250,255,0.95))',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.12), 0 6px 12px rgba(0,0,0,0.06), 0 4px 6px rgba(50,50,93,0.12)',
-              '&:hover': {
-                boxShadow: '0 15px 35px rgba(50,50,93,0.15), 0 5px 15px rgba(0,0,0,0.1)'
-              }
+                p: 0, 
+                borderRadius: 2,
+                height: '75vh',
+                          display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
             }}
           >
             {/* Chat header */}
             <Box sx={{ 
               p: 2, 
-              background: isAIMode 
-                ? 'linear-gradient(135deg, #11cb64 0%, #25a0fc 100%)'
-                : 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
-              color: 'white',
+                borderBottom: '1px solid',
+                borderColor: 'divider',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
-                {isAIMode ? <Code sx={{ mr: 1 }} /> : <Chat sx={{ mr: 1 }} />} 
-                {isAIMode ? "AI Assistant" : "Interview Conversation"}
-                {isAIMode && (
-                  <Chip 
-                    label="DeepSeek" 
-                    size="small" 
-                    sx={{ ml: 1, bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontSize: '0.7rem' }}
-                  />
-                )}
-              </Typography>
+                justifyContent: 'space-between',
+                background: 'linear-gradient(to right, #f5f7ff, #eef2ff)'
+              }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                {/* AI Mode Toggle */}
-                <Tooltip title={
-                  isAIMode 
-                  ? "Currently in AI Assistant Mode - I can answer any questions about any topic" 
-                  : "Currently in Interview Coach Mode - I'll help you practice interview questions and improve your skills"
-                }>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={isAIMode}
-                        onChange={toggleAIMode}
-                        color="default"
-                        sx={{
-                          '& .MuiSwitch-switchBase.Mui-checked': {
-                            color: 'white',
-                          },
-                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                            backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                          },
-                        }}
-                      />
-                    }
-                    label={
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography variant="body2" sx={{ color: 'white', display: 'flex', alignItems: 'center', mr: 1 }}>
-                          {isAIMode ? <Code sx={{ mr: 0.5, fontSize: 16 }} /> : <School sx={{ mr: 0.5, fontSize: 16 }} />}
-                          {isAIMode ? "AI Assistant" : "Interview Coach"}
+                  <Avatar src={selectedCoach?.avatar || '/assets/coach-avatar.png'} sx={{ mr: 1 }} />
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                      {selectedCoach?.name || 'Interview Coach'} 
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      AI-powered interview practice assistant
                         </Typography>
                       </Box>
-                    }
-                    sx={{ mr: 1 }}
-                  />
-                </Tooltip>
+                </Box>
                 
-                {roleplayMode && !isAIMode ? (
                   <Chip 
-                    label="Roleplay Mode" 
-                    color="secondary" 
-                    size="small"
-                    icon={<RecordVoiceOver />} 
-                    sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
-                  />
-                ) : !isAIMode ? (
-                  <Chip 
-                    label="Practice Mode" 
+                icon={<School fontSize="small" />} 
+                label="Interview Coach" 
                     color="primary" 
-                    size="small"
-                    icon={<School />} 
-                    sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
-                  />
-                ) : (
-                  <Chip 
-                    label="AI Assistant" 
-                    color="default" 
-                    size="small"
-                    icon={<Code />} 
-                    sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
-                  />
-                )}
-              </Box>
+                variant="outlined" 
+                sx={{ fontWeight: 'medium' }} 
+              />
             </Box>
 
             {/* Chat messages */}
             <Box 
               sx={{ 
-                height: '60vh', 
-                overflowY: 'auto', 
                 p: 2, 
+                  flexGrow: 1, 
+                  overflow: 'auto',
                 display: 'flex', 
                 flexDirection: 'column',
-                backgroundImage: isAIMode 
-                  ? 'radial-gradient(circle at center, rgba(240,255,245,0.4) 0%, rgba(255,255,255,0) 70%)'
-                  : 'radial-gradient(circle at center, rgba(240,245,255,0.4) 0%, rgba(255,255,255,0) 70%)',
-                backgroundSize: '100% 100%',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: 'rgba(0,0,0,0.03)',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: 'rgba(0,0,0,0.1)',
-                  borderRadius: '4px',
-                  '&:hover': {
-                    background: 'rgba(0,0,0,0.15)',
-                  },
-                },
-              }} 
-              ref={chatContainerRef}
-            >
-              {loading && !hasLoadedMessages ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                  <LoadingSpinner text="Loading conversation..." />
+                  gap: 2,
+                  bgcolor: '#f9fafd',
+                  height: 'calc(75vh - 64px)'
+                }}
+                ref={messagesEndRef}
+              >
+                {messages.length === 0 && (
+                  <Box 
+                    sx={{ 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      height: '100%',
+                      opacity: 0.8
+                    }}
+                  >
+                    <QuestionAnswer sx={{ fontSize: 80, color: 'primary.light', mb: 2, opacity: 0.5 }} />
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      Welcome to your Interview Coach
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ maxWidth: '80%' }}>
+                      Select a question from the sidebar to begin practicing your interview responses.
+                      The AI will provide feedback and guidance to help you improve.
+                    </Typography>
                 </Box>
-              ) : (
-                <Box sx={{ flexGrow: 1 }}>
-                  {messages.map((msg, index) => {
-                    // Filter out system messages
-                    if (msg.role === 'system') return null;
-                    if (msg.content && msg.content.includes('Coach persona changed to')) return null;
-                    
-                    // Filter messages based on current mode
-                    if (msg.mode && msg.mode !== (isAIMode ? 'ai_assistant' : 'interview_coach')) return null;
-                    
-                    const isUser = msg.role === 'user';
-                    const showAvatar = !isUser; // Only show coach avatar
-                    
-                    return (
+                )}
+
+                {messages.map((message, index) => (
                       <Box 
                         key={index} 
                         sx={{
-                          display: 'flex',
-                          flexDirection: isUser ? 'row-reverse' : 'row',
-                          mb: 2
+                      alignSelf: message.type === 'user' ? 'flex-end' : 'flex-start',
+                      maxWidth: '80%',
                         }}
                       >
-                        {showAvatar && (
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                      {message.type !== 'user' && (
                           <Avatar
-                            src={coachPersonas.find(coach => coach.id === selectedCoachPersona)?.avatar}
-                            alt="Coach"
-                            sx={{ mr: 1.5, width: 40, height: 40 }}
+                          src={selectedCoach?.avatar || '/assets/coach-avatar.png'}
+                          sx={{ width: 36, height: 36 }}
                           />
                         )}
                         
-                        <Paper
-                          elevation={1}
+                    <Box
                           sx={{
                             p: 2,
-                            maxWidth: '80%',
-                            bgcolor: isUser ? 'primary.main' : 'background.paper',
-                            color: isUser ? 'white' : 'text.primary',
-                            borderRadius: isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                            boxShadow: isUser 
-                              ? '0 3px 10px rgba(0,0,0,0.12)' 
-                              : '0 3px 10px rgba(0,0,0,0.06)',
-                            transition: 'all 0.3s ease',
-                            '&:hover': {
-                              transform: 'translateY(-2px)',
-                              boxShadow: isUser 
-                                ? '0 5px 15px rgba(0,0,0,0.15)' 
-                                : '0 5px 15px rgba(0,0,0,0.1)'
-                            },
-                            border: isUser ? 'none' : '1px solid rgba(0,0,0,0.05)'
-                          }}
-                        >
-                          <Typography variant="body1">
-                            {msg.content}
+                        borderRadius: 2,
+                        bgcolor: message.type === 'user' ? 'primary.main' : 'white',
+                        color: message.type === 'user' ? 'white' : 'text.primary',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        border: message.type !== 'user' ? '1px solid' : 'none',
+                        borderColor: 'divider',
+                        order: message.type === 'user' ? -1 : 1
+                      }}
+                    >
+                      {message.loading ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <CircularProgress size={16} sx={{ mr: 1 }} />
+                          <Typography variant="body2">Thinking...</Typography>
+                        </Box>
+                      ) : (
+                        <>
+                          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                            {message.text}
                           </Typography>
-                          <Box sx={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            mt: 1
-                          }}>
-                            <Typography 
-                              variant="caption" 
-                              color={isUser ? 'primary.contrastText' : 'text.secondary'} 
-                              sx={{ opacity: 0.8 }}
-                            >
-                              {new Date(msg.timestamp).toLocaleTimeString()}
-                              {!isUser && msg.model && ` • ${msg.model}`}
+                          <Typography variant="caption" color={message.type === 'user' ? 'rgba(255,255,255,0.7)' : 'text.secondary'} sx={{ display: 'block', mt: 1, textAlign: 'right' }}>
+                            {message.timestamp}
                             </Typography>
-                            
-                            {/* Add TTS button for AI messages */}
-                            {!isUser && (
-                              <IconButton 
-                                size="small" 
-                                onClick={() => speakAIResponse(msg.content)}
-                                disabled={isSpeaking}
-                                sx={{ 
-                                  ml: 1,
-                                  color: 'primary.main',
-                                  opacity: isSpeaking ? 1 : 0.6,
-                                  '&:hover': {opacity: 1}
-                                }}
-                              >
-                                <VolumeUp fontSize="small" />
-                              </IconButton>
+                        </>
                             )}
                           </Box>
-                        </Paper>
-                        {isUser && (
-                          <Avatar sx={{ ml: 1, bgcolor: 'secondary.main' }}>
-                            {profile?.name?.charAt(0) || 'U'}
+                    
+                    {message.type === 'user' && (
+                      <Avatar 
+                        sx={{ width: 36, height: 36, bgcolor: 'primary.dark' }}
+                      >
+                        <Person fontSize="small" />
                           </Avatar>
                         )}
                       </Box>
-                    );
-                  })}
-                  {isThinking && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', ml: 6, mt: 1 }}>
-                      <CircularProgress size={20} sx={{ mr: 2 }} />
-                      <Typography variant="body2" color="text.secondary">
-                        Thinking...
-                      </Typography>
                     </Box>
-                  )}
-                  <div ref={chatEndRef} />
-                </Box>
-              )}
-            </Box>
-
-            {/* Show feedback data, knowledge booster, behavioral pattern feedback, and vocabulary suggestions */}
-            <Box sx={{ p: 2 }}>
-              {!loading && hasLoadedMessages && (
-                <>
-                  {/* Mode info banner */}
-                  <Paper 
-                    elevation={0} 
+                ))}
+                
+                {isLoading && (
+                  <Box
                     sx={{ 
-                      p: 1.5, 
-                      mb: 2, 
-                      borderRadius: 2,
-                      background: isAIMode 
-                        ? 'linear-gradient(135deg, rgba(200, 240, 255, 0.2), rgba(255, 255, 255, 0.5))' 
-                        : 'linear-gradient(135deg, rgba(200, 220, 255, 0.2), rgba(255, 255, 255, 0.5))',
-                      border: '1px solid',
-                      borderColor: isAIMode ? 'info.200' : 'primary.200',
-                      display: 'flex',
-                      alignItems: 'center'
+                      alignSelf: 'flex-start',
+                      maxWidth: '80%',
                     }}
                   >
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                     <Avatar 
+                        src={selectedCoach?.avatar || '/assets/coach-avatar.png'}
+                        sx={{ width: 36, height: 36 }}
+                      />
+                      <Box
                       sx={{ 
-                        bgcolor: isAIMode ? 'info.main' : 'primary.main',
-                        width: 28, 
-                        height: 28,
-                        mr: 1.5
-                      }}
-                    >
-                      {isAIMode ? <Code fontSize="small" /> : <School fontSize="small" />}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="subtitle2" color={isAIMode ? 'info.dark' : 'primary.dark'}>
-                        {isAIMode ? 'AI Assistant Mode' : 'Interview Coach Mode'}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {isAIMode 
-                          ? 'Ask me anything! I can help with general knowledge, coding, writing, and more.' 
-                          : 'I\'ll help you practice interview questions and provide feedback on your responses.'}
-                      </Typography>
+                          p: 2,
+                          borderRadius: 2,
+                          bgcolor: 'white',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <CircularProgress size={16} sx={{ mr: 1 }} />
+                          <Typography variant="body2">Typing a response...</Typography>
                     </Box>
-                  </Paper>
-                  
-                  {renderFeedback()}
-                  {showKnowledgeBooster && renderKnowledgeBooster()}
-                  {detectedPatterns.length > 0 && renderBehavioralPatternFeedback()}
-                  {suggestedVocabulary.length > 0 && renderVocabularySuggestions()}
-                </>
-              )}
             </Box>
-
-            {/* Input area */}
-            <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', background: 'linear-gradient(180deg, rgba(245,245,245,0.1) 0%, rgba(245,245,255,0.6) 100%)' }}>
-              <TextField
-                fullWidth
-                placeholder="Type your message here..."
-                value={inputMessage}
-                onChange={(e) => {
-                  console.log('Input changed:', e.target.value);
-                  setInputMessage(e.target.value);
-                }}
-                onKeyPress={(e) => {
-                  console.log('Key pressed:', e.key);
-                  handleKeyPress(e);
-                }}
-                onClick={(e) => {
-                  console.log('Input field clicked');
-                }}
-                onFocus={(e) => {
-                  console.log('Input field focused');
-                }}
-                disabled={isTyping || loading}
-                multiline
-                minRows={2}
-                maxRows={4}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      {roleplayMode && (
-                        <Tooltip title="Next Question">
-                          <IconButton
-                            onClick={nextRoleplayQuestion}
-                            color="primary"
-                            sx={{ 
-                              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
-                              '&:hover': { 
-                                transform: 'scale(1.1)',
-                                backgroundColor: 'rgba(25, 118, 210, 0.08)'
-                              } 
-                            }}
-                          >
-                            <NavigateNext />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      <IconButton
-                        onClick={toggleListening}
-                        color={isListening ? 'secondary' : 'default'}
-                        disabled={isTyping || loading || !speechRecognition}
-                        sx={{ 
-                          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
-                          animation: isListening ? 'pulse 1.5s infinite' : 'none',
-                          '@keyframes pulse': {
-                            '0%': { boxShadow: '0 0 0 0 rgba(156, 39, 176, 0.4)' },
-                            '70%': { boxShadow: '0 0 0 10px rgba(156, 39, 176, 0)' },
-                            '100%': { boxShadow: '0 0 0 0 rgba(156, 39, 176, 0)' }
-                          },
-                          '&:hover': { 
-                            transform: 'scale(1.1)',
-                            backgroundColor: isListening ? 'rgba(156, 39, 176, 0.08)' : 'rgba(0, 0, 0, 0.08)'
-                          } 
-                        }}
-                      >
-                        {isListening ? <MicOff /> : <Mic />}
-                      </IconButton>
-                      <IconButton
-                        onClick={sendMessage}
-                        color="primary"
-                        disabled={!inputMessage.trim() || isTyping || loading}
-                        sx={{ 
-                          ml: 1, 
-                          bgcolor: 'primary.main', 
-                          color: 'white',
-                          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                          '&:hover': { 
-                            transform: 'scale(1.1)',
-                            bgcolor: 'primary.dark',
-                            boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
-                          },
-                          '&.Mui-disabled': {
-                            bgcolor: 'action.disabledBackground',
-                            color: 'text.disabled'
-                          }
-                        }}
-                      >
-                        <Send />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                variant="outlined"
-                sx={{ 
-                  bgcolor: 'background.paper',
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 3,
-                    transition: 'all 0.3s ease',
-                    border: '1px solid rgba(0,0,0,0.08)',
-                    '&:hover, &.Mui-focused': {
-                      boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-                    }
-                  }
-                }}
-              />
+                    </Box>
+                  </Box>
+                )}
             </Box>
           </Paper>
         </Grid>
-        
-        {/* Sidebar */}
-        <Grid item xs={12} md={isAIMode ? 0 : 4} sx={{ display: isAIMode ? 'none' : 'block' }}>
-          {/* Replace original renderMissions() call with the missions component */}
-          {renderMissions()}
-          
-          {/* Replace original Suggested Questions section with our enhanced version */}
-          {renderSuggestedQuestions()}
         </Grid>
-      </Grid>
-      
-      {/* Mission completed dialog */}
-      <Dialog
-        open={missionDialogOpen}
-        onClose={() => setMissionDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <EmojiEvents sx={{ mr: 1 }} />
-            Mission Accomplished!
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ py: 3 }}>
-          {selectedMission && (
-            <Box sx={{ textAlign: 'center' }}>
-              <Avatar 
-                sx={{ 
-                  width: 80, 
-                  height: 80, 
-                  mx: 'auto', 
-                  mb: 2, 
-                  bgcolor: 'success.main' 
-                }}
-              >
-                {selectedMission.icon}
-              </Avatar>
-              <Typography variant="h5" gutterBottom>
-                {selectedMission.title}
-              </Typography>
-              <Typography variant="body1" color="text.secondary" paragraph>
-                {selectedMission.description}
-              </Typography>
-              <Chip 
-                label={`Reward: ${selectedMission.reward}`} 
-                color="success" 
-                icon={<EmojiEvents />} 
-                sx={{ mb: 3 }}
-              />
-              <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
-                Skills improved:
-              </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                <Chip label="Interview Confidence" size="small" />
-                <Chip label="Communication" size="small" />
-                <Chip label="Self-Presentation" size="small" />
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setMissionDialogOpen(false)} color="primary">
-            Continue Training
-          </Button>
-        </DialogActions>
-      </Dialog>
-      
-      {/* Render dialogs */}
-      {renderRoleplaySetupDialog()}
-      {renderVocabularyDialog()}
-      
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        message={snackbarMessage}
-      />
+        </>
+      ) : (
+        <OllamaDeepSeekChatbot />
+      )}
     </Container>
   );
-};
+}
 
 export default AIInterviewCoach; 

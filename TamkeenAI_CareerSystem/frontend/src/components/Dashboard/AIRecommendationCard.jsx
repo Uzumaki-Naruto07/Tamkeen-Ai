@@ -22,7 +22,9 @@ import {
   ListItemText,
   TextField,
   Paper,
-  Badge
+  Badge,
+  FormControlLabel,
+  Switch
 } from '@mui/material';
 import WorkIcon from '@mui/icons-material/Work';
 import SchoolIcon from '@mui/icons-material/School';
@@ -40,6 +42,8 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import SendIcon from '@mui/icons-material/Send';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
+import SettingsIcon from '@mui/icons-material/Settings';
+import ComputerIcon from '@mui/icons-material/Computer';
 import { styled } from '@mui/material/styles';
 import { motion, AnimatePresence } from 'framer-motion';
 import chatService from '../../api/chatgpt';
@@ -115,6 +119,7 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [useLocalAI, setUseLocalAI] = useState(false);
   const { profile } = useUser();
   
   // Chat container ref for scrolling
@@ -146,7 +151,16 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
       // Make a direct call to the ChatGPT API endpoint
       const message = `Why is this ${recommendation.type} called "${recommendation.title}" a good match for me? Give a brief explanation.`;
       console.log('Sending AI explanation request to ChatGPT API');
-      const response = await chatService.sendMessage(message, JSON.stringify(profile), 'recommendation');
+      
+      // Use either cloud or local AI based on selection
+      const provider = useLocalAI ? 'deepseek' : 'openai';
+      const response = await chatService.sendMessageWithProvider(
+        message, 
+        JSON.stringify(profile), 
+        'recommendation',
+        provider
+      );
+      
       console.log('Received AI explanation response:', response);
       setAiExplanation(response.response);
     } catch (err) {
@@ -196,14 +210,21 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
     setSendingMessage(true);
     
     try {
-      // Send message to ChatGPT API
+      // Context for the AI
       const context = `The user is asking about the ${recommendation.type} called "${recommendation.title}". 
         Description: ${recommendation.description}
         Match percentage: ${recommendation.match_percentage}%
         ${recommendation.provider ? `Provider: ${recommendation.provider}` : ''}
         ${recommendation.relevance_factors ? `Relevant to user's: ${recommendation.relevance_factors.join(', ')}` : ''}`;
       
-      const response = await chatService.sendMessage(userMessage.message, context, 'recommendation');
+      // Use either cloud or local AI based on selection
+      const provider = useLocalAI ? 'deepseek' : 'openai';
+      const response = await chatService.sendMessageWithProvider(
+        userMessage.message, 
+        context, 
+        'recommendation',
+        provider
+      );
       
       const aiMessage = {
         sender: 'ai',
@@ -241,6 +262,11 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
       setError('Failed to refresh recommendation. Please try again later.');
       setLoading(false);
     }
+  };
+  
+  // Toggle between cloud and local AI
+  const handleToggleAIMode = (event) => {
+    setUseLocalAI(event.target.checked);
   };
   
   return (
@@ -389,9 +415,39 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
         {/* Chat section */}
         <Collapse in={chatVisible} timeout="auto" unmountOnExit>
           <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Chat with AI Assistant
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography variant="subtitle2">
+                Chat with AI Assistant
+              </Typography>
+              
+              <FormControlLabel
+                control={
+                  <Switch 
+                    size="small" 
+                    checked={useLocalAI}
+                    onChange={handleToggleAIMode}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {useLocalAI ? (
+                      <>
+                        <ComputerIcon fontSize="small" sx={{ mr: 0.5 }} />
+                        <Typography variant="caption">Local DeepSeek</Typography>
+                      </>
+                    ) : (
+                      <>
+                        <CloudDoneIcon fontSize="small" sx={{ mr: 0.5 }} />
+                        <Typography variant="caption">Cloud AI</Typography>
+                      </>
+                    )}
+                  </Box>
+                }
+                labelPlacement="start"
+                sx={{ ml: 0, mr: 0 }}
+              />
+            </Box>
             
             <Paper 
               variant="outlined" 

@@ -8,7 +8,10 @@
     "mock-dev": "VITE_USE_MOCK_DATA=true vite",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cors-proxy": "node cors-proxy.js",
+    "express-proxy": "node server.cjs",
+    "dev-with-proxy": "concurrently \"npm run dev\" \"npm run express-proxy\""
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
@@ -32,6 +35,7 @@
     "d3-scale": "^4.0.2",
     "d3-scale-chromatic": "^3.1.0",
     "date-fns": "^4.1.0",
+    "face-api.js": "^0.22.2",
     "framer-motion": "^12.6.2",
     "i18next": "^24.2.3",
     "lottie-react": "^2.4.1",
@@ -43,6 +47,7 @@
     "react-d3-cloud": "^1.0.6",
     "react-dom": "^18.2.0",
     "react-grid-layout": "^1.5.1",
+    "react-helmet": "^6.1.0",
     "react-i18next": "^15.4.1",
     "react-markdown": "^10.1.0",
     "react-quill": "^2.0.0",
@@ -60,10 +65,15 @@
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.1.2",
+    "cors": "^2.8.5",
+    "cors-anywhere": "^0.4.4",
     "eslint": "^8.45.0",
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.3",
+    "express": "^5.1.0",
+    "http-proxy-middleware": "^3.0.3",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.0.17",
     "vite": "^6.2.3"

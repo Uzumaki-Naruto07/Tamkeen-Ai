@@ -241,19 +241,30 @@ curl http://localhost:5001/api/health-check
 curl http://localhost:5001/api/interviews/topics
 ```
 
-#### Solution 2: Update Your Frontend Environment
+#### Solution 2: Start the Simple Upload Server
+
+To run the ATS resume analysis features, you need to start the simple upload server:
+
+```bash
+cd TamkeenAI_CareerSystem && lsof -i :5001 -t | xargs kill -9 2>/dev/null || true && cd backend && python simple_upload_server.py
+```
+
+This command:
+- Changes to the TamkeenAI_CareerSystem directory
+- Kills any process running on port 5001
+- Changes to the backend directory
+- Starts the simple upload server on port 5001
+
+#### Solution 3: Update Your Frontend Environment
 
 Ensure your frontend environment points to the correct API URL:
 
 ```bash
 # In frontend/.env
 VITE_API_URL=http://localhost:5001
-VITE_INTERVIEW_API_URL=http://localhost:5001
-VITE_ENABLE_MOCK_DATA=true
-VITE_ENABLE_BACKEND_CHECK=true
 ```
 
-#### Solution 3: Use the Combined Run Script
+#### Solution 4: Use the Combined Run Script
 
 The `run_full_app.sh` script has been updated to:
 - Start both the main backend API and interview API on port 5001

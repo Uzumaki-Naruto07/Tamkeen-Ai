@@ -16,6 +16,14 @@ export default defineConfig({
     strictPort: false, // Try another port if preferred port is taken
     open: true,
     cors: true, // Enable CORS for all requests
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path
+      }
+    },
     hmr: {
       // Don't specify clientPort to let it automatically match whatever port the server uses
       // clientPort: getPort(),

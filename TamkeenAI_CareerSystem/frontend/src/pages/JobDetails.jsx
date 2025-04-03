@@ -27,7 +27,8 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useUser, useResume, useJob } from '../context/AppContext';
-import { api, JOB_ENDPOINTS } from '../utils/api';
+import { api } from '../utils/api';
+import { JOB_ENDPOINTS } from '../api/endpoints';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format, formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';

@@ -298,61 +298,223 @@ const JobMatchCalculator = ({ resumeId, jobData, compact = false }) => {
       </Paper>
       
       {matchResults && (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Matching Skills
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                
-                {matchResults.matchingKeywords && matchResults.matchingKeywords.length > 0 ? (
-                  <List dense>
-                    {matchResults.matchingKeywords.map((keyword, index) => (
-                      <ListItem key={index}>
-                        <ListItemText primary={keyword} />
-                        <CheckCircle color="success" fontSize="small" />
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 2 }}>
-                    No matching skills found
+        <>
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              ATS Score Breakdown
+            </Typography>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6} md={4}>
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  p: 2, 
+                  border: 1, 
+                  borderColor: 'divider', 
+                  borderRadius: 1,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
+                }}>
+                  <Typography variant="subtitle1" gutterBottom>Keyword Match</Typography>
+                  <Box sx={{ position: 'relative', display: 'inline-flex', mb: 1 }}>
+                    <CircularProgress
+                      variant="determinate"
+                      value={matchResults.keywordMatchScore || (matchResults.matchingKeywords?.length / Math.max(1, matchResults.matchingKeywords?.length + matchResults.missingKeywords?.length) * 100) || 0}
+                      size={80}
+                      thickness={4}
+                      sx={{ color: theme => theme.palette.primary.main }}
+                    />
+                    <Box
+                      sx={{
+                        top: 0,
+                        left: 0,
+                        bottom: 0,
+                        right: 0,
+                        position: 'absolute',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Typography variant="body1" component="div" fontWeight="bold">
+                        {Math.round(matchResults.keywordMatchScore || (matchResults.matchingKeywords?.length / Math.max(1, matchResults.matchingKeywords?.length + matchResults.missingKeywords?.length) * 100) || 0)}%
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    {matchResults.matchingKeywords?.length || 0} of {(matchResults.matchingKeywords?.length || 0) + (matchResults.missingKeywords?.length || 0)} keywords
                   </Typography>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={4}>
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  p: 2, 
+                  border: 1, 
+                  borderColor: 'divider', 
+                  borderRadius: 1,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
+                }}>
+                  <Typography variant="subtitle1" gutterBottom>Content Match</Typography>
+                  <Box sx={{ position: 'relative', display: 'inline-flex', mb: 1 }}>
+                    <CircularProgress
+                      variant="determinate"
+                      value={matchResults.contentMatchScore || Math.min(matchResults.overallMatch + 10, 100)}
+                      size={80}
+                      thickness={4}
+                      sx={{ color: theme => theme.palette.success.main }}
+                    />
+                    <Box
+                      sx={{
+                        top: 0,
+                        left: 0,
+                        bottom: 0,
+                        right: 0,
+                        position: 'absolute',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Typography variant="body1" component="div" fontWeight="bold">
+                        {Math.round(matchResults.contentMatchScore || Math.min(matchResults.overallMatch + 10, 100))}%
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Contextual relevance of your experience
+                  </Typography>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={4}>
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  p: 2, 
+                  border: 1, 
+                  borderColor: 'divider', 
+                  borderRadius: 1,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
+                }}>
+                  <Typography variant="subtitle1" gutterBottom>ATS Readability</Typography>
+                  <Box sx={{ position: 'relative', display: 'inline-flex', mb: 1 }}>
+                    <CircularProgress
+                      variant="determinate"
+                      value={matchResults.readabilityScore || Math.min(90, Math.max(60, matchResults.overallMatch))}
+                      size={80}
+                      thickness={4}
+                      sx={{ color: theme => theme.palette.warning.main }}
+                    />
+                    <Box
+                      sx={{
+                        top: 0,
+                        left: 0,
+                        bottom: 0,
+                        right: 0,
+                        position: 'absolute',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Typography variant="body1" component="div" fontWeight="bold">
+                        {Math.round(matchResults.readabilityScore || Math.min(90, Math.max(60, matchResults.overallMatch)))}%
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    How well ATS systems can parse your resume
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+            
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Analysis Summary
+              </Typography>
+              <Typography variant="body2">
+                {matchResults.overallMatch >= 80 ? (
+                  <span>
+                    <strong>Strong alignment in core areas:</strong> Your resume shows excellent keyword alignment and content relevance for this position. The ATS system will likely rank your application highly.
+                  </span>
+                ) : matchResults.overallMatch >= 60 ? (
+                  <span>
+                    <strong>Good alignment with improvement areas:</strong> Your resume matches many key requirements, but adding the missing keywords and strengthening content relevance would improve your ATS ranking.
+                  </span>
+                ) : (
+                  <span>
+                    <strong>Limited alignment with this position:</strong> Your resume doesn't align well with this job's requirements. Consider adding more relevant skills and experience or targeting positions that better match your profile.
+                  </span>
                 )}
-              </CardContent>
-            </Card>
-          </Grid>
+              </Typography>
+            </Box>
+          </Paper>
           
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Missing Skills
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                
-                {matchResults.missingKeywords && matchResults.missingKeywords.length > 0 ? (
-                  <List dense>
-                    {matchResults.missingKeywords.map((keyword, index) => (
-                      <ListItem key={index}>
-                        <ListItemText 
-                          primary={keyword} 
-                          secondary="Consider adding this skill to your resume"
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 2 }}>
-                    No missing skills found
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Matching Skills
                   </Typography>
-                )}
-              </CardContent>
-            </Card>
+                  <Divider sx={{ mb: 2 }} />
+                  
+                  {matchResults.matchingKeywords && matchResults.matchingKeywords.length > 0 ? (
+                    <List dense>
+                      {matchResults.matchingKeywords.map((keyword, index) => (
+                        <ListItem key={index}>
+                          <ListItemText primary={keyword} />
+                          <CheckCircle color="success" fontSize="small" />
+                        </ListItem>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 2 }}>
+                      No matching skills found
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Missing Skills
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  
+                  {matchResults.missingKeywords && matchResults.missingKeywords.length > 0 ? (
+                    <List dense>
+                      {matchResults.missingKeywords.map((keyword, index) => (
+                        <ListItem key={index}>
+                          <ListItemText 
+                            primary={keyword} 
+                            secondary="Consider adding this skill to your resume"
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 2 }}>
+                      No missing skills found
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
           </Grid>
-        </Grid>
+        </>
       )}
     </Box>
   );

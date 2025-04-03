@@ -20,7 +20,9 @@ const MOCK_ENABLED = process.env.NODE_ENV === 'development';
 
 // Create an axios instance with default config
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
+  baseURL: isDevelopment 
+    ? '/api' // This will use the Vite proxy defined in vite.config.js
+    : (import.meta.env.VITE_API_URL || 'http://localhost:5001/api'),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -2766,5 +2768,18 @@ function getMockAssessmentData(url, data = null) {
     timestamp
   };
 }
+
+// Utility function to get URL with optional proxy prefix
+export const getProxyUrl = (url) => {
+  // Check if the proxy fallback should be used
+  const useProxyFallback = isDevelopment && isBackendUnavailable();
+  
+  if (useProxyFallback) {
+    // Use CORS proxy if backend is unavailable
+    return `http://localhost:8080/http://localhost:5001/api${url.startsWith('/') ? url : '/' + url}`;
+  }
+  
+  return url;
+};
 
 export default apiClient; 

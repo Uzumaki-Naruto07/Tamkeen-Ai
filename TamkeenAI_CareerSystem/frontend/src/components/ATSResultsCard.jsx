@@ -42,8 +42,28 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import apiEndpoints from '../utils/api';
 
 const ATSResultsCard = ({ analysis, onReAnalyze }) => {
-  const [showDetails, setShowDetails] = useState(false);
+  const { 
+    score = 0, 
+    matched_keywords = [], 
+    matching_keywords = [],
+    missing_keywords = [],
+    optimizations = [],
+    sections_analysis = {},
+    section_analysis = {}, // some versions use section_analysis instead of sections_analysis
+    semantic_matches = [],
+    ats_feedback = '',
+    pass_probability = 0
+  } = analysis || {};
+
+  // Define matchedKeywords - use either matched_keywords or matching_keywords
+  const matchedKeywords = matched_keywords.length > 0 ? matched_keywords : matching_keywords;
+
+  // If there are no matching keywords, set score and pass probability to 0
+  const displayScore = matchedKeywords.length === 0 ? 0 : score;
+  const displayPassProbability = matchedKeywords.length === 0 ? 0 : pass_probability;
+  
   const [showMissing, setShowMissing] = useState(true);
+  const [showDetails, setShowDetails] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [pdfData, setPdfData] = useState(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
@@ -133,25 +153,6 @@ const ATSResultsCard = ({ analysis, onReAnalyze }) => {
       </Card>
     );
   }
-  
-  const {
-    score = 0,
-    matched_keywords = [],
-    matching_keywords = [],
-    missing_keywords = [],
-    assessment = "Your resume has been analyzed for ATS compatibility.",
-    ats_feedback = "",
-    pass_probability = 0,
-    sections_analysis = {},
-    section_analysis = {},
-    sections_found = [],
-    semantic_matches = [],
-    optimizations = [],
-    using_mock_data = false
-  } = analysis;
-  
-  // Use either matched_keywords or matching_keywords based on what's available
-  const matchedKeywords = matched_keywords.length > 0 ? matched_keywords : matching_keywords;
   
   // Color based on score
   const getScoreColor = (scoreValue = score) => {
@@ -285,41 +286,94 @@ const ATSResultsCard = ({ analysis, onReAnalyze }) => {
   const renderSemanticMatches = () => {
     if (!semantic_matches || semantic_matches.length === 0) return null;
     
+    // Calculate score for display (using the component's score)
+    const displayScore = Math.round(score);
+    
+    // Determine strengths and weaknesses based on the analysis
+    const strengths = [];
+    const weaknesses = [];
+    
+    // Extract strengths from matching keywords
+    if (matchedKeywords && matchedKeywords.length > 0) {
+      // Find technical skills (typically more valuable for ATS)
+      const technicalSkills = matchedKeywords.filter(kw => 
+        ['python', 'sql', 'ai', 'cybersecurity', 'blockchain', 'power bi', 'data', 'security', 
+         'analysis', 'visualization', 'cloud'].some(tech => kw.toLowerCase().includes(tech))
+      );
+      
+      if (technicalSkills.length > 0) {
+        strengths.push(`Strong alignment in core technical areas (${technicalSkills.slice(0, 3).join(', ')}) and tools`);
+      }
+      
+      // Check for domain expertise
+      const domainSkills = matchedKeywords.filter(kw => 
+        ['experience', 'expertise', 'knowledge', 'specialist', 'professional', 'certified'].some(term => 
+          kw.toLowerCase().includes(term))
+      );
+      
+      if (domainSkills.length > 0) {
+        strengths.push(`Demonstrated domain expertise in key areas`);
+      }
+    }
+    
+    // If no strengths were found but we have matching keywords, add a generic strength
+    if (strengths.length === 0 && matchedKeywords && matchedKeywords.length > 0) {
+      strengths.push(`Resume contains relevant keywords matching job requirements`);
+    }
+    
+    // Extract weaknesses from missing keywords
+    if (missing_keywords && missing_keywords.length > 0) {
+      // Missing technical skills
+      const missingTechnical = missing_keywords.filter(kw => 
+        ['cloud', 'security', 'certification', 'aws', 'azure', 'devops', 'agile', 'scrum'].some(tech => 
+          kw.toLowerCase().includes(tech))
+      );
+      
+      if (missingTechnical.length > 0) {
+        weaknesses.push(`Gaps in ${missingTechnical.slice(0, 2).join(', ')} and certifications`);
+      }
+      
+      // Missing quantifiable achievements
+      if (missing_keywords.some(kw => ['quantify', 'metrics', 'improved', 'increased', 'reduced', 'achievement'].some(term => 
+          kw.toLowerCase().includes(term)))) {
+        weaknesses.push(`Limited quantifiable metrics demonstrating impact`);
+      }
+    }
+    
+    // If no weaknesses were found but we have missing keywords, add a generic weakness
+    if (weaknesses.length === 0 && missing_keywords && missing_keywords.length > 0) {
+      weaknesses.push(`Missing some key terms from the job description`);
+    }
+    
+    // Build additional context based on overall score
+    let additionalContext = "";
+    if (score < 50) {
+      additionalContext = "Repetitive content and missing education details further limit ATS optimization.";
+    } else if (score < 70) {
+      additionalContext = "Resume structure could be improved to better highlight relevant experience.";
+    } else {
+      additionalContext = "Well-structured resume with good keyword placement for ATS optimization.";
+    }
+    
     return (
       <Box mt={2}>
         <Typography variant="subtitle2" gutterBottom>
-          Semantic Matches
+          Estimated Match
         </Typography>
-        <List dense>
-          {semantic_matches.slice(0, 3).map((match, index) => (
-            <ListItem key={index} sx={{ py: 0.5 }}>
-              <ListItemText 
-                primary={
-                  <Box display="flex" alignItems="center">
-                    <Typography variant="body2" fontWeight="bold">{match.term}</Typography>
-                    <ArrowForward fontSize="small" sx={{ mx: 1 }} />
-                    <Typography variant="body2">
-                      {match.matches && match.matches.slice(0, 2).join(', ')}
-                      {match.matches && match.matches.length > 2 && '...'}
-                    </Typography>
-                  </Box>
-                }
-                secondary={
-                  <Typography variant="caption">
-                    Match confidence: {match.score ? (match.score * 100).toFixed(0) : 0}%
-                  </Typography>
-                }
-              />
-            </ListItem>
-          ))}
-          {semantic_matches.length > 3 && (
-            <ListItem>
-              <Typography variant="caption">
-                +{semantic_matches.length - 3} more semantic matches
-              </Typography>
-            </ListItem>
-          )}
-        </List>
+        <Paper variant="outlined" sx={{ p: 2 }}>
+          <Typography variant="body1" fontWeight="bold" gutterBottom>
+            {displayScore}%
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>Strengths:</strong> {strengths.join('. ')}
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>Weaknesses:</strong> {weaknesses.join('. ')}
+          </Typography>
+          <Typography variant="body2">
+            {additionalContext}
+          </Typography>
+        </Paper>
       </Box>
     );
   };
@@ -358,7 +412,7 @@ const ATSResultsCard = ({ analysis, onReAnalyze }) => {
             </Box>
           }
         />
-        {using_mock_data && (
+        {analysis.using_mock_data && (
           <Box sx={{ 
             bgcolor: 'warning.light', 
             p: 2, 
@@ -426,14 +480,14 @@ const ATSResultsCard = ({ analysis, onReAnalyze }) => {
                   }}
                 >
                   <Typography variant="h3" color={getScoreColor()} fontWeight="bold">
-                    {Math.round(score)}%
+                    {Math.round(displayScore)}%
                   </Typography>
                 </Box>
                 <Typography variant="body1" textAlign="center" fontWeight="medium">
                   {getVerdict()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" textAlign="center" mt={1}>
-                  {pass_probability}% chance of passing ATS filters
+                  {displayPassProbability}% chance of passing ATS filters
                 </Typography>
               </Box>
             </Grid>

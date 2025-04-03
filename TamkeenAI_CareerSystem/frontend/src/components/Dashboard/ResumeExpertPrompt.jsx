@@ -57,7 +57,7 @@ const ResumeExpertPrompt = ({ open, onClose }) => {
   const navigate = useNavigate();
 
   const handleNavigateToResume = () => {
-    navigate('/resume-builder');
+    navigate('/resumePage');
     if (onClose) onClose();
   };
 

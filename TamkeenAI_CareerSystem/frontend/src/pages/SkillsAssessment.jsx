@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Box, Paper, Typography, Button, Divider,
   Grid, Card, CardContent, CardActions, IconButton,
@@ -20,16 +20,17 @@ import {
   RateReview, Close, Add, Done, Search, Code, Engineering,
   Language, Analytics, Extension, People, CheckCircle,
   ArrowForward, ArrowBack, ExpandMore, QuestionAnswer,
-  CheckCircleOutline, RadioButtonUnchecked, LightbulbOutlined
+  CheckCircleOutline, RadioButtonUnchecked, LightbulbOutlined,
+  SchoolOutlined
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import SkillsRadarChart from '../components/charts/SkillsRadarChart';
 import SkillChip from '../components/common/SkillChip';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBoundary from '../components/common/ErrorBoundary';
-import EmotionDetector from '../components/EmotionDetector';
+import EmotionDetector from '../components/EmotionDetection/EmotionDetector';
 import AdaptiveDifficultyEngine from '../utils/AdaptiveDifficultyEngine';
 import {
   LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, ResponsiveContainer
@@ -141,7 +142,7 @@ const SkillsAssessment = () => {
     }
   }, [newSkill, saveSkillToDatabase]);
   
-  // Load initial data
+  // useEffect to load initial data
   useEffect(() => {
     const loadInitialData = async () => {
       if (!profile?.id) {
@@ -159,18 +160,27 @@ const SkillsAssessment = () => {
           userSkillsResponse, 
           completedResponse
         ] = await Promise.all([
-          apiEndpoints.skills.getCategories().catch(err => {
-            console.error('Error fetching categories:', err);
-            return { data: [] };
-          }),
-          apiEndpoints.skills.getUserSkills(profile.id).catch(err => {
-            console.error('Error fetching user skills:', err);
-            return { data: [] };
-          }),
-          apiEndpoints.skills.getCompletedAssessments(profile.id).catch(err => {
-            console.error('Error fetching completed assessments:', err);
-            return { data: [] };
-          })
+          // Check if skills endpoint exists and has getCategories method
+          (apiEndpoints.skills && typeof apiEndpoints.skills.getCategories === 'function')
+            ? apiEndpoints.skills.getCategories().catch(err => {
+                console.error('Error fetching categories:', err);
+                return { data: [] };
+              })
+            : Promise.resolve({ data: [] }), // Return empty data if endpoint doesn't exist
+          
+          (apiEndpoints.skills && typeof apiEndpoints.skills.getUserSkills === 'function')
+            ? apiEndpoints.skills.getUserSkills(profile.id).catch(err => {
+                console.error('Error fetching user skills:', err);
+                return { data: [] };
+              })
+            : Promise.resolve({ data: [] }),
+            
+          (apiEndpoints.skills && typeof apiEndpoints.skills.getCompletedAssessments === 'function')
+            ? apiEndpoints.skills.getCompletedAssessments(profile.id).catch(err => {
+                console.error('Error fetching completed assessments:', err);
+                return { data: [] };
+              })
+            : Promise.resolve({ data: [] })
         ]);
         
         setSkillCategories(categoriesResponse.data || []);
@@ -179,8 +189,13 @@ const SkillsAssessment = () => {
         
         // Try to get job titles separately to prevent the entire function from failing
         try {
-          const jobTitlesResponse = await apiEndpoints.jobs.getJobTitles();
-          setJobTitles(jobTitlesResponse.data || []);
+          if (apiEndpoints.jobs && typeof apiEndpoints.jobs.getJobTitles === 'function') {
+            const jobTitlesResponse = await apiEndpoints.jobs.getJobTitles();
+            setJobTitles(jobTitlesResponse.data || []);
+          } else {
+            // No job titles endpoint
+            setJobTitles([]);
+          }
         } catch (jobError) {
           console.error('Error loading job titles:', jobError);
           // Don't fail the entire function, just set empty job titles
@@ -195,13 +210,18 @@ const SkillsAssessment = () => {
           
           if (profile.targetJobs.length > 0) {
             try {
-              const skillGapResponse = await apiEndpoints.skills.getSkillGap(
-                profile.id, 
-                profile.targetJobs[0].id
-              );
-              
-              setSkillGap(skillGapResponse.data || []);
-              setSelectedJob(profile.targetJobs[0]);
+              if (apiEndpoints.skills && typeof apiEndpoints.skills.getSkillGap === 'function') {
+                const skillGapResponse = await apiEndpoints.skills.getSkillGap(
+                  profile.id, 
+                  profile.targetJobs[0].id
+                );
+                
+                setSkillGap(skillGapResponse.data || []);
+                setSelectedJob(profile.targetJobs[0]);
+              } else {
+                // No skill gap endpoint
+                setSkillGap([]);
+              }
             } catch (gapError) {
               console.error('Error loading skill gap data:', gapError);
               setSnackbarMessage('Could not load skill gap analysis. Please try again later.');
@@ -270,36 +290,47 @@ const SkillsAssessment = () => {
       setDifficultyLevel(initialDifficulty);
       
       // Fetch assessment questions with AI-powered generation
-      let questionsResponse;
-      try {
-        questionsResponse = await apiEndpoints.skills.getAssessmentQuestions(
-          categoryId,
-          {
-            difficulty: difficultyLevel,
-            adaptiveMode: adaptiveModeEnabled,
-            userLevel: profile?.skillLevels?.[category.name] || 0,
-            previousAssessments: completedAssessments
-              .filter(a => a.categoryId === categoryId)
-              .map(a => ({ score: a.score, date: a.completedAt }))
+      let questionsResponse = { data: [] };
+      
+      // Check if API endpoints exist before calling them
+      if (apiEndpoints?.skills) {
+        try {
+          if (typeof apiEndpoints.skills.getAssessmentQuestions === 'function') {
+            questionsResponse = await apiEndpoints.skills.getAssessmentQuestions(
+              categoryId,
+              {
+                difficulty: difficultyLevel,
+                adaptiveMode: adaptiveModeEnabled,
+                userLevel: profile?.skillLevels?.[category.name] || 0,
+                previousAssessments: completedAssessments
+                  .filter(a => a.categoryId === categoryId)
+                  .map(a => ({ score: a.score, date: a.completedAt }))
+              }
+            );
+          } else {
+            console.log('getAssessmentQuestions method not available');
           }
-        );
-        
-        if (!questionsResponse.data || questionsResponse.data.length === 0) {
-          // Retry with AI-powered generation specifically
-          questionsResponse = await apiEndpoints.skills.generateAIQuestions(
-            categoryId,
-            profile?.id,
-            difficultyLevel
-          );
+          
+          if ((!questionsResponse.data || questionsResponse.data.length === 0) && 
+              typeof apiEndpoints.skills.generateAIQuestions === 'function') {
+            // Retry with AI-powered generation specifically
+            questionsResponse = await apiEndpoints.skills.generateAIQuestions(
+              categoryId,
+              profile?.id,
+              difficultyLevel
+            );
+          }
+        } catch (apiErr) {
+          console.error('API Error loading questions:', apiErr);
         }
-      } catch (apiErr) {
-        console.error('API Error loading questions:', apiErr);
-        questionsResponse = { data: [] };
+      } else {
+        console.log('skills API endpoint not available');
       }
       
       // If no questions returned from API, use mock questions
       if (!questionsResponse.data || questionsResponse.data.length === 0) {
         // Generate mock questions based on category
+        console.log('Using mock questions for development');
         const mockQuestions = generateMockQuestions(category, difficultyLevel);
         setAssessmentQuestions(mockQuestions);
       } else {
@@ -411,12 +442,17 @@ const SkillsAssessment = () => {
     setError(null);
     
     try {
-      const skillGapResponse = await apiEndpoints.skills.getSkillGap(
-        profile?.id, 
-        job.id
-      );
-      
-      setSkillGap(skillGapResponse.data || []);
+      if (apiEndpoints?.skills && typeof apiEndpoints.skills.getSkillGap === 'function') {
+        const skillGapResponse = await apiEndpoints.skills.getSkillGap(
+          profile?.id, 
+          job.id
+        );
+        
+        setSkillGap(skillGapResponse.data || []);
+      } else {
+        console.log('getSkillGap method not available, using empty data');
+        setSkillGap([]);
+      }
     } catch (err) {
       console.error('Error getting skill gap:', err);
       setError('Failed to analyze skill gap for selected job.');
@@ -946,7 +982,7 @@ const SkillsAssessment = () => {
                 variant="contained"
                 color="primary"
                 endIcon={<ArrowForward />}
-                onClick={() => navigate('/learning-plan')}
+                onClick={() => navigate('/learning')}
                 fullWidth
               >
                 Create Learning Plan
@@ -1168,7 +1204,9 @@ const SkillsAssessment = () => {
           'Study complexity analysis in more depth',
           'Review data structure implementations'
         ],
-        categoryName: selectedCategory?.name || 'Technical Skills'
+        categoryName: selectedCategory?.name || 'Technical Skills',
+        timestamp: new Date().toISOString(),
+        id: Date.now()
       };
       
       setResults(mockResults);
@@ -1218,6 +1256,32 @@ const SkillsAssessment = () => {
       };
       
       setSkillForecast(mockSkillForecast);
+      
+      // Save results to localStorage
+      try {
+        // Get existing assessment history from localStorage or initialize empty array
+        const existingAssessmentHistory = JSON.parse(localStorage.getItem('skillAssessmentHistory') || '[]');
+        
+        // Create a new assessment history entry with all data
+        const assessmentHistoryEntry = {
+          ...mockResults,
+          skillForecast: mockSkillForecast,
+          category: selectedCategory?.id,
+          categoryName: selectedCategory?.name || 'Technical Skills'
+        };
+        
+        // Add to beginning of array
+        existingAssessmentHistory.unshift(assessmentHistoryEntry);
+        
+        // Limit history to most recent 10 entries
+        const limitedHistory = existingAssessmentHistory.slice(0, 10);
+        
+        // Save back to localStorage
+        localStorage.setItem('skillAssessmentHistory', JSON.stringify(limitedHistory));
+        console.log('Assessment results saved to localStorage');
+      } catch (storageErr) {
+        console.error('Error saving to localStorage:', storageErr);
+      }
       
       // Move to results step
       setActiveStep(2);
@@ -1413,39 +1477,45 @@ const SkillsAssessment = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch questions from API
-      const response = await apiEndpoints.skills.getAssessmentQuestions(categoryId);
-      
-      // Initialize adaptive difficulty engine if enabled
-      if (adaptiveModeEnabled) {
-        const engine = new AdaptiveDifficultyEngine({
-          initialDifficulty: difficultyLevel,
-          userProfile: profile,
-          categoryId,
-          stressThreshold: 0.7, // Configure stress threshold
-        });
+      // Check if the API endpoint exists before calling it
+      if (apiEndpoints?.skills && typeof apiEndpoints.skills.getAssessmentQuestions === 'function') {
+        // Fetch questions from API
+        const response = await apiEndpoints.skills.getAssessmentQuestions(categoryId);
         
-        // Get adjusted questions based on difficulty
-        const adjustedQuestions = engine.getAdjustedQuestions(response.data);
-        setAssessmentQuestions(adjustedQuestions);
-        
-        // Track difficulty changes for analytics
-        setDifficultyHistory([
-          { time: Date.now(), difficulty: difficultyLevel, reason: 'initial' }
-        ]);
+        // Initialize adaptive difficulty engine if enabled
+        if (adaptiveModeEnabled) {
+          const engine = new AdaptiveDifficultyEngine({
+            initialDifficulty: difficultyLevel,
+            userProfile: profile,
+            categoryId,
+            stressThreshold: 0.7, // Configure stress threshold
+          });
+          
+          // Get adjusted questions based on difficulty
+          const adjustedQuestions = engine.getAdjustedQuestions(response.data);
+          setAssessmentQuestions(adjustedQuestions);
+          
+          // Track difficulty changes for analytics
+          setDifficultyHistory([
+            { time: Date.now(), difficulty: difficultyLevel, reason: 'initial' }
+          ]);
+        } else {
+          setAssessmentQuestions(response.data);
+        }
       } else {
-        setAssessmentQuestions(response.data);
+        // API endpoint doesn't exist, use mock data
+        console.log('Skills assessment API endpoint not available, using mock data');
+        const mockQuestions = getMockQuestionsForCategory(categoryId);
+        setAssessmentQuestions(mockQuestions);
       }
     } catch (err) {
       console.error('Error fetching assessment questions:', err);
       setError('Failed to load assessment questions. Please try again later.');
       
       // Fallback to mock data in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Using mock assessment data for development');
-        const mockQuestions = getMockQuestionsForCategory(categoryId);
-        setAssessmentQuestions(mockQuestions);
-      }
+      console.log('Using mock assessment data for development');
+      const mockQuestions = getMockQuestionsForCategory(categoryId);
+      setAssessmentQuestions(mockQuestions);
     } finally {
       setLoading(false);
     }
@@ -1531,8 +1601,13 @@ const SkillsAssessment = () => {
   };
   
   // Add a handler to adjust difficulty based on emotions if enabled
-  const handleEmotionDetected = useCallback((emotion) => {
+  const handleEmotionDetected = useCallback((emotions) => {
     if (!adaptiveModeEnabled || !emotionDetectionEnabled) return;
+    
+    // Check if emotions is an array (from new component) or a string (from old component)
+    const emotion = Array.isArray(emotions) && emotions.length > 0 
+      ? emotions[0].emotion 
+      : (typeof emotions === 'string' ? emotions : 'neutral');
     
     // Map emotion to stress level
     let newStressLevel = 'normal';
@@ -1589,16 +1664,38 @@ const SkillsAssessment = () => {
       );
     }
     
+    // Determine which emotion detector component to use based on imports
+    // Import path will tell us if we're using the new or old component
+    const isUsingNewEmotionDetector = typeof EmotionDetector === 'function' && 
+      (EmotionDetector.toString().includes('EmotionDetection') || 
+       EmotionDetector.toString().includes('face-api'));
+    
     return (
       <Box>
         {emotionDetectionEnabled && (
           <Box sx={{ mb: 3 }}>
-            <EmotionDetector 
-              onEmotionDetected={handleEmotionDetected}
-              size="small"
-              showVideo={true}
-              stressLevel={stressLevel}
-            />
+            {isUsingNewEmotionDetector ? (
+              // Use new component with updated props
+              <EmotionDetector 
+                onEmotionDetected={handleEmotionDetected}
+                size="small"
+                showVideo={true}
+              />
+            ) : (
+              // Fallback to old component for backwards compatibility
+              <Box sx={{ position: 'relative' }}>
+                <EmotionDetector 
+                  onEmotionDetected={handleEmotionDetected}
+                  size="small"
+                  showVideo={true}
+                  interval={3000}
+                />
+                {/* Hide the error message if using mock data */}
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+                  Using emotion simulation (mock data)
+                </Typography>
+              </Box>
+            )}
             
             {stressLevel !== 'normal' && (
               <Alert 
@@ -1690,6 +1787,148 @@ const SkillsAssessment = () => {
             Submit Assessment
           </Button>
         </Box>
+      </Box>
+    );
+  };
+  
+  // Render assessment results
+  const renderResults = () => {
+    if (!results) {
+      return (
+        <Box sx={{ textAlign: 'center', py: 3 }}>
+          <Typography variant="body1">
+            No assessment results available.
+          </Typography>
+        </Box>
+      );
+    }
+    
+    return (
+      <Box>
+        <Paper sx={{ p: 3, mb: 4 }}>
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Typography variant="h5" gutterBottom>
+              Assessment Results: {results.categoryName}
+            </Typography>
+            
+            <Box sx={{ position: 'relative', display: 'inline-flex', mb: 2 }}>
+              <CircularProgress
+                variant="determinate"
+                value={results.score}
+                size={120}
+                thickness={5}
+                color={
+                  results.score > 80 ? 'success' :
+                  results.score > 60 ? 'primary' :
+                  results.score > 40 ? 'warning' : 'error'
+                }
+              />
+              <Box
+                sx={{
+                  top: 0,
+                  left: 0,
+                  bottom: 0,
+                  right: 0,
+                  position: 'absolute',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'column'
+                }}
+              >
+                <Typography variant="h4" component="div">
+                  {results.score}%
+                </Typography>
+                <Typography variant="caption" component="div" color="text.secondary">
+                  Score
+                </Typography>
+              </Box>
+            </Box>
+            
+            <Typography variant="body1" color="text.secondary">
+              You answered {results.correctAnswers} out of {results.totalQuestions} questions correctly.
+            </Typography>
+          </Box>
+          
+          <Divider sx={{ my: 3 }} />
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" gutterBottom>
+                Your Strengths
+              </Typography>
+              
+              <List>
+                {results.strengths.map((strength, index) => (
+                  <ListItem key={index}>
+                    <ListItemIcon>
+                      <CheckCircle color="success" />
+                    </ListItemIcon>
+                    <ListItemText primary={strength} />
+                  </ListItem>
+                ))}
+              </List>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" gutterBottom>
+                Areas for Improvement
+              </Typography>
+              
+              <List>
+                {results.weaknesses.map((weakness, index) => (
+                  <ListItem key={index}>
+                    <ListItemIcon>
+                      <InfoOutlined color="warning" />
+                    </ListItemIcon>
+                    <ListItemText primary={weakness} />
+                  </ListItem>
+                ))}
+              </List>
+            </Grid>
+          </Grid>
+        </Paper>
+        
+        <Paper sx={{ p: 3, mb: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Recommendations
+          </Typography>
+          
+          <List>
+            {results.recommendations.map((recommendation, index) => (
+              <ListItem key={index}>
+                <ListItemIcon>
+                  <SchoolOutlined color="primary" />
+                </ListItemIcon>
+                <ListItemText primary={recommendation} />
+              </ListItem>
+            ))}
+          </List>
+          
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
+            <Button
+              variant="outlined"
+              startIcon={<Refresh />}
+              onClick={() => {
+                setActiveStep(0);
+                setResults(null);
+              }}
+            >
+              Take Another Assessment
+            </Button>
+            
+            <Button
+              variant="contained"
+              color="primary"
+              endIcon={<ArrowForward />}
+              onClick={() => navigate('/learning')}
+            >
+              Explore Learning Resources
+            </Button>
+          </Box>
+        </Paper>
+        
+        {renderSkillForecast()}
       </Box>
     );
   };

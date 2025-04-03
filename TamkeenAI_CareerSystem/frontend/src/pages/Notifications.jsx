@@ -25,7 +25,6 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useUser } from '../context/AppContext';
-import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useDebounce } from '../hooks/useDebounce';
@@ -66,12 +65,12 @@ const Notifications = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   
   const navigate = useNavigate();
-  const { profile } = useUser();
+  const { profile, user } = useUser();
   const { t } = useTranslation();
   
   const [standardNotifications, setStandardNotifications] = useState([
     { 
-      id: 1, 
+      id: 'std-1', 
       messageKey: 'notifications.newJobRecommendation', 
       message: 'New job recommendation available', 
       read: false,
@@ -80,7 +79,7 @@ const Notifications = () => {
       type: 'job'
     },
     { 
-      id: 2, 
+      id: 'std-2', 
       messageKey: 'notifications.resumeUpdate', 
       message: 'Your resume needs updating', 
       read: false,
@@ -89,7 +88,7 @@ const Notifications = () => {
       type: 'resume'
     },
     { 
-      id: 3, 
+      id: 'std-3', 
       messageKey: 'notifications.skillGap', 
       message: 'Skill gap detected in your profile', 
       read: false,
@@ -101,54 +100,37 @@ const Notifications = () => {
   
   // Load notifications
   useEffect(() => {
-    const loadNotifications = async () => {
-      if (!profile?.id) {
-        setLoading(false);
-        return;
-      }
-      
-      setLoading(true);
-      setError(null);
-      
+    const loadNotifications = () => {
       try {
-        // Determine which API to call based on active tab
-        let response;
-        if (activeTab === 0) {
-          // All notifications
-          response = await apiEndpoints.notifications.getAllNotifications(profile.id, {
-            page,
-            limit: pageSize,
-            filters
-          });
-        } else if (activeTab === 1) {
-          // Unread notifications
-          response = await apiEndpoints.notifications.getUnreadNotifications(profile.id, {
-            page,
-            limit: pageSize,
-            filters
-          });
-        } else {
-          // Read notifications
-          response = await apiEndpoints.notifications.getReadNotifications(profile.id, {
-            page,
-            limit: pageSize,
-            filters
-          });
-        }
+        setLoading(true);
+        setError(null);
         
-        // Load booking notifications from localStorage
+        // Get booking notifications from localStorage
         const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
         
         // Combine with standard notifications
-        const allNotifications = [...bookingNotifications, ...standardNotifications];
+        let allNotifications = [...bookingNotifications, ...standardNotifications];
+        
+        // Filter based on active tab
+        if (activeTab === 1) {
+          // Only unread
+          allNotifications = allNotifications.filter(notification => !notification.read);
+        } else if (activeTab === 2) {
+          // Only read
+          allNotifications = allNotifications.filter(notification => notification.read);
+        }
         
         // Sort by date (newest first)
-        allNotifications.sort((a, b) => new Date(b.date) - new Date(a.date));
+        allNotifications.sort((a, b) => {
+          const dateA = a.date ? new Date(a.date) : new Date();
+          const dateB = b.date ? new Date(b.date) : new Date();
+          return dateB - dateA;
+        });
         
         setNotifications(allNotifications);
-        setTotalNotifications(response.meta?.total || 0);
+        setTotalNotifications(allNotifications.length);
       } catch (err) {
-        console.error('Error loading notifications:', err);
+        console.warn('Error loading notifications:', err);
         setError('Failed to load notifications. Please try again later.');
       } finally {
         setLoading(false);
@@ -156,28 +138,30 @@ const Notifications = () => {
     };
     
     loadNotifications();
-  }, [profile, activeTab, page, pageSize, filters, standardNotifications]);
+  }, [activeTab, standardNotifications]);
   
-  // Load notification settings
+  // Load notification settings from localStorage
   useEffect(() => {
-    const loadSettings = async () => {
-      if (!profile?.id) return;
-      
+    const loadSettings = () => {
       try {
-        const response = await apiEndpoints.notifications.getNotificationSettings(profile.id);
-        if (response.data) {
-          setNotificationSettings(response.data);
+        const savedSettings = localStorage.getItem('notificationSettings');
+        if (savedSettings) {
+          setNotificationSettings(JSON.parse(savedSettings));
         }
       } catch (err) {
-        console.error('Error loading notification settings:', err);
+        console.warn('Error loading notification settings:', err);
       }
     };
     
     loadSettings();
-  }, [profile]);
+  }, []);
   
   // Get icon based on notification type
   const getNotificationIcon = (notification) => {
+    if (notification.icon) {
+      return notification.icon;
+    }
+    
     switch (notification.type) {
       case 'application':
         return <Assignment color="primary" />;
@@ -201,9 +185,24 @@ const Notifications = () => {
   };
   
   // Handle mark as read
-  const handleMarkAsRead = async (notificationId) => {
+  const handleMarkAsRead = (notificationId) => {
     try {
-      await apiEndpoints.notifications.markAsRead(profile.id, notificationId);
+      // Update in localStorage
+      const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+      const updatedBookingNotifications = bookingNotifications.map(notification => 
+        notification.id === notificationId
+          ? { ...notification, read: true }
+          : notification
+      );
+      localStorage.setItem('notifications', JSON.stringify(updatedBookingNotifications));
+      
+      // Update standard notifications
+      const updatedStandardNotifications = standardNotifications.map(notification => 
+        notification.id === notificationId
+          ? { ...notification, read: true }
+          : notification
+      );
+      setStandardNotifications(updatedStandardNotifications);
       
       // Update the local state
       setNotifications(notifications.map(notification => 
@@ -218,16 +217,31 @@ const Notifications = () => {
       // Close the menu if open
       setMenuAnchorEl(null);
     } catch (err) {
-      console.error('Error marking notification as read:', err);
+      console.warn('Error marking notification as read:', err);
       setSnackbarMessage('Failed to update notification');
       setSnackbarOpen(true);
     }
   };
   
   // Handle mark as unread
-  const handleMarkAsUnread = async (notificationId) => {
+  const handleMarkAsUnread = (notificationId) => {
     try {
-      await apiEndpoints.notifications.markAsUnread(profile.id, notificationId);
+      // Update in localStorage
+      const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+      const updatedBookingNotifications = bookingNotifications.map(notification => 
+        notification.id === notificationId
+          ? { ...notification, read: false }
+          : notification
+      );
+      localStorage.setItem('notifications', JSON.stringify(updatedBookingNotifications));
+      
+      // Update standard notifications
+      const updatedStandardNotifications = standardNotifications.map(notification => 
+        notification.id === notificationId
+          ? { ...notification, read: false }
+          : notification
+      );
+      setStandardNotifications(updatedStandardNotifications);
       
       // Update the local state
       setNotifications(notifications.map(notification => 
@@ -242,21 +256,30 @@ const Notifications = () => {
       // Close the menu if open
       setMenuAnchorEl(null);
     } catch (err) {
-      console.error('Error marking notification as unread:', err);
+      console.warn('Error marking notification as unread:', err);
       setSnackbarMessage('Failed to update notification');
       setSnackbarOpen(true);
     }
   };
   
   // Handle delete notification
-  const handleDeleteNotification = async (notificationId) => {
+  const handleDeleteNotification = (notificationId) => {
     try {
-      await apiEndpoints.notifications.deleteNotification(profile.id, notificationId);
+      // Delete from localStorage if it's a booking notification
+      const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+      const updatedBookingNotifications = bookingNotifications.filter(
+        notification => notification.id !== notificationId
+      );
+      localStorage.setItem('notifications', JSON.stringify(updatedBookingNotifications));
       
-      // Remove from local state
-      setNotifications(notifications.filter(notification => 
-        notification.id !== notificationId
-      ));
+      // Remove from standard notifications if it's a standard notification
+      const updatedStandardNotifications = standardNotifications.filter(
+        notification => notification.id !== notificationId
+      );
+      setStandardNotifications(updatedStandardNotifications);
+      
+      // Update the local state
+      setNotifications(notifications.filter(notification => notification.id !== notificationId));
       
       setSnackbarMessage('Notification deleted');
       setSnackbarOpen(true);
@@ -264,18 +287,31 @@ const Notifications = () => {
       // Close the menu if open
       setMenuAnchorEl(null);
     } catch (err) {
-      console.error('Error deleting notification:', err);
+      console.warn('Error deleting notification:', err);
       setSnackbarMessage('Failed to delete notification');
       setSnackbarOpen(true);
     }
   };
   
   // Handle mark all as read
-  const handleMarkAllAsRead = async () => {
+  const handleMarkAllAsRead = () => {
     try {
-      await apiEndpoints.notifications.markAllAsRead(profile.id);
+      // Mark all booking notifications as read in localStorage
+      const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+      const updatedBookingNotifications = bookingNotifications.map(notification => ({
+        ...notification,
+        read: true
+      }));
+      localStorage.setItem('notifications', JSON.stringify(updatedBookingNotifications));
       
-      // Update local state
+      // Mark all standard notifications as read
+      const updatedStandardNotifications = standardNotifications.map(notification => ({
+        ...notification,
+        read: true
+      }));
+      setStandardNotifications(updatedStandardNotifications);
+      
+      // Update the local state
       setNotifications(notifications.map(notification => ({
         ...notification,
         read: true
@@ -284,123 +320,131 @@ const Notifications = () => {
       setSnackbarMessage('All notifications marked as read');
       setSnackbarOpen(true);
     } catch (err) {
-      console.error('Error marking all notifications as read:', err);
+      console.warn('Error marking all notifications as read:', err);
       setSnackbarMessage('Failed to update notifications');
       setSnackbarOpen(true);
     }
   };
   
   // Handle clear all notifications
-  const handleClearAll = async () => {
+  const handleClearAll = () => {
     try {
-      await apiEndpoints.notifications.clearAllNotifications(profile.id);
+      // Clear all booking notifications from localStorage
+      localStorage.setItem('notifications', JSON.stringify([]));
       
-      // Update local state
-      setNotifications([]);
+      // Set standard notifications as read instead of removing them
+      const updatedStandardNotifications = standardNotifications.map(notification => ({
+        ...notification,
+        read: true
+      }));
+      setStandardNotifications(updatedStandardNotifications);
+      
+      // Update the local state - only keep standard notifications but mark them as read
+      setNotifications(updatedStandardNotifications);
       
       setSnackbarMessage('All notifications cleared');
       setSnackbarOpen(true);
     } catch (err) {
-      console.error('Error clearing notifications:', err);
+      console.warn('Error clearing notifications:', err);
       setSnackbarMessage('Failed to clear notifications');
       setSnackbarOpen(true);
     }
   };
   
-  // Handle save notification settings
-  const handleSaveSettings = async () => {
+  // Handle save settings
+  const handleSaveSettings = () => {
     try {
-      await apiEndpoints.notifications.updateNotificationSettings(profile.id, notificationSettings);
+      // Save settings to localStorage
+      localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
       
-      setSnackbarMessage('Notification settings updated');
+      setSnackbarMessage('Notification settings saved');
       setSnackbarOpen(true);
       setSettingsOpen(false);
     } catch (err) {
-      console.error('Error updating notification settings:', err);
-      setSnackbarMessage('Failed to update settings');
+      console.warn('Error saving notification settings:', err);
+      setSnackbarMessage('Failed to save settings');
       setSnackbarOpen(true);
     }
   };
   
-  // Apply filters
+  // Handle apply filters
   const handleApplyFilters = () => {
     setFilterMenuAnchorEl(null);
-    setPage(1); // Reset to first page when filters change
+    // The filters are already applied by the state change
   };
   
-  // Reset filters
+  // Handle reset filters
   const handleResetFilters = () => {
     setFilters({
       types: [],
       dateRange: 'all'
     });
     setFilterMenuAnchorEl(null);
-    setPage(1);
   };
   
+  // Handle notification click
   const handleNotificationClick = (notification) => {
-    // Mark as read
-    const updatedNotifications = notifications.map(n => {
-      if (n.id === notification.id) {
-        return { ...n, read: true };
-      }
-      return n;
-    });
-    setNotifications(updatedNotifications);
-    
-    // Also update booking notifications in localStorage
-    if (notification.type === 'booking_reminder') {
-      const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-      const updatedBookingNotifications = bookingNotifications.map(n => {
-        if (n.id === notification.id) {
-          return { ...n, read: true };
-        }
-        return n;
-      });
-      localStorage.setItem('notifications', JSON.stringify(updatedBookingNotifications));
+    // First mark as read
+    if (!notification.read) {
+      handleMarkAsRead(notification.id);
     }
     
-    // Navigate based on notification type
+    // Handle different notification types
     if (notification.type === 'booking_reminder') {
       navigate('/my-bookings');
     } else if (notification.type === 'job') {
       navigate('/job-search');
     } else if (notification.type === 'resume') {
-      navigate('/resume-builder');
+      navigate('/resumePage');
     } else if (notification.type === 'skill') {
-      navigate('/skill-builder');
+      navigate('/skills-assessment');
+    } else {
+      // For other notifications, show details dialog
+      setSelectedNotification(notification);
+      setNotificationDetailsOpen(true);
     }
   };
   
+  // Render notification icon
   const renderNotificationIcon = (notification) => {
-    if (notification.type === 'booking_reminder') {
-      return <CalendarToday color="primary" />;
-    } else if (notification.icon) {
-      return notification.icon;
-    }
-    return <NotificationsIcon color="primary" />;
+    return (
+      <ListItemIcon>
+        {getNotificationIcon(notification)}
+      </ListItemIcon>
+    );
   };
   
+  // Format date for display
   const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now - date;
-    
-    // Less than a day
-    if (diff < 86400000) {
-      const hours = Math.floor(diff / 3600000);
-      if (hours < 1) return 'Just now';
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    try {
+      if (!dateStr) return '';
+      const date = new Date(dateStr);
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (error) {
+      console.warn('Error formatting date:', error);
+      return '';
     }
-    
-    // Less than a week
-    if (diff < 604800000) {
-      const days = Math.floor(diff / 86400000);
-      return `${days} day${days > 1 ? 's' : ''} ago`;
+  };
+  
+  // Render notification content
+  const renderNotificationContent = (notification) => {
+    try {
+      if (notification.type === 'booking_reminder') {
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+            <Box>
+              <Typography variant="subtitle2">{notification.title || ''}</Typography>
+              <Typography variant="body2">{notification.message || ''}</Typography>
+            </Box>
+          </Box>
+        );
+      }
+      
+      return <Typography variant="body2">{t(notification.messageKey || '', notification.message || '')}</Typography>;
+    } catch (error) {
+      console.warn('Error rendering notification content:', error);
+      return <Typography variant="body2">Notification</Typography>;
     }
-    
-    // Else show date
-    return date.toLocaleDateString();
   };
   
   return (
@@ -456,20 +500,7 @@ const Notifications = () => {
                         {renderNotificationIcon(notification)}
                       </Avatar>
                       <Box sx={{ flex: 1 }} onClick={() => handleNotificationClick(notification)}>
-                        {notification.type === 'booking_reminder' ? (
-                          <>
-                            <Typography variant="subtitle1" sx={{ fontWeight: notification.read ? 'normal' : 'bold' }}>
-                          {notification.title}
-                        </Typography>
-                            <Typography variant="body2" paragraph>
-                            {notification.message}
-                          </Typography>
-                          </>
-                        ) : (
-                          <Typography variant="body1" sx={{ fontWeight: notification.read ? 'normal' : 'bold' }}>
-                            {t(notification.messageKey, notification.message)}
-                          </Typography>
-                        )}
+                        {renderNotificationContent(notification)}
                         <Typography variant="caption" color="text.secondary">
                           {formatDate(notification.date)}
                           </Typography>

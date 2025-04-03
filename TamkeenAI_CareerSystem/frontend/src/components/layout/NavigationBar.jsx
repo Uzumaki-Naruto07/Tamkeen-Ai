@@ -207,8 +207,6 @@ const navigationItems = [
   { path: '/ai-coach', label: 'AI Coach', labelKey: 'navigation.aiCoach', icon: <SmartToyIcon /> },
   { path: '/resumePage', label: 'Resume Builder', labelKey: 'navigation.resumeBuilder', icon: <DescriptionIcon /> },
   { path: '/skills-assessment', label: 'Skill Builder', labelKey: 'navigation.skillBuilder', icon: <SchoolIcon /> },
-  { path: '/resume-score-tracker', label: 'Resume Score', labelKey: 'navigation.resumeScore', icon: <AssessmentIcon /> },
-
   { path: '/achievements', label: 'Achievements', labelKey: 'navigation.achievements', icon: <EmojiEventsIcon /> },
 ];
 
@@ -254,43 +252,57 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
   
   // Define mock notifications for the example
   const getNotifications = () => {
-    // Standard mock notifications
-    const standardNotifications = [
-      { id: 1, messageKey: 'notifications.newJobRecommendation', message: 'New job recommendation', read: false },
-      { id: 2, messageKey: 'notifications.resumeUpdate', message: 'Your resume needs updating', read: false },
-      { id: 3, messageKey: 'notifications.skillGap', message: 'Skill gap detected', read: false }
-    ];
-    
-    // Get booking notifications from localStorage
-    const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-    
-    // Combine lists with booking notifications first
-    return [...bookingNotifications, ...standardNotifications];
+    try {
+      // Standard mock notifications
+      const standardNotifications = [
+        { id: 1, messageKey: 'notifications.newJobRecommendation', message: 'New job recommendation', read: false },
+        { id: 2, messageKey: 'notifications.resumeUpdate', message: 'Your resume needs updating', read: false },
+        { id: 3, messageKey: 'notifications.skillGap', message: 'Skill gap detected', read: false }
+      ];
+      
+      // Get booking notifications from localStorage
+      const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+      
+      // Combine lists with booking notifications first
+      return [...bookingNotifications, ...standardNotifications];
+    } catch (error) {
+      console.warn('Error fetching notifications:', error);
+      return [];
+    }
   };
   
   // Calculate unread notifications count
   useEffect(() => {
-    // Load notifications from localStorage and update the counter
-    const loadNotifications = () => {
-      // Get booking notifications from localStorage
-      const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+    try {
+      // Load notifications from localStorage and update the counter
+      const loadNotifications = () => {
+        try {
+          // Get booking notifications from localStorage
+          const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+          
+          // Count unread booking notifications
+          const unreadBookingCount = bookingNotifications.filter(n => !n.read).length;
+          
+          // Count standard notifications (3 by default)
+          const standardNotificationsCount = 3;
+          
+          // Set total unread count
+          setUnreadCount(unreadBookingCount + standardNotificationsCount);
+        } catch (error) {
+          console.warn('Error loading notifications:', error);
+          setUnreadCount(0);
+        }
+      };
       
-      // Count unread booking notifications
-      const unreadBookingCount = bookingNotifications.filter(n => !n.read).length;
+      loadNotifications();
       
-      // Count standard notifications (3 by default)
-      const standardNotificationsCount = 3;
+      // Set up interval to check for new notifications
+      const interval = setInterval(loadNotifications, 5000); // Check every 5 seconds
       
-      // Set total unread count
-      setUnreadCount(unreadBookingCount + standardNotificationsCount);
-    };
-    
-    loadNotifications();
-    
-    // Set up interval to check for new notifications
-    const interval = setInterval(loadNotifications, 5000); // Check every 5 seconds
-    
-    return () => clearInterval(interval);
+      return () => clearInterval(interval);
+    } catch (error) {
+      console.warn('Error setting up notification system:', error);
+    }
   }, []);
   
   // Toggle drawer
@@ -371,13 +383,17 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
   
   // Handle mark all notifications as read
   const handleMarkAllRead = () => {
-    setUnreadCount(0);
-    
-    // Mark booking notifications as read in localStorage
-    const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-    if (bookingNotifications.length > 0) {
-      const updatedNotifications = bookingNotifications.map(n => ({ ...n, read: true }));
-      localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+    try {
+      setUnreadCount(0);
+      
+      // Mark booking notifications as read in localStorage
+      const bookingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+      if (bookingNotifications.length > 0) {
+        const updatedNotifications = bookingNotifications.map(n => ({ ...n, read: true }));
+        localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+      }
+    } catch (error) {
+      console.warn('Error marking notifications as read:', error);
     }
   };
   
@@ -399,21 +415,26 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
   
   // Render notification content based on notification type
   const renderNotificationContent = (notification) => {
-    // Handle booking reminders
-    if (notification.type === 'booking_reminder') {
-      return (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-          <CalendarToday color="primary" sx={{ mr: 1, mt: 0.5 }} fontSize="small" />
-          <Box>
-            <Typography variant="subtitle2">{notification.title}</Typography>
-            <Typography variant="body2">{notification.message}</Typography>
+    try {
+      // Handle booking reminders
+      if (notification.type === 'booking_reminder') {
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+            <CalendarToday color="primary" sx={{ mr: 1, mt: 0.5 }} fontSize="small" />
+            <Box>
+              <Typography variant="subtitle2">{notification.title || ''}</Typography>
+              <Typography variant="body2">{notification.message || ''}</Typography>
+            </Box>
           </Box>
-        </Box>
-      );
+        );
+      }
+      
+      // Handle existing notification types with messageKey
+      return <Typography variant="body2">{t(notification.messageKey || '', notification.message || '')}</Typography>;
+    } catch (error) {
+      console.warn('Error rendering notification content:', error);
+      return <Typography variant="body2">Notification</Typography>;
     }
-    
-    // Handle existing notification types with messageKey
-    return <Typography variant="body2">{t(notification.messageKey, notification.message)}</Typography>;
   };
   
   return (
@@ -507,14 +528,16 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
               endIcon={<ArrowDropDownIcon />}
             >
               <Avatar 
-                src={user?.avatar || undefined} 
+                src={(user?.avatar && typeof user.avatar === 'string') ? user.avatar : undefined} 
                 sx={{ width: 32, height: 32, mr: 1 }}
               >
-                {user?.firstName?.charAt(0) || user?.name?.charAt(0) || "U"}
+                {(user?.firstName && typeof user.firstName === 'string') ? user.firstName.charAt(0) : 
+                 (user?.name && typeof user.name === 'string') ? user.name.charAt(0) : "U"}
               </Avatar>
               {!isMobile && (
                 <Typography variant="body2">
-                  {user?.firstName || user?.name?.split(' ')[0] || "User"}
+                  {(user?.firstName && typeof user.firstName === 'string') ? user.firstName : 
+                   (user?.name && typeof user.name === 'string') ? user.name.split(' ')[0] : "User"}
                 </Typography>
               )}
             </ProfileButton>
@@ -577,30 +600,42 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
           </Box>
           <Divider />
           <List sx={{ p: 0 }}>
-            {getNotifications().length > 0 ? (
-              getNotifications().map((notification) => (
-                <ListItem 
-                  key={notification.id}
-                  button
-                  onClick={() => handleNotificationClick(notification)}
-                  sx={{ 
-                    backgroundColor: notification.read ? 'inherit' : 'rgba(25, 118, 210, 0.08)',
-                    '&:hover': {
-                      backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                    }
-                  }}
-                >
-                  <ListItemText 
-                    primary={renderNotificationContent(notification)}
-                    secondary={notification.read ? t('notifications.read') : t('notifications.new')}
-                  />
-                </ListItem>
-              ))
-            ) : (
-              <ListItem>
-                <ListItemText primary={t('notifications.empty')} />
-              </ListItem>
-            )}
+            {(() => {
+              try {
+                const notifications = getNotifications();
+                return notifications.length > 0 ? (
+                  notifications.map((notification) => (
+                    <ListItem 
+                      key={notification.id || Math.random().toString()}
+                      button
+                      onClick={() => handleNotificationClick(notification)}
+                      sx={{ 
+                        backgroundColor: notification.read ? 'inherit' : 'rgba(25, 118, 210, 0.08)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                        }
+                      }}
+                    >
+                      <ListItemText 
+                        primary={renderNotificationContent(notification)}
+                        secondary={notification.read ? t('notifications.read') : t('notifications.new')}
+                      />
+                    </ListItem>
+                  ))
+                ) : (
+                  <ListItem>
+                    <ListItemText primary={t('notifications.empty')} />
+                  </ListItem>
+                );
+              } catch (error) {
+                console.warn('Error rendering notifications list:', error);
+                return (
+                  <ListItem>
+                    <ListItemText primary="Could not load notifications" />
+                  </ListItem>
+                );
+              }
+            })()}
           </List>
           <Divider />
           <Box sx={{ p: 1 }}>
