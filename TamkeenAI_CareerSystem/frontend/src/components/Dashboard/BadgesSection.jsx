@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Paper, 
   Typography, 
@@ -46,7 +46,10 @@ import ShareIcon from '@mui/icons-material/Share';
 import LockIcon from '@mui/icons-material/Lock';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DownloadIcon from '@mui/icons-material/Download';
 import { motion } from 'framer-motion';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 // Badge icon mapping
 const badgeIcons = {
@@ -70,19 +73,104 @@ const badgeColors = {
   'diamond': '#B9F2FF'
 };
 
+// Sample badge data for fallback
+const sampleBadges = [
+  {
+    id: '1',
+    name: 'First Interview Completed',
+    icon: 'assignment',
+    tier: 'bronze',
+    date_earned: '2023-12-15',
+    description: 'Successfully completed your first mock interview session',
+    category: 'Interviews',
+    progression_path: 'Interview Mastery'
+  },
+  {
+    id: '2',
+    name: 'Resume Expert',
+    icon: 'work',
+    tier: 'silver',
+    date_earned: '2023-12-20',
+    description: 'Achieved a resume score of 85 or higher',
+    category: 'Resume',
+    progression_path: 'Application Excellence'
+  },
+  {
+    id: '3',
+    name: 'Skill Acquisition Champion',
+    icon: 'trending_up',
+    tier: 'gold',
+    date_earned: null,
+    description: 'Add 10 verified skills to your profile',
+    category: 'Skills',
+    progression_path: 'Skill Development',
+    unlock_conditions: {
+      required_count: 10,
+      description: 'Add 10 verified skills to your profile'
+    },
+    unlock_progress: 7
+  },
+  {
+    id: '4',
+    name: 'Networking Novice',
+    icon: 'people',
+    tier: 'bronze',
+    date_earned: '2024-01-05',
+    description: 'Connect with 5 professionals in your field',
+    category: 'Networking',
+    progression_path: 'Professional Network'
+  },
+  {
+    id: '5',
+    name: 'Career Path Explorer',
+    icon: 'school',
+    tier: 'silver',
+    date_earned: null,
+    description: 'Explore 3 different career paths',
+    category: 'Career Planning',
+    unlock_conditions: {
+      required_count: 3,
+      description: 'Explore 3 different career paths'
+    },
+    unlock_progress: 1
+  }
+];
+
 const BadgesSection = ({ data }) => {
   const { t } = useTranslation();
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
   const [expandedCategory, setExpandedCategory] = useState(null);
+  const [badgeData, setBadgeData] = useState([]);
   
-  // Ensure badges exist with fallback to empty array
-  const badges = Array.isArray(data) ? data : [];
+  useEffect(() => {
+    // Try to fetch badges from localStorage first
+    try {
+      const storedBadges = localStorage.getItem('user_badges');
+      if (storedBadges) {
+        setBadgeData(JSON.parse(storedBadges));
+      } else if (Array.isArray(data) && data.length > 0) {
+        // If no localStorage data but props data exists, use that
+        setBadgeData(data);
+        // Also save to localStorage for future
+        localStorage.setItem('user_badges', JSON.stringify(data));
+      } else {
+        // If no data found anywhere, use sample data
+        setBadgeData(sampleBadges);
+        // Save sample data to localStorage
+        localStorage.setItem('user_badges', JSON.stringify(sampleBadges));
+      }
+    } catch (error) {
+      console.error('Error loading badge data:', error);
+      // Fallback to sample data on error
+      setBadgeData(sampleBadges);
+    }
+  }, [data]);
   
   // Calculate badge stats
-  const earnedBadges = badges.filter(badge => badge.date_earned);
-  const totalBadges = badges.length;
+  const earnedBadges = badgeData.filter(badge => badge.date_earned);
+  const totalBadges = badgeData.length;
   const completionPercentage = Math.round((earnedBadges.length / totalBadges) * 100) || 0;
   
   // Heading and badge stats
@@ -137,9 +225,55 @@ const BadgesSection = ({ data }) => {
       alert(t('common.share') + ': ' + selectedBadge.name);
     }
   };
+
+  // Export badges as PDF
+  const handleExportBadges = () => {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(20);
+    doc.text('My Achievement Badges', 14, 22);
+    
+    // Add completion stats
+    doc.setFontSize(12);
+    doc.text(`Progress: ${earnedBadges.length}/${totalBadges} badges earned (${completionPercentage}% complete)`, 14, 30);
+    
+    // Add current date
+    const today = new Date();
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on ${today.toLocaleDateString()}`, 14, 35);
+    
+    // Create table data
+    const tableColumn = ["Badge Name", "Category", "Tier", "Date Earned", "Description"];
+    const tableRows = badgeData.map(badge => [
+      badge.name,
+      badge.category || "-",
+      badge.tier || "-",
+      badge.date_earned || "Not yet earned",
+      badge.description
+    ]);
+    
+    // Add table
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 40,
+      styles: { fontSize: 10, cellPadding: 3 },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      alternateRowStyles: { fillColor: [240, 240, 240] },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        3: { cellWidth: 25 }
+      }
+    });
+    
+    // Save PDF
+    doc.save('my-achievements.pdf');
+  };
   
   // Organize badges into categories and trees
-  const categorizedBadges = badges.reduce((acc, badge) => {
+  const categorizedBadges = badgeData.reduce((acc, badge) => {
     const category = badge.category || t('badges.generalCategory');
     if (!acc[category]) {
       acc[category] = [];
@@ -149,7 +283,7 @@ const BadgesSection = ({ data }) => {
   }, {});
   
   // Create badge progression trees
-  const badgeTrees = badges.reduce((acc, badge) => {
+  const badgeTrees = badgeData.reduce((acc, badge) => {
     if (badge.progression_path) {
       if (!acc[badge.progression_path]) {
         acc[badge.progression_path] = [];
@@ -432,7 +566,7 @@ const BadgesSection = ({ data }) => {
         <>
           <Divider sx={{ my: 2 }} />
           <Grid container spacing={2}>
-            {badges.map((badge) => {
+            {badgeData.map((badge) => {
               const isEarned = !!badge.date_earned;
               return (
                 <Grid item xs={4} sm={3} md={4} key={badge.id}>
