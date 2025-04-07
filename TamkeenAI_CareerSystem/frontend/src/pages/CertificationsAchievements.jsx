@@ -4,9 +4,7 @@ import {
   Button, Divider, Chip, IconButton, TextField, Tooltip,
   Dialog, DialogTitle, DialogContent, DialogActions,
   List, ListItem, ListItemText, ListItemIcon, Avatar,
-  CircularProgress, Alert, Paper, Tab, Tabs,
-  Menu, MenuItem, Dialog as ConfirmDialog,
-  DialogContentText, Snackbar
+  CircularProgress, Alert, Paper, Tab, Tabs
 } from '@mui/material';
 import {
   WorkspacePremium, School, EmojiEvents, Add, Edit,
@@ -20,8 +18,6 @@ import apiEndpoints from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 
 const CertificationsAchievements = () => {
   const { t } = useTranslation();
@@ -43,11 +39,6 @@ const CertificationsAchievements = () => {
     url: ''
   });
   const [skillChart, setSkillChart] = useState([]);
-  const [menuAnchor, setMenuAnchor] = useState(null);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   // Fetch certifications and achievements
   useEffect(() => {
@@ -74,31 +65,11 @@ const CertificationsAchievements = () => {
         
         // Fetch badges
         try {
-          const storedBadges = localStorage.getItem('user_badges');
-          if (storedBadges) {
-            setBadges(JSON.parse(storedBadges));
-          } else {
-            const badgesResponse = await apiEndpoints.user.getBadges(user.id);
-            setBadges(badgesResponse?.data || []);
-            // Save to localStorage for future use
-            if (badgesResponse?.data) {
-              localStorage.setItem('user_badges', JSON.stringify(badgesResponse.data));
-            }
-          }
+          const badgesResponse = await apiEndpoints.user.getBadges(user.id);
+          setBadges(badgesResponse?.data || []);
         } catch (err) {
-          console.log('Badges API not available, checking localStorage');
-          // Try to get badges from localStorage as fallback
-          try {
-            const storedBadges = localStorage.getItem('user_badges');
-            if (storedBadges) {
-              setBadges(JSON.parse(storedBadges));
-            } else {
-              setBadges([]);
-            }
-          } catch (e) {
-            console.error('Error retrieving badges from localStorage:', e);
-            setBadges([]);
-          }
+          console.log('Badges API not available, using empty list');
+          setBadges([]);
         }
 
         // Fetch skill chart
@@ -208,160 +179,10 @@ const CertificationsAchievements = () => {
         }]);
       }
       handleCloseDialog();
-
-      // Show success message
-      setSnackbarMessage(`${addItemType} added successfully!`);
-      setSnackbarOpen(true);
     } catch (err) {
       console.error(`Error adding ${addItemType}:`, err);
       setError(t('error_adding_item'));
     }
-  };
-
-  // Handle menu open
-  const handleMenuOpen = (event, item, type) => {
-    event.stopPropagation();
-    setMenuAnchor(event.currentTarget);
-    setSelectedItem({ ...item, type });
-  };
-
-  // Handle menu close
-  const handleMenuClose = () => {
-    setMenuAnchor(null);
-  };
-
-  // Handle delete action
-  const handleDeleteClick = () => {
-    handleMenuClose();
-    setConfirmDialogOpen(true);
-  };
-
-  // Confirm delete
-  const handleConfirmDelete = async () => {
-    try {
-      if (selectedItem.type === 'certification') {
-        await apiEndpoints.user.deleteCertification(user.id, selectedItem.id);
-        setCertifications(prev => prev.filter(cert => cert.id !== selectedItem.id));
-      } else if (selectedItem.type === 'achievement') {
-        await apiEndpoints.user.deleteAchievement(user.id, selectedItem.id);
-        setAchievements(prev => prev.filter(achieve => achieve.id !== selectedItem.id));
-      } else if (selectedItem.type === 'badge') {
-        // Handle badge hiding
-        const updatedBadges = badges.map(badge => 
-          badge.id === selectedItem.id ? { ...badge, hidden: true } : badge
-        );
-        setBadges(updatedBadges);
-        localStorage.setItem('user_badges', JSON.stringify(updatedBadges));
-      }
-      
-      setConfirmDialogOpen(false);
-      setSnackbarMessage(`${selectedItem.type} deleted successfully!`);
-      setSnackbarOpen(true);
-    } catch (err) {
-      console.error(`Error deleting ${selectedItem.type}:`, err);
-      setError(`Error deleting ${selectedItem.type}`);
-      setConfirmDialogOpen(false);
-    }
-  };
-
-  // Handle share action
-  const handleShareItem = () => {
-    handleMenuClose();
-    
-    const title = selectedItem.title || selectedItem.name;
-    const text = selectedItem.description;
-    const url = window.location.href;
-    
-    if (navigator.share) {
-      navigator.share({
-        title,
-        text,
-        url
-      }).catch(err => {
-        console.error('Share failed:', err);
-      });
-    } else {
-      // Fallback for browsers without share API
-      navigator.clipboard.writeText(`${title}: ${text} ${url}`);
-      setSnackbarMessage('Copied to clipboard!');
-      setSnackbarOpen(true);
-    }
-  };
-
-  // Export item as PDF
-  const handleExportPDF = () => {
-    handleMenuClose();
-    
-    const doc = new jsPDF();
-    
-    if (selectedItem.type === 'certification' || selectedItem.type === 'achievement') {
-      // Title
-      doc.setFontSize(20);
-      doc.text(selectedItem.title, 14, 22);
-      
-      // Issuer and date
-      doc.setFontSize(12);
-      if (selectedItem.issuer) {
-        doc.text(`Issuer: ${selectedItem.issuer}`, 14, 32);
-      }
-      if (selectedItem.date) {
-        doc.text(`Date: ${selectedItem.date}`, 14, 40);
-      }
-      
-      // Description
-      if (selectedItem.description) {
-        doc.setFontSize(11);
-        const splitDescription = doc.splitTextToSize(selectedItem.description, 180);
-        doc.text(splitDescription, 14, 50);
-      }
-      
-      // Skills if any
-      if (selectedItem.skills && selectedItem.skills.length > 0) {
-        const yPos = selectedItem.description ? 70 : 50;
-        doc.setFontSize(12);
-        doc.text('Skills:', 14, yPos);
-        doc.setFontSize(10);
-        selectedItem.skills.forEach((skill, index) => {
-          doc.text(`• ${skill}`, 20, yPos + 8 + (index * 6));
-        });
-      }
-      
-    } else if (selectedItem.type === 'badge') {
-      // Badge export
-      doc.setFontSize(20);
-      doc.text(selectedItem.name, 14, 22);
-      
-      // Badge category and tier
-      doc.setFontSize(12);
-      if (selectedItem.category) {
-        doc.text(`Category: ${selectedItem.category}`, 14, 32);
-      }
-      if (selectedItem.tier) {
-        doc.text(`Tier: ${selectedItem.tier}`, 14, 40);
-      }
-      
-      // Date earned
-      if (selectedItem.date_earned) {
-        doc.text(`Earned on: ${selectedItem.date_earned}`, 14, 48);
-      }
-      
-      // Description
-      if (selectedItem.description) {
-        doc.setFontSize(11);
-        const splitDescription = doc.splitTextToSize(selectedItem.description, 180);
-        doc.text(splitDescription, 14, 58);
-      }
-    }
-    
-    doc.save(`${selectedItem.type}-${selectedItem.title || selectedItem.name}.pdf`);
-    
-    setSnackbarMessage('Exported to PDF successfully!');
-    setSnackbarOpen(true);
-  };
-
-  // Close snackbar
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
   };
 
   const renderCertifications = () => (
@@ -413,18 +234,12 @@ const CertificationsAchievements = () => {
                 </Tooltip>
               )}
               <Tooltip title={t('share')}>
-                <IconButton 
-                  size="small"
-                  onClick={(e) => handleMenuOpen(e, cert, 'certification')}
-                >
+                <IconButton size="small">
                   <Share fontSize="small" />
                 </IconButton>
               </Tooltip>
               <Tooltip title={t('more_options')}>
-                <IconButton 
-                  size="small"
-                  onClick={(e) => handleMenuOpen(e, cert, 'certification')}
-                >
+                <IconButton size="small">
                   <MoreVert fontSize="small" />
                 </IconButton>
               </Tooltip>
@@ -440,20 +255,17 @@ const CertificationsAchievements = () => {
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            p: 3,
+            minHeight: 200,
             border: '2px dashed',
             borderColor: 'divider',
-            bgcolor: 'background.default',
+            backgroundColor: 'transparent',
             cursor: 'pointer'
           }}
           onClick={() => handleOpenDialog('certification')}
         >
-          <Add fontSize="large" color="primary" sx={{ mb: 2 }} />
-          <Typography variant="h6" align="center">
+          <Add fontSize="large" color="primary" />
+          <Typography variant="h6" color="primary" sx={{ mt: 2 }}>
             {t('add_certification')}
-          </Typography>
-          <Typography variant="body2" color="textSecondary" align="center" sx={{ mt: 1 }}>
-            {t('add_certification_prompt')}
           </Typography>
         </Card>
       </Grid>
@@ -466,11 +278,9 @@ const CertificationsAchievements = () => {
         <Grid item xs={12} md={6} lg={4} key={achievement.id || index}>
           <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <CardContent sx={{ flexGrow: 1 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                <Typography variant="h6" component="h3" gutterBottom>
-                  {achievement.title}
-                </Typography>
-              </Box>
+              <Typography variant="h6" component="h3" gutterBottom>
+                {achievement.title}
+              </Typography>
               <Typography color="textSecondary" gutterBottom>
                 {achievement.issuer}
               </Typography>
@@ -481,42 +291,24 @@ const CertificationsAchievements = () => {
               <Typography variant="body2" paragraph>
                 {achievement.description}
               </Typography>
-              {achievement.skills && (
-                <Box mt={2}>
-                  {achievement.skills.map((skill, idx) => (
-                    <Chip 
-                      key={idx} 
-                      label={skill} 
-                      size="small" 
-                      sx={{ mr: 0.5, mb: 0.5 }} 
-                    />
-                  ))}
-                </Box>
-              )}
             </CardContent>
             <Divider />
             <Box sx={{ p: 1, display: 'flex', justifyContent: 'flex-end' }}>
               {achievement.url && (
-                <Tooltip title={t('view_achievement')}>
+                <Tooltip title={t('view_details')}>
                   <IconButton size="small" component="a" href={achievement.url} target="_blank">
                     <Link fontSize="small" />
                   </IconButton>
                 </Tooltip>
               )}
-              <Tooltip title={t('share')}>
-                <IconButton 
-                  size="small"
-                  onClick={(e) => handleMenuOpen(e, achievement, 'achievement')}
-                >
-                  <Share fontSize="small" />
+              <Tooltip title={t('edit')}>
+                <IconButton size="small">
+                  <Edit fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title={t('more_options')}>
-                <IconButton 
-                  size="small"
-                  onClick={(e) => handleMenuOpen(e, achievement, 'achievement')}
-                >
-                  <MoreVert fontSize="small" />
+              <Tooltip title={t('delete')}>
+                <IconButton size="small">
+                  <Delete fontSize="small" />
                 </IconButton>
               </Tooltip>
             </Box>
@@ -531,20 +323,17 @@ const CertificationsAchievements = () => {
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            p: 3,
+            minHeight: 200,
             border: '2px dashed',
             borderColor: 'divider',
-            bgcolor: 'background.default',
+            backgroundColor: 'transparent',
             cursor: 'pointer'
           }}
           onClick={() => handleOpenDialog('achievement')}
         >
-          <Add fontSize="large" color="primary" sx={{ mb: 2 }} />
-          <Typography variant="h6" align="center">
+          <Add fontSize="large" color="primary" />
+          <Typography variant="h6" color="primary" sx={{ mt: 2 }}>
             {t('add_achievement')}
-          </Typography>
-          <Typography variant="body2" color="textSecondary" align="center" sx={{ mt: 1 }}>
-            {t('add_achievement_prompt')}
           </Typography>
         </Card>
       </Grid>
@@ -553,326 +342,189 @@ const CertificationsAchievements = () => {
 
   const renderBadges = () => (
     <Grid container spacing={3}>
-      {badges
-        .filter(badge => !badge.hidden)
-        .map((badge, index) => (
-        <Grid item xs={12} sm={6} md={4} lg={3} key={badge.id || index}>
+      {badges.map((badge, index) => (
+        <Grid item xs={6} sm={4} md={3} lg={2} key={badge.id || index}>
           <Card sx={{ 
             height: '100%', 
             display: 'flex', 
             flexDirection: 'column',
-            position: 'relative',
-            bgcolor: badge.date_earned ? 'background.paper' : 'background.default',
-            border: badge.date_earned ? `2px solid ${badge.tier ? badge.tier : 'primary.main'}` : '1px solid divider',
-            boxShadow: badge.date_earned ? 3 : 1
+            alignItems: 'center',
+            padding: 2
           }}>
-            <CardContent sx={{ flexGrow: 1, pt: 3, pb: 2 }}>
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
+            <Avatar 
+              src={badge.imageUrl} 
+              sx={{ 
+                width: 80, 
+                height: 80, 
                 mb: 2,
-                position: 'relative'
-              }}>
-                <Avatar 
-                  sx={{ 
-                    width: 70, 
-                    height: 70, 
-                    bgcolor: badge.date_earned 
-                      ? (badge.tier === 'gold' ? '#FFD700' 
-                         : badge.tier === 'silver' ? '#C0C0C0'
-                         : badge.tier === 'bronze' ? '#CD7F32'
-                         : badge.tier === 'platinum' ? '#E5E4E2'
-                         : 'primary.main')
-                      : 'action.disabled',
-                    boxShadow: badge.date_earned ? '0 4px 10px rgba(0,0,0,0.2)' : 'none',
-                    opacity: badge.date_earned ? 1 : 0.7
-                  }}
-                >
-                  {badge.icon === 'star' && <Star fontSize="large" />}
-                  {badge.icon === 'school' && <School fontSize="large" />}
-                  {badge.icon === 'emoji_events' && <EmojiEvents fontSize="large" />}
-                  {badge.icon === 'work' && <WorkspacePremium fontSize="large" />}
-                  {badge.icon === 'assignment' && <CheckCircle fontSize="large" />}
-                  {badge.icon === 'people' && <GroupIcon fontSize="large" />}
-                  {!badge.icon && <Star fontSize="large" />}
-                </Avatar>
-                {badge.date_earned && (
-                  <Box 
-                    sx={{ 
-                      position: 'absolute', 
-                      bottom: -10, 
-                      bgcolor: 'success.main', 
-                      color: 'white', 
-                      px: 1, 
-                      py: 0.2, 
-                      borderRadius: 1,
-                      fontSize: '0.7rem',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    {badge.tier || 'EARNED'}
-                  </Box>
-                )}
-              </Box>
-              
-              <Typography variant="subtitle1" align="center" gutterBottom sx={{ fontWeight: 'bold' }}>
-                {badge.name}
-              </Typography>
-              
-              {badge.category && (
-                <Chip 
-                  label={badge.category} 
-                  size="small" 
-                  color="primary" 
-                  variant="outlined"
-                  sx={{ display: 'block', mx: 'auto', mb: 1.5 }}
-                />
-              )}
-              
-              <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 1.5 }}>
-                {badge.description}
-              </Typography>
-              
-              {badge.date_earned && (
-                <Typography variant="caption" display="block" align="center" color="text.secondary">
-                  <DateRange fontSize="inherit" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
-                  Earned: {new Date(badge.date_earned).toLocaleDateString()}
-                </Typography>
-              )}
-              
-              {!badge.date_earned && badge.unlock_conditions && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="caption" display="block" align="center" gutterBottom>
-                    Progress: {badge.unlock_progress || 0}/{badge.unlock_conditions.required_count}
-                  </Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={(badge.unlock_progress / badge.unlock_conditions.required_count) * 100} 
-                    sx={{ height: 8, borderRadius: 4 }}
-                  />
-                </Box>
-              )}
-            </CardContent>
-            <Box sx={{ mt: 'auto', p: 1, display: 'flex', justifyContent: 'flex-end' }}>
-              <Tooltip title={t('share')}>
-                <IconButton 
-                  size="small"
-                  onClick={(e) => handleMenuOpen(e, badge, 'badge')}
-                  disabled={!badge.date_earned}
-                >
-                  <Share fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title={t('more_options')}>
-                <IconButton 
-                  size="small"
-                  onClick={(e) => handleMenuOpen(e, badge, 'badge')}
-                >
-                  <MoreVert fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Box>
+                boxShadow: 3
+              }}
+            >
+              <EmojiEvents />
+            </Avatar>
+            <Typography 
+              variant="subtitle1" 
+              component="h3" 
+              align="center" 
+              gutterBottom
+              sx={{ fontWeight: 'bold' }}
+            >
+              {badge.title}
+            </Typography>
+            <Typography 
+              variant="body2" 
+              color="textSecondary" 
+              align="center"
+            >
+              {badge.description}
+            </Typography>
           </Card>
         </Grid>
       ))}
     </Grid>
   );
 
-  // Item options menu
-  const renderItemMenu = () => (
-    <Menu
-      anchorEl={menuAnchor}
-      open={Boolean(menuAnchor)}
-      onClose={handleMenuClose}
-    >
-      <MenuItem onClick={handleShareItem}>
-        <ListItemIcon>
-          <Share fontSize="small" />
-        </ListItemIcon>
-        <ListItemText primary="Share" />
-      </MenuItem>
-      <MenuItem onClick={handleExportPDF}>
-        <ListItemIcon>
-          <Download fontSize="small" />
-        </ListItemIcon>
-        <ListItemText primary="Export as PDF" />
-      </MenuItem>
-      <Divider />
-      <MenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
-        <ListItemIcon>
-          <Delete fontSize="small" color="error" />
-        </ListItemIcon>
-        <ListItemText primary={selectedItem?.type === 'badge' ? "Hide" : "Delete"} />
-      </MenuItem>
-    </Menu>
-  );
-
-  // Confirm delete dialog
-  const renderConfirmDialog = () => (
-    <ConfirmDialog
-      open={confirmDialogOpen}
-      onClose={() => setConfirmDialogOpen(false)}
-    >
-      <DialogTitle>
-        {selectedItem?.type === 'badge' ? "Hide Badge" : `Delete ${selectedItem?.type}`}
-      </DialogTitle>
-      <DialogContent>
-        <DialogContentText>
-          {selectedItem?.type === 'badge' 
-            ? `Are you sure you want to hide the "${selectedItem?.name}" badge?`
-            : `Are you sure you want to delete "${selectedItem?.title}"? This action cannot be undone.`
-          }
-        </DialogContentText>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setConfirmDialogOpen(false)}>Cancel</Button>
-        <Button onClick={handleConfirmDelete} color="error" variant="contained">
-          {selectedItem?.type === 'badge' ? "Hide" : "Delete"}
-        </Button>
-      </DialogActions>
-    </ConfirmDialog>
-  );
-
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+        <LoadingSpinner message={t('loading_certifications')} />
+      </Box>
+    );
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        {t('certifications_achievements')}
-      </Typography>
-      
-      <Paper sx={{ mb: 4 }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          indicatorColor="primary"
-          textColor="primary"
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
-        >
-          <Tab 
-            icon={<WorkspacePremium />} 
-            label={t('certifications')} 
-            iconPosition="start"
-          />
-          <Tab 
-            icon={<EmojiEvents />} 
-            label={t('achievements')} 
-            iconPosition="start"
-          />
-          <Tab 
-            icon={<Star />} 
-            label={t('badges')} 
-            iconPosition="start"
-          />
-        </Tabs>
-        
-        <Box sx={{ p: 3 }}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
-          
+    <Container maxWidth="lg">
+      <Box sx={{ py: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Typography variant="h4" component="h1">
+            {t('certifications_and_achievements')}
+          </Typography>
+          <Box>
+            <Tooltip title={t('import_from_linkedin')}>
+              <Button 
+                variant="outlined" 
+                startIcon={<LinkedIn />}
+                sx={{ mr: 1 }}
+              >
+                {t('import')}
+              </Button>
+            </Tooltip>
+            <Tooltip title={t('upload_certificates')}>
+              <Button 
+                variant="contained" 
+                startIcon={<CloudUpload />}
+              >
+                {t('upload')}
+              </Button>
+            </Tooltip>
+          </Box>
+        </Box>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+
+        <Paper sx={{ mb: 4 }}>
+          <Tabs 
+            value={tabValue} 
+            onChange={handleTabChange}
+            indicatorColor="primary"
+            textColor="primary"
+            centered
+          >
+            <Tab 
+              icon={<WorkspacePremium />} 
+              label={t('certifications')} 
+              iconPosition="start"
+            />
+            <Tab 
+              icon={<EmojiEvents />} 
+              label={t('achievements')} 
+              iconPosition="start"
+            />
+            <Tab 
+              icon={<Star />} 
+              label={t('badges')} 
+              iconPosition="start"
+            />
+          </Tabs>
+        </Paper>
+
+        <Box sx={{ mt: 3 }}>
           {tabValue === 0 && renderCertifications()}
           {tabValue === 1 && renderAchievements()}
           {tabValue === 2 && renderBadges()}
         </Box>
-      </Paper>
-      
-      {/* Add Item Dialog */}
+      </Box>
+
+      {/* Add new item dialog */}
       <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           {addItemType === 'certification' ? t('add_certification') : t('add_achievement')}
         </DialogTitle>
         <DialogContent>
           <TextField
-            autoFocus
-            margin="dense"
-            id="title"
             name="title"
             label={t('title')}
-            type="text"
-            fullWidth
-            variant="outlined"
             value={newItem.title}
             onChange={handleInputChange}
-            sx={{ mb: 2 }}
+            fullWidth
+            margin="normal"
+            required
           />
           <TextField
-            margin="dense"
-            id="issuer"
             name="issuer"
-            label={t('issuer')}
-            type="text"
-            fullWidth
-            variant="outlined"
+            label={addItemType === 'certification' ? t('issuer') : t('organization')}
             value={newItem.issuer}
             onChange={handleInputChange}
-            sx={{ mb: 2 }}
+            fullWidth
+            margin="normal"
           />
           <TextField
-            margin="dense"
-            id="date"
             name="date"
-            label={t('date')}
+            label={t('issue_date')}
             type="date"
-            fullWidth
-            variant="outlined"
-            InputLabelProps={{
-              shrink: true,
-            }}
             value={newItem.date}
             onChange={handleInputChange}
-            sx={{ mb: 2 }}
+            fullWidth
+            margin="normal"
+            InputLabelProps={{ shrink: true }}
           />
           <TextField
-            margin="dense"
-            id="description"
             name="description"
             label={t('description')}
-            multiline
-            rows={4}
-            fullWidth
-            variant="outlined"
             value={newItem.description}
             onChange={handleInputChange}
-            sx={{ mb: 2 }}
+            fullWidth
+            margin="normal"
+            multiline
+            rows={3}
           />
           <TextField
-            margin="dense"
-            id="url"
             name="url"
-            label={t('url')}
-            type="url"
-            fullWidth
-            variant="outlined"
+            label={t('credential_url')}
             value={newItem.url}
             onChange={handleInputChange}
+            fullWidth
+            margin="normal"
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>{t('cancel')}</Button>
-          <Button onClick={handleAddItem} variant="contained" color="primary">
-            {t('add')}
+          <Button onClick={handleCloseDialog}>
+            {t('cancel')}
+          </Button>
+          <Button 
+            onClick={handleAddItem} 
+            variant="contained" 
+            color="primary"
+            disabled={!newItem.title}
+          >
+            {t('save')}
           </Button>
         </DialogActions>
       </Dialog>
-      
-      {/* Item Actions Menu */}
-      {renderItemMenu()}
-      
-      {/* Confirm Delete Dialog */}
-      {renderConfirmDialog()}
-      
-      {/* Notification Snackbar */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={5000}
-        onClose={handleCloseSnackbar}
-        message={snackbarMessage}
-      />
     </Container>
   );
 };
