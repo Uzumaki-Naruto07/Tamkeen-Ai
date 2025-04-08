@@ -313,9 +313,96 @@ export const AppContextProvider = ({ children }) => {
   // Check authentication status on mount and token change
   useEffect(() => {
     const checkAuth = async () => {
+      // Add support for UAE PASS login
+      const uaePassUserData = localStorage.getItem('user_data');
+      
       if (token) {
         try {
           setLoading(true);
+          
+          // UAE PASS authentication
+          if (token === 'mock_uae_pass_token' && uaePassUserData) {
+            try {
+              // Parse the user data
+              const userData = JSON.parse(uaePassUserData);
+              
+              if (!userData || !userData.id || !userData.email) {
+                throw new Error('Invalid UAE PASS user data');
+              }
+              
+              // Set the user in the context
+              setUser(userData);
+              setUserRoles(['user']);
+              
+              // Look for user-specific profile data
+              const userId = userData.id;
+              const profileKey = `profile_${userId}`;
+              
+              // Try to load profile from localStorage
+              const profileData = localStorage.getItem(profileKey);
+              
+              if (profileData) {
+                try {
+                  // Parse and use the stored profile
+                  const userProfile = JSON.parse(profileData);
+                  console.log(`Loaded profile for UAE PASS user ${userData.name} (${userId})`);
+                  setProfile(userProfile);
+                } catch (parseErr) {
+                  console.error('Failed to parse stored profile:', parseErr);
+                  
+                  // Initialize with a basic profile if parse fails
+                  const nameParts = userData.name ? userData.name.split(' ') : ['User', ''];
+                  const basicProfile = {
+                    id: userId,
+                    userId: userId,
+                    fullName: userData.name || 'User',
+                    firstName: nameParts[0] || '',
+                    lastName: nameParts.length > 1 ? nameParts.slice(1).join(' ') : '',
+                    email: userData.email,
+                    bio: 'UAE PASS authenticated user',
+                    skills: [],
+                    experience: '',
+                    avatar: userData.avatar
+                  };
+                  
+                  setProfile(basicProfile);
+                  
+                  // Save the basic profile
+                  localStorage.setItem(profileKey, JSON.stringify(basicProfile));
+                }
+              } else {
+                // No profile found, create a new one
+                console.log(`No profile found for UAE PASS user ${userData.name}, creating new profile`);
+                const nameParts = userData.name ? userData.name.split(' ') : ['User', ''];
+                const newProfile = {
+                  id: userId,
+                  userId: userId,
+                  fullName: userData.name || 'User',
+                  firstName: nameParts[0] || '',
+                  lastName: nameParts.length > 1 ? nameParts.slice(1).join(' ') : '',
+                  email: userData.email,
+                  bio: 'UAE PASS authenticated user',
+                  skills: [],
+                  experience: '',
+                  avatar: userData.avatar
+                };
+                
+                setProfile(newProfile);
+                
+                // Save the new profile
+                localStorage.setItem(profileKey, JSON.stringify(newProfile));
+              }
+              
+              setLoading(false);
+              return;
+            } catch (err) {
+              console.error('Failed to process UAE PASS user data:', err);
+              // Continue to normal authentication flow or logout
+              logout();
+              setLoading(false);
+              return;
+            }
+          }
           
           // In development, we can just set a mock user if we have a token
           if (import.meta.env.DEV && token.startsWith('mock-token')) {
@@ -406,22 +493,42 @@ export const AppContextProvider = ({ children }) => {
         
         // Handle avatar URL validation
         if (updatedProfile.hasOwnProperty('avatar')) {
-          // If avatar URL is invalid or contains placeholder values, set to null
-          if (!updatedProfile.avatar || 
-              typeof updatedProfile.avatar === 'string' && (
-                updatedProfile.avatar.includes('undefined') || 
-                updatedProfile.avatar === '/' || 
-                updatedProfile.avatar.startsWith('http://localhost:5001/api/undefined')
-              )) {
-            updatedProfile.avatar = null;
-          }
-          
           // Log the avatar update to help with debugging
           console.log('DEV MODE: Updating avatar in profile:', updatedProfile.avatar);
+          
+          // Synchronize avatar across all profile storage locations
+          const userId = updatedProfile.id || updatedProfile.userId || user?.id || 'unknown-user';
+          const avatarValue = updatedProfile.avatar;
+          
+          // Update all profile-related localStorage entries
+          try {
+            // Update main profile storage
+            const mainProfileKey = `profile_${userId}`;
+            const mainProfile = JSON.parse(localStorage.getItem(mainProfileKey) || '{}');
+            mainProfile.avatar = avatarValue;
+            localStorage.setItem(mainProfileKey, JSON.stringify(mainProfile));
+            
+            // Update userProfile if it exists
+            const userProfileData = JSON.parse(localStorage.getItem('userProfile') || '{}');
+            userProfileData.profileImage = avatarValue;
+            userProfileData.avatar = avatarValue;
+            localStorage.setItem('userProfile', JSON.stringify(userProfileData));
+            
+            // Update user_data if it exists (for UAE PASS)
+            const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
+            if (userData && userData.id) {
+              userData.avatar = avatarValue;
+              localStorage.setItem('user_data', JSON.stringify(userData));
+            }
+            
+            console.log('Synchronized avatar across all profile storage locations');
+          } catch (storageErr) {
+            console.warn('Failed to fully synchronize avatar in localStorage:', storageErr);
+          }
         }
         
         // Ensure we have a valid userId
-        const userId = updatedProfile.id || updatedProfile.userId || 'mock-user-1';
+        const userId = updatedProfile.id || updatedProfile.userId || user?.id || 'mock-user-1';
         updatedProfile.id = userId;
         updatedProfile.userId = userId;
         
@@ -682,11 +789,46 @@ export const AppContextProvider = ({ children }) => {
   
   // Logout function
   const logout = () => {
-    localStorage.removeItem('token');
+    // Clear all user data from context
     setToken(null);
     setUser(null);
     setProfile(null);
     setUserRoles([]);
+    setSavedJobs([]);
+    
+    // Clear specific tokens
+    localStorage.removeItem('token');
+    localStorage.removeItem('user_data');
+    localStorage.removeItem('uaepass_user');
+    
+    // Clear user-specific data while preserving app settings
+    const keysToKeep = ['language', 'theme', 'darkMode', 'rtl', 'highContrast'];
+    
+    // Get all keys from localStorage
+    const keys = Object.keys(localStorage);
+    
+    // Filter out the keys we want to keep
+    const keysToRemove = keys.filter(key => {
+      // Keep specific app settings
+      if (keysToKeep.includes(key)) return false;
+      
+      // Remove all profile data
+      if (key.startsWith('profile_')) return true;
+      
+      // Remove all user-related data
+      if (['userProfile', 'savedJobs', 'resumeAnalysisHistory', 
+           'skillAssessmentHistory', 'userBookings', 'notifications',
+           'dashboardLayout', 'hiddenWidgets', 'tourProgress'].includes(key)) {
+        return true;
+      }
+      
+      return false;
+    });
+    
+    // Remove all filtered keys
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    console.log('User logged out. All user data cleared.');
   };
   
   // Toggle theme
@@ -747,22 +889,25 @@ export const AppContextProvider = ({ children }) => {
   };
   
   const contextValue = {
-    // Auth
+    // User state
     user,
-    isAuthenticated: !!user,
+    profile,
+    loading,
+    error,
     isLoggingIn,
-    token,
+    
+    // User actions
     login,
     logout,
     register,
-    loading,
-    error,
-    
-    // User profile
-    profile,
     updateUserProfile,
     
-    // UI preferences
+    // State setters (for direct manipulation)
+    setUser,
+    setToken,
+    setProfile,
+    
+    // UI state
     theme,
     language,
     toggleTheme,

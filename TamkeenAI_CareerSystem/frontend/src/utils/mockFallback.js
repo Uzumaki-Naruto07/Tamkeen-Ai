@@ -188,6 +188,34 @@ export const withMockFallback = async (apiCall, mockDataKey, params = {}, showWa
         data = data[key];
       }
       mockResponse = data;
+    } else if (mockDataKey === 'gamification.getUserProgress' || mockDataKey.startsWith('gamification.')) {
+      // Special handling for gamification endpoints
+      const subKey = mockDataKey.split('.')[1]; // get the part after 'gamification.'
+      
+      if (subKey === 'getUserProgress') {
+        mockResponse = mockData.gamification.progress;
+      } else if (subKey === 'getUserBadges') {
+        mockResponse = mockData.gamification.badges;
+      } else if (subKey === 'getUserAchievements') {
+        mockResponse = mockData.gamification.achievements;
+      } else if (subKey === 'getChallenges') {
+        mockResponse = mockData.gamification.challenges;
+      } else if (subKey === 'getActivityHistory') {
+        mockResponse = mockData.gamification.activityHistory;
+      } else {
+        // Default fallback for other gamification endpoints
+        mockResponse = mockData.gamification;
+      }
+    } else if (mockDataKey === 'skills.getUserSkillStats') {
+      // Special handling for skill stats
+      mockResponse = {
+        "React": 90,
+        "JavaScript": 85,
+        "Node.js": 70,
+        "TypeScript": 75,
+        "UI/UX Design": 60,
+        "GraphQL": 65
+      };
     } else if (mockDataKey) {
       // Simple key lookup
       mockResponse = mockData[mockDataKey];

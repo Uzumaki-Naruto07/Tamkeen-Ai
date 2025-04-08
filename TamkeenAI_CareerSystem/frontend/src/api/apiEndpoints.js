@@ -125,6 +125,20 @@ const apiEndpoints = {
     addUserSkill: (skillData) => api.post('/skills/user', skillData),
     updateUserSkill: (skillId, skillData) => api.put(`/skills/user/${skillId}`, skillData),
     removeUserSkill: (skillId) => api.delete(`/skills/user/${skillId}`),
+    getUserSkillStats: (userId) => api.get(`/skills/user/${userId}/stats`),
+  },
+  
+  // Gamification endpoints
+  gamification: {
+    getUserProgress: (userId) => api.get(`/gamification/progress/${userId}`),
+    getUserBadges: (userId) => api.get(`/gamification/badges/${userId}`),
+    getUserAchievements: (userId) => api.get(`/gamification/achievements/${userId}`),
+    getChallenges: (userId) => api.get(`/gamification/challenges/${userId}`),
+    acceptChallenge: (userId, challengeId) => api.post(`/gamification/challenges/${userId}/accept/${challengeId}`),
+    completeChallenge: (userId, challengeId) => api.post(`/gamification/challenges/${userId}/complete/${challengeId}`),
+    getActivityHistory: (userId) => api.get(`/gamification/activities/${userId}`),
+    awardXP: (userId, amount, reason) => api.post(`/gamification/xp/${userId}`, { amount, reason }),
+    awardBadge: (userId, badgeId) => api.post(`/gamification/badges/${userId}/award/${badgeId}`),
   },
   
   // Career endpoints with special CORS handling

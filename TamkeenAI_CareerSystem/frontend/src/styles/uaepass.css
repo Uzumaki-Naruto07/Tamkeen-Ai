@@ -1,0 +1,247 @@
+/* UAE PASS login page styles */
+.uaepass-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #ffffff;
+  padding: 20px;
+  position: relative;
+}
+
+/* Top green border */
+.uaepass-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background-color: #00a881;
+}
+
+/* Bottom green border */
+.uaepass-container::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: #00a881;
+}
+
+.uaepass-logo-container {
+  margin: 40px 0 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.uaepass-logo {
+  font-size: 80px !important;
+  color: #000;
+  background: linear-gradient(to bottom right, #000, #00a881);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.uaepass-title {
+  font-size: 24px;
+  color: #4a545e;
+  margin-bottom: 30px;
+  font-weight: 500;
+}
+
+.uaepass-form {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
+
+.uaepass-input {
+  padding: 14px;
+  margin-bottom: 20px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  font-size: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.uaepass-input::placeholder {
+  color: #8f9aab;
+}
+
+.uaepass-input:focus {
+  outline: none;
+  border-color: #00a881;
+  box-shadow: 0 0 0 2px rgba(0, 168, 129, 0.1);
+}
+
+.uaepass-remember-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.uaepass-checkbox {
+  margin-right: 8px;
+}
+
+.uaepass-remember-label {
+  color: #4a545e;
+  font-size: 16px;
+}
+
+.uaepass-login-button {
+  background-color: #6c7a91;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 15px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-bottom: 30px;
+}
+
+.uaepass-login-button:hover {
+  background-color: #5a6679;
+}
+
+.uaepass-login-button:disabled {
+  background-color: #a5aeba;
+  cursor: not-allowed;
+}
+
+.uaepass-error {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.uaepass-links {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.uaepass-account-text {
+  margin-bottom: 10px;
+  color: #4a545e;
+}
+
+.uaepass-link {
+  color: #00a881;
+  text-decoration: none;
+}
+
+.uaepass-link:hover {
+  text-decoration: underline;
+}
+
+.uaepass-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  padding: 20px;
+  width: 100%;
+  border-top: 1px solid #e5e7eb;
+  margin-top: auto;
+}
+
+.uaepass-footer-link {
+  color: #6c7a91;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.uaepass-footer-link:hover {
+  color: #00a881;
+}
+
+.uaepass-copyright {
+  color: #8f9aab;
+  font-size: 12px;
+  margin-top: 20px;
+  text-align: center;
+}
+
+/* Modal styles */
+.uaepass-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.uaepass-modal {
+  background-color: white;
+  border-radius: 8px;
+  padding: 24px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.uaepass-modal-title {
+  font-size: 20px;
+  color: #4a545e;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.uaepass-modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.uaepass-modal-cancel,
+.uaepass-modal-create {
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+}
+
+.uaepass-modal-cancel {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+.uaepass-modal-create {
+  background-color: #00a881;
+  color: white;
+}
+
+.uaepass-modal-cancel:hover {
+  background-color: #e2e8f0;
+}
+
+.uaepass-modal-create:hover {
+  background-color: #008f6b;
+}
+
+.uaepass-success {
+  background-color: #dcfce7;
+  color: #166534;
+  padding: 12px;
+  border-radius: 6px;
+  text-align: center;
+  margin-bottom: 16px;
+  font-weight: 500;
+} 

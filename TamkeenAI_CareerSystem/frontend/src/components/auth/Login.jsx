@@ -24,6 +24,7 @@ import {
   VolumeOff as VolumeOffIcon,
   AccessibilityNew as AccessibilityIcon,
   Flag as FlagIcon,
+  Fingerprint as FingerprintIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
@@ -269,31 +270,12 @@ const Login = () => {
 
           <motion.div variants={itemVariants}>
             <OAuthButton
-              startIcon={<GoogleIcon />}
+              startIcon={<FingerprintIcon sx={{ color: '#008448' }} />}
               variant="outlined"
               fullWidth
+              onClick={() => navigate('/uaepass-login')}
             >
-              {isRTL ? 'المتابعة مع جوجل' : 'Continue with Google'}
-            </OAuthButton>
-          </motion.div>
-
-          <motion.div variants={itemVariants}>
-            <OAuthButton
-              startIcon={<AppleIcon />}
-              variant="outlined"
-              fullWidth
-            >
-              {isRTL ? 'المتابعة مع أبل' : 'Continue with Apple'}
-            </OAuthButton>
-          </motion.div>
-
-          <motion.div variants={itemVariants}>
-            <OAuthButton
-              startIcon={<GitHubIcon />}
-              variant="outlined"
-              fullWidth
-            >
-              {isRTL ? 'المتابعة مع جيثب' : 'Continue with GitHub'}
+              {isRTL ? 'المتابعة مع هوية الإمارات' : 'Sign in with UAE PASS'}
             </OAuthButton>
           </motion.div>
 

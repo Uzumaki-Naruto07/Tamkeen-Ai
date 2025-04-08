@@ -1,406 +1,353 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { 
+  Card,
+  CardContent,
+  Typography,
   Box, 
-  Typography, 
+  Grid,
   Paper, 
-  Tabs, 
-  Tab,
+  Divider,
   Button,
-  IconButton,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Chip,
+  LinearProgress,
   Tooltip,
+  Alert,
+  IconButton,
+  Stack,
+  Link,
   CircularProgress,
-  useTheme
+  Collapse
 } from '@mui/material';
 import { 
   BarChart, 
   Bar, 
-  LineChart, 
-  Line, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip as RechartsTooltip, 
+  Tooltip as ChartTooltip,
   Legend, 
   ResponsiveContainer,
+  Cell,
+  LabelList,
+  LineChart,
+  Line,
   RadarChart,
-  Radar,
   PolarGrid,
   PolarAngleAxis,
-  PolarRadiusAxis
+  PolarRadiusAxis,
+  Radar
 } from 'recharts';
-import {
-  InfoOutlined,
-  DownloadOutlined,
-  VisibilityOutlined,
-  TrendingUp
-} from '@mui/icons-material';
-import { skillTransitionData } from '../../utils/app-mocks';
-import { motion } from 'framer-motion';
+import CodeIcon from '@mui/icons-material/Code';
+import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
+import DesignServicesIcon from '@mui/icons-material/DesignServices';
+import StorageIcon from '@mui/icons-material/Storage';
+import TerminalIcon from '@mui/icons-material/Terminal';
+import CloudIcon from '@mui/icons-material/Cloud';
+import SecurityIcon from '@mui/icons-material/Security';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
+import PsychologyIcon from '@mui/icons-material/Psychology';
+import DeveloperBoardIcon from '@mui/icons-material/DeveloperBoard';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import SchoolIcon from '@mui/icons-material/School';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
+import StarsIcon from '@mui/icons-material/Stars';
+import InfoIcon from '@mui/icons-material/Info';
+import AddIcon from '@mui/icons-material/Add';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
+import DashboardAPI from '../../api/DashboardAPI';
+import chatService from '../../api/chatgpt';
 
-const SkillTransitionChart = () => {
-  const theme = useTheme();
-  const [activeTab, setActiveTab] = useState(0);
-  const [chartData, setChartData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedSkill, setSelectedSkill] = useState(null);
+// Category icon mapping
+const categoryIcons = {
+  'Frontend': <CodeIcon />,
+  'Backend': <TerminalIcon />,
+  'Database': <StorageIcon />,
+  'DevOps': <CloudIcon />,
+  'Design': <DesignServicesIcon />,
+  'Security': <SecurityIcon />,
+  'Analytics': <AnalyticsIcon />,
+  'Machine Learning': <PsychologyIcon />,
+  'Mobile': <DeveloperBoardIcon />,
+  'Soft Skills': <BusinessCenterIcon />
+};
 
+// Resource type icon mapping
+const resourceTypeIcons = {
+  'course': <SchoolIcon />,
+  'video': <PlayCircleOutlineIcon />,
+  'book': <MenuBookIcon />,
+  'practice': <AssignmentTurnedInIcon />
+};
+
+// Professional color palette
+const colorPalette = {
+  primary: '#3366cc',       // Professional blue
+  secondary: '#4ecdc4',     // Teal accent
+  success: '#2ecc71',       // Green
+  warning: '#f39c12',       // Orange
+  error: '#e74c3c',         // Red
+  lightGrey: '#f5f5f5',     // Light grey background
+  darkGrey: '#555555',      // Dark grey text
+  chartFill: 'rgba(51, 102, 204, 0.2)',  // Transparent blue for chart
+  chartStroke: '#3366cc',   // Blue for chart outline
+};
+
+const SkillTransitionChart = ({ skillData, targetRole }) => {
+  const [assessmentHistory, setAssessmentHistory] = useState([]);
+  const [latestAssessment, setLatestAssessment] = useState(null);
+  const [error, setError] = useState(null);
+  
+  // Load assessment data from localStorage on component mount
   useEffect(() => {
-    // Simulate API call
-    const fetchData = async () => {
-      setLoading(true);
-      // In a real app, this would be an API call
-      setTimeout(() => {
-        setChartData(skillTransitionData);
-        setLoading(false);
-      }, 1000);
-    };
-
-    fetchData();
-  }, []);
-
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-  };
-
-  const handleSkillSelect = (skill) => {
-    setSelectedSkill(skill === selectedSkill ? null : skill);
-  };
-
-  const prepareGapChartData = () => {
-    if (!chartData) return [];
-    
-    return chartData.targetSkills.map(skill => ({
-      name: skill.name,
-      current: skill.currentProficiency,
-      required: skill.required,
-      gap: skill.gap
-    }));
-  };
-
-  const prepareDevelopmentChartData = () => {
-    if (!chartData || !selectedSkill) {
-      // If no skill is selected, return the first one
-      const defaultSkill = chartData?.skillsDevelopment[0];
-      if (!defaultSkill) return [];
-
-      return defaultSkill.milestones.map(milestone => ({
-        date: milestone.date,
-        level: milestone.level,
-        event: milestone.event
-      }));
+    try {
+      const storedHistory = localStorage.getItem('skillAssessmentHistory');
+      if (storedHistory) {
+        const parsedHistory = JSON.parse(storedHistory);
+        setAssessmentHistory(parsedHistory);
+        
+        // Set latest assessment
+        if (parsedHistory.length > 0) {
+          setLatestAssessment(parsedHistory[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading assessment data from localStorage:', error);
+      setError('Failed to load assessment history.');
     }
-
-    const selectedSkillData = chartData.skillsDevelopment.find(
-      item => item.skill === selectedSkill
-    );
-
-    if (!selectedSkillData) return [];
-
-    return selectedSkillData.milestones.map(milestone => ({
-      date: milestone.date,
-      level: milestone.level,
-      event: milestone.event
-    }));
-  };
-
-  const prepareComparisonChartData = () => {
-    if (!chartData) return [];
+  }, []);
+  
+  // Prepare data for radar chart showing strengths vs areas for improvement
+  const radarChartData = useMemo(() => {
+    if (!latestAssessment) return [];
     
-    return chartData.skillsComparison.industry.map(item => ({
-      skill: item.skill,
-      user: item.userLevel,
-      industry: item.industryAvg,
-      top: item.topPerformers
-    }));
-  };
-
-  const prepareRadarChartData = () => {
-    if (!chartData) return [];
+    // Example data structure for radar chart
+    const strengths = latestAssessment.strengths || [];
+    const weaknesses = latestAssessment.weaknesses || [];
     
-    // Combine data for radar chart
-    const roleSpecific = chartData.skillsComparison.roleSpecific;
-    const currentRole = "Frontend Developer";
-    const targetRole = "Frontend Team Lead";
+    const data = [];
     
-    const skills = [...new Set([
-      ...roleSpecific[currentRole].map(item => item.skill),
-      ...roleSpecific[targetRole].map(item => item.skill)
-    ])];
-    
-    return skills.map(skill => {
-      const currentRoleData = roleSpecific[currentRole].find(item => item.skill === skill);
-      const targetRoleData = roleSpecific[targetRole].find(item => item.skill === skill);
-      
-      return {
-        skill,
-        [currentRole]: currentRoleData ? currentRoleData.importance : 0,
-        [targetRole]: targetRoleData ? targetRoleData.importance : 0,
-        userLevel: (currentRoleData || targetRoleData) ? 
-          (currentRoleData || targetRoleData).userLevel : 0
-      };
+    // Add strengths with high scores
+    strengths.forEach((strength, index) => {
+      data.push({
+        subject: strength,
+        A: Math.min(90 + index * 2, 100), // High scores for strengths
+        fullMark: 100
+      });
     });
-  };
-
-  const renderGapChart = () => (
-    <Box p={2}>
-      <Typography variant="h6" gutterBottom>
-        Current vs Required Skills for Target Role
-      </Typography>
-      <Typography variant="body2" color="textSecondary" paragraph>
-        This chart shows the gap between your current skill levels and what's required for your target role as a Frontend Team Lead.
-      </Typography>
-      <ResponsiveContainer width="100%" height={350}>
-        <BarChart
-          data={prepareGapChartData()}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+    
+    // Add weaknesses with lower scores
+    weaknesses.forEach((weakness, index) => {
+      data.push({
+        subject: weakness,
+        A: Math.max(40 - index * 5, 20), // Lower scores for weaknesses
+        fullMark: 100
+      });
+    });
+    
+    return data;
+  }, [latestAssessment]);
+  
+  // Render the latest assessment result with radar chart
+  const renderLatestAssessment = () => {
+    if (!latestAssessment) return null;
+    
+    // Determine color based on score
+    const scoreColor = 
+      latestAssessment.score > 80 ? colorPalette.success :
+      latestAssessment.score > 60 ? colorPalette.primary :
+      latestAssessment.score > 40 ? colorPalette.warning : colorPalette.error;
+    
+    return (
+      <Paper 
+        elevation={2} 
+        sx={{ 
+          mb: 2, 
+          p: 3, 
+          borderRadius: 2, 
+          backgroundColor: '#ffffff',
+          border: `1px solid ${colorPalette.lightGrey}`,
+          maxHeight: '650px',
+          overflow: 'auto'
+        }}
+      >
+        <Typography 
+          variant="h6" 
+          gutterBottom 
+          sx={{ 
+            color: colorPalette.primary, 
+            fontWeight: 600, 
+            fontSize: '1.2rem',
+            mb: 1.5
+          }}
         >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis />
-          <RechartsTooltip 
-            formatter={(value, name) => [
-              `${value}%`, 
-              name === 'current' ? 'Your Level' : name === 'required' ? 'Required Level' : 'Gap'
-            ]}
-          />
-          <Legend />
-          <Bar dataKey="current" name="Your Current Level" fill={theme.palette.primary.main} />
-          <Bar dataKey="required" name="Required Level" fill={theme.palette.success.main} />
-          <Bar dataKey="gap" name="Skill Gap" fill={theme.palette.error.main} />
-        </BarChart>
-      </ResponsiveContainer>
-    </Box>
-  );
-
-  const renderDevelopmentChart = () => (
-    <Box p={2}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6">
-          Skill Development Timeline
+          Latest Assessment: {latestAssessment.categoryName}
         </Typography>
-        <Box>
-          {chartData?.skillsDevelopment.map((skill) => (
-            <Button
-              key={skill.skill}
-              size="small"
-              variant={selectedSkill === skill.skill ? "contained" : "outlined"}
-              sx={{ mr: 1, mb: 1 }}
-              onClick={() => handleSkillSelect(skill.skill)}
-            >
-              {skill.skill}
-            </Button>
-          ))}
+        
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Box sx={{ position: 'relative', display: 'inline-flex', mb: 2 }}>
+                <CircularProgress
+                  variant="determinate"
+                  value={latestAssessment.score}
+                  size={120}
+                  thickness={4}
+                  sx={{ color: scoreColor }}
+                />
+                <Box
+                  sx={{
+                    top: 0,
+                    left: 0,
+                    bottom: 0,
+                    right: 0,
+                    position: 'absolute',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexDirection: 'column'
+                  }}
+                >
+                  <Typography variant="h4" component="div" sx={{ fontWeight: 'bold', color: scoreColor }}>
+                    {latestAssessment.score}%
+                  </Typography>
+                  <Typography variant="caption" component="div" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                    Score
+                  </Typography>
         </Box>
       </Box>
-      <Typography variant="body2" color="textSecondary" paragraph>
-        {selectedSkill ? 
-          `Tracking your progress in ${selectedSkill} from level ${chartData?.skillsDevelopment.find(s => s.skill === selectedSkill)?.startLevel} to target level ${chartData?.skillsDevelopment.find(s => s.skill === selectedSkill)?.targetLevel}.` : 
-          'Select a skill to see your development timeline. Projected milestones help you track your progress.'}
+              
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
+                {new Date(latestAssessment.timestamp).toLocaleDateString()}
       </Typography>
-      <ResponsiveContainer width="100%" height={350}>
-        <LineChart
-          data={prepareDevelopmentChartData()}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="date" />
-          <YAxis />
-          <RechartsTooltip
-            formatter={(value, name, props) => {
-              const dataPoint = props.payload;
-              return [
-                `Level: ${value}`, 
-                dataPoint.event
-              ];
-            }}
-          />
-          <Line 
-            type="monotone" 
-            dataKey="level" 
-            stroke={theme.palette.primary.main} 
-            activeDot={{ r: 8 }} 
-            strokeWidth={2}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+              
+              <Typography variant="body1" sx={{ mt: 1.5, fontSize: '1rem' }}>
+                {latestAssessment.correctAnswers} of {latestAssessment.totalQuestions} correct
+      </Typography>
     </Box>
-  );
-
-  const renderComparisonChart = () => (
-    <Box p={2}>
-      <Typography variant="h6" gutterBottom>
-        Your Skills vs Industry Averages
+          </Grid>
+          
+          <Grid item xs={12} md={8}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: colorPalette.darkGrey, fontSize: '1rem', mb: 1 }}>
+              Skills Profile
       </Typography>
-      <Typography variant="body2" color="textSecondary" paragraph>
-        Compare your skill levels against industry averages and top performers to identify competitive advantages.
-      </Typography>
-      <ResponsiveContainer width="100%" height={350}>
-        <BarChart
-          data={prepareComparisonChartData()}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="skill" />
-          <YAxis />
-          <RechartsTooltip 
-            formatter={(value, name) => [
-              `${value}%`, 
-              name === 'user' ? 'Your Level' : name === 'industry' ? 'Industry Average' : 'Top Performers'
-            ]}
-          />
-          <Legend />
-          <Bar dataKey="user" name="Your Level" fill={theme.palette.primary.main} />
-          <Bar dataKey="industry" name="Industry Average" fill={theme.palette.info.main} />
-          <Bar dataKey="top" name="Top Performers" fill={theme.palette.success.main} />
-        </BarChart>
-      </ResponsiveContainer>
-    </Box>
-  );
-
-  const renderRoleComparisonChart = () => (
-    <Box p={2}>
-      <Typography variant="h6" gutterBottom>
-        Current vs Target Role Skill Requirements
-      </Typography>
-      <Typography variant="body2" color="textSecondary" paragraph>
-        This radar chart shows how skill requirements differ between your current role and target role, along with your current levels.
-      </Typography>
-      <ResponsiveContainer width="100%" height={350}>
-        <RadarChart outerRadius={150} data={prepareRadarChartData()}>
-          <PolarGrid />
-          <PolarAngleAxis dataKey="skill" />
-          <PolarRadiusAxis angle={30} domain={[0, 100]} />
+            
+            <Box sx={{ height: 260 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarChartData}>
+                  <PolarGrid stroke={colorPalette.lightGrey} />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: colorPalette.darkGrey, fontSize: 11 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: colorPalette.darkGrey, fontSize: 11 }} />
           <Radar 
-            name="Frontend Developer" 
-            dataKey="Frontend Developer" 
-            stroke={theme.palette.info.main} 
-            fill={theme.palette.info.main} 
-            fillOpacity={0.2} 
-          />
-          <Radar 
-            name="Frontend Team Lead" 
-            dataKey="Frontend Team Lead" 
-            stroke={theme.palette.success.main} 
-            fill={theme.palette.success.main} 
-            fillOpacity={0.2} 
-          />
-          <Radar 
-            name="Your Current Level" 
-            dataKey="userLevel" 
-            stroke={theme.palette.primary.main} 
-            fill={theme.palette.primary.main} 
-            fillOpacity={0.6} 
-          />
-          <Legend />
+                    name="Skill Level" 
+                    dataKey="A" 
+                    stroke={colorPalette.chartStroke} 
+                    fill={colorPalette.chartFill} 
+                    fillOpacity={0.7} 
+                  />
+                  <Legend iconSize={12} wrapperStyle={{ fontSize: '12px' }} />
         </RadarChart>
       </ResponsiveContainer>
     </Box>
-  );
+          </Grid>
+        </Grid>
+        
+        <Divider sx={{ my: 2 }} />
+        
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: colorPalette.darkGrey, fontSize: '1rem' }}>
+              Strengths
+            </Typography>
+            
+            <List dense sx={{ maxHeight: '180px', overflow: 'auto' }}>
+              {latestAssessment.strengths.map((strength, index) => (
+                <ListItem key={index} sx={{ py: 0.75 }}>
+                  <ListItemIcon sx={{ minWidth: '36px' }}>
+                    <CheckCircleIcon sx={{ color: colorPalette.success, fontSize: '1.2rem' }} />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={strength} 
+                    primaryTypographyProps={{ 
+                      fontSize: '1rem',
+                      fontWeight: 500
+                    }} 
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: colorPalette.darkGrey, fontSize: '1rem' }}>
+              Areas for Improvement
+            </Typography>
+            
+            <List dense sx={{ maxHeight: '180px', overflow: 'auto' }}>
+              {latestAssessment.weaknesses.map((weakness, index) => (
+                <ListItem key={index} sx={{ py: 0.75 }}>
+                  <ListItemIcon sx={{ minWidth: '36px' }}>
+                    <PriorityHighIcon sx={{ color: colorPalette.warning, fontSize: '1.2rem' }} />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={weakness} 
+                    primaryTypographyProps={{ 
+                      fontSize: '1rem',
+                      fontWeight: 500
+                    }} 
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Grid>
+        </Grid>
+      </Paper>
+    );
+  };
 
   return (
-    <Paper 
-      component={motion.div}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      elevation={3} 
-      sx={{ 
-        borderRadius: 2, 
-        overflow: 'hidden', 
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column'
-      }}
-    >
-      <Box 
+    <Box sx={{ height: '100%', overflow: 'hidden' }}>
+      {error && (
+        <Alert severity="error" sx={{ mb: 1.5, fontSize: '0.85rem' }}>
+          {error}
+        </Alert>
+      )}
+      
+      {/* Render only the latest assessment component */}
+      {latestAssessment && renderLatestAssessment()}
+      
+      {!latestAssessment && !error && (
+        <Paper 
+          elevation={2} 
         sx={{ 
           p: 2, 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          bgcolor: theme.palette.background.default
-        }}
-      >
-        <Box display="flex" alignItems="center">
-          <TrendingUp sx={{ mr: 1, color: theme.palette.primary.main }} />
-          <Typography variant="h6" component="h2">
-            Skill Transition Path
-          </Typography>
-        </Box>
-        <Box>
-          <Tooltip title="Download chart data">
-            <IconButton size="small">
-              <DownloadOutlined fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="View detailed analysis">
-            <IconButton size="small">
-              <VisibilityOutlined fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="AI-powered skill path insights">
-            <IconButton size="small">
-              <InfoOutlined fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
-      
-      <Tabs
-        value={activeTab}
-        onChange={handleTabChange}
-        variant="fullWidth"
-        indicatorColor="primary"
-        textColor="primary"
-        sx={{ 
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          bgcolor: theme.palette.background.default
-        }}
-      >
-        <Tab label="Skill Gaps" />
-        <Tab label="Development" />
-        <Tab label="Comparison" />
-        <Tab label="Role Analysis" />
-      </Tabs>
-      
-      <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-        {loading ? (
-          <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-            <CircularProgress />
-          </Box>
-        ) : (
-          <>
-            {activeTab === 0 && renderGapChart()}
-            {activeTab === 1 && renderDevelopmentChart()}
-            {activeTab === 2 && renderComparisonChart()}
-            {activeTab === 3 && renderRoleComparisonChart()}
-          </>
-        )}
-      </Box>
-      
-      <Box 
-        sx={{ 
-          p: 2, 
-          borderTop: `1px solid ${theme.palette.divider}`,
-          bgcolor: theme.palette.background.default,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}
-      >
-        <Typography variant="body2" color="textSecondary">
-          Target Role: Frontend Team Lead
-        </Typography>
-        <Button 
-          variant="outlined" 
-          size="small"
-          startIcon={<InfoOutlined />}
+            textAlign: 'center', 
+            borderRadius: 2, 
+            backgroundColor: colorPalette.lightGrey,
+            border: `1px solid ${colorPalette.lightGrey}`
+          }}
         >
-          Improve Your Path
-        </Button>
+          <Typography variant="body1" color="text.secondary">
+            No assessment data available yet.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Complete a skill assessment to see your results here.
+          </Typography>
+        </Paper>
+      )}
       </Box>
-    </Paper>
   );
 };
 

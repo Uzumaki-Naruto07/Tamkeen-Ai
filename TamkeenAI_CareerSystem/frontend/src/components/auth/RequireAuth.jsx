@@ -48,7 +48,12 @@ const RequireAuth = ({ children }) => {
     return <div style={{ height: '100vh' }}></div>;
   }
   
-  if (!isAuthenticated) {
+  // Check both the context's isAuthenticated and localStorage for a token
+  // This ensures we don't have race conditions where the token exists but context hasn't updated yet
+  const hasToken = !!localStorage.getItem('token') || !!localStorage.getItem('auth_token');
+  const hasUserData = !!localStorage.getItem('user_data');
+  
+  if (!isAuthenticated && !(hasToken && hasUserData)) {
     // Redirect to the login page, but save the current location they were trying to go to
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

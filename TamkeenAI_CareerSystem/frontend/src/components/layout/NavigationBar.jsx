@@ -248,7 +248,26 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
     };
     
     setCurrentTab(findTabIndex());
-  }, [location]);
+  }, [location.pathname]);
+  
+  // Load profile image from localStorage when user changes
+  useEffect(() => {
+    if (user) {
+      try {
+        // Try to load profile image from userProfile in localStorage
+        const savedProfile = localStorage.getItem('userProfile');
+        if (savedProfile) {
+          const parsedProfile = JSON.parse(savedProfile);
+          if (parsedProfile.profileImage) {
+            // Update user with profile image from localStorage
+            user.avatar = parsedProfile.profileImage;
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load profile image from localStorage:', error);
+      }
+    }
+  }, [user]);
   
   // Define mock notifications for the example
   const getNotifications = () => {

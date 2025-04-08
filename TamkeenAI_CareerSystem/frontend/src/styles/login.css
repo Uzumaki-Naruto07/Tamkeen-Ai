@@ -99,6 +99,18 @@
   font-size: 0.875rem;
 }
 
+/* UAE PASS info */
+.login-uaepass-info {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background-color: rgba(0, 168, 129, 0.1);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #00a881;
+}
+
 /* Error message */
 .login-error {
   margin-bottom: 1rem;
@@ -255,30 +267,57 @@
 }
 
 .login-divider-text {
-  padding: 0 0.75rem;
-  font-size: 0.875rem;
+  padding: 0 0.5rem;
   color: var(--text-secondary);
+  font-size: 0.875rem;
 }
 
-/* Social login buttons */
-.login-social-buttons {
+/* UAE PASS Button */
+.login-uaepass-button-container {
   margin-top: 1.5rem;
   display: flex;
-  justify-content: center;
-  gap: 1rem;
+  flex-direction: column;
+  align-items: center;
 }
 
-.login-social-button {
-  padding: 0.5rem;
-  background: none;
-  border: none;
+.login-uaepass-button {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 30px;
+  background-color: white;
+  color: #222;
+  font-weight: 500;
+  font-size: 16px;
+  transition: all 0.2s ease;
   cursor: pointer;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  text-decoration: none;
+}
+
+.login-uaepass-button:hover {
+  background-color: #f9f9f9;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.login-uaepass-button span {
+  font-weight: 500;
+}
+
+.login-uaepass-text {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 0.25rem;
 }
 
 /* Video section */
 .login-video-section {
-  display: none; /* Hidden by default on mobile */
-  background-color: var(--primary-color-light);
+  display: none;
   position: relative;
   overflow: hidden;
 }

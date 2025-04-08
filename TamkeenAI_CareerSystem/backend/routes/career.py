@@ -11,7 +11,74 @@ openai.api_base = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
 
 career_bp = Blueprint('career', __name__)
 
-# ... existing routes ...
+# Add the new recommendations endpoint
+@career_bp.route('/recommendations', methods=['POST'])
+def get_career_recommendations():
+    """
+    Get career recommendations based on assessment results
+    """
+    try:
+        data = request.json
+        user_id = data.get('userId', 'guest')
+        assessment_results = data.get('assessmentResults', [])
+        
+        # Create mock response - in a real implementation, this would use DeepSeek
+        recommendations = [
+            {
+                "id": "career-1",
+                "title": "Data Scientist",
+                "match": 96,
+                "description": "Analyze complex datasets to extract insights and solve business problems.",
+                "skillMatch": ["Python", "Machine Learning", "Statistics"],
+                "educationPath": ["Bachelor's in Computer Science", "Master's in Data Science"],
+                "salary": "$90,000 - $140,000",
+                "growthPotential": "High",
+                "industries": ["Tech", "Finance", "Healthcare"]
+            },
+            {
+                "id": "career-2",
+                "title": "AI Engineer",
+                "match": 94,
+                "description": "Design and implement artificial intelligence solutions for businesses.",
+                "skillMatch": ["Python", "Deep Learning", "TensorFlow"],
+                "educationPath": ["Bachelor's in Computer Science", "AI Specialization"],
+                "salary": "$100,000 - $150,000",
+                "growthPotential": "Very High",
+                "industries": ["Tech", "Automotive", "Research"]
+            },
+            {
+                "id": "career-3",
+                "title": "UX Researcher",
+                "match": 92,
+                "description": "Study user behavior to improve product design and user experience.",
+                "skillMatch": ["User Research", "Data Analysis", "Communication"],
+                "educationPath": ["Bachelor's in Psychology", "HCI Certificate"],
+                "salary": "$80,000 - $130,000",
+                "growthPotential": "High",
+                "industries": ["Tech", "E-commerce", "Healthcare"]
+            }
+        ]
+        
+        return jsonify(recommendations)
+        
+    except Exception as e:
+        print(f"Error getting career recommendations: {str(e)}")
+        # Return generic recommendations as fallback
+        fallback_recommendations = [
+            {
+                "id": "career-1",
+                "title": "Data Scientist",
+                "match": 94,
+                "description": "Fallback recommendation"
+            },
+            {
+                "id": "career-2", 
+                "title": "Software Engineer",
+                "match": 92,
+                "description": "Fallback recommendation"
+            }
+        ]
+        return jsonify(fallback_recommendations)
 
 @career_bp.route('/analyze-prediction', methods=['POST'])
 def analyze_career_prediction():

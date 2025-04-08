@@ -318,6 +318,27 @@ const Dashboard = () => {
     }
   }, []);
   
+  // Load profile image from localStorage when user changes
+  useEffect(() => {
+    if (user) {
+      try {
+        // Try to load profile image from userProfile in localStorage
+        const savedProfile = localStorage.getItem('userProfile');
+        if (savedProfile) {
+          const parsedProfile = JSON.parse(savedProfile);
+          if (parsedProfile.profileImage) {
+            // Update user with profile image from localStorage
+            if (user) {
+              user.avatar = parsedProfile.profileImage;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load profile image from localStorage:', error);
+      }
+    }
+  }, [user]);
+  
   // Get dummy data for additional widgets 
   // This would normally come from the API
   const todaysSchedule = dashboardData?.todaysSchedule || [];
@@ -447,8 +468,25 @@ const Dashboard = () => {
   useEffect(() => {
     // Check profile completion and show prompts if needed
     if (profile && !hasCheckedProfile.current) {
+      // Check if user is from UAE PASS
+      const isUaePassUser = () => {
+        const token = localStorage.getItem('token');
+        const userData = localStorage.getItem('user_data');
+        return token === 'mock_uae_pass_token' && !!userData;
+      };
+      
+      const isFromUaePass = isUaePassUser();
+      
       // Calculate profile completion
       const calculateProfileCompletion = () => {
+        // If profile is undefined or null, return 0
+        if (!profile) {
+          setProfileCompletionPercentage(0);
+          setShowProfilePrompt(true);
+          hasCheckedProfile.current = true;
+          return;
+        }
+        
         // Required fields for a complete profile
         const requiredFields = [
           'firstName',
@@ -475,7 +513,15 @@ const Dashboard = () => {
         const percentage = Math.round((completedCount / requiredFields.length) * 100);
         setProfileCompletionPercentage(percentage);
         
-        // If profile is less than 70% complete, show prompt
+        // For UAE PASS users, always show the profile prompt if last name or skills are missing
+        // This is common as UAE PASS might only have first name
+        if (isFromUaePass && (!profile.lastName || !profile.skills || (Array.isArray(profile.skills) && profile.skills.length === 0))) {
+          console.log('UAE PASS user detected, showing profile completion prompt');
+          setShowProfilePrompt(true);
+          return;
+        }
+        
+        // For regular users, show prompt if profile completion is low
         if (percentage < 70) {
           setShowProfilePrompt(true);
         }
@@ -487,10 +533,35 @@ const Dashboard = () => {
         }
       };
       
+      // Try to load profile from localStorage if not available in context
+      if (!profile && isFromUaePass) {
+        try {
+          const userId = user?.id;
+          if (userId) {
+            const storedProfileStr = localStorage.getItem(`profile_${userId}`);
+            if (storedProfileStr) {
+              const storedProfile = JSON.parse(storedProfileStr);
+              // Use the stored profile for calculations
+              console.log('Using stored profile from localStorage for UAE PASS user');
+              calculateProfileCompletion();
+              return;
+            }
+          }
+          
+          // If we can't load profile but we know it's a UAE PASS user, show prompt
+          setProfileCompletionPercentage(0);
+          setShowProfilePrompt(true);
+          hasCheckedProfile.current = true;
+          return;
+        } catch (err) {
+          console.warn('Error loading profile from localStorage:', err);
+        }
+      }
+      
       calculateProfileCompletion();
       hasCheckedProfile.current = true;
     }
-  }, [profile]);
+  }, [profile, user]);
   
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -1725,7 +1796,22 @@ const Dashboard = () => {
           <Grid item xs={12} md={5}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Avatar 
-                src={profile?.avatar} 
+                src={(() => {
+                  // Try to get profile image from localStorage first
+                  try {
+                    const savedProfile = localStorage.getItem('userProfile');
+                    if (savedProfile) {
+                      const parsedProfile = JSON.parse(savedProfile);
+                      if (parsedProfile.profileImage) {
+                        return parsedProfile.profileImage;
+                      }
+                    }
+                  } catch (error) {
+                    console.warn('Failed to load profile image from localStorage in avatar:', error);
+                  }
+                  // Fall back to profile avatar if localStorage fails
+                  return profile?.avatar;
+                })()}
                 sx={{ 
                   width: 64, 
                   height: 64, 
@@ -2205,35 +2291,8 @@ const Dashboard = () => {
                 }}
                 elevation={0}
               >
-                <Box sx={{
-                  ...widgetHeaderStyles,
-                  backgroundColor: 'transparent',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: isDarkMode ? '#fff' : '#333'
-                }}>
-                  <Typography 
-                    variant="subtitle1" 
-                    fontWeight="bold"
-                    sx={{
-                      textShadow: isDarkMode ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
-                      color: isDarkMode ? '#fff' : '#333',
-                      letterSpacing: '0.5px'
-                    }}
-                  >
-                    Skill Transition
-                  </Typography>
-                </Box>
-                <Box sx={{
-                  ...widgetContentStyles,
-                  height: 'calc(100% - 40px)',
-                  color: isDarkMode ? '#fff' : '#333',
-                  '& .MuiTypography-root': {
-                    fontWeight: 500,
-                    textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.2)' : 'none'
-                  }
-                }}>
-                  <SkillTransitionChart />
-                </Box>
+                {/* Add the SkillTransitionChart component and pass the userId */}
+                <SkillTransitionChart userId={user?.id} />
               </Paper>
             </Grid>
           </Grid>

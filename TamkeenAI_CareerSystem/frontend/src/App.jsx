@@ -31,6 +31,7 @@ import MainLayout from './components/layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import UaePassLogin from './pages/UaePassLogin';
 
 // Lazy-loaded page components with error handling
 const lazyLoad = (importFn) => {
@@ -143,6 +144,7 @@ const router = createBrowserRouter(
         <Route path="/login" element={<PublicRoute element={<Login />} />} />
         <Route path="/register" element={<PublicRoute element={<Register />} />} />
         <Route path="/forgot-password" element={<PublicRoute element={<ForgotPassword />} />} />
+        <Route path="/uaepass-login" element={<PublicRoute element={<UaePassLogin />} />} />
       </Route>
       
       {/* Protected routes with navigation */}

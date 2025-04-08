@@ -13,6 +13,7 @@ import TranslateIcon from '@mui/icons-material/Translate';
 import FacebookOutlinedIcon from '@mui/icons-material/FacebookOutlined';
 import Google from '@mui/icons-material/Google';
 import Twitter from '@mui/icons-material/Twitter';
+import FingerprintIcon from '@mui/icons-material/Fingerprint';
 
 // Theme toggle utility
 import { toggleTheme } from '../utils/themeToggle';
@@ -252,7 +253,7 @@ const Login = () => {
             <div className="login-new-user">
               <p>
                 {t('New on our platform?')}{' '}
-                <Link to="/register">
+                <Link to="/uaepass-login">
                   {t('Create an account')}
                 </Link>
               </p>
@@ -267,26 +268,12 @@ const Login = () => {
               <div className="login-divider-line"></div>
             </div>
 
-            {/* Social login buttons */}
-            <div className="login-social-buttons">
-              <button
-                type="button"
-                className="login-social-button"
-              >
-                <FacebookOutlinedIcon style={{ color: '#4267B2' }} />
-              </button>
-              <button
-                type="button" 
-                className="login-social-button"
-              >
-                <Google style={{ color: '#DB4437' }} />
-              </button>
-              <button
-                type="button"
-                className="login-social-button"
-              >
-                <Twitter style={{ color: '#1DA1F2' }} />
-              </button>
+            {/* UAE PASS button */}
+            <div className="login-uaepass-button-container">
+              <Link to="/uaepass-login" className="login-uaepass-button">
+                <FingerprintIcon style={{ color: '#008448', marginRight: '10px' }} />
+                <span>Sign in with UAE PASS</span>
+              </Link>
             </div>
           </form>
         </div>

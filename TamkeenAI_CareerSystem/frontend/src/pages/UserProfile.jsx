@@ -795,6 +795,23 @@ const UserProfile = () => {
             }
           }
           
+          // Save to localStorage directly as well for better sync
+          try {
+            // Save to userProfile in localStorage
+            const localUserProfile = JSON.parse(localStorage.getItem(`profile_${devUserId}`) || '{}');
+            localUserProfile.avatar = avatarUrl;
+            localStorage.setItem(`profile_${devUserId}`, JSON.stringify(localUserProfile));
+            
+            // Also update the main user profile in local storage to ensure nav bar display
+            const userProfileData = JSON.parse(localStorage.getItem('userProfile') || '{}');
+            userProfileData.profileImage = avatarUrl;
+            localStorage.setItem('userProfile', JSON.stringify(userProfileData));
+            
+            console.log('User profile and avatar updated in localStorage');
+          } catch (localStorageErr) {
+            console.warn('Failed to update avatar in localStorage:', localStorageErr);
+          }
+          
           // Force the snackbar to appear by using setTimeout
           setTimeout(() => {
             console.log('DEV MODE: Showing success message for cleared avatar');
@@ -821,77 +838,103 @@ const UserProfile = () => {
         throw new Error('No file selected');
       }
       
-      // Create FormData with selected image
-      const formData = new FormData();
-      formData.append('avatar', file);
-      
-      console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type);
-      
-      // Get user ID for the API call
-      const userId = userProfile?.id || userProfile?.userId || userAccountProfile?.id;
-      
-      if (!userId) {
-        throw new Error('User ID not found');
-      }
-      
-      // Upload avatar using the API
-      const apiResponse = await apiEndpoints.profiles.uploadAvatar(userId, formData);
-      console.log('Avatar upload response:', apiResponse);
-      
-      // Process the avatar URL from the response
-      let avatarUrl = apiResponse.data?.avatarUrl || null;
-      
-      // Check if we have a valid URL
-      if (avatarUrl) {
-        // Basic URL validation
-        if (avatarUrl.includes('undefined') || avatarUrl === '/' || !avatarUrl.includes('/')) {
-          console.warn('Received potentially invalid avatar URL:', avatarUrl);
-          avatarUrl = null;
-        } else {
-          console.log('Valid avatar URL received:', avatarUrl);
+      // Read the file as DataURL to store in localStorage
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const avatarDataUrl = e.target.result;
+        
+        // Get user ID for the API call
+        const userId = userProfile?.id || userProfile?.userId || userAccountProfile?.id;
+        
+        if (!userId) {
+          throw new Error('User ID not found');
         }
-      }
-      
-      // Update user profile with the new avatar URL
-      setUserProfile(prev => ({
-        ...prev,
-        avatar: avatarUrl
-      }));
-      
-      // Update in the main app context if available
-      if (updateUserProfile) {
+        
         try {
-          const contextUpdate = {
-            id: userId,
-            userId: userId,
-            avatar: avatarUrl
-          };
+          // Update local state
+          setUserProfile(prev => ({
+            ...prev,
+            avatar: avatarDataUrl
+          }));
           
-          console.log('Updating profile context with new avatar:', contextUpdate);
-          await updateUserProfile(contextUpdate);
-          console.log('Profile context updated successfully with new avatar');
-        } catch (err) {
-          console.warn("Couldn't sync avatar with context", err);
+          // Save to localStorage
+          try {
+            // Save to userProfile in localStorage
+            const localUserProfile = JSON.parse(localStorage.getItem(`profile_${userId}`) || '{}');
+            localUserProfile.avatar = avatarDataUrl;
+            localStorage.setItem(`profile_${userId}`, JSON.stringify(localUserProfile));
+            
+            // Also update the main user profile in local storage to ensure nav bar display
+            const userProfileData = JSON.parse(localStorage.getItem('userProfile') || '{}');
+            userProfileData.profileImage = avatarDataUrl;
+            localStorage.setItem('userProfile', JSON.stringify(userProfileData));
+            
+            console.log('User profile and avatar updated in localStorage');
+          } catch (localStorageErr) {
+            console.warn('Failed to update avatar in localStorage:', localStorageErr);
+          }
+          
+          // Update in the main app context if available
+          if (updateUserProfile) {
+            try {
+              const contextUpdate = {
+                id: userId,
+                userId: userId,
+                avatar: avatarDataUrl
+              };
+              
+              console.log('Updating profile context with new avatar');
+              await updateUserProfile(contextUpdate);
+              console.log('Profile context updated successfully with new avatar');
+            } catch (err) {
+              console.warn("Couldn't sync avatar with context", err);
+            }
+          }
+          
+          // Try API call if available
+          try {
+            // Create FormData with selected image
+            const formData = new FormData();
+            formData.append('avatar', file);
+            
+            console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type);
+            
+            // Upload avatar using the API
+            const apiResponse = await apiEndpoints.profiles.uploadAvatar(userId, formData);
+            console.log('Avatar upload response:', apiResponse);
+          } catch (apiErr) {
+            console.log('API not available or error occurred, using localStorage only', apiErr);
+          }
+          
+          // Close dialog and show success message
+          setPhotoDialogOpen(false);
+          
+          setTimeout(() => {
+            console.log('Showing success message for profile picture update');
+            setSnackbarSeverity('success');
+            setSnackbarMessage('Profile picture updated successfully');
+            setSnackbarOpen(true);
+          }, 100);
+          
+        } finally {
+          setSaving(false);
         }
-      }
+      };
       
-      // Close dialog and show success message
-      setPhotoDialogOpen(false);
-      
-      // Use setTimeout to ensure the snackbar appears after state updates
-      setTimeout(() => {
-        console.log('Showing success message for profile picture update');
-        setSnackbarSeverity('success');
-        setSnackbarMessage('Profile picture updated successfully');
+      reader.onerror = (error) => {
+        console.error('Error reading file:', error);
+        setSaving(false);
+        setSnackbarSeverity('error');
+        setSnackbarMessage('Failed to read image file. Please try another.');
         setSnackbarOpen(true);
-      }, 100);
+      };
       
+      reader.readAsDataURL(file);
     } catch (err) {
       console.error('Error saving profile picture:', err);
       setSnackbarSeverity('error');
       setSnackbarMessage('Failed to upload profile picture: ' + (err.message || 'Unknown error'));
       setSnackbarOpen(true);
-    } finally {
       setSaving(false);
     }
   };

@@ -5,13 +5,15 @@ import {
   Link, Alert, CircularProgress, IconButton, Stepper,
   Step, StepLabel, Grid, InputAdornment, FormControlLabel,
   Checkbox, Select, MenuItem, FormControl, InputLabel,
-  FormHelperText, Tooltip
+  FormHelperText, Tooltip, Dialog, DialogTitle, DialogContent,
+  DialogActions, DialogContentText
 } from '@mui/material';
 import {
   Visibility, VisibilityOff, PersonAddAlt,
   Google, Facebook, LinkedIn, GitHub,
   CheckCircle, Info, ArrowBack, ArrowForward,
-  AccountCircle, Email, Lock, School, Work
+  AccountCircle, Email, Lock, School, Work,
+  Fingerprint, VerifiedUser, Code, Phone
 } from '@mui/icons-material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/AppContext';
@@ -41,6 +43,13 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   
+  // UAE PASS integration states
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationError, setVerificationError] = useState(null);
+  const [uaePassInitiated, setUaePassInitiated] = useState(false);
+  const [uaePassData, setUaePassData] = useState(null);
+  
   const navigate = useNavigate();
   const { login, isAuthenticated } = useUser();
   const { toggleTheme, theme } = useAppContext();
@@ -51,6 +60,37 @@ const Register = () => {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
+  
+  // Check for UAE PASS callback
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('sessionId');
+    const state = urlParams.get('state');
+    const code = urlParams.get('code');
+    const error = urlParams.get('error');
+    
+    console.log('URL params check:', { sessionId, state, code, error });
+    
+    if (error) {
+      // Handle UAE PASS error
+      console.error('UAE PASS authentication error:', error);
+      setError(`UAE PASS authentication failed: ${error}`);
+      return;
+    }
+    
+    if (code && state === 'uaepass-auth') {
+      // UAE PASS has redirected back with an authorization code
+      console.log('UAE PASS authorization code received:', code);
+      
+      // Use the state as session ID if no sessionId parameter is present
+      const id = sessionId || state;
+      handleUaePassCallback(id);
+    } else if (sessionId && state === 'uaepass-auth') {
+      // UAE PASS has redirected back with a session ID
+      console.log('UAE PASS session ID received:', sessionId);
+      handleUaePassCallback(sessionId);
+    }
+  }, []);
   
   const steps = [
     'Account Information',
@@ -146,6 +186,132 @@ const Register = () => {
     setActiveStep((prevStep) => prevStep - 1);
   };
   
+  // Handle UAE PASS registration
+  const handleUaePassRegister = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Initiate UAE PASS authentication
+      const response = await axios.post(`http://localhost:5005/api/auth/register/uaepass/init`, {
+        redirectUrl: window.location.origin + window.location.pathname + '?state=uaepass-auth'
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.data && response.data.redirectUrl) {
+        // Set flag to indicate UAE PASS process has started
+        setUaePassInitiated(true);
+        
+        // Redirect to UAE PASS login page
+        window.location.href = response.data.redirectUrl;
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (err) {
+      console.error('UAE PASS initiation error:', err);
+      console.error('Error details:', err.response ? err.response.data : 'No response data');
+      setError('Failed to connect to UAE PASS. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle UAE PASS callback after user authenticates
+  const handleUaePassCallback = async (sessionId) => {
+    setLoading(true);
+    setError(null);
+    
+    console.log('Processing UAE PASS callback with sessionId:', sessionId);
+    
+    try {
+      // Validate the session with your backend
+      console.log('Sending validation request to:', `http://localhost:5005/api/auth/register/uaepass/validate`);
+      
+      const response = await axios.post(`http://localhost:5005/api/auth/register/uaepass/validate`, {
+        sessionId
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('UAE PASS validation response:', response.data);
+      
+      if (response.data && response.data.userData) {
+        // Save UAE PASS user data
+        setUaePassData(response.data.userData);
+        
+        // Pre-fill form with UAE PASS data
+        setFormData({
+          ...formData,
+          firstName: response.data.userData.firstName || response.data.userData.fullNameEn?.split(' ')[0] || '',
+          lastName: response.data.userData.lastName || response.data.userData.fullNameEn?.split(' ').slice(1).join(' ') || '',
+          email: response.data.userData.email || '',
+          phoneNumber: response.data.userData.phoneNumber || response.data.userData.mobile || ''
+        });
+        
+        // Open verification dialog
+        setShowVerificationDialog(true);
+      } else {
+        throw new Error('Failed to retrieve user data from UAE PASS');
+      }
+    } catch (err) {
+      console.error('UAE PASS validation error:', err);
+      console.error('Error details:', err.response ? err.response.data : 'No response data');
+      setError('Failed to validate UAE PASS authentication. Please try again.');
+    } finally {
+      setLoading(false);
+      
+      // Remove query parameters from URL without refreshing
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
+  
+  // Handle verification code submission
+  const handleVerifyCode = async () => {
+    if (!verificationCode.trim()) {
+      setVerificationError('Please enter verification code');
+      return;
+    }
+    
+    setLoading(true);
+    setVerificationError(null);
+    
+    try {
+      // Verify the code with your backend
+      const response = await axios.post(`http://localhost:5005/api/auth/register/uaepass/verify`, {
+        sessionId: uaePassData.sessionId,
+        verificationCode
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.data && response.data.success) {
+        // Close the dialog
+        setShowVerificationDialog(false);
+        
+        // Jump to professional profile step
+        setActiveStep(1);
+        
+        // Show success message
+        setError(null);
+      } else {
+        setVerificationError('Invalid verification code. Please try again.');
+      }
+    } catch (err) {
+      console.error('Verification error:', err);
+      console.error('Error details:', err.response ? err.response.data : 'No response data');
+      setVerificationError('Failed to verify code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -158,7 +324,13 @@ const Register = () => {
     setError(null);
     
     try {
-      const response = await axios.post(AUTH_ENDPOINTS.REGISTER, formData);
+      // Include UAE PASS data if available
+      const registrationData = {
+        ...formData,
+        uaePassData: uaePassData
+      };
+      
+      const response = await axios.post(AUTH_ENDPOINTS.REGISTER, registrationData);
       
       setRegistrationSuccess(true);
       
@@ -196,19 +368,6 @@ const Register = () => {
       
       console.error('Registration error:', err);
     } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleSocialRegister = async (provider) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Redirect to OAuth provider
-      window.location.href = `${AUTH_ENDPOINTS.REGISTER}/${provider}`;
-    } catch (err) {
-      setError(`${provider} registration failed. Please try again.`);
       setLoading(false);
     }
   };
@@ -620,51 +779,38 @@ const Register = () => {
               </Typography>
             </Divider>
             
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 3 }}>
-              <Tooltip title="Sign up with Google">
-                <IconButton 
-                  onClick={() => handleSocialRegister('google')}
-                  disabled={loading}
-                  color="error"
-                  sx={{ border: 1, borderColor: 'divider' }}
-                >
-                  <Google />
-                </IconButton>
-              </Tooltip>
-              
-              <Tooltip title="Sign up with Facebook">
-                <IconButton 
-                  onClick={() => handleSocialRegister('facebook')}
-                  disabled={loading}
-                  color="primary"
-                  sx={{ border: 1, borderColor: 'divider' }}
-                >
-                  <Facebook />
-                </IconButton>
-              </Tooltip>
-              
-              <Tooltip title="Sign up with LinkedIn">
-                <IconButton 
-                  onClick={() => handleSocialRegister('linkedin')}
-                  disabled={loading}
-                  color="primary"
-                  sx={{ border: 1, borderColor: 'divider', bgcolor: 'action.hover' }}
-                >
-                  <LinkedIn />
-                </IconButton>
-              </Tooltip>
-              
-              <Tooltip title="Sign up with GitHub">
-                <IconButton 
-                  onClick={() => handleSocialRegister('github')}
-                  disabled={loading}
-                  color="inherit"
-                  sx={{ border: 1, borderColor: 'divider' }}
-                >
-                  <GitHub />
-                </IconButton>
-              </Tooltip>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+              <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<Fingerprint style={{ color: '#29639c', marginRight: '4px' }} />}
+                onClick={() => navigate('/uaepass-login')}
+                disabled={loading}
+                sx={{
+                  borderColor: '#e5e7eb',
+                  color: '#333',
+                  mb: 2,
+                  '&:hover': {
+                    backgroundColor: '#f9f9f9',
+                    borderColor: '#e5e7eb',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                  },
+                  height: 48,
+                  fontWeight: 'regular',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  borderRadius: '30px',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                  fontSize: '16px'
+                }}
+              >
+                Sign in with UAE PASS
+              </Button>
             </Box>
+            
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>
+              Use UAE PASS for fast, secure registration with verified government ID
+            </Typography>
             
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2">
@@ -682,6 +828,103 @@ const Register = () => {
           </>
         )}
       </Paper>
+      
+      {/* UAE PASS Verification Dialog */}
+      <Dialog open={showVerificationDialog} onClose={() => setShowVerificationDialog(false)}>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <VerifiedUser sx={{ mr: 1, color: 'primary.main' }} />
+            Verify Your UAE PASS
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            A verification code has been sent to your registered mobile number. 
+            Please enter the code below to complete your UAE PASS authentication.
+          </DialogContentText>
+          
+          {verificationError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {verificationError}
+            </Alert>
+          )}
+          
+          <TextField
+            label="Full Name"
+            fullWidth
+            margin="normal"
+            autoFocus
+            disabled={loading}
+            value={formData.firstName + ' ' + formData.lastName}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <AccountCircle />
+                </InputAdornment>
+              ),
+            }}
+          />
+          
+          <TextField
+            label="Phone Number"
+            fullWidth
+            margin="normal"
+            disabled={loading}
+            value={formData.phoneNumber || uaePassData?.mobile || ''}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Phone />
+                </InputAdornment>
+              ),
+            }}
+          />
+          
+          <TextField
+            label="Verification Code"
+            fullWidth
+            margin="normal"
+            value={verificationCode}
+            onChange={(e) => setVerificationCode(e.target.value)}
+            placeholder="Enter 6-digit code"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Code />
+                </InputAdornment>
+              ),
+            }}
+          />
+          
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              Didn't receive the code? 
+              <Button 
+                variant="text" 
+                size="small" 
+                sx={{ ml: 1 }} 
+                onClick={handleUaePassRegister}
+                disabled={loading}
+              >
+                Resend Code
+              </Button>
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowVerificationDialog(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleVerifyCode} 
+            variant="contained" 
+            disabled={loading || !verificationCode.trim()}
+            startIcon={loading ? <CircularProgress size={20} /> : <CheckCircle />}
+          >
+            {loading ? 'Verifying...' : 'Verify'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

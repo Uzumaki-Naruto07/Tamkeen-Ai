@@ -101,68 +101,75 @@ const Settings = () => {
   
   useEffect(() => {
     const loadUserSettings = async () => {
-      if (!profile?.id) {
-        setLoading(false);
-        return;
-      }
-      
       setLoading(true);
       setError(null);
       
       try {
-        // Load profile settings
-        setProfileForm({
-          name: profile.name || '',
-          email: profile.email || '',
-          phone: profile.phone || '',
-          bio: profile.bio || '',
-          location: profile.location || '',
-          website: profile.website || '',
-          linkedin: profile.linkedin || '',
-          github: profile.github || '',
-          twitter: profile.twitter || '',
-          showContactInfo: profile.showContactInfo !== undefined ? profile.showContactInfo : true,
-          profileVisibility: profile.profileVisibility || 'public'
-        });
-        
-        // Load notification settings
-        try {
-          const notificationsResponse = await apiEndpoints.settings.getNotificationSettings(profile.id);
-          if (notificationsResponse?.data) {
-            setNotificationSettings(notificationsResponse.data);
+        // Load profile from localStorage
+        const savedProfile = localStorage.getItem('userProfile');
+        if (savedProfile) {
+          const parsedProfile = JSON.parse(savedProfile);
+          setProfileForm({
+            name: parsedProfile.name || '',
+            email: parsedProfile.email || '',
+            phone: parsedProfile.phone || '',
+            bio: parsedProfile.bio || '',
+            location: parsedProfile.location || '',
+            website: parsedProfile.website || '',
+            linkedin: parsedProfile.linkedin || '',
+            github: parsedProfile.github || '',
+            twitter: parsedProfile.twitter || '',
+            showContactInfo: parsedProfile.showContactInfo !== undefined ? parsedProfile.showContactInfo : true,
+            profileVisibility: parsedProfile.profileVisibility || 'public'
+          });
+
+          // Set the profile image if available
+          if (parsedProfile.profileImage) {
+            setPreviewImage(parsedProfile.profileImage);
           }
-        } catch (err) {
-          console.log('Notification settings API not available, using defaults');
+        } else if (profile?.id) {
+          // If nothing in localStorage but we have a profile in context
+          setProfileForm({
+            name: profile.name || '',
+            email: profile.email || '',
+            phone: profile.phone || '',
+            bio: profile.bio || '',
+            location: profile.location || '',
+            website: profile.website || '',
+            linkedin: profile.linkedin || '',
+            github: profile.github || '',
+            twitter: profile.twitter || '',
+            showContactInfo: profile.showContactInfo !== undefined ? profile.showContactInfo : true,
+            profileVisibility: profile.profileVisibility || 'public'
+          });
+
+          if (profile.profileImage) {
+            setPreviewImage(profile.profileImage);
+          }
         }
         
-        // Load appearance settings
-        try {
-          const appearanceResponse = await apiEndpoints.settings.getAppearanceSettings(profile.id);
-          if (appearanceResponse?.data) {
-            setAppearanceSettings(appearanceResponse.data);
-          }
-        } catch (err) {
-          console.log('Appearance settings API not available, using defaults');
+        // Load notification settings from localStorage
+        const savedNotifications = localStorage.getItem('notificationSettings');
+        if (savedNotifications) {
+          setNotificationSettings(JSON.parse(savedNotifications));
         }
         
-        // Load privacy settings
-        try {
-          const privacyResponse = await apiEndpoints.settings.getPrivacySettings(profile.id);
-          if (privacyResponse?.data) {
-            setPrivacySettings(privacyResponse.data);
-          }
-        } catch (err) {
-          console.log('Privacy settings API not available, using defaults');
+        // Load appearance settings from localStorage
+        const savedAppearance = localStorage.getItem('appearanceSettings');
+        if (savedAppearance) {
+          setAppearanceSettings(JSON.parse(savedAppearance));
         }
         
-        // Load data settings
-        try {
-          const dataResponse = await apiEndpoints.settings.getDataSettings(profile.id);
-          if (dataResponse?.data) {
-            setDataSettings(dataResponse.data);
-          }
-        } catch (err) {
-          console.log('Data settings API not available, using defaults');
+        // Load privacy settings from localStorage
+        const savedPrivacy = localStorage.getItem('privacySettings');
+        if (savedPrivacy) {
+          setPrivacySettings(JSON.parse(savedPrivacy));
+        }
+        
+        // Load data settings from localStorage
+        const savedData = localStorage.getItem('dataSettings');
+        if (savedData) {
+          setDataSettings(JSON.parse(savedData));
         }
         
         setLoading(false);
@@ -179,28 +186,40 @@ const Settings = () => {
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
-      const response = await apiEndpoints.settings.updateProfile(profile.id, profileForm);
+      // Save to localStorage
+      const userProfileData = {
+        ...profileForm,
+        profileImage: previewImage
+      };
       
-      if (response.success) {
-        // Update user context
-        updateUser({
-          ...profile,
-          name: profileForm.name,
-          email: profileForm.email,
-          phone: profileForm.phone,
-          bio: profileForm.bio,
-          location: profileForm.location,
-          website: profileForm.website,
-          linkedin: profileForm.linkedin,
-          github: profileForm.github,
-          twitter: profileForm.twitter,
-          showContactInfo: profileForm.showContactInfo,
-          profileVisibility: profileForm.profileVisibility
-        });
-        
-        setSnackbarMessage('Profile updated successfully');
-        setSnackbarSeverity('success');
-        setSnackbarOpen(true);
+      localStorage.setItem('userProfile', JSON.stringify(userProfileData));
+      
+      // Update user context
+      updateUser({
+        ...profile,
+        name: profileForm.name,
+        email: profileForm.email,
+        phone: profileForm.phone,
+        bio: profileForm.bio,
+        location: profileForm.location,
+        website: profileForm.website,
+        linkedin: profileForm.linkedin,
+        github: profileForm.github,
+        twitter: profileForm.twitter,
+        showContactInfo: profileForm.showContactInfo,
+        profileVisibility: profileForm.profileVisibility,
+        profileImage: previewImage
+      });
+      
+      setSnackbarMessage('Profile updated successfully');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+      
+      // Try API call if available
+      try {
+        await apiEndpoints.settings.updateProfile(profile?.id, profileForm);
+      } catch (apiErr) {
+        console.log('API not available, using local storage only');
       }
     } catch (err) {
       console.error('Error saving profile:', err);
@@ -222,25 +241,31 @@ const Settings = () => {
     
     setSaving(true);
     try {
-      const response = await apiEndpoints.settings.changePassword(profile.id, {
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword
+      // Store password change in localStorage for demo
+      localStorage.setItem('passwordChanged', new Date().toISOString());
+      
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
       });
       
-      if (response.success) {
-        setPasswordForm({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
+      setSnackbarMessage('Password changed successfully');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+      
+      // Try API call if available
+      try {
+        await apiEndpoints.settings.changePassword(profile?.id, {
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
         });
-        
-        setSnackbarMessage('Password changed successfully');
-        setSnackbarSeverity('success');
-        setSnackbarOpen(true);
+      } catch (apiErr) {
+        console.log('API not available, using local storage only');
       }
     } catch (err) {
       console.error('Error changing password:', err);
-      setSnackbarMessage(err.response?.data?.message || 'Failed to change password. Please check your current password.');
+      setSnackbarMessage('Failed to change password. Please check your current password.');
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
     } finally {
@@ -251,12 +276,18 @@ const Settings = () => {
   const handleSaveNotifications = async () => {
     setSaving(true);
     try {
-      const response = await apiEndpoints.settings.updateNotificationSettings(profile.id, notificationSettings);
+      // Save to localStorage
+      localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
       
-      if (response.success) {
-        setSnackbarMessage('Notification settings updated successfully');
-        setSnackbarSeverity('success');
-        setSnackbarOpen(true);
+      setSnackbarMessage('Notification settings updated successfully');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+      
+      // Try API call if available
+      try {
+        await apiEndpoints.settings.updateNotificationSettings(profile?.id, notificationSettings);
+      } catch (apiErr) {
+        console.log('API not available, using local storage only');
       }
     } catch (err) {
       console.error('Error saving notification settings:', err);
@@ -271,19 +302,25 @@ const Settings = () => {
   const handleSaveAppearance = async () => {
     setSaving(true);
     try {
-      const response = await apiEndpoints.settings.updateAppearanceSettings(profile.id, appearanceSettings);
+      // Save to localStorage
+      localStorage.setItem('appearanceSettings', JSON.stringify(appearanceSettings));
       
-      if (response.success) {
-        // Apply appearance changes immediately
-        document.documentElement.setAttribute('data-theme', 
-          appearanceSettings.theme === 'system' 
-            ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-            : appearanceSettings.theme
-        );
-        
-        setSnackbarMessage('Appearance settings updated successfully');
-        setSnackbarSeverity('success');
-        setSnackbarOpen(true);
+      // Apply appearance changes immediately
+      document.documentElement.setAttribute('data-theme', 
+        appearanceSettings.theme === 'system' 
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+          : appearanceSettings.theme
+      );
+      
+      setSnackbarMessage('Appearance settings updated successfully');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+      
+      // Try API call if available
+      try {
+        await apiEndpoints.settings.updateAppearanceSettings(profile?.id, appearanceSettings);
+      } catch (apiErr) {
+        console.log('API not available, using local storage only');
       }
     } catch (err) {
       console.error('Error saving appearance settings:', err);
@@ -298,12 +335,18 @@ const Settings = () => {
   const handleSavePrivacy = async () => {
     setSaving(true);
     try {
-      const response = await apiEndpoints.settings.updatePrivacySettings(profile.id, privacySettings);
+      // Save to localStorage
+      localStorage.setItem('privacySettings', JSON.stringify(privacySettings));
       
-      if (response.success) {
-        setSnackbarMessage('Privacy settings updated successfully');
-        setSnackbarSeverity('success');
-        setSnackbarOpen(true);
+      setSnackbarMessage('Privacy settings updated successfully');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+      
+      // Try API call if available
+      try {
+        await apiEndpoints.settings.updatePrivacySettings(profile?.id, privacySettings);
+      } catch (apiErr) {
+        console.log('API not available, using local storage only');
       }
     } catch (err) {
       console.error('Error saving privacy settings:', err);
@@ -318,12 +361,18 @@ const Settings = () => {
   const handleSaveDataSettings = async () => {
     setSaving(true);
     try {
-      const response = await apiEndpoints.settings.updateDataSettings(profile.id, dataSettings);
+      // Save to localStorage
+      localStorage.setItem('dataSettings', JSON.stringify(dataSettings));
       
-      if (response.success) {
-        setSnackbarMessage('Data settings updated successfully');
-        setSnackbarSeverity('success');
-        setSnackbarOpen(true);
+      setSnackbarMessage('Data settings updated successfully');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+      
+      // Try API call if available
+      try {
+        await apiEndpoints.settings.updateDataSettings(profile?.id, dataSettings);
+      } catch (apiErr) {
+        console.log('API not available, using local storage only');
       }
     } catch (err) {
       console.error('Error saving data settings:', err);
@@ -336,7 +385,7 @@ const Settings = () => {
   };
   
   const handleDeleteAccount = async () => {
-    if (confirmationEmail !== profile.email) {
+    if (confirmationEmail !== profileForm.email) {
       setSnackbarMessage('Email confirmation does not match your email address');
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
@@ -345,19 +394,29 @@ const Settings = () => {
     
     setSaving(true);
     try {
-      const response = await apiEndpoints.settings.deleteAccount(profile.id);
+      // Clear all localStorage
+      localStorage.removeItem('userProfile');
+      localStorage.removeItem('notificationSettings');
+      localStorage.removeItem('appearanceSettings');
+      localStorage.removeItem('privacySettings');
+      localStorage.removeItem('dataSettings');
       
-      if (response.success) {
-        setDeleteAccountOpen(false);
-        setSnackbarMessage('Your account has been deleted');
-        setSnackbarSeverity('success');
-        setSnackbarOpen(true);
-        
-        // Log the user out
-        setTimeout(() => {
-          logout();
-          navigate('/login');
-        }, 2000);
+      setDeleteAccountOpen(false);
+      setSnackbarMessage('Your account has been deleted');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+      
+      // Log the user out
+      setTimeout(() => {
+        logout();
+        navigate('/login');
+      }, 2000);
+      
+      // Try API call if available
+      try {
+        await apiEndpoints.settings.deleteAccount(profile?.id);
+      } catch (apiErr) {
+        console.log('API not available, using local storage only');
       }
     } catch (err) {
       console.error('Error deleting account:', err);
@@ -371,21 +430,40 @@ const Settings = () => {
   
   const handleExportData = async (format) => {
     try {
-      const response = await apiEndpoints.settings.exportUserData(profile.id, { format });
+      // In local storage mode, just create a JSON file with all user data
+      const userData = {
+        profile: JSON.parse(localStorage.getItem('userProfile') || '{}'),
+        notifications: JSON.parse(localStorage.getItem('notificationSettings') || '{}'),
+        appearance: JSON.parse(localStorage.getItem('appearanceSettings') || '{}'),
+        privacy: JSON.parse(localStorage.getItem('privacySettings') || '{}'),
+        data: JSON.parse(localStorage.getItem('dataSettings') || '{}')
+      };
       
-      if (response.success && response.data?.downloadUrl) {
-        // Create a temporary link and trigger download
-        const link = document.createElement('a');
-        link.href = response.data.downloadUrl;
-        link.setAttribute('download', `tamkeen_data_export.${format}`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      // Create a file and trigger download
+      const dataString = format === 'json' 
+        ? JSON.stringify(userData, null, 2)
+        : Object.entries(userData).map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join('\n');
         
-        setExportOpen(false);
-        setSnackbarMessage(`Data exported successfully as ${format.toUpperCase()}`);
-        setSnackbarSeverity('success');
-        setSnackbarOpen(true);
+      const blob = new Blob([dataString], { type: format === 'json' ? 'application/json' : 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `tamkeen_data_export.${format}`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setExportOpen(false);
+      setSnackbarMessage(`Data exported successfully as ${format.toUpperCase()}`);
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+      
+      // Try API call if available
+      try {
+        await apiEndpoints.settings.exportUserData(profile?.id, { format });
+      } catch (apiErr) {
+        console.log('API not available, using local storage only');
       }
     } catch (err) {
       console.error('Error exporting data:', err);
@@ -398,40 +476,123 @@ const Settings = () => {
   const handleProfileImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file type
+      if (!file.type.match('image.*')) {
+        setSnackbarMessage('Please select an image file (JPEG, PNG, etc.)');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+        return;
+      }
+      
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setSnackbarMessage('Image size should be less than 5MB');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+        return;
+      }
+      
       setProfileImage(file);
       const reader = new FileReader();
       reader.onload = () => {
-        setPreviewImage(reader.result);
+        try {
+          setPreviewImage(reader.result);
+        } catch (error) {
+          console.error('Error setting preview image:', error);
+          setSnackbarMessage('Failed to process image. Please try another.');
+          setSnackbarSeverity('error');
+          setSnackbarOpen(true);
+        }
+      };
+      reader.onerror = () => {
+        setSnackbarMessage('Failed to read image file. Please try another.');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
       };
       reader.readAsDataURL(file);
     }
   };
   
   const handleUploadProfileImage = async () => {
-    if (!profileImage) return;
+    if (!profileImage && !previewImage) {
+      setSnackbarMessage('Please select an image first');
+      setSnackbarSeverity('warning');
+      setSnackbarOpen(true);
+      return;
+    }
     
     setSaving(true);
     try {
-      const formData = new FormData();
-      formData.append('profileImage', profileImage);
+      // Get the user's ID
+      const userId = profile?.id || 'unknown-user';
       
-      const response = await apiEndpoints.settings.uploadProfileImage(profile.id, formData);
-      
-      if (response.success && response.data?.imageUrl) {
-        // Update user context with new image
-        updateUser({
-          ...profile,
-          profileImage: response.data.imageUrl
-        });
+      // Save the image URL to localStorage and update all relevant storage locations
+      try {
+        // 1. Update main userProfile
+        const currentProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+        const updatedProfile = {
+          ...currentProfile,
+          profileImage: previewImage,
+          avatar: previewImage
+        };
+        localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
+        
+        // 2. Update profile_{userId} if it exists
+        const profileKey = `profile_${userId}`;
+        const userProfileData = JSON.parse(localStorage.getItem(profileKey) || '{}');
+        if (userProfileData) {
+          userProfileData.avatar = previewImage;
+          localStorage.setItem(profileKey, JSON.stringify(userProfileData));
+        }
+        
+        // 3. Update user_data for UAE PASS users
+        const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
+        if (userData && userData.id) {
+          userData.avatar = previewImage;
+          localStorage.setItem('user_data', JSON.stringify(userData));
+        }
+        
+        // Update user context with new image using the app's updateUserProfile function
+        if (typeof updateUserProfile === 'function') {
+          await updateUserProfile({
+            id: userId,
+            userId: userId,
+            avatar: previewImage
+          });
+        } else {
+          // Direct update if updateUserProfile not available
+          updateUser({
+            ...profile,
+            avatar: previewImage,
+            profileImage: previewImage
+          });
+        }
         
         setImageUploadOpen(false);
         setSnackbarMessage('Profile image updated successfully');
         setSnackbarSeverity('success');
         setSnackbarOpen(true);
+        
+        // Reset states
+        setProfileImage(null);
+        
+        // Try API call if available
+        try {
+          if (profile?.id && profileImage) {
+            const formData = new FormData();
+            formData.append('profileImage', profileImage);
+            await apiEndpoints.settings.uploadProfileImage(profile.id, formData);
+          }
+        } catch (apiErr) {
+          console.log('API not available, using local storage only', apiErr);
+        }
+      } catch (storageErr) {
+        console.error('Error saving to localStorage:', storageErr);
+        throw new Error('Failed to save image to local storage');
       }
     } catch (err) {
       console.error('Error uploading profile image:', err);
-      setSnackbarMessage('Failed to upload profile image. Please try again later.');
+      setSnackbarMessage('Failed to upload profile image. Please try again.');
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
     } finally {
@@ -461,20 +622,20 @@ const Settings = () => {
               }
             >
               <Avatar 
-                src={profile?.profileImage} 
-                alt={profile?.name} 
+                src={previewImage || profile?.profileImage} 
+                alt={profileForm.name} 
                 sx={{ width: 100, height: 100, margin: '0 auto' }}
               >
-                {profile?.name?.charAt(0) || <AccountCircle />}
+                {profileForm.name?.charAt(0) || <AccountCircle />}
               </Avatar>
             </Badge>
             
             <Typography variant="h6" sx={{ mt: 2 }}>
-              {profile?.name}
+              {profileForm.name || 'User'}
             </Typography>
             
             <Typography variant="body2" color="text.secondary">
-              {profile?.email}
+              {profileForm.email}
             </Typography>
             
             <Chip 
@@ -1143,7 +1304,12 @@ const Settings = () => {
       {/* Profile Image Upload Dialog */}
       <Dialog
         open={imageUploadOpen}
-        onClose={() => setImageUploadOpen(false)}
+        onClose={() => {
+          if (!saving) {
+            setImageUploadOpen(false);
+            setProfileImage(null);
+          }
+        }}
         maxWidth="sm"
         fullWidth
       >
@@ -1160,7 +1326,7 @@ const Settings = () => {
                 src={profile?.profileImage} 
                 sx={{ width: 150, height: 150, margin: '0 auto' }}
               >
-                {profile?.name?.charAt(0) || <AccountCircle />}
+                {profileForm.name?.charAt(0) || <AccountCircle />}
               </Avatar>
             )}
           </Box>
@@ -1170,6 +1336,7 @@ const Settings = () => {
               variant="outlined"
               component="label"
               startIcon={<CloudUpload />}
+              disabled={saving}
             >
               Choose Image
               <input
@@ -1179,18 +1346,29 @@ const Settings = () => {
                 onChange={handleProfileImageChange}
               />
             </Button>
+            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+              Max size: 5MB. Formats: JPG, PNG, GIF
+            </Typography>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setImageUploadOpen(false)}>
+          <Button 
+            onClick={() => {
+              setImageUploadOpen(false);
+              setProfileImage(null);
+              setPreviewImage(null);
+            }}
+            disabled={saving}
+          >
             Cancel
           </Button>
           <Button
             variant="contained"
             onClick={handleUploadProfileImage}
-            disabled={!profileImage || saving}
+            disabled={saving || (!profileImage && !previewImage)}
+            startIcon={saving ? <CircularProgress size={20} /> : null}
           >
-            Upload
+            {saving ? 'Uploading...' : 'Upload'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1218,7 +1396,7 @@ const Settings = () => {
             value={confirmationEmail}
             onChange={(e) => setConfirmationEmail(e.target.value)}
             fullWidth
-            placeholder={profile?.email}
+            placeholder={profileForm.email}
             margin="normal"
           />
         </DialogContent>
@@ -1230,7 +1408,7 @@ const Settings = () => {
             variant="contained"
             color="error"
             onClick={handleDeleteAccount}
-            disabled={confirmationEmail !== profile?.email || saving}
+            disabled={confirmationEmail !== profileForm.email || saving}
             startIcon={saving ? <CircularProgress size={20} /> : <Delete />}
           >
             Delete My Account

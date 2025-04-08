@@ -217,6 +217,189 @@ const mockAnalytics = {
   }
 };
 
+// Gamification mock data
+const mockGamification = {
+  progress: {
+    level: 4,
+    currentXP: 350,
+    xpToNextLevel: 500,
+    totalXP: 1350,
+    streak: 5,
+    activeDays: 21
+  },
+  badges: [
+    {
+      id: 'badge-1',
+      name: 'Profile Master',
+      description: 'Completed your profile with all details',
+      category: 'profile',
+      color: '#4CAF50',
+      unlocked: true,
+      dateAchieved: '2023-02-15T10:30:00Z',
+      criteria: ['Complete personal info', 'Add profile picture', 'Add a resume']
+    },
+    {
+      id: 'badge-2',
+      name: 'Job Seeker',
+      description: 'Applied to 10 jobs',
+      category: 'jobs',
+      color: '#2196F3',
+      unlocked: true,
+      dateAchieved: '2023-03-10T14:15:00Z',
+      criteria: ['Apply to 10 jobs']
+    },
+    {
+      id: 'badge-3',
+      name: 'Skill Builder',
+      description: 'Added 15 skills to your profile',
+      category: 'skills',
+      color: '#9C27B0',
+      unlocked: true,
+      dateAchieved: '2023-03-05T09:45:00Z',
+      criteria: ['Add 15 skills to your profile']
+    },
+    {
+      id: 'badge-4',
+      name: 'Interview Ace',
+      description: 'Complete 5 mock interviews',
+      category: 'interview',
+      color: '#F44336',
+      unlocked: false,
+      criteria: ['Complete 5 mock interviews with a score of 80% or higher']
+    },
+    {
+      id: 'badge-5',
+      name: 'Networking Pro',
+      description: 'Connected with 10 professionals',
+      category: 'networking',
+      color: '#FF9800',
+      unlocked: false,
+      criteria: ['Connect with 10 professionals in your industry']
+    }
+  ],
+  achievements: [
+    {
+      id: 'achieve-1',
+      name: 'First Job Application',
+      description: 'Applied to your first job',
+      category: 'jobs',
+      points: 50,
+      achieved: true,
+      dateAchieved: '2023-01-20T11:30:00Z'
+    },
+    {
+      id: 'achieve-2',
+      name: 'Resume Uploaded',
+      description: 'Uploaded your first resume',
+      category: 'profile',
+      points: 30,
+      achieved: true,
+      dateAchieved: '2023-01-15T09:20:00Z'
+    },
+    {
+      id: 'achieve-3',
+      name: 'Skill Assessment Completed',
+      description: 'Completed your first skill assessment',
+      category: 'skills',
+      points: 75,
+      achieved: true,
+      dateAchieved: '2023-01-25T14:45:00Z'
+    },
+    {
+      id: 'achieve-4',
+      name: 'Interview Feedback',
+      description: 'Received feedback from 3 mock interviews',
+      category: 'interview',
+      points: 60,
+      achieved: true,
+      dateAchieved: '2023-02-10T16:30:00Z'
+    },
+    {
+      id: 'achieve-5',
+      name: 'Learning Streak',
+      description: 'Learned for 7 consecutive days',
+      category: 'learning',
+      points: 100,
+      achieved: false
+    }
+  ],
+  challenges: [
+    {
+      id: 'challenge-1',
+      name: 'Resume Optimizer',
+      description: 'Improve your resume score by 15%',
+      category: 'resume',
+      difficulty: 'medium',
+      xpReward: 150,
+      deadline: '2023-04-15T23:59:59Z',
+      status: 'in-progress',
+      progress: 60,
+      accepted: true
+    },
+    {
+      id: 'challenge-2',
+      name: 'Interview Preparation',
+      description: 'Complete 3 mock interviews this week',
+      category: 'interview',
+      difficulty: 'hard',
+      xpReward: 200,
+      deadline: '2023-04-10T23:59:59Z',
+      status: 'not-started',
+      progress: 0,
+      accepted: false
+    },
+    {
+      id: 'challenge-3',
+      name: 'Skill Development',
+      description: 'Complete 2 skill courses',
+      category: 'learning',
+      difficulty: 'easy',
+      xpReward: 100,
+      deadline: '2023-04-20T23:59:59Z',
+      status: 'completed',
+      progress: 100,
+      accepted: true
+    }
+  ],
+  activityHistory: [
+    {
+      id: 'activity-1',
+      type: 'job_application',
+      description: 'Applied for Frontend Developer at TechCorp UAE',
+      timestamp: '2023-03-15T10:30:00Z',
+      xpEarned: 20
+    },
+    {
+      id: 'activity-2',
+      type: 'skill_assessment',
+      description: 'Completed React assessment with 85% score',
+      timestamp: '2023-03-12T14:15:00Z',
+      xpEarned: 50
+    },
+    {
+      id: 'activity-3',
+      type: 'learning',
+      description: 'Completed course: Advanced TypeScript',
+      timestamp: '2023-03-10T09:45:00Z',
+      xpEarned: 30
+    },
+    {
+      id: 'activity-4',
+      type: 'achievement',
+      description: 'Earned badge: Skill Builder',
+      timestamp: '2023-03-05T09:45:00Z',
+      xpEarned: 75
+    },
+    {
+      id: 'activity-5',
+      type: 'interview',
+      description: 'Completed mock interview for Software Engineer position',
+      timestamp: '2023-03-02T11:30:00Z',
+      xpEarned: 40
+    }
+  ]
+};
+
 // ATS analysis mock data
 const atsAnalysis = {
   overall_score: 75,
@@ -464,7 +647,9 @@ const mockData = {
   // Helper functions
   getJobApplicationsByUserId,
   getJobApplicationById,
-  getJobApplicationsByStatus
+  getJobApplicationsByStatus,
+  // Career progression & gamification
+  gamification: mockGamification,
 };
 
 export default mockData; 

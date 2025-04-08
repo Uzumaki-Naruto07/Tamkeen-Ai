@@ -1263,31 +1263,31 @@ const SkillsAssessment = () => {
       
       setSkillForecast(mockSkillForecast);
       
-      // Save results to localStorage
-      try {
-        // Get existing assessment history from localStorage or initialize empty array
-        const existingAssessmentHistory = JSON.parse(localStorage.getItem('skillAssessmentHistory') || '[]');
-        
-        // Create a new assessment history entry with all data
-        const assessmentHistoryEntry = {
-          ...mockResults,
-          skillForecast: mockSkillForecast,
-          category: selectedCategory?.id,
-          categoryName: selectedCategory?.name || 'Technical Skills'
-        };
-        
-        // Add to beginning of array
-        existingAssessmentHistory.unshift(assessmentHistoryEntry);
-        
-        // Limit history to most recent 10 entries
-        const limitedHistory = existingAssessmentHistory.slice(0, 10);
-        
-        // Save back to localStorage
-        localStorage.setItem('skillAssessmentHistory', JSON.stringify(limitedHistory));
-        console.log('Assessment results saved to localStorage');
-      } catch (storageErr) {
-        console.error('Error saving to localStorage:', storageErr);
-      }
+      // Save assessment results to localStorage for the skill transition chart
+      const userId = profile?.id || 'guest-user';
+      const assessmentHistory = JSON.parse(localStorage.getItem(`assessment_history_${userId}`)) || [];
+      
+      // Create assessment result entry
+      const assessmentResult = {
+        id: `assessment-${Date.now()}`,
+        userId: userId,
+        skillName: selectedCategory?.name,
+        title: selectedCategory?.name,
+        skillCategory: selectedCategory?.id,
+        score: mockResults.score,
+        maxScore: mockResults.maxScore,
+        completedAt: new Date().toISOString(),
+        demand: selectedCategory?.id === 'tech-skills' ? 'High' : 'Medium',
+        relevance: 85
+      };
+      
+      // Add to history and save
+      assessmentHistory.push(assessmentResult);
+      localStorage.setItem(`assessment_history_${userId}`, JSON.stringify(assessmentHistory));
+      console.log('Saved assessment result to localStorage:', assessmentResult);
+      
+      // Trigger an event so other components can know assessment data has changed
+      window.dispatchEvent(new CustomEvent('assessmentDataChanged', { detail: assessmentResult }));
       
       // Move to results step
       setActiveStep(2);
@@ -1305,7 +1305,7 @@ const SkillsAssessment = () => {
       
     } catch (err) {
       console.error('Error submitting assessment:', err);
-      setSnackbarMessage('Failed to submit assessment. Please try again.');
+      setSnackbarMessage('Error submitting assessment. Please try again.');
       setSnackbarOpen(true);
     } finally {
       setIsSubmitting(false);

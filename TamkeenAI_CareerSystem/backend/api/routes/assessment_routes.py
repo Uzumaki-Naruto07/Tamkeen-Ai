@@ -47,6 +47,96 @@ VALUE_QUESTIONS = [
     {"id": 5, "text": "Career advancement opportunities are very important", "category": "achievement"}
 ]
 
+# Mock available assessments
+AVAILABLE_ASSESSMENTS = [
+    {
+        "id": "assessment-1",
+        "title": "JavaScript Fundamentals",
+        "skillCategory": "technical",
+        "description": "Test your knowledge of JavaScript basics",
+        "duration": 20,
+        "difficulty": "beginner"
+    },
+    {
+        "id": "assessment-2",
+        "title": "React Development",
+        "skillCategory": "technical",
+        "description": "Assess your React skills and knowledge",
+        "duration": 25,
+        "difficulty": "intermediate"
+    },
+    {
+        "id": "assessment-3",
+        "title": "Communication Skills",
+        "skillCategory": "soft",
+        "description": "Evaluate your workplace communication effectiveness",
+        "duration": 15,
+        "difficulty": "beginner"
+    }
+]
+
+# Mock skill groups
+SKILL_GROUPS = [
+    { "id": "technical", "name": "Technical Skills", "count": 2 },
+    { "id": "soft", "name": "Soft Skills", "count": 1 }
+]
+
+# Mock completed assessments
+COMPLETED_ASSESSMENTS = [
+    {
+        "id": "completed-assessment-1",
+        "title": "JavaScript Basics",
+        "skillCategory": "technical",
+        "score": 85,
+        "maxScore": 100,
+        "completedAt": "2023-06-15T10:30:00Z"
+    },
+    {
+        "id": "completed-assessment-2",
+        "title": "Communication Skills",
+        "skillCategory": "soft",
+        "score": 90,
+        "maxScore": 100,
+        "completedAt": "2023-06-01T14:45:00Z"
+    }
+]
+
+@assessment_bp.route('/available/<user_id>', methods=['GET'])
+def get_available_assessments(user_id):
+    """Get available assessments for a user"""
+    try:
+        logger.info(f"Getting available assessments for user {user_id}")
+        
+        # Return mock data for now
+        # In a real implementation, you would query the database
+        return jsonify({
+            "assessments": AVAILABLE_ASSESSMENTS,
+            "skillGroups": SKILL_GROUPS
+        })
+    
+    except Exception as e:
+        logger.error(f"Failed to get available assessments: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to get available assessments'
+        }), 500
+
+@assessment_bp.route('/user/<user_id>', methods=['GET'])
+def get_user_assessments(user_id):
+    """Get completed assessments for a user"""
+    try:
+        logger.info(f"Getting completed assessments for user {user_id}")
+        
+        # Return mock data for now
+        # In a real implementation, you would query the database
+        return jsonify(COMPLETED_ASSESSMENTS)
+    
+    except Exception as e:
+        logger.error(f"Failed to get user assessments: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to get user assessments'
+        }), 500
 
 @assessment_bp.route('/personality/questions', methods=['GET'])
 @auth_required
