@@ -45,7 +45,7 @@ let isBackendAvailable = false;
 let backendCheckInProgress = false;
 
 // Use CORS proxy in development mode
-const useCorsProxy = process.env.NODE_ENV === 'development';
+const useCorsProxy = import.meta.env.MODE === 'development';
 const corsProxyUrl = 'http://localhost:8080/';
 
 // Helper to get base URL with optional CORS proxy
@@ -134,7 +134,9 @@ api.interceptors.request.use(async (config) => {
       '/resume/upload',
       '/ats/analyze',
       '/ats/analyze-with-deepseek',
-      '/ats/analyze-with-openai'
+      '/ats/analyze-with-openai',
+      '/career/analyze-prediction',
+      '/career/recommendations'
     ];
     
     const shouldSkipAuth = skipAuthForEndpoints.some(endpoint => 
@@ -143,7 +145,7 @@ api.interceptors.request.use(async (config) => {
     
     if (!shouldSkipAuth) {
       // Add token to auth header - use X-Auth-Token
-    config.headers['X-Auth-Token'] = token;
+      config.headers['X-Auth-Token'] = token;
     } else {
       console.log('Skipping auth token for endpoint:', config.url);
     }
@@ -283,6 +285,162 @@ const apiEndpoints = {
   profile: profileApi,
   assessment: assessmentApi,
   
+  // Add career recommendations endpoints
+  career: {
+    getCareerRecommendations: (data) => api.post('/career/recommendations', data),
+    
+    // New endpoint for combined Pymetrics-style and LLM career prediction
+    analyzePrediction: async (assessmentData) => {
+      try {
+        console.log("Sending assessment data to DeepSeek for analysis", assessmentData);
+        
+        // Format the prompt for DeepSeek
+        const prompt = `
+          Based on the user's answers to a career assessment, predict the 3 most suitable career paths. Here are the user's details:
+          - Personality: ${JSON.stringify(assessmentData.personality)}
+          - Interests: ${JSON.stringify(assessmentData.interests)}
+          - Work Values: ${JSON.stringify(assessmentData.values)}
+          - Skills: ${JSON.stringify(assessmentData.skills)}
+          
+          Return a valid JSON object with the following structure:
+          {
+            "recommendedCareers": [
+              {"title": "Career Name", "match": 98, "description": "Why it fits the user's profile"}
+            ],
+            "personalityType": "Personality label that describes the user",
+            "explanation": "Brief analysis of the user's traits and why certain careers fit",
+            "skillGaps": [
+              {"skill": "Skill Name", "importance": "High/Medium/Low", "resources": ["Learning resource 1", "Learning resource 2"]}
+            ]
+          }
+        `;
+        
+        const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || 'sk-or-v1-your-api-key';
+        
+        // Call DeepSeek through OpenRouter API
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'Tamkeen AI Career Assessment'
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat', // Use DeepSeek model
+            messages: [
+              { role: 'system', content: 'You are a career advisor AI helping users find their ideal career path based on their assessment results.' },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.3, // Lower temperature for more focused responses
+            max_tokens: 1500
+          })
+        });
+        
+        const data = await response.json();
+        console.log("DeepSeek response:", data);
+        
+        // Parse the completion from DeepSeek
+        let result;
+        try {
+          // Extract the generated text from the response
+          const generatedText = data.choices[0].message.content;
+          
+          // Try to locate and parse JSON in the response
+          const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            result = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error("No valid JSON found in response");
+          }
+        } catch (parseError) {
+          console.error("Error parsing DeepSeek response:", parseError);
+          
+          // Fallback with mock data if parsing fails
+          result = {
+            recommendedCareers: [
+              { 
+                title: 'Data Scientist', 
+                match: 95, 
+                description: 'Your analytical abilities and interest in patterns suggest data science would be an excellent fit.' 
+              },
+              { 
+                title: 'AI Engineer', 
+                match: 92, 
+                description: 'Your technical aptitude and problem-solving align well with AI engineering.' 
+              },
+              { 
+                title: 'UX Researcher', 
+                match: 88, 
+                description: 'Your combination of analytical skills and social understanding would make you excellent at researching user needs.' 
+              }
+            ],
+            personalityType: "Analytical Problem-Solver",
+            explanation: "Your assessment reveals strong analytical abilities paired with openness to new ideas. You enjoy solving complex problems and have excellent technical aptitude.",
+            skillGaps: [
+              { skill: "Machine Learning", importance: "High", resources: ["Deep Learning Specialization", "TensorFlow Certification"] },
+              { skill: "Data Visualization", importance: "Medium", resources: ["Tableau Fundamentals", "D3.js Course"] }
+            ]
+          };
+        }
+        
+        // Save to all separate localStorage fields for easy access
+        localStorage.setItem("tamkeenCareerAssessment", JSON.stringify({
+          assessment: assessmentData,
+          results: result
+        }));
+        localStorage.setItem("tamkeenPersonality", JSON.stringify({
+          type: result.personalityType,
+          explanation: result.explanation
+        }));
+        localStorage.setItem("tamkeenSkills", JSON.stringify({
+          current: assessmentData.skills,
+          gaps: result.skillGaps
+        }));
+        localStorage.setItem("tamkeenCareerMatch", JSON.stringify(result.recommendedCareers));
+        
+        return { data: result };
+      } catch (error) {
+        console.error("Error calling DeepSeek API:", error);
+        throw error;
+      }
+    },
+  },
+  
+  // Add user endpoint methods
+  user: {
+    ...profileApi,
+    getSavedLearningPaths: async (userId) => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/user/${userId}/learning-paths`);
+        return response;
+      } catch (error) {
+        console.log('Using mock data for saved learning paths', error);
+        return Promise.resolve({
+          data: []
+        });
+      }
+    }
+  },
+  
+  // Add documents endpoint methods
+  documents: {
+    getResume: async (resumeId) => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/resume/${resumeId}`);
+        return response;
+      } catch (error) {
+        console.log('Using mock data for resume', error);
+        return Promise.resolve({
+          data: {
+            id: resumeId,
+            skills: ["JavaScript", "React", "Node.js", "CSS", "HTML"]
+          }
+        });
+      }
+    }
+  },
+  
   // Add interview coach endpoints
   interviews: {
     createOrLoadConversation: async (userId) => {
@@ -373,7 +531,7 @@ const apiEndpoints = {
       console.log('API sendMessage received:', JSON.stringify(message));
       
       // If in offline or development mode, use fallback
-      if (!conversationId || conversationId.startsWith('local-') || process.env.NODE_ENV === 'development') {
+      if (!conversationId || conversationId.startsWith('local-') || import.meta.env.MODE === 'development') {
         console.log('Sending message to API:', JSON.stringify(message));
         
         try {

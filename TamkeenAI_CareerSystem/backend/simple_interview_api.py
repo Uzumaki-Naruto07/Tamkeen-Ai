@@ -9,6 +9,7 @@ import json
 import logging
 import datetime
 import random
+import argparse
 from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 
@@ -58,11 +59,13 @@ CORS(app, resources={r"/*": {"origins": "*", "allow_headers": ["Content-Type", "
 
 @app.route('/health-check', methods=['GET'])
 def health_check():
-    return jsonify({"status": "ok", "message": "Simple Interview API is running on port 5001"})
+    port = int(os.environ.get('PORT', 5001))
+    return jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
 
 @app.route('/api/health-check', methods=['GET'])
 def api_health_check():
-    return jsonify({"status": "ok", "message": "Simple Interview API is running on port 5001"})
+    port = int(os.environ.get('PORT', 5001))
+    return jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
 
 @app.route('/api/interviews/conversation', methods=['POST'])
 def create_or_load_conversation():
@@ -332,8 +335,14 @@ def options_handler(path):
     response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
     return response
 
-if __name__ == '__main__':
-    # Hard-coded port 5001 to match frontend expectations
-    PORT = 5001
-    logger.info(f"Starting Simple Interview API server on port {PORT}")
-    app.run(host='0.0.0.0', port=PORT, debug=False, threaded=True, use_reloader=False) 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Simple Interview API Server')
+    parser.add_argument('--port', type=int, default=5001,
+                        help='Port to run the server on (default: 5001)')
+    args = parser.parse_args()
+    
+    # Set port in environment for route messages
+    os.environ['PORT'] = str(args.port)
+    
+    logger.info(f"Starting Simple Interview API server on port {args.port}")
+    app.run(host='0.0.0.0', port=args.port) 

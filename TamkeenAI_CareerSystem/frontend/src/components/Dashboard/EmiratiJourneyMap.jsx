@@ -27,6 +27,8 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import DownloadIcon from '@mui/icons-material/Download';
 import { motion } from 'framer-motion';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
 
 const EmiratiJourneyMap = () => {
   const [activeStep, setActiveStep] = useState(0);
@@ -114,253 +116,246 @@ const EmiratiJourneyMap = () => {
     console.log("Downloading journey map...");
   };
 
+  const handleInfoClick = () => {
+    // Implementation for handling info icon click
+  };
+
+  const handleDownloadClick = () => {
+    // Implementation for handling download icon click
+  };
+
   return (
-    <Paper 
-      elevation={3} 
-      sx={{ 
-        p: 2, 
-        height: "100%", 
-        display: "flex", 
-        flexDirection: "column",
-        overflow: "hidden",
-        transition: "all 0.3s ease",
-        "&:hover": {
-          boxShadow: 6
-        }
-      }}
-    >
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-        <Typography variant="h6" component="h2" sx={{ fontWeight: "bold" }}>
-          Emirati Graduate to AI Engineer Journey
-        </Typography>
-        <Box>
-          <Tooltip title="Learn more about this career path">
-            <IconButton onClick={() => setIsModalOpen(true)} size="small">
-              <InfoIcon />
+    <Card sx={{ height: '100%', overflow: 'hidden' }}>
+      <CardContent sx={{ height: 'calc(100% - 40px)', overflow: 'auto', p: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6">
+            Emirati Graduate to AI Engineer Journey
+          </Typography>
+          <Box sx={{ display: 'flex' }}>
+            <IconButton size="small" onClick={handleInfoClick}>
+              <InfoOutlined fontSize="small" />
             </IconButton>
-          </Tooltip>
-          <Tooltip title="Download journey map as PDF">
-            <IconButton onClick={handleDownloadJourneyMap} size="small">
-              <DownloadIcon />
+            <IconButton size="small" onClick={handleDownloadClick}>
+              <DownloadOutlined fontSize="small" />
             </IconButton>
-          </Tooltip>
+          </Box>
         </Box>
-      </Box>
-      
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        A data-driven roadmap based on successful Emirati tech professionals
-      </Typography>
-      
-      <Box sx={{ flex: 1, overflowY: "auto" }}>
-        <Stepper activeStep={activeStep} orientation="vertical">
-          {journeySteps.map((step, index) => (
-            <Step key={index}>
-              <StepLabel 
-                StepIconComponent={() => (
-                  <motion.div
-                    initial={index === activeStep ? { scale: 1 } : { scale: 1 }}
-                    animate={index === activeStep ? { scale: 1.2 } : { scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                    style={{ color: index === activeStep ? "#1976d2" : "grey" }}
-                  >
-                    {step.icon}
-                  </motion.div>
-                )}
-              >
-                <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
-                  {step.label}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {step.description}
-                </Typography>
-              </StepLabel>
-              <StepContent>
-                <Typography sx={{ mb: 2 }}>{step.content}</Typography>
-                
-                <Card variant="outlined" sx={{ mb: 2 }}>
-                  <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
-                    <Grid container spacing={1}>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                          Key Skills
-                        </Typography>
-                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 1 }}>
-                          {step.stats.skills.map((skill, i) => (
-                            <Chip key={i} label={skill} size="small" />
-                          ))}
-                        </Box>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                          {index === 0 ? "Challenges" : "Achievements"}
-                        </Typography>
-                        <Box component="ul" sx={{ pl: 2, m: 0 }}>
-                          {(index === 0 ? step.stats.challenges : step.stats.achievements).map((item, i) => (
-                            <Typography key={i} component="li" variant="body2">{item}</Typography>
-                          ))}
-                        </Box>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Divider sx={{ my: 1 }} />
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                          <Typography variant="body2">
-                            <strong>Time Frame:</strong> {step.stats.timeFrame}
+        
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          A data-driven roadmap based on successful Emirati tech professionals
+        </Typography>
+        
+        <Box sx={{ flex: 1, overflowY: "auto" }}>
+          <Stepper activeStep={activeStep} orientation="vertical">
+            {journeySteps.map((step, index) => (
+              <Step key={index}>
+                <StepLabel 
+                  StepIconComponent={() => (
+                    <motion.div
+                      initial={index === activeStep ? { scale: 1 } : { scale: 1 }}
+                      animate={index === activeStep ? { scale: 1.2 } : { scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                      style={{ color: index === activeStep ? "#1976d2" : "grey" }}
+                    >
+                      {step.icon}
+                    </motion.div>
+                  )}
+                >
+                  <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                    {step.label}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {step.description}
+                  </Typography>
+                </StepLabel>
+                <StepContent>
+                  <Typography sx={{ mb: 2 }}>{step.content}</Typography>
+                  
+                  <Card variant="outlined" sx={{ mb: 2 }}>
+                    <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+                      <Grid container spacing={1}>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 0.5 }}>
+                            Key Skills
                           </Typography>
-                          <Typography variant="body2">
-                            <strong>Salary Range:</strong> {step.stats.salary}
+                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 1 }}>
+                            {step.stats.skills.map((skill, i) => (
+                              <Chip key={i} label={skill} size="small" />
+                            ))}
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 0.5 }}>
+                            {index === 0 ? "Challenges" : "Achievements"}
                           </Typography>
-                        </Box>
+                          <Box component="ul" sx={{ pl: 2, m: 0 }}>
+                            {(index === 0 ? step.stats.challenges : step.stats.achievements).map((item, i) => (
+                              <Typography key={i} component="li" variant="body2">{item}</Typography>
+                            ))}
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12}>
+                          <Divider sx={{ my: 1 }} />
+                          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                            <Typography variant="body2">
+                              <strong>Time Frame:</strong> {step.stats.timeFrame}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Salary Range:</strong> {step.stats.salary}
+                            </Typography>
+                          </Box>
+                        </Grid>
                       </Grid>
-                    </Grid>
+                    </CardContent>
+                  </Card>
+                  
+                  <Box sx={{ mb: 2 }}>
+                    <div>
+                      <Button
+                        disabled={index === 0}
+                        onClick={handleBack}
+                        sx={{ mr: 1 }}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        variant="contained"
+                        onClick={index === journeySteps.length - 1 ? handleReset : handleNext}
+                        sx={{ mr: 1 }}
+                      >
+                        {index === journeySteps.length - 1 ? "Reset" : "Continue"}
+                      </Button>
+                    </div>
+                  </Box>
+                </StepContent>
+              </Step>
+            ))}
+          </Stepper>
+        </Box>
+        
+        {/* Detailed Journey Modal */}
+        <Modal
+          open={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          aria-labelledby="journey-modal-title"
+        >
+          <Box sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "90%",
+            maxWidth: 900,
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 24,
+            p: 4,
+            maxHeight: "90vh",
+            overflow: "auto"
+          }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+              <Typography id="journey-modal-title" variant="h5" component="h2" sx={{ fontWeight: "bold" }}>
+                Emirati Tech Professional Journey Map
+              </Typography>
+              <IconButton onClick={() => setIsModalOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+            
+            <Typography variant="subtitle1" paragraph>
+              This journey map is based on data collected from successful Emirati professionals in the AI field, showing the most common path from graduation to establishing a career as an AI Engineer.
+            </Typography>
+            
+            <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
+              Key Journey Insights
+            </Typography>
+            
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              <Grid item xs={12} md={4}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                      <TrendingUpIcon color="primary" sx={{ mr: 1 }} />
+                      <Typography variant="h6">36 Months</Typography>
+                    </Box>
+                    <Typography variant="body2">
+                      Average time from graduation to AI Engineer position
+                    </Typography>
                   </CardContent>
                 </Card>
-                
-                <Box sx={{ mb: 2 }}>
-                  <div>
-                    <Button
-                      disabled={index === 0}
-                      onClick={handleBack}
-                      sx={{ mr: 1 }}
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      variant="contained"
-                      onClick={index === journeySteps.length - 1 ? handleReset : handleNext}
-                      sx={{ mr: 1 }}
-                    >
-                      {index === journeySteps.length - 1 ? "Reset" : "Continue"}
-                    </Button>
-                  </div>
-                </Box>
-              </StepContent>
-            </Step>
-          ))}
-        </Stepper>
-      </Box>
-      
-      {/* Detailed Journey Modal */}
-      <Modal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        aria-labelledby="journey-modal-title"
-      >
-        <Box sx={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "90%",
-          maxWidth: 900,
-          bgcolor: "background.paper",
-          borderRadius: 2,
-          boxShadow: 24,
-          p: 4,
-          maxHeight: "90vh",
-          overflow: "auto"
-        }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-            <Typography id="journey-modal-title" variant="h5" component="h2" sx={{ fontWeight: "bold" }}>
-              Emirati Tech Professional Journey Map
-            </Typography>
-            <IconButton onClick={() => setIsModalOpen(false)}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-          
-          <Typography variant="subtitle1" paragraph>
-            This journey map is based on data collected from successful Emirati professionals in the AI field, showing the most common path from graduation to establishing a career as an AI Engineer.
-          </Typography>
-          
-          <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
-            Key Journey Insights
-          </Typography>
-          
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={4}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                    <TrendingUpIcon color="primary" sx={{ mr: 1 }} />
-                    <Typography variant="h6">36 Months</Typography>
-                  </Box>
-                  <Typography variant="body2">
-                    Average time from graduation to AI Engineer position
-                  </Typography>
-                </CardContent>
-              </Card>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                      <SchoolIcon color="primary" sx={{ mr: 1 }} />
+                      <Typography variant="h6">4 Certifications</Typography>
+                    </Box>
+                    <Typography variant="body2">
+                      Average number of professional certifications obtained
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                      <WorkIcon color="primary" sx={{ mr: 1 }} />
+                      <Typography variant="h6">2.5 Roles</Typography>
+                    </Box>
+                    <Typography variant="body2">
+                      Average number of job positions before securing AI Engineer role
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
             </Grid>
-            <Grid item xs={12} md={4}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                    <SchoolIcon color="primary" sx={{ mr: 1 }} />
-                    <Typography variant="h6">4 Certifications</Typography>
-                  </Box>
-                  <Typography variant="body2">
-                    Average number of professional certifications obtained
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                    <WorkIcon color="primary" sx={{ mr: 1 }} />
-                    <Typography variant="h6">2.5 Roles</Typography>
-                  </Box>
-                  <Typography variant="body2">
-                    Average number of job positions before securing AI Engineer role
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-          
-          <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
-            Critical Success Factors
-          </Typography>
-          
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
-              1. Continuous Learning
-            </Typography>
-            <Typography variant="body1" paragraph>
-              Successful professionals dedicate 8-10 hours weekly to learning new skills even while employed.
+            
+            <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
+              Critical Success Factors
             </Typography>
             
-            <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
-              2. Portfolio Development
-            </Typography>
-            <Typography variant="body1" paragraph>
-              Building practical projects demonstrating AI capabilities is crucial for career advancement.
-            </Typography>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
+                1. Continuous Learning
+              </Typography>
+              <Typography variant="body1" paragraph>
+                Successful professionals dedicate 8-10 hours weekly to learning new skills even while employed.
+              </Typography>
+              
+              <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
+                2. Portfolio Development
+              </Typography>
+              <Typography variant="body1" paragraph>
+                Building practical projects demonstrating AI capabilities is crucial for career advancement.
+              </Typography>
+              
+              <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
+                3. Professional Networking
+              </Typography>
+              <Typography variant="body1" paragraph>
+                85% of successful AI Engineers credit professional networking for finding opportunities.
+              </Typography>
+              
+              <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
+                4. Mentorship
+              </Typography>
+              <Typography variant="body1" paragraph>
+                Having guidance from experienced professionals significantly accelerates career progression.
+              </Typography>
+            </Box>
             
-            <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
-              3. Professional Networking
-            </Typography>
-            <Typography variant="body1" paragraph>
-              85% of successful AI Engineers credit professional networking for finding opportunities.
-            </Typography>
-            
-            <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
-              4. Mentorship
-            </Typography>
-            <Typography variant="body1" paragraph>
-              Having guidance from experienced professionals significantly accelerates career progression.
-            </Typography>
+            <Box sx={{ display: "flex", justifyContent: "space-between", mt: 3 }}>
+              <Button variant="outlined" onClick={() => setIsModalOpen(false)}>Close</Button>
+              <Button variant="contained" onClick={handleDownloadJourneyMap} startIcon={<DownloadIcon />}>
+                Download Journey Map
+              </Button>
+            </Box>
           </Box>
-          
-          <Box sx={{ display: "flex", justifyContent: "space-between", mt: 3 }}>
-            <Button variant="outlined" onClick={() => setIsModalOpen(false)}>Close</Button>
-            <Button variant="contained" onClick={handleDownloadJourneyMap} startIcon={<DownloadIcon />}>
-              Download Journey Map
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
-    </Paper>
+        </Modal>
+      </CardContent>
+    </Card>
   );
 };
 

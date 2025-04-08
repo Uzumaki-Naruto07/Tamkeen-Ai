@@ -1,589 +1,277 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Paper, 
-  Typography, 
-  Box, 
-  Button, 
-  Chip, 
-  List, 
-  ListItem, 
-  ListItemIcon, 
-  ListItemText,
-  Divider,
+import {
+  Box,
+  Typography,
   CircularProgress,
-  Tooltip,
-  IconButton,
-  Badge,
   LinearProgress,
+  Divider,
   Avatar,
-  Card,
-  CardContent,
-  Collapse,
-  Grid,
-  useTheme
+  Button,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Chip,
+  Paper
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import WorkIcon from '@mui/icons-material/Work';
-import SchoolIcon from '@mui/icons-material/School';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import PeopleIcon from '@mui/icons-material/People';
-import InfoIcon from '@mui/icons-material/Info';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useUser } from '../../context/AppContext';
-import { mockDashboardData } from '../../utils/mockData/mockDataIndex';
-import { useTranslation } from 'react-i18next';
-import { getConsistentAvatarUrl } from '../../utils/api';
-
-// Icons
-import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StarIcon from '@mui/icons-material/Star';
-import CelebrationIcon from '@mui/icons-material/Celebration';
-import MilitaryTechIcon from '@mui/icons-material/MilitaryTech';
-import EmojiObjectsIcon from '@mui/icons-material/EmojiObjects';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import RecommendIcon from '@mui/icons-material/Recommend';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 
-// Styled components
-const ProgressCard = styled(Card)(({ theme }) => ({
-  height: '100%',
-  position: 'relative',
-  borderRadius: theme.shape.borderRadius * 2,
-  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-  overflow: 'visible',
-  '&:hover': {
-    transform: 'translateY(-5px)',
-    boxShadow: theme.shadows[8],
-  },
-}));
-
-const ProgressCardContent = styled(CardContent)(({ theme }) => ({
-  padding: theme.spacing(3),
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-}));
-
-const LevelBadge = styled(Box)(({ theme }) => ({
-  position: 'absolute',
-  top: -15,
-  right: 15,
-  zIndex: 1,
-}));
-
-const LevelDisplay = styled(Badge)(({ theme }) => ({
-  '& .MuiBadge-badge': {
-    backgroundColor: theme.palette.secondary.main,
-    color: theme.palette.secondary.contrastText,
-    fontSize: '0.75rem',
-    padding: theme.spacing(0, 1),
-    borderRadius: theme.shape.borderRadius,
-    fontWeight: 'bold',
-  },
-}));
-
-const ProgressCircleContainer = styled(Box)(({ theme }) => ({
-  position: 'relative',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  marginBottom: theme.spacing(1),
-}));
-
-const CircularProgressBox = styled(Box)(({ theme, level }) => ({
-  position: 'relative',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  width: 130,
-  height: 130,
-  '&::after': {
-    content: '""',
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    right: 4,
-    bottom: 4,
-    borderRadius: '50%',
-    background: `linear-gradient(120deg, ${theme.palette.background.paper} 0%, ${
-      level >= 10 
-        ? theme.palette.gold.light
-        : level >= 5
-          ? theme.palette.silver.light
-          : theme.palette.bronze.light
-    } 100%)`,
-    opacity: 0.2,
-    zIndex: 0,
-  },
-}));
-
-const AchievementGrid = styled(Grid)(({ theme }) => ({
-  marginTop: theme.spacing(2),
-}));
-
-const AchievementItem = styled(Box)(({ theme, unlocked }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  borderRadius: theme.shape.borderRadius,
-  padding: theme.spacing(1),
-  backgroundColor: unlocked ? theme.palette.primary.light : theme.palette.action.disabledBackground,
-  opacity: unlocked ? 1 : 0.7,
-  marginBottom: theme.spacing(1),
-}));
-
-const NextLevelRequirements = styled(Box)(({ theme }) => ({
-  marginTop: theme.spacing(2),
-  backgroundColor: theme.palette.background.paper,
-  borderRadius: theme.shape.borderRadius,
-  padding: theme.spacing(1.5),
-  boxShadow: theme.shadows[1],
-}));
-
-const Milestone = styled(Box)(({ theme, completed }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  marginBottom: theme.spacing(1),
-  opacity: completed ? 1 : 0.7,
-}));
-
-const UserInfoBox = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  marginBottom: theme.spacing(2),
-}));
-
-const WelcomeMessage = styled(Typography)(({ theme }) => ({
-  marginTop: theme.spacing(1),
-  fontSize: '1.1rem',
-  fontWeight: 'bold',
-  color: theme.palette.text.primary,
-}));
-
-const LevelText = styled(Typography)(({ theme, level }) => ({
-  color: 
-    level >= 10 
-      ? theme.palette.gold.main
-      : level >= 5
-        ? theme.palette.silver.main
-        : theme.palette.bronze.main,
-  fontWeight: 'bold',
-}));
-
-// Animation variants
-const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    transition: { duration: 0.5 }
-  },
-  exit: { 
-    opacity: 0, 
-    y: -20,
-    transition: { duration: 0.3 }
-  }
-};
-
-// Calculate level based on XP
-const calculateLevel = (xp) => {
-  // Level formula: level = 1 + floor(sqrt(xp / 100))
-  return 1 + Math.floor(Math.sqrt(xp / 100));
-};
-
-// Calculate XP needed for next level
-const xpForNextLevel = (level) => {
-  // XP needed for next level: (level)^2 * 100
-  return Math.pow(level, 2) * 100;
-};
-
-// Calculate XP progress percentage
-const calculateXPProgress = (xp, level) => {
-  const currentLevelXP = Math.pow(level - 1, 2) * 100;
-  const nextLevelXP = Math.pow(level, 2) * 100;
-  return ((xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
-};
-
-// Activity icon mapping
-const activityIcons = {
-  'resume': <AssignmentIcon />,
-  'interview': <SchoolIcon />,
-  'networking': <PeopleIcon />,
-  'job': <WorkIcon />,
-  'default': <AssignmentIcon />
-};
-
-const UserProgressCard = ({ data, user, expanded = false }) => {
-  const { t } = useTranslation();
-  const theme = useTheme();
-  const navigate = useNavigate();
-  const { profile } = useUser();
-  const userData = user || profile || {};
-  
-  const [isExpanded, setIsExpanded] = useState(expanded);
-  // Use data from props or fallback to default values to avoid undefined errors
-  const [userXP, setUserXP] = useState(data?.xp || mockDashboardData?.progress?.xp || 0);
+const UserProgressCard = ({ data }) => {
+  const [showMore, setShowMore] = useState(false);
   const [showAchievement, setShowAchievement] = useState(false);
   const [recentAchievement, setRecentAchievement] = useState(null);
   
   // Calculate user level and progress
-  const calculateLevel = (xp) => {
-    // XP required for each level follows formula: level * 100
-    const level = Math.floor(xp / 100) + 1;
-    const currentLevelXP = (level - 1) * 100;
-    const nextLevelXP = level * 100;
-    const progress = ((xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
-    return { level, progress, currentLevelXP, nextLevelXP, xpToNextLevel: nextLevelXP - xp };
-  };
+  const userProgress = data?.overall || 0;
+  const userLevel = data?.level || 1;
+  const userRank = data?.rank || 'Beginner';
+  const xpPoints = data?.xp || 0;
+  const nextLevelXP = data?.nextLevelXp || 100;
   
-  const userLevelData = calculateLevel(userXP);
-  
-  // Mock achievements data
-  const achievements = [
-    { id: 1, title: 'First Login', icon: <CelebrationIcon />, unlocked: true },
-    { id: 2, title: 'Profile Completed', icon: <CheckCircleIcon />, unlocked: userXP >= 50 },
-    { id: 3, title: 'Resume Expert', icon: <WorkspacePremiumIcon />, unlocked: userXP >= 150 },
-    { id: 4, title: 'Interview Master', icon: <MilitaryTechIcon />, unlocked: userXP >= 250 },
-    { id: 5, title: 'Networking Pro', icon: <PeopleIcon />, unlocked: userXP >= 350 },
-  ];
-  
-  // Mock milestone data
-  const milestones = [
-    { id: 1, title: 'Complete Your Profile', xp: 50, completed: userXP >= 50 },
-    { id: 2, title: 'Upload Your Resume', xp: 75, completed: userXP >= 125 },
-    { id: 3, title: 'Take Skills Assessment', xp: 100, completed: userXP >= 225 },
-    { id: 4, title: 'Apply for a Job', xp: 125, completed: userXP >= 350 },
-  ];
-  
-  // Get welcome message based on time of day
-  const getWelcomeMessage = () => {
-    const hours = new Date().getHours();
-    let greeting = 'Good morning';
-    
-    if (hours >= 12 && hours < 17) {
-      greeting = 'Good afternoon';
-    } else if (hours >= 17) {
-      greeting = 'Good evening';
+  // Default data
+  const progressData = {
+    overall: userProgress,
+    level: userLevel,
+    rank: userRank,
+    xp: xpPoints,
+    nextLevelXp: nextLevelXP,
+    goals: data?.goals || [
+      { id: 1, title: 'Complete resume', completed: true },
+      { id: 2, title: 'Apply to 10 jobs', completed: false },
+      { id: 3, title: 'Complete skill assessment', completed: false }
+    ],
+    achievements: data?.recentAchievements || [
+      { id: 1, title: 'First Login', date: '2023-10-15', icon: 'login' },
+      { id: 2, title: 'Resume Expert', date: '2023-10-20', icon: 'resume' }
+    ],
+    skills: data?.skills || {
+      technical: 65,
+      communication: 80,
+      leadership: 60
     }
-    
-    // Get user's name with appropriate fallbacks
-    const userName = 
-      userData.firstName || 
-      (userData.fullName ? userData.fullName.split(' ')[0] : null) || 
-      (userData.name ? userData.name.split(' ')[0] : null) ||
-      'User';
-    
-    return `${greeting}, ${userName}`;
   };
-  
-  // Simulate gaining XP for demo purposes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const newXP = userXP + 25;
-      setUserXP(newXP);
-      
-      // Check if a new achievement was unlocked
-      const newlyUnlocked = achievements.find(a => 
-        !a.unlocked && 
-        calculateLevel(userXP).level < calculateLevel(newXP).level
-      );
-      
-      if (newlyUnlocked) {
-        setRecentAchievement(newlyUnlocked);
-        setShowAchievement(true);
-        
-        setTimeout(() => {
-          setShowAchievement(false);
-        }, 5000);
-      }
-    }, 30000); // Gain XP every 30 seconds
-    
-    return () => clearTimeout(timer);
-  }, [userXP]);
-  
+
   return (
-    <motion.div
-      variants={cardVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-    >
-      <ProgressCard>
-        <LevelBadge>
-          <LevelDisplay
-            badgeContent={t('userProgress.level', { level: userLevelData.level })}
-          >
-            <Avatar 
-              sx={{ 
-                width: 48, 
-                height: 48, 
-                bgcolor: 
-                  userLevelData.level >= 10 
-                    ? theme.palette.gold.main
-                    : userLevelData.level >= 5
-                      ? theme.palette.silver.main
-                      : theme.palette.bronze.main,
-              }}
-            >
-              <EmojiEventsIcon />
-            </Avatar>
-          </LevelDisplay>
-        </LevelBadge>
+    <Box sx={{ 
+      height: '100%',
+      display: 'flex', 
+      flexDirection: 'column',
+      p: 2
+    }}>
+      <Box sx={{ textAlign: 'center', mb: 2 }}>
+        <Typography variant="h5" fontWeight="medium" gutterBottom>Your Progress</Typography>
         
-        <ProgressCardContent>
-          <UserInfoBox>
-            <Avatar 
-              src={userData.avatar || undefined} 
-              alt={userData.firstName || userData.fullName || userData.name || 'User'}
-              sx={{ 
-                width: 56, 
-                height: 56, 
-                mr: 2,
-                border: '2px solid',
-                borderColor: 
-                  userLevelData.level >= 10 
-                    ? theme.palette.gold.main
-                    : userLevelData.level >= 5
-                      ? theme.palette.silver.main
-                      : theme.palette.bronze.main,
-              }}
-            >
-              {userData.firstName?.charAt(0) || userData.fullName?.charAt(0) || userData.name?.charAt(0) || 'U'}
-            </Avatar>
-            <Box>
-              <WelcomeMessage variant="h6">
-                {getWelcomeMessage()}
-              </WelcomeMessage>
-              <Typography variant="body2" color="text.secondary">
-                {userData.title || t('userProgress.careerExplorer')}
-              </Typography>
-            </Box>
-          </UserInfoBox>
-          
-          <ProgressCircleContainer>
-            <CircularProgressBox level={userLevelData.level}>
-              <CircularProgress
-                variant="determinate"
-                value={userLevelData.progress}
-                size={130}
-                thickness={5}
-                sx={{
-                  color: 
-                    userLevelData.level >= 10 
-                      ? theme.palette.gold.main
-                      : userLevelData.level >= 5
-                        ? theme.palette.silver.main
-                        : theme.palette.bronze.main,
-                  zIndex: 1,
-                }}
-              />
-              <Box
-                sx={{
-                  position: 'absolute',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 2,
-                }}
-              >
-                <Typography variant="h4" component="div" fontWeight="bold">
-                  {userXP}
-                </Typography>
-                <Typography variant="caption" component="div" color="text.secondary">
-                  XP Points
-                </Typography>
-              </Box>
-            </CircularProgressBox>
-          </ProgressCircleContainer>
-          
-          <Box sx={{ textAlign: 'center', mb: 2 }}>
-            <LevelText variant="subtitle1" level={userLevelData.level}>
-              Level {userLevelData.level} {
-                userLevelData.level >= 10 
-                  ? 'Gold' 
-                  : userLevelData.level >= 5 
-                    ? 'Silver' 
-                    : 'Bronze'
-              }
-            </LevelText>
-            <Typography variant="body2" color="text.secondary">
-              {userLevelData.xpToNextLevel} XP to next level
-            </Typography>
-          </Box>
-          
-          <Divider sx={{ mb: 2 }} />
-          
-          <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="subtitle1">Recent Achievements</Typography>
-              <Tooltip title="View All">
-                <IconButton size="small">
-                  <InfoOutlinedIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Box>
-            <Box>
-              {achievements
-                .filter(a => a.unlocked)
-                .slice(0, 3)
-                .map(achievement => (
-                  <AchievementItem key={achievement.id} unlocked={achievement.unlocked.toString()}>
-                    <Avatar
-                      sx={{ 
-                        width: 32, 
-                        height: 32, 
-                        mr: 1, 
-                        bgcolor: theme.palette.primary.main
-                      }}
-                    >
-                      {achievement.icon}
-                    </Avatar>
-                    <Typography variant="body2">
-                      {achievement.title}
-                    </Typography>
-                  </AchievementItem>
-                ))}
-            </Box>
-          </Box>
-          
-          <Button
-            variant="outlined"
-            color="primary"
-            onClick={() => setIsExpanded(!isExpanded)}
-            fullWidth
-          >
-            {isExpanded ? 'Hide Details' : 'Show More'}
-          </Button>
-          
-          <AnimatePresence>
-            {isExpanded && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <NextLevelRequirements>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Next Level Requirements
-                  </Typography>
-                  
-                  {milestones.map(milestone => (
-                    <Milestone key={milestone.id} completed={milestone.completed}>
-                      <CheckCircleIcon 
-                        color={milestone.completed ? "success" : "disabled"} 
-                        fontSize="small"
-                        sx={{ mr: 1 }}
-                      />
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="body2">
-                          {milestone.title}
-                        </Typography>
-                        <LinearProgress
-                          variant="determinate"
-                          value={milestone.completed ? 100 : 0}
-                          sx={{ 
-                            mt: 0.5, 
-                            height: 4, 
-                            borderRadius: 2 
-                          }}
-                        />
-                      </Box>
-                      <Chip
-                        label={`+${milestone.xp} XP`}
-                        size="small"
-                        color={milestone.completed ? "primary" : "default"}
-                        sx={{ ml: 1 }}
-                      />
-                    </Milestone>
-                  ))}
-                </NextLevelRequirements>
-                
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Recommended Actions
-                  </Typography>
-                  
-                  <Grid container spacing={1}>
-                    <Grid item xs={6}>
-                      <Tooltip title="Take a skill assessment to improve your profile">
-                        <Button
-                          variant="outlined"
-                          color="secondary"
-                          startIcon={<SchoolIcon />}
-                          size="small"
-                          fullWidth
-                        >
-                          Skill Quiz
-                        </Button>
-                      </Tooltip>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Tooltip title="Update your skills to get better job matches">
-                        <Button
-                          variant="outlined"
-                          color="secondary"
-                          startIcon={<FitnessCenterIcon />}
-                          size="small"
-                          fullWidth
-                        >
-                          Update Skills
-                        </Button>
-                      </Tooltip>
-                    </Grid>
-                  </Grid>
-                </Box>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </ProgressCardContent>
-      </ProgressCard>
-      
-      {/* New achievement notification */}
-      <AnimatePresence>
-        {showAchievement && recentAchievement && (
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            style={{
-              position: 'fixed',
-              bottom: 20,
-              right: 20,
-              zIndex: 1000,
+        {/* Profile and Level */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center',
+          mb: 1
+        }}>
+          <Avatar 
+            sx={{ 
+              width: 70, 
+              height: 70, 
+              mb: 1,
+              bgcolor: 'primary.main',
+              border: '4px solid #e0e0e0'
             }}
           >
-            <Card sx={{ bgcolor: theme.palette.success.light, p: 2, borderRadius: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar
-                  sx={{ 
-                    bgcolor: theme.palette.success.main,
-                    mr: 2
-                  }}
-                >
-                  <StarIcon />
-                </Avatar>
-                <Box>
-                  <Typography variant="subtitle1" color="textPrimary">
-                    Achievement Unlocked!
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    {recentAchievement.title}
-                  </Typography>
-                </Box>
-              </Box>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+            {userRank[0] || 'Z'}
+          </Avatar>
+          
+          <Typography variant="h6">Level {progressData.level} {progressData.rank}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {progressData.nextLevelXp} XP to next level
+          </Typography>
+        </Box>
+        
+        {/* XP Points with Circular Progress */}
+        <Box sx={{ 
+          position: 'relative', 
+          display: 'inline-flex',
+          mb: 2
+        }}>
+          <CircularProgress
+            variant="determinate"
+            value={75}
+            size={100}
+            thickness={4}
+            sx={{ color: 'primary.main' }}
+          />
+          <Box
+            sx={{
+              top: 0,
+              left: 0,
+              bottom: 0,
+              right: 0,
+              position: 'absolute',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column'
+            }}
+          >
+            <Typography variant="h4" component="div" fontWeight="bold">
+              {progressData.xp}
+            </Typography>
+            <Typography variant="caption" component="div" color="text.secondary">
+              XP Points
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+      
+      <Divider sx={{ mb: 1.5 }} />
+      
+      {/* Skill Progress */}
+      <Box sx={{ mb: 1.5 }}>
+        <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+          Skills Progress
+        </Typography>
+        
+        <Box sx={{ mb: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+            <Typography variant="body2">Technical</Typography>
+            <Typography variant="body2">{progressData.skills.technical}%</Typography>
+          </Box>
+          <LinearProgress 
+            variant="determinate" 
+            value={progressData.skills.technical} 
+            sx={{ height: 6, borderRadius: 3 }}
+          />
+        </Box>
+        
+        <Box sx={{ mb: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+            <Typography variant="body2">Communication</Typography>
+            <Typography variant="body2">{progressData.skills.communication}%</Typography>
+          </Box>
+          <LinearProgress 
+            variant="determinate" 
+            value={progressData.skills.communication} 
+            sx={{ height: 6, borderRadius: 3 }}
+          />
+        </Box>
+        
+        <Box sx={{ mb: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+            <Typography variant="body2">Leadership</Typography>
+            <Typography variant="body2">{progressData.skills.leadership}%</Typography>
+          </Box>
+          <LinearProgress 
+            variant="determinate" 
+            value={progressData.skills.leadership} 
+            sx={{ height: 6, borderRadius: 3 }}
+          />
+        </Box>
+      </Box>
+      
+      {/* Goals */}
+      <Box sx={{ mb: 1.5 }}>
+        <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+          Current Goals
+        </Typography>
+        
+        <List dense disablePadding>
+          {progressData.goals.map(goal => (
+            <ListItem key={goal.id} disablePadding sx={{ mb: 0.5, py: 0 }}>
+              <ListItemIcon sx={{ minWidth: 28 }}>
+                <CheckCircleIcon 
+                  color={goal.completed ? "success" : "disabled"}
+                  fontSize="small"
+                />
+              </ListItemIcon>
+              <ListItemText 
+                primary={goal.title}
+                primaryTypographyProps={{
+                  variant: "body2",
+                  color: goal.completed ? "text.primary" : "text.secondary",
+                  sx: goal.completed ? { textDecoration: 'line-through' } : {}
+                }}
+              />
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+      
+      {/* Recent Achievements */}
+      <Box sx={{ mb: 1.5 }}>
+        <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+          Recent Achievements
+        </Typography>
+        
+        <List dense disablePadding>
+          {progressData.achievements.map(achievement => (
+            <ListItem key={achievement.id} disablePadding sx={{ mb: 0.5, py: 0 }}>
+              <ListItemIcon sx={{ minWidth: 28 }}>
+                <EmojiEventsIcon color="primary" fontSize="small" />
+              </ListItemIcon>
+              <ListItemText 
+                primary={achievement.title}
+                secondary={achievement.date}
+                primaryTypographyProps={{ variant: "body2" }}
+                secondaryTypographyProps={{ variant: "caption" }}
+              />
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+      
+      {/* Upcoming Milestones (Only shown when "Show More" is clicked) */}
+      {showMore && (
+        <Box sx={{ mb: 1.5 }}>
+          <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+            Upcoming Milestones
+          </Typography>
+          
+          <List dense disablePadding>
+            <ListItem disablePadding sx={{ mb: 0.5, py: 0 }}>
+              <ListItemIcon sx={{ minWidth: 28 }}>
+                <StarIcon color="warning" fontSize="small" />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Reach Level 10"
+                secondary="200 XP needed"
+                primaryTypographyProps={{ variant: "body2" }}
+                secondaryTypographyProps={{ variant: "caption" }}
+              />
+            </ListItem>
+            <ListItem disablePadding sx={{ mb: 0.5, py: 0 }}>
+              <ListItemIcon sx={{ minWidth: 28 }}>
+                <StarIcon color="warning" fontSize="small" />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Complete 20 Applications"
+                secondary="8 more needed"
+                primaryTypographyProps={{ variant: "body2" }}
+                secondaryTypographyProps={{ variant: "caption" }}
+              />
+            </ListItem>
+          </List>
+        </Box>
+      )}
+      
+      {/* Show More Button */}
+      <Box sx={{ mt: 'auto', textAlign: 'center' }}>
+        <Button 
+          color="primary" 
+          onClick={() => setShowMore(!showMore)}
+          size="small"
+          variant="outlined"
+          sx={{ borderRadius: 20, textTransform: 'none', px: 2 }}
+        >
+          {showMore ? "Show Less" : "Show More"}
+        </Button>
+      </Box>
+    </Box>
   );
 };
 
-export default UserProgressCard; 
+export default UserProgressCard;

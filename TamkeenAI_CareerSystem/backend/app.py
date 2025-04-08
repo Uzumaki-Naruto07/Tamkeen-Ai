@@ -84,22 +84,51 @@ def create_app():
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload size
     
-    # Enable CORS for the entire application with proper configuration
-    # Use a more permissive CORS policy to resolve preflight issues
-    CORS(app, origins=[
-        "http://localhost:3000", 
-        "http://127.0.0.1:3000", 
-        "http://localhost:5173", 
-        "http://127.0.0.1:5173",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-        "*"  # For development only - remove in production
-    ],
-         allow_headers=["Content-Type", "Authorization", "X-Requested-With", 
-                       "X-Force-Real-API", "X-Skip-Mock", "x-auth-token"],
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         expose_headers=["Content-Disposition"],
-         supports_credentials=True)
+    # CORS configuration - simplified to prevent duplicate headers
+    # Instead of using the Flask-CORS extension with complex options
+    @app.after_request
+    def add_cors_headers(response):
+        """Add CORS headers to all responses to prevent duplicates"""
+        # First remove any existing CORS headers to prevent duplicates
+        headers_to_remove = [
+            'Access-Control-Allow-Origin',
+            'Access-Control-Allow-Methods',
+            'Access-Control-Allow-Headers',
+            'Access-Control-Allow-Credentials',
+            'Access-Control-Expose-Headers'
+        ]
+        for header in headers_to_remove:
+            if header in response.headers:
+                del response.headers[header]
+        
+        # Get origin from request
+        origin = request.headers.get('Origin', '*')
+        
+        # Now add the headers consistently
+        if os.getenv('FLASK_ENV') != 'production' or app.debug:
+            response.headers['Access-Control-Allow-Origin'] = origin
+        else:
+            allowed_origins = [
+                "http://localhost:3000", 
+                "http://127.0.0.1:3000", 
+                "http://localhost:5173", 
+                "http://127.0.0.1:5173",
+                "http://localhost:3001",
+                "http://127.0.0.1:3001"
+            ]
+            if origin in allowed_origins:
+                response.headers['Access-Control-Allow-Origin'] = origin
+            
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, X-Force-Real-API, X-Skip-Mock, x-auth-token'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition'
+        
+        # Ensure OPTIONS requests always return 200
+        if request.method == "OPTIONS":
+            response.status_code = 200
+            
+        return response
     
     # Register blueprints
     app.register_blueprint(user_bp, url_prefix='/api/user')
@@ -117,42 +146,6 @@ def create_app():
     # Register the new interview coach blueprint with a unique name
     app.register_blueprint(interview_coach_bp, url_prefix='/api/interviews', name='interview_coach')
     app.register_blueprint(ats_bp)
-    
-    # Add a default response for OPTIONS requests globally
-    @app.after_request
-    def after_request(response):
-        # Add CORS headers to all responses
-        origin = request.headers.get('Origin')
-        
-        # In development mode, be more permissive with CORS
-        if os.getenv('FLASK_ENV') != 'production' or app.debug:
-            response.headers.add('Access-Control-Allow-Origin', origin or '*')
-            response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Force-Real-API, X-Skip-Mock, x-auth-token')
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
-        else:
-            # In production, only allow the configured frontend origins
-            allowed_origins = [
-                "http://localhost:3000", 
-                "http://127.0.0.1:3000", 
-                "http://localhost:5173", 
-                "http://127.0.0.1:5173",
-                "http://localhost:3001",
-                "http://127.0.0.1:3001"
-            ]
-            if origin and origin in allowed_origins:
-                response.headers.add('Access-Control-Allow-Origin', origin)
-                
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Force-Real-API, X-Skip-Mock, x-auth-token')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        response.headers.add('Access-Control-Expose-Headers', 'Content-Disposition')
-        
-        # Ensure OPTIONS requests always return 200
-        if request.method == "OPTIONS":
-            response.status_code = 200
-            
-        return response
     
     # Add a route handler for user profile by ID
     @app.route('/api/user/profile/<user_id>', methods=['GET', 'OPTIONS'])
@@ -263,6 +256,79 @@ def create_app():
     def health_check_new():
         """Health check endpoint"""
         return jsonify({"status": "healthy"})
+    
+    # Add Hugging Face API endpoints
+    @app.route('/api/huggingface/status', methods=['GET'])
+    def huggingface_status():
+        """Check Hugging Face API connection status"""
+        try:
+            # Direct approach using huggingface_hub
+            import os
+            from huggingface_hub import login, HfApi
+            
+            # Get token directly from environment
+            hf_token = os.environ.get('HF_TOKEN')
+            
+            # Debug info
+            print(f"HF_TOKEN present: {hf_token is not None}")
+            
+            if not hf_token:
+                return jsonify({"connected": False, "message": "No API token available"}), 200
+            
+            try:
+                # Login to HuggingFace
+                login(token=hf_token)
+                
+                # Test connection with a simple call
+                api = HfApi(token=hf_token)
+                # Just check if we can list our models (lightweight call)
+                _ = list(api.list_models(limit=1))
+                
+                return jsonify({"connected": True, "message": "Successfully connected to Hugging Face API"}), 200
+            except Exception as e:
+                logger.warning(f"Hugging Face connection failed: {str(e)}")
+                return jsonify({"connected": False, "message": f"Failed to connect: {str(e)}"}), 200
+        except ImportError as e:
+            return jsonify({"connected": False, "message": f"Hugging Face libraries not installed: {str(e)}"}), 200
+    
+    @app.route('/api/huggingface/connect', methods=['POST'])
+    def huggingface_connect():
+        """Connect to Hugging Face API with token"""
+        try:
+            # Direct approach using huggingface_hub
+            import os
+            from huggingface_hub import login, HfApi
+            
+            # Get the token from request if provided, otherwise use environment
+            request_data = request.get_json() or {}
+            token = request_data.get('token', None) or os.environ.get('HF_TOKEN')
+            
+            # Debug info
+            print(f"Token provided: {token is not None}")
+            
+            if not token:
+                return jsonify({"connected": False, "message": "No API token available"}), 200
+            
+            try:
+                # Login to HuggingFace
+                login(token=token)
+                
+                # Test connection
+                api = HfApi(token=token)
+                _ = list(api.list_models(limit=1))
+                
+                return jsonify({"connected": True, "message": "Successfully connected to Hugging Face API"}), 200
+            except Exception as e:
+                logger.warning(f"Hugging Face connection failed: {str(e)}")
+                return jsonify({"connected": False, "message": f"Failed to connect: {str(e)}"}), 200
+        except Exception as e:
+            # Catch any unexpected exceptions to prevent 500 errors
+            logger.error(f"Unexpected error in huggingface_connect: {str(e)}")
+            return jsonify({
+                "connected": False, 
+                "message": "An unexpected error occurred. Please check server logs.",
+                "error": str(e)
+            }), 200  # Return 200 even for errors to allow frontend to handle gracefully
     
     logger.info("Application initialized successfully")
     return app

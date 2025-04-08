@@ -5,7 +5,7 @@
 import axios from 'axios';
 
 // Base API URL - uses environment variable or defaults to local development URL
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Create axios instance with common configuration
 const api = axios.create({
@@ -13,6 +13,18 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+// Create a separate axios instance for career endpoints to handle CORS better
+const careerApi = axios.create({
+  baseURL: 'http://localhost:5001/api',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
+  },
+  // Disable credentials to avoid CORS preflight issues
+  withCredentials: false
 });
 
 // Add request interceptor to include auth token in requests
@@ -23,6 +35,19 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Add error handling for CORS issues
+careerApi.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.code === 'ERR_NETWORK' || (error.response && error.response.status === 0)) {
+      console.warn('CORS or network error with career API - using fallback data');
+      // Return a resolved promise with null to trigger fallback mechanism
+      return Promise.resolve({ data: null });
+    }
+    return Promise.reject(error);
+  }
+);
 
 // API endpoints organized by feature
 const apiEndpoints = {
@@ -102,6 +127,28 @@ const apiEndpoints = {
     removeUserSkill: (skillId) => api.delete(`/skills/user/${skillId}`),
   },
   
+  // Career endpoints with special CORS handling
+  career: {
+    analyzePrediction: (assessmentData) => {
+      console.log("Sending data to career prediction API...");
+      try {
+        return careerApi.post('/career/analyze-prediction', assessmentData);
+      } catch (error) {
+        console.error("Error in career prediction API:", error);
+        // Return a failed promise that will be caught by the caller
+        return Promise.reject(error);
+      }
+    },
+    getRecommendations: (userId) => {
+      try {
+        return careerApi.get(`/career/recommendations?userId=${userId}`);
+      } catch (error) {
+        console.error("Error in career recommendations API:", error);
+        return Promise.reject(error);
+      }
+    }
+  },
+  
   // Emotion detection endpoints
   emotions: {
     detectEmotion: async (imageData) => {
@@ -141,7 +188,7 @@ const apiEndpoints = {
     // WebSocket connection for real-time emotion detection
     getWebSocketUrl: (sessionId) => {
       const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-      const host = process.env.REACT_APP_WS_HOST || window.location.host;
+      const host = import.meta.env.VITE_WS_HOST || window.location.host;
       return `${protocol}${host}/ws/emotions/${sessionId}`;
     },
   },

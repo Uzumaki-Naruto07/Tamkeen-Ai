@@ -185,7 +185,13 @@ const SkillsAssessment = () => {
         
         setSkillCategories(categoriesResponse.data || []);
         setUserSkills(userSkillsResponse.data || []);
-        setCompletedAssessments(completedResponse.data || []);
+        
+        // Ensure completedResponse.data is an array
+        const completedAssessments = Array.isArray(completedResponse.data)
+          ? completedResponse.data
+          : (completedResponse.data?.assessments || []);
+        
+        setCompletedAssessments(completedAssessments);
         
         // Try to get job titles separately to prevent the entire function from failing
         try {

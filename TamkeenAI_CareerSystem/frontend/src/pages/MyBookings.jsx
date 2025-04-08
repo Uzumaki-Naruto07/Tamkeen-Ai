@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Container, 
   Typography, 
@@ -59,6 +59,16 @@ const MyBookings = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [highlightedBookingId, setHighlightedBookingId] = useState(null);
   const [payments, setPayments] = useState([]);
+  const [bookingRefs, setBookingRefs] = useState({});
+
+  // Function to create refs for all bookings
+  const createBookingRefs = useCallback((bookings) => {
+    const refs = {};
+    bookings.forEach(booking => {
+      refs[`booking-${booking.id}`] = React.createRef();
+    });
+    setBookingRefs(refs);
+  }, []);
 
   useEffect(() => {
     loadBookings();
@@ -81,9 +91,9 @@ const MyBookings = () => {
       
       // Scroll to the highlighted booking after it renders
       setTimeout(() => {
-        const bookingElement = document.getElementById(`booking-${location.state.highlightBookingId}`);
-        if (bookingElement) {
-          bookingElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const bookingRef = bookingRefs[`booking-${location.state.highlightBookingId}`];
+        if (bookingRef && bookingRef.current) {
+          bookingRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
           console.log(`Could not find element for booking-${location.state.highlightBookingId}, forcing refresh`);
           // If booking not found but should exist, force a refresh
@@ -92,9 +102,9 @@ const MyBookings = () => {
           
           // Try again after a short delay
           setTimeout(() => {
-            const retryElement = document.getElementById(`booking-${location.state.highlightBookingId}`);
-            if (retryElement) {
-              retryElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const retryRef = bookingRefs[`booking-${location.state.highlightBookingId}`];
+            if (retryRef && retryRef.current) {
+              retryRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
           }, 1000);
         }
@@ -119,7 +129,7 @@ const MyBookings = () => {
     }, 60000); // Refresh every minute
     
     return () => clearInterval(refreshTimer); // Clean up on unmount
-  }, [location]);
+  }, [location, bookingRefs]);
   
   // Add a listener for when the user comes back to this component via browser navigation
   useEffect(() => {
@@ -271,6 +281,9 @@ const MyBookings = () => {
     if (upcoming.length > 0 && tabValue !== 0) {
       setTabValue(0);
     }
+    
+    // Create refs after loading bookings
+    createBookingRefs(uniqueBookings);
   };
 
   const loadPayments = () => {
@@ -682,9 +695,10 @@ const MyBookings = () => {
     const isHighlighted = booking.id === highlightedBookingId;
     
     return (
-      <Grid item xs={12} md={6} lg={4} key={booking.id}>
+      <Grid item xs={12} sm={6} md={4} key={booking.id}>
         <Card 
           id={`booking-${booking.id}`}
+          ref={bookingRefs[`booking-${booking.id}`]}
           sx={{ 
             display: 'flex', 
             flexDirection: 'column', 

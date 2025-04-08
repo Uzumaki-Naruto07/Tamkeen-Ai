@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Container, 
   Typography, 
@@ -225,6 +225,10 @@ const CoachProfile = () => {
   const [rescheduleData, setRescheduleData] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
 
+  // Add refs for the sections we want to scroll to
+  const availabilitySectionRef = useRef(null);
+  const bookingActionButtonRef = useRef(null);
+
   useEffect(() => {
     // Fetch coach data based on coachId
     setLoading(true);
@@ -266,7 +270,7 @@ const CoachProfile = () => {
       // If availability tab is selected (either from state or rescheduling), scroll to it
       if ((location.state?.activeTab === 2) || (rescheduleBooking && JSON.parse(rescheduleBooking).coachId === parseInt(coachId))) {
         setTimeout(() => {
-          document.getElementById('availability-section')?.scrollIntoView({ behavior: 'smooth' });
+          availabilitySectionRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 300); // Slightly longer delay to ensure the component is fully rendered
       }
     }, 800);
@@ -279,7 +283,7 @@ const CoachProfile = () => {
     // If switching to availability tab, scroll to it
     if (newValue === 2) {
       setTimeout(() => {
-        document.getElementById('availability-section')?.scrollIntoView({ behavior: 'smooth' });
+        availabilitySectionRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     }
   };
@@ -302,7 +306,7 @@ const CoachProfile = () => {
     
     // Scroll to the book session button
     setTimeout(() => {
-      document.getElementById('booking-action-button')?.scrollIntoView({ behavior: 'smooth' });
+      bookingActionButtonRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
   };
 
@@ -439,7 +443,7 @@ const CoachProfile = () => {
     
     // Scroll to availability section after tab change
     setTimeout(() => {
-      document.getElementById('availability-section')?.scrollIntoView({ behavior: 'smooth' });
+      availabilitySectionRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
   };
 
@@ -668,7 +672,7 @@ const CoachProfile = () => {
       )}
       
       {tabValue === 2 && (
-        <Card sx={{ p: 3 }} id="availability-section">
+        <Card sx={{ p: 3 }} id="availability-section" ref={availabilitySectionRef}>
           <Typography variant="h5" gutterBottom>Available Time Slots</Typography>
           <Typography variant="body2" paragraph>
             Select a date and time to book your session with {coach.name}.
@@ -701,6 +705,7 @@ const CoachProfile = () => {
               onClick={handleBookSession}
               disabled={!selectedTimeSlot || bookingLoading}
               id="booking-action-button"
+              ref={bookingActionButtonRef}
               sx={{
                 px: 4,
                 py: 1,

@@ -21,7 +21,10 @@ import {
   ListItemIcon,
   ListItemText,
   Avatar,
-  LinearProgress
+  LinearProgress,
+  Menu,
+  MenuItem,
+  useTheme
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AddIcon from '@mui/icons-material/Add';
@@ -70,7 +73,6 @@ import chatService, { getConnectionStatus } from '../api/chatgpt';
 import mockDashboardData from '../utils/mockData/dashboardData';
 
 // Import components
-import UserProgressCard from '../components/Dashboard/UserProgressCard';
 import SkillProgressSection from '../components/Dashboard/SkillProgressSection';
 import ResumeScoreChart from '../components/Dashboard/ResumeScoreChart';
 import CareerPathsSection from '../components/Dashboard/CareerPathsSection';
@@ -83,7 +85,6 @@ import AIRecommendationCard from '../components/Dashboard/AIRecommendationCard';
 import SkillGapAnalysis from '../components/Dashboard/SkillGapAnalysis';
 import CareerJourneyTimeline from '../components/Dashboard/CareerJourneyTimeline';
 import PersonalizedLearningPaths from '../components/Dashboard/PersonalizedLearningPaths';
-import OpportunityAlertCard from '../components/Dashboard/OpportunityAlertCard';
 import LearningRoadmap from '../components/Dashboard/LearningRoadmap';
 import ProfileCompletionPrompt from '../components/Dashboard/ProfileCompletionPrompt';
 import ResumeExpertPrompt from '../components/Dashboard/ResumeExpertPrompt';
@@ -91,110 +92,59 @@ import SkillTransitionChart from '../components/Dashboard/SkillTransitionChart';
 import EmiratiJourneyMap from '../components/Dashboard/EmiratiJourneyMap';
 import DashboardReportExporter from '../components/Dashboard/DashboardReportExporter';
 import WinnerVibeBanner from '../components/Dashboard/WinnerVibeBanner';
+import ApplicationStatsCard from '../components/Dashboard/ApplicationStatsCard';
+import TodoListCard from '../components/Dashboard/TodoListCard';
+import CalendarCard from '../components/Dashboard/CalendarCard';
+import AskTamkeenWidget from '../components/Dashboard/AskTamkeenWidget';
+import LearningProcessCard from '../components/Dashboard/LearningProcessCard';
 
 // Import context
 import { useUser } from '../context/AppContext';
 
-// Define dashboard widgets
+// Define dashboard widgets with updated sizes
 const widgetMap = {
-  userProgress: {
-    id: 'userProgress',
-    title: 'Your Progress',
-    component: UserProgressCard,
-    defaultSize: { xs: 12, md: 4 },
-    defaultOrder: 0
-  },
-  resumeScore: {
-    id: 'resumeScore',
-    title: 'Resume Score',
-    component: ResumeScoreChart,
-    defaultSize: { xs: 12, md: 8 },
-    defaultOrder: 1
-  },
-  skillGap: {
-    id: 'skillGap',
-    title: 'Skill Gap Analysis',
-    component: SkillGapAnalysis,
-    defaultSize: { xs: 12, md: 6 },
-    defaultOrder: 2
-  },
-  skillTransition: {
-    id: 'skillTransition',
-    title: 'Skill Transition',
-    component: SkillTransitionChart,
-    defaultSize: { xs: 12, md: 6 },
-    defaultOrder: 3
-  },
-  careerJourney: {
-    id: 'careerJourney',
-    title: 'Career Journey',
-    component: CareerJourneyTimeline,
-    defaultSize: { xs: 12, md: 8 },
-    defaultOrder: 4
-  },
-  emiratiJourney: {
-    id: 'emiratiJourney',
-    title: 'Emirati Career Path',
-    component: EmiratiJourneyMap,
-    defaultSize: { xs: 12, md: 8 },
-    defaultOrder: 5
-  },
-  badges: {
-    id: 'badges',
-    title: 'Achievements',
-    component: BadgesSection,
-    defaultSize: { xs: 12, md: 4 },
-    defaultOrder: 6
-  },
-  careerPrediction: {
-    id: 'careerPrediction',
-    title: 'Career Predictions',
-    component: CareerPredictionSection,
-    defaultSize: { xs: 12, md: 6 },
-    defaultOrder: 7
-  },
-  learningPaths: {
-    id: 'learningPaths',
-    title: 'Learning Paths',
-    component: PersonalizedLearningPaths,
-    defaultSize: { xs: 12, md: 6 },
-    defaultOrder: 8
-  },
-  marketInsights: {
-    id: 'marketInsights',
-    title: 'Market Insights',
-    component: MarketInsightsSection,
-    defaultSize: { xs: 12, md: 8 },
-    defaultOrder: 9
+  applicationStats: {
+    id: 'applicationStats',
+    title: 'Application Statistics',
+    component: ApplicationStatsCard,
+    defaultSize: { xs: 12, sm: 12, md: 12 }, // Full width
+    defaultOrder: 0,
+    excludeFromDraggable: true // Add this flag to exclude from draggable widgets
   },
   leaderboard: {
     id: 'leaderboard',
-    title: 'Leaderboard',
+    title: 'Career Leaderboard',
     component: LeaderboardWidget,
-    defaultSize: { xs: 12, md: 4 },
-    defaultOrder: 10
+    defaultSize: { xs: 12, sm: 4, md: 4 },
+    defaultOrder: 1,
+    useSmallStyle: false
   },
-  activityLog: {
-    id: 'activityLog',
-    title: 'Recent Activities',
-    component: ActivityLogSection,
-    defaultSize: { xs: 12, md: 4 },
-    defaultOrder: 11
+  todoList: {
+    id: 'todoList',
+    title: 'To-Do List',
+    component: TodoListCard,
+    defaultSize: { xs: 12, sm: 4, md: 4 },
+    defaultOrder: 2,
+    useSmallStyle: true
   },
-  opportunityAlert: {
-    id: 'opportunityAlert',
-    title: 'Opportunity Alerts',
-    component: OpportunityAlertCard,
-    defaultSize: { xs: 12, md: 8 },
-    defaultOrder: 12
+  calendar: {
+    id: 'calendar',
+    title: 'Calendar',
+    component: CalendarCard,
+    defaultSize: { xs: 12, sm: 4, md: 4 },
+    defaultOrder: 3,
+    useSmallStyle: true
   },
-  dashboardReport: {
-    id: 'dashboardReport',
-    title: 'Career Report',
-    component: DashboardReportExporter,
-    defaultSize: { xs: 12, md: 4 },
-    defaultOrder: 13
+  // Add resumeScore back with excludeFromDraggable flag
+  resumeScore: {
+    id: 'resumeScore',
+    title: 'Resume ATS Score',
+    component: ResumeScoreChart,
+    defaultSize: { xs: 12, sm: 4, md: 4 },
+    defaultOrder: 4,
+    excludeFromDraggable: true // This will prevent it from showing in the draggable widgets section
   }
+  // Removed emiratiCareerPath from widgetMap
 };
 
 // Animation variants
@@ -226,21 +176,44 @@ const itemVariants = {
 
 // Widget card styling - use this for all widget Paper components
 const widgetCardStyles = {
-  p: 0, // Remove padding from the Paper to allow internal gradient headers
+  p: 0,
   display: 'flex',
   flexDirection: 'column',
-  borderRadius: 3,
+  borderRadius: 2,
   position: 'relative',
   overflow: 'hidden',
-  height: '100%',
-  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  border: '1px solid rgba(0,0,0,0.04)',
+  height: '400px', // Increased from 250px
+  maxHeight: '400px', // Increased from 250px
+  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+  transition: 'all 0.2s ease',
+  border: '1px solid rgba(0,0,0,0.08)',
+  backgroundColor: '#fff',
   '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
-    borderColor: 'rgba(25, 118, 210, 0.1)'
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
   }
+};
+
+// Progress widget style - taller to match design
+const progressWidgetStyles = {
+  ...widgetCardStyles,
+  height: '450px', // Further increased height
+  maxHeight: '450px',
+  backgroundColor: '#fff', // Remove pink background
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden', // Prevent scrolling
+};
+
+// Application stats widget style with animation
+const statsWidgetStyles = {
+  p: 2,
+  borderRadius: 2,
+  backgroundColor: 'transparent', // Make it transparent to show the card backgrounds
+  width: '100%',
+  height: 'auto',
+  minHeight: '120px',
+  boxShadow: 'none', // Remove shadow
+  marginBottom: 2
 };
 
 // Widget header styling
@@ -248,19 +221,47 @@ const widgetHeaderStyles = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  mb: 0,
-  p: 2.5,
-  pb: 2,
-  background: 'linear-gradient(145deg, rgba(25, 118, 210, 0.05) 0%, rgba(25, 118, 210, 0.15) 100%)',
-  borderBottom: '1px solid rgba(0,0,0,0.06)'
+  p: 1,
+  pb: 1,
+  borderBottom: '1px solid rgba(0,0,0,0.06)',
+  minHeight: '40px',
+  maxHeight: '40px',
+  backgroundColor: '#fff'
 };
 
 // Widget content styling
 const widgetContentStyles = {
-  p: 2.5,
+  p: 1,
   flexGrow: 1,
   display: 'flex',
-  flexDirection: 'column'
+  flexDirection: 'column',
+  overflow: 'auto',
+  height: 'calc(100% - 40px)', // Subtract header height
+  '&::-webkit-scrollbar': {
+    width: '4px',
+  },
+  '&::-webkit-scrollbar-track': {
+    background: '#f1f1f1',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: '#888',
+    borderRadius: '2px',
+  }
+};
+
+// Small widget style for to-do and calendar with animation
+const smallWidgetStyles = {
+  ...widgetCardStyles,
+  height: '150px',
+  maxHeight: '150px',
+  backgroundColor: '#E5B5B5', // Pink background from design
+  transform: 'translateY(0)',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    transform: 'translateY(-5px)',
+    boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+    backgroundColor: '#e0a0a0', // Slightly darker on hover
+  }
 };
 
 // Function to generate a gradient background based on widget ID
@@ -284,11 +285,13 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dashboardLayout, setDashboardLayout] = useState(null);
-  const [hiddenWidgets, setHiddenWidgets] = useState([]);
+  const [hiddenWidgets, setHiddenWidgets] = useState(['resumeScore']); // Hide resumeScore from draggable widgets
   const [activeTab, setActiveTab] = useState(0);
   const [quickStatsMenuAnchor, setQuickStatsMenuAnchor] = useState(null);
   const { profile, user, logout, isAuthenticated, setIsAuthenticated } = useUser();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
   
   // Log mock data availability on mount
   useEffect(() => {
@@ -709,11 +712,8 @@ const Dashboard = () => {
       if (savedLayout) {
         setDashboardLayout(JSON.parse(savedLayout));
       } else {
-        // Default layout
-        const defaultLayout = Object.values(widgetMap)
-          .sort((a, b) => a.defaultOrder - b.defaultOrder)
-          .map(widget => widget.id);
-        setDashboardLayout(defaultLayout);
+        // Use our new default layout
+        setupDefaultLayout();
       }
       
       if (savedHidden) {
@@ -732,6 +732,16 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Setup default layout
+  const setupDefaultLayout = () => {
+    const defaultLayout = [
+      'applicationStats',  // App stats at top
+    ];
+    
+    setDashboardLayout(defaultLayout);
+    return defaultLayout;
   };
   
   // Handle drag end for widget reordering
@@ -762,13 +772,9 @@ const Dashboard = () => {
   
   // Reset dashboard layout to default
   const resetDashboardLayout = () => {
-    const defaultLayout = Object.values(widgetMap)
-      .sort((a, b) => a.defaultOrder - b.defaultOrder)
-      .map(widget => widget.id);
-    
-    setDashboardLayout(defaultLayout);
+    const layout = setupDefaultLayout();
     setHiddenWidgets([]);
-    localStorage.setItem('dashboardLayout', JSON.stringify(defaultLayout));
+    localStorage.setItem('dashboardLayout', JSON.stringify(layout));
     localStorage.setItem('hiddenWidgets', JSON.stringify([]));
   };
   
@@ -1305,6 +1311,34 @@ const Dashboard = () => {
           'skillGaps', 
           'marketInsights'
         ]
+      },
+      // Add data for the new components we just created
+      applicationStats: {
+        applications: 23,
+        onHold: 6,
+        rejected: 3,
+        totalApplied: 25.9,
+        applicationWeeks: "7",
+        onHoldWeeks: "3", 
+        rejectedWeeks: "2",
+        totalWeeks: "20/23"
+      },
+      todos: [
+        { task: 'Update resume', dueTime: '10:00 AM' },
+        { task: 'Apply for 3 jobs', dueTime: '2:00 PM' },
+        { task: 'Practice interview', dueTime: '4:30 PM' }
+      ],
+      calendar: {
+        events: [
+          { title: 'Interview with XYZ Corp', date: new Date(), type: 'interview' },
+          { title: 'Resume Review', date: new Date(Date.now() + 86400000), type: 'task' }
+        ]
+      },
+      learningData: {
+        videosCompleted: 12,
+        totalVideos: 30,
+        completionPercentage: 40,
+        lastWatched: "Introduction to AI"
       }
     };
     
@@ -1328,40 +1362,32 @@ const Dashboard = () => {
         };
       case 'skillTransition':
         return { data: safeData.skillTransitionData || null };
-      case 'careerJourney':
-        return { milestones: safeData.careerMilestones || defaultData.careerMilestones };
-      case 'emiratiJourney':
+      case 'emiratiCareerPath':
         return { data: safeData.emiratiJourneyData || null };
-      case 'badges':
-        return { badges: safeData.badges || defaultData.badges };
-      case 'careerPrediction':
-        return { predictions: safeData.careerPredictions || defaultData.careerPredictions };
-      case 'learningPaths':
-        return { paths: safeData.learningPaths || defaultData.learningPaths };
       case 'marketInsights':
         return { 
           insights: safeData.marketInsights || defaultData.marketInsights,
           marketInsights: safeData.marketInsights || defaultData.marketInsights // Add this for backward compatibility
         };
-      case 'leaderboard':
+      case 'askTamkeen':
         return { 
-          leaderboard: safeData.leaderboard || defaultData.leaderboard, 
-          friends: safeData.friends || defaultData.friends,
-          position: {
-            user_position: 0, // Not ranked
-            total_users: safeData.leaderboard?.length || defaultData.leaderboard.length,
-            top_percentile: 0,
-            points: 0,
-            next_milestone: 100,
-            rank_history: [0, 0, 0, 0, 0, 0, 0]
-          }
+          leaderboard: safeData.leaderboard || defaultData.leaderboard
         };
-      case 'activityLog':
-        return { activities: safeData.recentActivities || defaultData.recentActivities };
-      case 'opportunityAlert':
-        return { opportunities: safeData.opportunities || defaultData.opportunities };
-      case 'dashboardReport':
-        return { userData: defaultData.dashboardReportData.userData, reportSections: defaultData.dashboardReportData.reportSections };
+      case 'applicationStats':
+        return { 
+          data: safeData.applicationStats || defaultData.applicationStats,
+          // Adding direct stats for easier access
+          applications: safeData.applicationStats?.applications || 23,
+          onHold: safeData.applicationStats?.onHold || 6,
+          rejected: safeData.applicationStats?.rejected || 3,
+          totalApplied: safeData.applicationStats?.totalApplied || 25.9
+        };
+      case 'todoList':
+        return { data: { todos: safeData.todos || defaultData.todos } };
+      case 'calendar':
+        return { data: safeData.calendar || defaultData.calendar };
+      case 'learningProcess':
+        return { data: { learningData: safeData.learningData || defaultData.learningData } };
       default:
         return {};
     }
@@ -1390,10 +1416,7 @@ const Dashboard = () => {
         setDashboardData(mockDashboardData);
         
         // Setup default layout
-        const defaultLayout = Object.values(widgetMap)
-          .sort((a, b) => a.defaultOrder - b.defaultOrder)
-          .map(widget => widget.id);
-        setDashboardLayout(defaultLayout);
+        setupDefaultLayout();
       }
     }, 5000);
     
@@ -1407,10 +1430,7 @@ const Dashboard = () => {
     setError(null);
     
     // Ensure dashboard widget layout is set
-    const defaultLayout = Object.values(widgetMap)
-      .sort((a, b) => a.defaultOrder - b.defaultOrder)
-      .map(widget => widget.id);
-    setDashboardLayout(defaultLayout);
+    setupDefaultLayout();
     
     // Set a flag indicating we're using mock data
     sessionStorage.setItem('usingMockDashboardData', 'true');
@@ -1464,7 +1484,85 @@ const Dashboard = () => {
   }
   
   return (
-    <Container maxWidth="xl" sx={{ mt: 3, mb: 5 }}>
+    <>
+    <Box 
+      component={motion.div}
+      initial={{ opacity: 0 }}
+      animate={{ 
+        opacity: 1
+      }}
+      transition={{
+        duration: 1.5,
+        ease: "easeInOut"
+      }}
+      sx={{ 
+        minHeight: '100vh',
+        width: '100%',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: -1,
+        overflow: 'hidden',
+        backgroundImage: `url('https://media1.giphy.com/media/MyWrJJIdAfoJuEPlLP/200w.gif?cid=6c09b952raw34ma675rbjd4kel0xgl77ej53jt9wo9lrg8cf&ep=v1_gifs_search&rid=200w.gif&ct=g')`,
+        backgroundRepeat: 'repeat',
+        backgroundSize: '200px auto',
+        backgroundPosition: 'center',
+        opacity: 0.25,
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(240, 245, 255, 0.9) 0%, rgba(230, 240, 250, 0.9) 50%, rgba(220, 235, 245, 0.9) 100%)',
+          zIndex: -1
+        }
+      }}
+    >
+      {/* Keep some of the decorative elements for added visual interest */}
+      {[...Array(5)].map((_, i) => (
+        <Box
+          key={`circle-${i}`}
+          component={motion.div}
+          initial={{ scale: 0.8, opacity: 0.2 }}
+          animate={{ 
+            scale: [0.8, 1.2, 0.8],
+            opacity: [0.2, 0.4, 0.2]
+          }}
+          transition={{ 
+            duration: 8 + (i * 2),
+            ease: "easeInOut",
+            repeat: Infinity,
+          }}
+          sx={{
+            position: 'absolute',
+            width: theme.spacing(15 + (i * 5)),
+            height: theme.spacing(15 + (i * 5)),
+            borderRadius: '50%',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: i % 2 === 0 
+              ? 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)'
+              : 'radial-gradient(circle, rgba(230,240,255,0.1) 0%, rgba(240,245,255,0) 70%)',
+            top: `${10 + (i * 15)}%`,
+            left: `${60 - (i * 10)}%`,
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
+      ))}
+    </Box>
+    <Container 
+      maxWidth="xl" 
+      sx={{ 
+        mt: { xs: 2, sm: 3 }, 
+        mb: { xs: 4, sm: 5 },
+        px: { xs: 1, sm: 2, md: 3 }, 
+        overflow: 'hidden',
+        maxWidth: '100%',
+        position: 'relative',
+        zIndex: 1
+      }}
+    >
       {/* Profile and Resume Completion Prompts */}
       <ProfileCompletionPrompt 
         open={showProfilePrompt} 
@@ -1584,24 +1682,27 @@ const Dashboard = () => {
           </Button>
           
           <Tooltip title="Refresh Dashboard">
-            <IconButton 
+            <Button 
+              variant="contained" 
+              color="primary"
               onClick={refreshDashboard} 
               disabled={loading}
               sx={{
-                backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                '&:hover': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.12)'
-                }
+                mt: 2,
+                mb: 2,
+                fontWeight: 'bold'
               }}
             >
+              Refresh Dashboard
               <RefreshIcon sx={{ 
+                ml: 1,
                 animation: loading ? 'spin 1s linear infinite' : 'none',
                 '@keyframes spin': {
                   '0%': { transform: 'rotate(0deg)' },
                   '100%': { transform: 'rotate(360deg)' }
                 }
               }} />
-            </IconButton>
+            </Button>
           </Tooltip>
         </Box>
       </Box>
@@ -1636,13 +1737,29 @@ const Dashboard = () => {
                 {profile?.firstName?.charAt(0) || "U"}
               </Avatar>
               <Box>
-                <Typography variant="h5" fontWeight="bold">
+                <Typography variant="h5" fontWeight="bold" sx={{
+                  background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', // Gold gradient
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                }}>
                   {profile?.firstName ? `${profile?.firstName} ${profile?.lastName || ''}` : 'User'}
                 </Typography>
-                <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                <Typography variant="body1" sx={{ 
+                  color: '#f5f5f5',
+                  fontWeight: 'medium',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                }}>
                   {dashboardData?.progress?.rank || 'Career Explorer'} - Level {dashboardData?.progress?.level || 1}
                 </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8, display: 'block', mt: 0.5 }}>
+                <Typography variant="caption" sx={{ 
+                  color: 'rgba(255,223,0,0.9)',
+                  display: 'block', 
+                  mt: 0.5,
+                  fontWeight: 'medium',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.4)'
+                }}>
                   {dashboardData?.progress?.nextMilestone || 'Complete your profile to see your next career milestone'}
                 </Typography>
               </Box>
@@ -1801,7 +1918,329 @@ const Dashboard = () => {
         </Grid>
       </Paper>
       
-      {/* Widgets hidden notice */}
+      {/* Add ApplicationStatsCard below the blue header */}
+      <Box sx={{ mb: 3 }}>
+        <ApplicationStatsCard data={getWidgetProps('applicationStats')} />
+      </Box>
+      
+      {/* Left sidebar with Leaderboard, Todo and Calendar */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={4}>
+          {/* Career Leaderboard - Left Column */}
+          <Paper
+            sx={{
+              ...widgetCardStyles,
+              height: '880px',
+              maxHeight: '880px',
+              background: isDarkMode 
+                ? 'linear-gradient(135deg, rgba(186, 104, 200, 0.4) 0%, rgba(156, 39, 176, 0.4) 100%)' // Light purple in dark mode
+                : 'linear-gradient(135deg, rgba(186, 104, 200, 0.7) 0%, rgba(156, 39, 176, 0.7) 100%)', // Purple gradient
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)',
+              color: isDarkMode ? '#fff' : '#333',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-5px)',
+                boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              },
+              animation: 'purpleGlow 2s infinite alternate-reverse',
+              '@keyframes purpleGlow': {
+                '0%': { boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)' },
+                '100%': { boxShadow: '0 8px 20px rgba(156, 39, 176, 0.3)' }
+              }
+            }}
+            elevation={0}
+          >
+            <Box sx={{
+              ...widgetHeaderStyles,
+              backgroundColor: 'transparent',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+              color: isDarkMode ? '#fff' : '#333'
+            }}>
+              <Typography 
+                variant="subtitle1" 
+                fontWeight="bold"
+                sx={{
+                  textShadow: isDarkMode ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                  color: isDarkMode ? '#fff' : '#333',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                Career Leaderboard
+              </Typography>
+            </Box>
+            <Box sx={{
+              ...widgetContentStyles,
+              height: 'auto',
+              overflow: 'auto',
+              maxHeight: 'calc(880px - 40px)',
+              color: isDarkMode ? '#fff' : '#333',
+              '& .MuiTypography-root': {
+                fontWeight: 500,
+                textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.2)' : 'none'
+              }
+            }}>
+              <LeaderboardWidget {...getWidgetProps('leaderboard')} />
+            </Box>
+          </Paper>
+        </Grid>
+        
+        <Grid item xs={12} md={8}>
+          {/* Todo and Calendar in a row - Right Column */}
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              {/* Todo List */}
+              <Paper
+                component={motion.div}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                sx={{
+                  ...smallWidgetStyles,
+                  height: '250px',
+                  maxHeight: '250px',
+                  background: isDarkMode 
+                    ? 'linear-gradient(135deg, rgba(248, 187, 208, 0.4) 0%, rgba(244, 143, 177, 0.4) 100%)' // More translucent baby pink
+                    : 'linear-gradient(135deg, rgba(255, 205, 210, 0.7) 0%, rgba(248, 187, 208, 0.7) 100%)', // Semi-transparent baby pink
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)',
+                  color: isDarkMode ? '#fff' : '#333',
+                  '&:hover': {
+                    transform: 'translateY(-5px) scale(1.02)',
+                    boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                  },
+                  animation: 'pulse 2s infinite alternate-reverse',
+                  '@keyframes pulse': {
+                    '0%': { boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)' },
+                    '100%': { boxShadow: '0 8px 20px rgba(248, 187, 208, 0.3)' }
+                  }
+                }}
+                elevation={0}
+              >
+                <Box sx={{
+                  ...widgetHeaderStyles,
+                  backgroundColor: 'transparent',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: isDarkMode ? '#fff' : '#333',
+                  display: 'flex',
+                  justifyContent: 'space-between'
+                }}>
+                  <Typography 
+                    variant="subtitle1" 
+                    fontWeight="bold"
+                    sx={{
+                      textShadow: isDarkMode ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                      color: isDarkMode ? '#fff' : '#333',
+                      letterSpacing: '0.5px'
+                    }}
+                  >
+                    To-Do List
+                  </Typography>
+                </Box>
+                <Box sx={{
+                  ...widgetContentStyles,
+                  height: 'calc(100% - 40px)',
+                  color: isDarkMode ? '#fff' : '#333',
+                  '& .MuiTypography-root': {
+                    fontWeight: 500,
+                    textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.2)' : 'none'
+                  }
+                }}>
+                  <TodoListCard {...getWidgetProps('todoList')} />
+                </Box>
+              </Paper>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              {/* Calendar */}
+              <Paper
+                component={motion.div}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                sx={{
+                  ...smallWidgetStyles,
+                  height: '250px',
+                  maxHeight: '250px',
+                  background: isDarkMode 
+                    ? 'linear-gradient(135deg, rgba(255, 204, 128, 0.4) 0%, rgba(255, 183, 77, 0.4) 100%)' // More translucent baby orange
+                    : 'linear-gradient(135deg, rgba(255, 204, 128, 0.85) 0%, rgba(255, 183, 77, 0.85) 100%)', // More opaque in light mode
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)',
+                  color: isDarkMode ? '#fff' : '#333',
+                  '&:hover': {
+                    transform: 'translateY(-5px) scale(1.02)',
+                    boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                  },
+                  animation: 'glow 2s infinite alternate-reverse',
+                  '@keyframes glow': {
+                    '0%': { boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)' },
+                    '100%': { boxShadow: '0 8px 20px rgba(255, 204, 128, 0.3)' }
+                  }
+                }}
+                elevation={0}
+              >
+                <Box sx={{
+                  ...widgetHeaderStyles,
+                  backgroundColor: 'transparent',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: isDarkMode ? '#fff' : '#333'
+                }}>
+                  <Typography 
+                    variant="subtitle1" 
+                    fontWeight="bold"
+                    sx={{
+                      textShadow: isDarkMode ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                      color: isDarkMode ? '#fff' : '#333',
+                      letterSpacing: '0.5px'
+                    }}
+                  >
+                    Calendar
+                  </Typography>
+                </Box>
+                <Box sx={{
+                  ...widgetContentStyles,
+                  height: 'calc(100% - 40px)',
+                  color: isDarkMode ? '#fff' : '#333',
+                  '& .MuiTypography-root': {
+                    fontWeight: 500,
+                    textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.2)' : 'none'
+                  }
+                }}>
+                  <CalendarCard {...getWidgetProps('calendar')} />
+                </Box>
+              </Paper>
+            </Grid>
+            
+            {/* Second row with Resume ATS Score and Skill Transition side by side */}
+            <Grid item xs={12} sm={6}>
+              {/* Resume ATS Score */}
+              <Paper
+                component={motion.div}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.15 }}
+                sx={{
+                  ...smallWidgetStyles,
+                  height: '600px',
+                  maxHeight: '600px',
+                  background: isDarkMode 
+                    ? 'linear-gradient(135deg, rgba(156, 204, 101, 0.4) 0%, rgba(124, 179, 66, 0.4) 100%)' // Light green
+                    : 'linear-gradient(135deg, rgba(156, 204, 101, 0.7) 0%, rgba(124, 179, 66, 0.7) 100%)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)',
+                  color: isDarkMode ? '#fff' : '#333',
+                  '&:hover': {
+                    transform: 'translateY(-5px) scale(1.02)',
+                    boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                  },
+                  mt: 2
+                }}
+                elevation={0}
+              >
+                <Box sx={{
+                  ...widgetHeaderStyles,
+                  backgroundColor: 'transparent',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: isDarkMode ? '#fff' : '#333'
+                }}>
+                  <Typography 
+                    variant="subtitle1" 
+                    fontWeight="bold"
+                    sx={{
+                      textShadow: isDarkMode ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                      color: isDarkMode ? '#fff' : '#333',
+                      letterSpacing: '0.5px'
+                    }}
+                  >
+                    Resume ATS Score
+                  </Typography>
+                </Box>
+                <Box sx={{
+                  ...widgetContentStyles,
+                  height: 'calc(100% - 40px)',
+                  color: isDarkMode ? '#fff' : '#333',
+                  '& .MuiTypography-root': {
+                    fontWeight: 500,
+                    textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.2)' : 'none'
+                  }
+                }}>
+                  <ResumeScoreChart {...getWidgetProps('resumeScore')} />
+                </Box>
+              </Paper>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              {/* Skill Transition Chart */}
+              <Paper
+                component={motion.div}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                sx={{
+                  ...smallWidgetStyles,
+                  height: '600px',
+                  maxHeight: '600px',
+                  background: isDarkMode 
+                    ? 'linear-gradient(135deg, rgba(139, 195, 245, 0.4) 0%, rgba(96, 171, 237, 0.4) 100%)' // Light blue
+                    : 'linear-gradient(135deg, rgba(139, 195, 245, 0.7) 0%, rgba(96, 171, 237, 0.7) 100%)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)',
+                  color: isDarkMode ? '#fff' : '#333',
+                  '&:hover': {
+                    transform: 'translateY(-5px) scale(1.02)',
+                    boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                  },
+                  mt: 2
+                }}
+                elevation={0}
+              >
+                <Box sx={{
+                  ...widgetHeaderStyles,
+                  backgroundColor: 'transparent',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: isDarkMode ? '#fff' : '#333'
+                }}>
+                  <Typography 
+                    variant="subtitle1" 
+                    fontWeight="bold"
+                    sx={{
+                      textShadow: isDarkMode ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                      color: isDarkMode ? '#fff' : '#333',
+                      letterSpacing: '0.5px'
+                    }}
+                  >
+                    Skill Transition
+                  </Typography>
+                </Box>
+                <Box sx={{
+                  ...widgetContentStyles,
+                  height: 'calc(100% - 40px)',
+                  color: isDarkMode ? '#fff' : '#333',
+                  '& .MuiTypography-root': {
+                    fontWeight: 500,
+                    textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.2)' : 'none'
+                  }
+                }}>
+                  <SkillTransitionChart />
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Grid>
+        
+        <Grid item xs={12} md={8}>
+          {/* Right column for draggable widgets */}
       {hiddenWidgets.length > 0 && (
         <Box sx={{ mb: 2 }}>
           <Paper sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1835,10 +2274,10 @@ const Dashboard = () => {
               initial="hidden"
               animate="visible"
             >
-              <Grid container spacing={3}>
+                  <Grid container spacing={2}>
                 {visibleWidgets.map((widgetId, index) => {
                   const widget = widgetMap[widgetId];
-                  if (!widget) return null;
+                      if (!widget || widget.excludeFromDraggable) return null;
                   
                   const WidgetComponent = widget.component;
                   const widgetProps = getWidgetProps(widgetId);
@@ -1854,14 +2293,15 @@ const Dashboard = () => {
                           component={motion.div}
                           variants={itemVariants}
                         >
-                          <Paper sx={widgetCardStyles}>
-                            <Box 
-                              sx={{
-                                ...widgetHeaderStyles,
-                                background: getWidgetGradient(widgetId)
-                              }}
-                            >
-                              <Typography variant="h6" fontWeight="bold">
+                              <Paper 
+                                sx={widget.id === 'applicationStats' ? 
+                                    { boxShadow: 'none', backgroundColor: 'transparent', p: 0 } : 
+                                    (widget.useSmallStyle ? smallWidgetStyles : widgetCardStyles)}
+                                elevation={0}
+                              >
+                                {widget.id !== 'applicationStats' && (
+                                  <Box sx={widgetHeaderStyles}>
+                                    <Typography variant="subtitle1" fontWeight="medium">
                                 {widget.title}
                               </Typography>
                               <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -1877,8 +2317,14 @@ const Dashboard = () => {
                                 </Tooltip>
                               </Box>
                             </Box>
-                            
-                            <Box sx={widgetContentStyles}>
+                                )}
+                                <Box 
+                                  sx={widget.id === 'applicationStats' ? 
+                                      { p: 0, width: '100%', height: 'auto' } : 
+                                      widgetContentStyles
+                                }
+                                component={'div'}
+                                >
                               <WidgetComponent {...widgetProps} />
                             </Box>
                           </Paper>
@@ -1893,6 +2339,8 @@ const Dashboard = () => {
           )}
         </Droppable>
       </DragDropContext>
+        </Grid>
+      </Grid>
       
       {/* Quote section */}
       <Paper 
@@ -1959,6 +2407,7 @@ const Dashboard = () => {
       {/* Debug info - only shown in development */}
       {process.env.NODE_ENV === 'development' && renderDebugInfo()}
     </Container>
+    </>
   );
 };
 

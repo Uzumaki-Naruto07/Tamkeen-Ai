@@ -289,7 +289,6 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
                 variant="contained"
                 color="primary"
                 startIcon={<AutoFixHighIcon />}
-                onClick={handleNavigateToResumePage}
                 sx={{ borderRadius: 2 }}
               >
                 AI Resume Fix

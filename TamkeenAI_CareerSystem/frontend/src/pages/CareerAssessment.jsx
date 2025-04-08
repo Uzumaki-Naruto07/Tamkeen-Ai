@@ -6,13 +6,15 @@ import {
   ListItemText, ListItemIcon, LinearProgress,
   Alert, CircularProgress, Accordion, AccordionSummary,
   AccordionDetails, Badge, Dialog, DialogTitle,
-  DialogContent, DialogActions, Rating
+  DialogContent, DialogActions, Rating, CardHeader
 } from '@mui/material';
 import {
   School, Work, Psychology, TrendingUp, Assessment,
   Timeline, CheckCircle, Schedule, ExpandMore,
   BarChart, Star, Insights, Favorite, WorkspacePremium,
-  Code, Business, SportsEsports, Language
+  Code, Business, SportsEsports, Language, Info,
+  Close, PieChart, InsertChart, CheckBox, Error,
+  Assignment, FitnessCenter, Flag
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/AppContext';
@@ -20,6 +22,36 @@ import apiEndpoints from '../utils/api';
 import SkillAssessment from '../components/SkillAssessment';
 import LearningPathGenerator from '../components/LearningPathGenerator';
 import LoadingSpinner from '../components/LoadingSpinner';
+import AssessmentResults from '../components/AssessmentResults';
+import CareerPrediction from '../components/CareerPrediction';
+import CareerRecommendations from '../components/CareerRecommendations';
+import { Stepper, Step, StepLabel, StepContent } from '@mui/material';
+
+// For any icon that might not exist, import alternatives
+import FlightIcon from '@mui/icons-material/FlightTakeoff';
+
+export default function CareerAssessment() {
+  try {
+    return <CareerAssessmentPage />;
+  } catch (error) {
+    console.error("Error rendering Career Assessment:", error);
+    return (
+      <Box sx={{ p: 3 }}>
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="h5" color="error" gutterBottom>
+            Something went wrong
+          </Typography>
+          <Typography variant="body1" paragraph>
+            We're sorry, but an error occurred while rendering this component.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Please try refreshing the page or contact support if the issue persists.
+          </Typography>
+        </Paper>
+      </Box>
+    );
+  }
+}
 
 const CareerAssessmentPage = () => {
   const [tabValue, setTabValue] = useState(0);
@@ -37,6 +69,23 @@ const CareerAssessmentPage = () => {
   const [certificateDialogOpen, setCertificateDialogOpen] = useState(false);
   const [selectedCertificate, setSelectedCertificate] = useState(null);
   
+  // New state for showing assessment answers and performance
+  const [assessmentResults, setAssessmentResults] = useState(null);
+  const [showAnswers, setShowAnswers] = useState(false);
+  const [questionResponses, setQuestionResponses] = useState([]);
+  
+  // New state for enhanced assessment data
+  const [personalityType, setPersonalityType] = useState(null);
+  const [interests, setInterests] = useState([]);
+  const [strengths, setStrengths] = useState([]);
+  const [values, setValues] = useState([]);
+  const [careerTimeline, setCareerTimeline] = useState([]);
+  const [gapAnalysis, setGapAnalysis] = useState({});
+  
+  // Add state for career prediction
+  const [careerPredictionResults, setCareerPredictionResults] = useState(null);
+  const [showCareerPrediction, setShowCareerPrediction] = useState(false);
+  
   const { assessmentId } = useParams();
   const navigate = useNavigate();
   const { profile } = useUser();
@@ -44,27 +93,28 @@ const CareerAssessmentPage = () => {
   // Fetch available assessments and user's completed assessments
   useEffect(() => {
     const fetchAssessmentData = async () => {
-      if (!profile?.id) {
-        setLoading(false);
-        return;
-      }
-      
       setLoading(true);
       setError(null);
       
       try {
+        // Handle case where profile is not yet loaded
+        const userId = profile?.id || 'guest-user';
+        console.log('Fetching assessment data for user:', userId);
+        
         // Fetch available assessments
-        const assessmentsResponse = await apiEndpoints.skills.getAvailableAssessments();
+        const assessmentsResponse = await apiEndpoints.assessment.getAvailableAssessments(userId);
+        console.log('Received assessment data:', assessmentsResponse.data);
         setAssessmentsList(assessmentsResponse.data.assessments || []);
         setAvailableSkillGroups(assessmentsResponse.data.skillGroups || []);
         
         // Fetch user's completed assessments
-        const completedResponse = await apiEndpoints.skills.getUserAssessments(profile.id);
-        setCompletedAssessments(completedResponse.data);
+        const completedResponse = await apiEndpoints.assessment.getUserAssessments(userId);
+        console.log('Received completed assessments:', completedResponse.data);
+        setCompletedAssessments(completedResponse.data || []);
         
         // Calculate skill scores based on completed assessments
         const scores = {};
-        completedResponse.data.forEach(assessment => {
+        (completedResponse.data || []).forEach(assessment => {
           const category = assessment.skillCategory;
           
           if (!scores[category]) {
@@ -89,7 +139,7 @@ const CareerAssessmentPage = () => {
         
         // If there's an assessmentId in the URL, load that assessment
         if (assessmentId) {
-          const assessment = assessmentsResponse.data.assessments.find(a => a.id === assessmentId);
+          const assessment = assessmentsResponse.data.assessments?.find(a => a.id === assessmentId);
           if (assessment) {
             setCurrentAssessment(assessment);
             setActiveSkillCategory(assessment.skillCategory);
@@ -99,21 +149,22 @@ const CareerAssessmentPage = () => {
         }
         
         // Fetch career recommendations based on assessments
-        if (completedResponse.data.length > 0) {
+        if ((completedResponse.data || []).length > 0) {
           try {
             const recommendationsResponse = await apiEndpoints.career.getCareerRecommendations({
-              userId: profile.id,
+              userId,
               assessmentResults: completedResponse.data
             });
             
-            setCareerRecommendations(recommendationsResponse.data);
+            setCareerRecommendations(recommendationsResponse.data || []);
           } catch (err) {
             console.error('Error fetching career recommendations:', err);
+            // Don't set error state here - just log it as it's non-critical
           }
         }
       } catch (err) {
-        setError('Failed to load assessment data');
         console.error('Error fetching assessment data:', err);
+        setError('Failed to load assessment data. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -121,6 +172,66 @@ const CareerAssessmentPage = () => {
     
     fetchAssessmentData();
   }, [profile, assessmentId]);
+  
+  // Add mock data for demonstration purposes
+  useEffect(() => {
+    if (!loading && profile) {
+      // Set example personality assessment data
+      setPersonalityType({
+        type: "Investigative Thinker",
+        code: "INTJ",
+        description: "You're analytical, logical, and intellectually curious. You excel at solving complex problems and enjoy exploring ideas deeply.",
+        suitableCareers: ["Data Scientist", "AI Researcher", "Systems Analyst", "Strategic Planner"]
+      });
+      
+      // Set example interests
+      setInterests([
+        { category: "Technology", score: 85, activities: ["Coding", "System Design", "Troubleshooting"] },
+        { category: "Analysis", score: 78, activities: ["Data Interpretation", "Research", "Critical Thinking"] },
+        { category: "Teaching", score: 65, activities: ["Explaining Concepts", "Training", "Mentoring"] },
+        { category: "Creative", score: 45, activities: ["Visual Design", "Content Creation", "Innovation"] },
+        { category: "Management", score: 58, activities: ["Team Leadership", "Resource Allocation", "Strategic Planning"] }
+      ]);
+      
+      // Set example strengths
+      setStrengths([
+        { name: "Problem Solving", level: 4.5, description: "Ability to analyze situations and find effective solutions" },
+        { name: "Analytical Thinking", level: 4.8, description: "Breaking down complex problems into manageable parts" },
+        { name: "Technical Aptitude", level: 4.2, description: "Quickly learning and applying new technologies" },
+        { name: "Communication", level: 3.7, description: "Clearly conveying complex ideas to diverse audiences" },
+        { name: "Adaptability", level: 3.9, description: "Adjusting to changing requirements and environments" }
+      ]);
+      
+      // Set example values
+      setValues([
+        { name: "Knowledge Seeking", importance: 5, aligned: true },
+        { name: "Innovation", importance: 4, aligned: true },
+        { name: "Autonomy", importance: 4, aligned: false },
+        { name: "Work-Life Balance", importance: 3, aligned: true },
+        { name: "Recognition", importance: 3, aligned: false }
+      ]);
+      
+      // Set example gap analysis
+      setGapAnalysis({
+        currentSkills: ["Python", "Data Analysis", "Machine Learning Basics", "Presentation Skills"],
+        targetRole: "AI Engineer",
+        missingSkills: [
+          { skill: "Deep Learning", priority: "High", resources: ["Deep Learning Specialization on Coursera", "TensorFlow Certification"] },
+          { skill: "Cloud Infrastructure", priority: "Medium", resources: ["AWS Certified Solutions Architect", "Google Cloud Platform Fundamentals"] },
+          { skill: "MLOps", priority: "Medium", resources: ["MLOps on Azure", "CI/CD for Machine Learning"] }
+        ],
+        timeline: "6-9 months"
+      });
+      
+      // Set example career timeline
+      setCareerTimeline([
+        { role: "Junior Data Analyst", timeframe: "Current", skills: ["Data Analysis", "SQL", "Python Basics", "Reporting"] },
+        { role: "Data Scientist", timeframe: "1-2 years", skills: ["Machine Learning", "Statistical Analysis", "Data Modeling", "Python Advanced"] },
+        { role: "Senior Data Scientist", timeframe: "3-5 years", skills: ["MLOps", "Team Leadership", "Project Management", "Deep Learning"] },
+        { role: "AI Lead", timeframe: "5-7 years", skills: ["AI Strategy", "Research Direction", "Product Development", "Business Intelligence"] }
+      ]);
+    }
+  }, [loading, profile]);
   
   // Handle tab change
   const handleTabChange = (event, newValue) => {
@@ -137,12 +248,18 @@ const CareerAssessmentPage = () => {
   
   // Handle assessment completion
   const handleAssessmentComplete = (results) => {
+    // Store detailed assessment results including correct answers
+    setAssessmentResults(results);
+    setQuestionResponses(results.questionResponses || []);
+    setShowAnswers(true);
+    
     // Refresh completed assessments list
     const fetchUpdatedAssessments = async () => {
       setResultsLoading(true);
       try {
-        const completedResponse = await apiEndpoints.skills.getUserAssessments(profile.id);
-        setCompletedAssessments(completedResponse.data);
+        const userId = profile?.id || 'guest-user';
+        const completedResponse = await apiEndpoints.assessment.getUserAssessments(userId);
+        setCompletedAssessments(completedResponse.data || []);
         
         // Update skill scores
         const scores = { ...skillScores };
@@ -184,20 +301,24 @@ const CareerAssessmentPage = () => {
         // Update career recommendations
         try {
           const recommendationsResponse = await apiEndpoints.career.getCareerRecommendations({
-            userId: profile.id,
+            userId,
             assessmentResults: completedResponse.data
           });
           
-          setCareerRecommendations(recommendationsResponse.data);
+          setCareerRecommendations(recommendationsResponse.data || []);
         } catch (err) {
           console.error('Error fetching career recommendations:', err);
+          // Don't set error for this non-critical feature
         }
       } catch (err) {
         console.error('Error updating assessment data:', err);
+        // Add user-friendly error handling
+        setError('There was a problem updating your assessment results. Your progress may not be saved.');
       } finally {
         setResultsLoading(false);
-        setAssessmentActive(false);
-        setCurrentAssessment(null);
+        // Don't automatically hide the assessment to show results
+        // setAssessmentActive(false);
+        // setCurrentAssessment(null);
       }
     };
     
@@ -354,6 +475,30 @@ const CareerAssessmentPage = () => {
             Browse Assessments
           </Button>
         </Paper>
+      );
+    }
+    
+    // Show assessment results with correct answers if assessment is completed
+    if (showAnswers && assessmentResults) {
+      return (
+        <AssessmentResults 
+          results={{
+            ...assessmentResults,
+            title: currentAssessment.title,
+            questionResponses: questionResponses
+          }}
+          onRetake={() => {
+            setShowAnswers(false);
+            setAssessmentResults(null);
+            // Restart the same assessment
+            handleStartAssessment(currentAssessment);
+          }}
+          onFinish={() => {
+            setShowAnswers(false);
+            setAssessmentResults(null);
+            setTabValue(3); // Go to Skills tab
+          }}
+        />
       );
     }
     
@@ -795,6 +940,800 @@ const CareerAssessmentPage = () => {
     );
   };
   
+  // Render personality and interests
+  const renderPersonalityAndInterests = () => {
+    if (!personalityType || interests.length === 0) {
+      return (
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="h6" gutterBottom>
+            Personality Assessment Not Completed
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Complete the personality assessment to learn about your career preferences.
+          </Typography>
+          <Button 
+            variant="contained" 
+            sx={{ mt: 2 }}
+            onClick={() => setTabValue(1)}
+          >
+            Take Assessment
+          </Button>
+        </Paper>
+      );
+    }
+    
+    return (
+      <Box>
+        {/* Personality Type Section */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h5" gutterBottom>
+            Your Personality Type
+          </Typography>
+          
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', mt: 2 }}>
+            <Avatar
+              sx={{ 
+                width: 80, 
+                height: 80, 
+                bgcolor: 'primary.main',
+                fontSize: '1.5rem',
+                mr: 3
+              }}
+            >
+              {personalityType.code}
+            </Avatar>
+            
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                {personalityType.type}
+              </Typography>
+              
+              <Typography variant="body1" paragraph>
+                {personalityType.description}
+              </Typography>
+              
+              <Typography variant="subtitle2" gutterBottom>
+                Suitable Career Paths:
+              </Typography>
+              
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {personalityType.suitableCareers.map(career => (
+                  <Chip 
+                    key={career}
+                    label={career}
+                    color="primary"
+                    size="small"
+                    sx={{ mr: 1, mb: 1 }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          </Box>
+        </Paper>
+        
+        {/* Interests Section */}
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h5" gutterBottom>
+            Your Interests
+          </Typography>
+          
+          <Typography variant="body1" color="text.secondary" paragraph>
+            Your interests indicate what types of activities you're drawn to and can help identify fulfilling career paths.
+          </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              {/* Interests Chart */}
+              <Card sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Interest Areas
+                </Typography>
+                
+                {interests.map(interest => (
+                  <Box key={interest.category} sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="body2">{interest.category}</Typography>
+                      <Typography variant="body2">{interest.score}%</Typography>
+                    </Box>
+                    <LinearProgress 
+                      variant="determinate" 
+                      value={interest.score}
+                      sx={{ 
+                        height: 8, 
+                        borderRadius: 1,
+                        mb: 0.5
+                      }}
+                    />
+                  </Box>
+                ))}
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              {/* Activities List */}
+              <Card sx={{ p: 2, height: '100%' }}>
+                <Typography variant="h6" gutterBottom>
+                  Activities You Enjoy
+                </Typography>
+                
+                <List dense>
+                  {interests.slice(0, 3).flatMap(interest => 
+                    interest.activities.map(activity => (
+                      <ListItem key={activity}>
+                        <ListItemIcon>
+                          <CheckCircle color="primary" fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={activity} 
+                          secondary={interest.category}
+                        />
+                      </ListItem>
+                    ))
+                  )}
+                </List>
+              </Card>
+            </Grid>
+          </Grid>
+          
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              What This Means For Your Career
+            </Typography>
+            
+            <Typography variant="body2">
+              Your highest interests in Technology and Analysis suggest roles that combine technical expertise with problem-solving. 
+              Consider positions that allow you to apply technical skills while analyzing data or systems to derive insights and solutions.
+            </Typography>
+          </Box>
+        </Paper>
+      </Box>
+    );
+  };
+  
+  // Render strengths and skills
+  const renderStrengthsAndSkills = () => {
+    if (strengths.length === 0) {
+      return (
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="h6" gutterBottom>
+            Strengths Assessment Not Completed
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Complete the strengths assessment to identify your key capabilities.
+          </Typography>
+          <Button 
+            variant="contained" 
+            sx={{ mt: 2 }}
+            onClick={() => setTabValue(1)}
+          >
+            Take Assessment
+          </Button>
+        </Paper>
+      );
+    }
+    
+    return (
+      <Box>
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h5" gutterBottom>
+            Your Strengths & Skills
+          </Typography>
+          
+          <Typography variant="body1" color="text.secondary" paragraph>
+            Your natural strengths and developed skills form the foundation of your professional capabilities.
+          </Typography>
+          
+          <Grid container spacing={3}>
+            {strengths.map(strength => (
+              <Grid item xs={12} md={6} key={strength.name}>
+                <Card variant="outlined" sx={{ p: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="h6">
+                      {strength.name}
+                    </Typography>
+                    <Rating 
+                      value={strength.level} 
+                      precision={0.5} 
+                      readOnly 
+                      size="small"
+                    />
+                  </Box>
+                  
+                  <Typography variant="body2" color="text.secondary">
+                    {strength.description}
+                  </Typography>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+          
+          <Box sx={{ mt: 4 }}>
+            <Typography variant="h6" gutterBottom>
+              Technical Skills
+            </Typography>
+            
+            <Grid container spacing={2}>
+              {Object.keys(skillScores).map(category => 
+                skillScores[category].assessments.map(skill => (
+                  <Grid item xs={6} md={3} key={skill.id}>
+                    <Box 
+                      sx={{ 
+                        p: 2, 
+                        textAlign: 'center',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        '&:hover': {
+                          boxShadow: 1
+                        }
+                      }}
+                    >
+                      <Typography variant="body1" gutterBottom>
+                        {assessmentsList.find(a => a.id === skill.id)?.title || 'Skill'}
+                      </Typography>
+                      
+                      <CircularProgress
+                        variant="determinate"
+                        value={(skill.score / skill.maxScore) * 100}
+                        size={60}
+                        thickness={5}
+                        sx={{ my: 1 }}
+                      />
+                      
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        Proficiency: {Math.round((skill.score / skill.maxScore) * 100)}%
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))
+              )}
+            </Grid>
+          </Box>
+          
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Leverage Your Strengths
+            </Typography>
+            
+            <Typography variant="body2">
+              Your exceptional problem-solving and analytical thinking skills position you perfectly for roles that require deep analysis and technical expertise.
+              Focus on career paths that emphasize these strengths while providing opportunities to develop your communication skills further.
+            </Typography>
+          </Box>
+        </Paper>
+      </Box>
+    );
+  };
+  
+  // Render values and goals
+  const renderValuesAndGoals = () => {
+    if (values.length === 0) {
+      return (
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="h6" gutterBottom>
+            Values Assessment Not Completed
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Complete the values assessment to understand what motivates you professionally.
+          </Typography>
+          <Button 
+            variant="contained" 
+            sx={{ mt: 2 }}
+            onClick={() => setTabValue(1)}
+          >
+            Take Assessment
+          </Button>
+        </Paper>
+      );
+    }
+    
+    return (
+      <Box>
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h5" gutterBottom>
+            Your Values & Goals
+          </Typography>
+          
+          <Typography variant="body1" color="text.secondary" paragraph>
+            Understanding your core values helps identify careers that will be fulfilling and sustainable long-term.
+          </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Card sx={{ p: 2, height: '100%' }}>
+                <Typography variant="h6" gutterBottom>
+                  Work Values
+                </Typography>
+                
+                <List>
+                  {values.map(value => (
+                    <ListItem 
+                      key={value.name}
+                      secondaryAction={
+                        <Chip 
+                          icon={value.aligned ? <CheckCircle /> : <Info />}
+                          label={value.aligned ? "Aligned" : "Opportunity"}
+                          color={value.aligned ? "success" : "default"}
+                          size="small"
+                        />
+                      }
+                    >
+                      <ListItemIcon>
+                        <Rating 
+                          value={value.importance} 
+                          max={5}
+                          readOnly
+                          size="small"
+                        />
+                      </ListItemIcon>
+                      <ListItemText primary={value.name} />
+                    </ListItem>
+                  ))}
+                </List>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <Card sx={{ p: 2, height: '100%' }}>
+                <Typography variant="h6" gutterBottom>
+                  Work Environment Preferences
+                </Typography>
+                
+                <Box sx={{ p: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Preferred Work Setting
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                    {['Remote-friendly', 'Flexible hours', 'Collaborative'].map(pref => (
+                      <Chip 
+                        key={pref}
+                        label={pref}
+                        color="primary"
+                        variant="outlined"
+                        size="small"
+                      />
+                    ))}
+                  </Box>
+                  
+                  <Typography variant="subtitle2" gutterBottom>
+                    Leadership Style
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                    {['Autonomous', 'Mentorship-oriented', 'Results-focused'].map(pref => (
+                      <Chip 
+                        key={pref}
+                        label={pref}
+                        color="primary"
+                        variant="outlined"
+                        size="small"
+                      />
+                    ))}
+                  </Box>
+                  
+                  <Typography variant="subtitle2" gutterBottom>
+                    Career Goals
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {['Technical mastery', 'Subject matter expert', 'Continuous learning'].map(pref => (
+                      <Chip 
+                        key={pref}
+                        label={pref}
+                        color="primary"
+                        variant="outlined"
+                        size="small"
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              </Card>
+            </Grid>
+          </Grid>
+          
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Values-Based Career Decisions
+            </Typography>
+            
+            <Typography variant="body2">
+              Your values emphasize knowledge seeking and innovation, suggesting roles that provide continuous learning opportunities and creative problem-solving.
+              The lack of alignment in autonomy indicates you might benefit from positions with greater independence or decision-making authority.
+            </Typography>
+          </Box>
+        </Paper>
+      </Box>
+    );
+  };
+  
+  // Render gap analysis and career path
+  const renderGapAnalysisAndPath = () => {
+    if (!gapAnalysis.targetRole || !careerTimeline.length) {
+      return (
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="h6" gutterBottom>
+            Career Path Analysis Not Completed
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Complete the career assessments to see your personalized development path.
+          </Typography>
+          <Button 
+            variant="contained" 
+            sx={{ mt: 2 }}
+            onClick={() => setTabValue(1)}
+          >
+            Take Assessments
+          </Button>
+        </Paper>
+      );
+    }
+    
+    return (
+      <Box>
+        {/* Gap Analysis Section */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h5" gutterBottom>
+            Skill Gap Analysis
+          </Typography>
+          
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            Based on your assessments, here's what you need to develop to become a successful <strong>{gapAnalysis.targetRole}</strong>.
+          </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Card sx={{ p: 2, height: '100%' }}>
+                <Typography variant="h6" gutterBottom>
+                  Your Current Skills
+                </Typography>
+                
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {gapAnalysis.currentSkills.map(skill => (
+                    <Chip 
+                      key={skill}
+                      label={skill}
+                      color="success"
+                      sx={{ m: 0.5 }}
+                    />
+                  ))}
+                </Box>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <Card sx={{ p: 2, height: '100%' }}>
+                <Typography variant="h6" gutterBottom>
+                  Skills to Develop
+                </Typography>
+                
+                <List dense>
+                  {gapAnalysis.missingSkills.map(skill => (
+                    <ListItem key={skill.skill}>
+                      <ListItemText 
+                        primary={skill.skill}
+                        secondary={
+                          <>
+                            <Typography variant="caption" component="span" color="text.secondary">
+                              Priority: 
+                            </Typography>
+                            <Chip 
+                              label={skill.priority}
+                              color={skill.priority === "High" ? "error" : "warning"}
+                              size="small"
+                              sx={{ ml: 1, mr: 1 }}
+                            />
+                          </>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </Card>
+            </Grid>
+          </Grid>
+          
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Recommended Learning Resources
+            </Typography>
+            
+            <Card variant="outlined">
+              <List>
+                {gapAnalysis.missingSkills.flatMap(skill => 
+                  skill.resources.map((resource, idx) => (
+                    <ListItem key={`${skill.skill}-${idx}`}>
+                      <ListItemIcon>
+                        <School color="primary" />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={resource}
+                        secondary={`For developing ${skill.skill}`}
+                      />
+                      <Button size="small" variant="outlined">
+                        Explore
+                      </Button>
+                    </ListItem>
+                  ))
+                )}
+              </List>
+            </Card>
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              Estimated time to close skill gaps: <strong>{gapAnalysis.timeline}</strong>
+            </Typography>
+          </Box>
+        </Paper>
+        
+        {/* Career Timeline */}
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h5" gutterBottom>
+            Career Development Path
+          </Typography>
+          
+          <Typography variant="body1" paragraph>
+            Based on your skills, interests, and goals, here's a potential career progression:
+          </Typography>
+          
+          <Stepper orientation="vertical" sx={{ mt: 3 }}>
+            {careerTimeline.map((step, index) => (
+              <Step key={step.role} active={index === 0} completed={index > 0 ? false : undefined}>
+                <StepLabel>
+                  <Typography variant="h6">{step.role}</Typography>
+                  <Typography variant="caption">{step.timeframe}</Typography>
+                </StepLabel>
+                <StepContent>
+                  <Typography variant="body2" paragraph>
+                    Key skills for this role:
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
+                    {step.skills.map(skill => (
+                      <Chip 
+                        key={skill}
+                        label={skill}
+                        size="small"
+                        sx={{ m: 0.5 }}
+                      />
+                    ))}
+                  </Box>
+                  
+                  {index === 0 && (
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => setTabValue(3)}
+                      sx={{ mt: 1 }}
+                    >
+                      View Skills Assessment
+                    </Button>
+                  )}
+                </StepContent>
+              </Step>
+            ))}
+          </Stepper>
+          
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              UAE Vision 2030 Alignment
+            </Typography>
+            
+            <Typography variant="body2">
+              Your career path in {gapAnalysis.targetRole} aligns well with UAE's vision for building a knowledge-based economy and positioning as a global leader in artificial intelligence and digital transformation.
+            </Typography>
+            
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 2 }}>
+              {['Digital Economy', 'Innovation Hub', 'Knowledge Transfer'].map(area => (
+                <Chip 
+                  key={area}
+                  label={area}
+                  variant="outlined"
+                  size="small"
+                  sx={{ m: 0.5 }}
+                />
+              ))}
+            </Box>
+          </Box>
+        </Paper>
+      </Box>
+    );
+  };
+  
+  // Handle career prediction completion
+  const handleCareerPredictionComplete = (results) => {
+    console.log("Career prediction results received:", results);
+    
+    setCareerPredictionResults(results);
+    setShowCareerPrediction(true);
+    
+    // Update other tabs with the prediction results
+    setPersonalityType({
+      type: results.personalityType,
+      description: results.explanation,
+      suitableCareers: results.recommendedCareers?.map(career => career.title) || []
+    });
+    
+    // Format interests from prediction
+    const interestEntries = Object.entries(results.interests || {})
+      .map(([category, score]) => ({
+        category: category.charAt(0).toUpperCase() + category.slice(1),
+        score: score,
+        activities: [] // We don't have detailed activities from the prediction
+      }))
+      .sort((a, b) => b.score - a.score);
+    
+    setInterests(interestEntries);
+    
+    // Format strengths from prediction skills
+    const strengthEntries = Object.entries(results.skills || {})
+      .map(([name, level]) => ({
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        level: level,
+        description: `Your assessment indicates proficiency in ${name}`
+      }))
+      .sort((a, b) => b.level - a.level);
+    
+    setStrengths(strengthEntries);
+    
+    // Format values from prediction
+    const valueEntries = Object.entries(results.values || {})
+      .map(([name, importance]) => ({
+        name: name.charAt(0).toUpperCase() + name.slice(1).replace('_', ' '),
+        importance: Math.min(5, Math.max(1, Math.round(importance / 20))), // Convert to 1-5 scale
+        aligned: importance > 60 // Consider values above 60% aligned with career
+      }))
+      .sort((a, b) => b.importance - a.importance);
+    
+    setValues(valueEntries);
+    
+    // Format gap analysis from prediction skill gaps
+    if (results.skillGaps && results.skillGaps.length > 0) {
+      const targetRole = results.recommendedCareers?.[0]?.title || "Your Ideal Role";
+      
+      setGapAnalysis({
+        currentSkills: Object.keys(results.skills || {})
+          .filter(skill => results.skills[skill] >= 4)
+          .map(skill => skill.charAt(0).toUpperCase() + skill.slice(1)),
+        targetRole: targetRole,
+        missingSkills: results.skillGaps.map(gap => ({
+          skill: gap.skill,
+          priority: gap.importance,
+          resources: gap.resources || []
+        })),
+        timeline: "6-12 months"
+      });
+    }
+    
+    // Format career recommendations
+    setCareerRecommendations(results.recommendedCareers || []);
+    
+    // Save all data to localStorage with the requested keys
+    localStorage.setItem("tamkeenCareerAssessment", JSON.stringify(results));
+    localStorage.setItem("tamkeenPersonality", JSON.stringify({
+      type: results.personalityType,
+      explanation: results.explanation
+    }));
+    localStorage.setItem("tamkeenInterests", JSON.stringify(interestEntries));
+    localStorage.setItem("tamkeenSkills", JSON.stringify({
+      current: results.skills,
+      gaps: results.skillGaps
+    }));
+    localStorage.setItem("tamkeenCareerMatch", JSON.stringify(results.recommendedCareers));
+    localStorage.setItem("tamkeenValues", JSON.stringify(valueEntries));
+    
+    // Set the URL to indicate completion
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('assessment', 'complete');
+    window.history.pushState({}, '', currentUrl);
+    
+    // Navigate to Career Recommendations tab
+    setTabValue(5);
+  };
+  
+  // Add this new function to render career prediction assessment
+  const renderCareerPrediction = () => {
+    return (
+      <Box>
+        <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+          AI-Powered Career Prediction
+        </Typography>
+        
+        <Typography variant="body1" paragraph>
+          Our advanced career assessment combines behavioral signals and cognitive traits with 
+          LLM-powered reasoning to provide highly personalized career recommendations.
+        </Typography>
+        
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 4 }}>
+          <Chip icon={<Psychology />} label="Personality Traits" color="primary" />
+          <Chip icon={<Favorite />} label="Interests & Preferences" color="primary" />
+          <Chip icon={<Star />} label="Work Values" color="primary" />
+          <Chip icon={<Assessment />} label="Skills Analysis" color="primary" />
+          <Chip icon={<BarChart />} label="AI-Powered Matching" color="primary" />
+        </Box>
+        
+        {showCareerPrediction ? (
+          <CareerPrediction 
+            onComplete={handleCareerPredictionComplete}
+          />
+        ) : (
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="h6" gutterBottom>
+              Discover Your Ideal Career Path
+            </Typography>
+            
+            <Typography variant="body1" paragraph sx={{ maxWidth: 600, mx: 'auto', mb: 4 }}>
+              Take our comprehensive assessment to receive personalized career recommendations based on 
+              your unique combination of personality traits, interests, values, and skills.
+            </Typography>
+            
+            <Button 
+              variant="contained" 
+              size="large"
+              onClick={() => setShowCareerPrediction(true)}
+              startIcon={<Assessment />}
+            >
+              Start Career Assessment
+            </Button>
+          </Paper>
+        )}
+      </Box>
+    );
+  };
+  
+  // Render tabs content based on active tab
+  const renderContent = () => {
+    try {
+      switch (tabValue) {
+        case 0:
+          return renderActiveAssessment();
+        case 1:
+          return renderAssessmentCards();
+        case 2:
+          return <CareerPrediction onComplete={handleCareerPredictionComplete} />;
+        case 3:
+          return renderPersonalityAndInterests();
+        case 4:
+          return renderStrengthsAndSkills();
+        case 5:
+          return (
+            <CareerRecommendations 
+              recommendedCareers={careerRecommendations} 
+            />
+          );
+        case 6:
+          return renderValuesAndGoals();
+        case 7:
+          return renderGapAnalysisAndPath();
+        case 8:
+          return renderCertificates();
+        default:
+          return (
+            <Box p={3}>
+              <Typography variant="h5">Tab content not available</Typography>
+            </Box>
+          );
+      }
+    } catch (err) {
+      console.error('Error rendering tab content:', err);
+      return (
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="h6" color="error" gutterBottom>
+            Couldn't load this tab
+          </Typography>
+          <Typography variant="body1" paragraph>
+            There was an error loading this content. Please try another tab.
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary"
+            onClick={() => setTabValue(1)}
+          >
+            Go to Available Assessments
+          </Button>
+        </Paper>
+      );
+    }
+  };
+  
   if (loading && !assessmentActive) {
     return <LoadingSpinner message="Loading assessment data..." />;
   }
@@ -819,10 +1758,14 @@ const CareerAssessmentPage = () => {
           scrollButtons="auto"
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab icon={<Assessment />} label="Active Assessment" disabled={!assessmentActive} />
+          <Tab icon={<Assignment />} label="Active Assessment" disabled={!assessmentActive} />
           <Tab icon={<Work />} label="Available Assessments" />
-          <Tab icon={<Insights />} label="Skill Insights" />
-          <Tab icon={<TrendingUp />} label="Career Recommendations" />
+          <Tab icon={<FlightIcon />} label="Career Prediction" />
+          <Tab icon={<Psychology />} label="Personality & Interests" />
+          <Tab icon={<Star />} label="Strengths & Skills" />
+          <Tab icon={<Favorite />} label="Values & Goals" />
+          <Tab icon={<Work />} label="Career Recommendations" />
+          <Tab icon={<Timeline />} label="Gap Analysis & Path" />
           <Tab icon={<WorkspacePremium />} label="Certificates" />
         </Tabs>
       </Paper>
@@ -830,13 +1773,7 @@ const CareerAssessmentPage = () => {
       {resultsLoading ? (
         <LoadingSpinner message="Processing assessment results..." />
       ) : (
-        <>
-          {tabValue === 0 && renderActiveAssessment()}
-          {tabValue === 1 && renderAssessmentCards()}
-          {tabValue === 2 && renderSkillInsights()}
-          {tabValue === 3 && renderCareerRecommendations()}
-          {tabValue === 4 && renderCertificates()}
-        </>
+        renderContent()
       )}
       
       {/* Certificate Dialog */}
@@ -906,5 +1843,3 @@ const CareerAssessmentPage = () => {
     </Box>
   );
 };
-
-export default CareerAssessmentPage;

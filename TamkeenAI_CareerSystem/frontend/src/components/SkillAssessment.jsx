@@ -72,11 +72,163 @@ import TimerIcon from '@mui/icons-material/Timer';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
+import SearchIcon from '@mui/icons-material/Search';
 import { Chart } from 'react-chartjs-2';
 import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 import SpeechControl from './Speech/SpeechControl';
+
+// Mock data for development and fallback purposes
+const sampleSkillCategories = [
+  { id: 'technical', name: 'Technical Skills' },
+  { id: 'soft', name: 'Soft Skills' },
+  { id: 'leadership', name: 'Leadership Skills' },
+  { id: 'domain', name: 'Domain Knowledge' },
+  { id: 'language', name: 'Languages' }
+];
+
+const industryBenchmarks = {
+  'Software Engineer': {
+    technical: {
+      'JavaScript': 4,
+      'React': 3.5,
+      'Node.js': 3,
+      'Python': 3,
+      'SQL': 3.5
+    },
+    soft: {
+      'Communication': 4,
+      'Problem Solving': 4.5,
+      'Teamwork': 4
+    },
+    leadership: {
+      'Project Management': 3,
+      'Mentoring': 2.5
+    }
+  },
+  'Data Scientist': {
+    technical: {
+      'Python': 4.5,
+      'Machine Learning': 4,
+      'Statistics': 4.5,
+      'SQL': 3.5,
+      'Data Visualization': 4
+    },
+    domain: {
+      'Big Data': 3.5,
+      'Analytics': 4
+    }
+  },
+  'Product Manager': {
+    soft: {
+      'Communication': 5,
+      'Problem Solving': 4.5,
+      'Negotiation': 4,
+      'Presentation': 4.5
+    },
+    leadership: {
+      'Project Management': 4.5,
+      'Decision Making': 4.5,
+      'Strategic Thinking': 4
+    },
+    technical: {
+      'Market Research': 4,
+      'Data Analysis': 3.5
+    }
+  }
+};
+
+const recommendedSkillsByRole = {
+  'Software Engineer': [
+    { name: 'Cloud Computing', category: 'technical', trending: true },
+    { name: 'DevOps', category: 'technical', trending: true },
+    { name: 'Cybersecurity', category: 'technical', trending: true },
+    { name: 'Agile Methodologies', category: 'soft', trending: false },
+    { name: 'Technical Writing', category: 'soft', trending: false }
+  ],
+  'Data Scientist': [
+    { name: 'Deep Learning', category: 'technical', trending: true },
+    { name: 'Natural Language Processing', category: 'technical', trending: true },
+    { name: 'Big Data Technologies', category: 'technical', trending: true },
+    { name: 'Data Ethics', category: 'domain', trending: false },
+    { name: 'Business Intelligence', category: 'domain', trending: false }
+  ],
+  'Product Manager': [
+    { name: 'User Research', category: 'domain', trending: true },
+    { name: 'Growth Strategies', category: 'domain', trending: true },
+    { name: 'A/B Testing', category: 'technical', trending: false },
+    { name: 'Competitive Analysis', category: 'domain', trending: false },
+    { name: 'Stakeholder Management', category: 'leadership', trending: false }
+  ]
+};
+
+const sampleAssessments = [
+  {
+    id: 'js-fundamentals',
+    title: 'JavaScript Fundamentals',
+    skillName: 'JavaScript',
+    description: 'Test your knowledge of JavaScript basics',
+    skillCategory: 'technical',
+    duration: 20,
+    questions: [
+      {
+        id: 'js-q1',
+        text: 'What is closure in JavaScript?',
+        options: [
+          { id: 'js-q1-a', text: 'A function that has access to variables from its outer scope' },
+          { id: 'js-q1-b', text: 'A way to close browser windows' },
+          { id: 'js-q1-c', text: 'A method to terminate functions' },
+          { id: 'js-q1-d', text: 'A design pattern for DOM manipulation' }
+        ],
+        correctAnswer: 'js-q1-a'
+      },
+      {
+        id: 'js-q2',
+        text: 'Which statement creates a new array with the results of calling a function for every array element?',
+        options: [
+          { id: 'js-q2-a', text: 'forEach()' },
+          { id: 'js-q2-b', text: 'filter()' },
+          { id: 'js-q2-c', text: 'map()' },
+          { id: 'js-q2-d', text: 'reduce()' }
+        ],
+        correctAnswer: 'js-q2-c'
+      }
+    ]
+  },
+  {
+    id: 'react-basics',
+    title: 'React Basics',
+    skillName: 'React',
+    description: 'Assess your understanding of React fundamentals',
+    skillCategory: 'technical',
+    duration: 25,
+    questions: [
+      {
+        id: 'react-q1',
+        text: 'What is JSX?',
+        options: [
+          { id: 'react-q1-a', text: 'A JavaScript library' },
+          { id: 'react-q1-b', text: 'A syntax extension for JavaScript that looks like HTML' },
+          { id: 'react-q1-c', text: 'A database query language' },
+          { id: 'react-q1-d', text: 'A CSS framework' }
+        ],
+        correctAnswer: 'react-q1-b'
+      },
+      {
+        id: 'react-q2',
+        text: 'Which hook is used to perform side effects in function components?',
+        options: [
+          { id: 'react-q2-a', text: 'useState' },
+          { id: 'react-q2-b', text: 'useEffect' },
+          { id: 'react-q2-c', text: 'useContext' },
+          { id: 'react-q2-d', text: 'useReducer' }
+        ],
+        correctAnswer: 'react-q2-b'
+      }
+    ]
+  }
+];
 
 const SkillAssessment = ({
   userData = {},
@@ -110,7 +262,7 @@ const SkillAssessment = ({
   const [comparisonMode, setComparisonMode] = useState(false);
   const [benchmarkData, setBenchmarkData] = useState(null);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
-  const [assessments, setAssessments] = useState([]);
+  const [availableAssessments, setAvailableAssessments] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [selectedAnswer, setSelectedAnswer] = useState('');
@@ -123,6 +275,7 @@ const SkillAssessment = ({
   const [error, setError] = useState(null);
   const [skillInsights, setSkillInsights] = useState(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const timerRef = useRef(null);
   const { profile } = useUser();
   
@@ -130,6 +283,8 @@ const SkillAssessment = ({
   useEffect(() => {
     const fetchAssessments = async () => {
       if (!profile?.id) {
+        console.log('User profile not available for skill assessment');
+        setAvailableAssessments([]);
         setLoading(false);
         return;
       }
@@ -139,16 +294,35 @@ const SkillAssessment = ({
       
       try {
         // This connects to either skill_assessment.py or an external LMS API
-        const response = await apiEndpoints.skills.getAssessments({
+        const response = await apiEndpoints.assessment.getAssessments({
           userId: profile.id,
           category: selectedCategory,
           skill: selectedSkill
         });
         
-        setAssessments(response.data);
+        setAvailableAssessments(response.data);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to fetch skill assessments');
         console.error('Error fetching assessments:', err);
+        setError(err.response?.data?.message || 'Failed to fetch skill assessments');
+        // Provide fallback mock data
+        setAvailableAssessments([
+          {
+            id: 'mock-assessment-1',
+            title: 'JavaScript Fundamentals',
+            description: 'Test your knowledge of JavaScript basics including variables, functions, and objects.',
+            skillCategory: 'technical',
+            duration: 20,
+            questions: [{ id: 'q1', text: 'Sample question' }]
+          },
+          {
+            id: 'mock-assessment-2',
+            title: 'React Essentials',
+            description: 'Assess your understanding of React components, hooks, and state management.',
+            skillCategory: 'technical',
+            duration: 25,
+            questions: [{ id: 'q1', text: 'Sample question' }]
+          }
+        ]);
       } finally {
         setLoading(false);
       }
@@ -406,6 +580,36 @@ const SkillAssessment = ({
       setAssessmentComplete(true);
       setAssessmentInProgress(false);
       
+      // Create mock question responses with correct answers for display
+      const questionResponses = currentAssessment.questions.map(question => {
+        const userAnswer = answers[question.id];
+        const isCorrect = userAnswer === question.correctAnswer;
+        
+        // Get text representations for user answer and correct answer
+        const userAnswerText = question.options.find(opt => opt.id === userAnswer)?.text || 'No answer provided';
+        const correctAnswerText = question.options.find(opt => opt.id === question.correctAnswer)?.text || 'Unknown';
+        
+        return {
+          questionId: question.id,
+          questionText: question.text,
+          userAnswer: userAnswerText,
+          correctAnswer: correctAnswerText,
+          isCorrect: isCorrect,
+          explanation: question.explanation || `The correct answer is "${correctAnswerText}".`
+        };
+      });
+      
+      // Call onCompleteAssessment with detailed results including question responses
+      if (typeof onCompleteAssessment === 'function') {
+        onCompleteAssessment({
+          assessmentId: currentAssessment.id,
+          score: response.data.score,
+          maxScore: response.data.maxScore,
+          questionResponses: questionResponses,
+          title: currentAssessment.title
+        });
+      }
+      
       // Get skill insights based on results
       if (response.data.score !== undefined) {
         try {
@@ -653,7 +857,7 @@ const SkillAssessment = ({
         </Typography>
         
         <Grid container spacing={2}>
-          {assessments.map(assessment => (
+          {availableAssessments.map(assessment => (
             <Grid item xs={12} md={6} key={assessment.id}>
               <Card variant="outlined">
                 <CardContent>

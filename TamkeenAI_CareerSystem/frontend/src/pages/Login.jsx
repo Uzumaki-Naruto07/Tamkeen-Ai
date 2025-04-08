@@ -104,7 +104,7 @@ const Login = () => {
       const result = await login(email, password);
       
       if (result && result.success) {
-        navigate('/');
+        navigate('/dashboard');
       } else {
         // Handle the case where login returns a result but not success
         const errorMessage = result?.error || t('Login failed. Please try again.');

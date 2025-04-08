@@ -152,11 +152,11 @@ const LeaderboardWidget = () => {
   // Calculate how many items to show
   const getDisplayedItems = () => {
     const list = view === 'global' ? mockLeaderboardData.leaderboard : mockLeaderboardData.friends;
-    return showAll ? list : list.slice(0, 5);
+    return list.slice(0, 3);
   };
   
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper sx={{ p: 3, overflow: 'visible', height: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
           <EmojiEventsIcon color="primary" sx={{ mr: 1 }} />
@@ -406,34 +406,20 @@ const LeaderboardWidget = () => {
         ))}
       </List>
       
-      {/* Show More / Show Less toggle */}
-      {(view === 'global' ? mockLeaderboardData.leaderboard : mockLeaderboardData.friends).length > 5 && (
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Button 
-            size="small"
-            variant="outlined"
-            onClick={toggleShowAll}
-            sx={{
-              borderRadius: 20,
-              textTransform: 'none',
-              px: 2,
-              '&:hover': {
-                backgroundColor: 'primary.light',
-                borderColor: 'primary.main'
-              }
-            }}
-          >
-            {showAll ? 'Show Less' : 'Show More'}
-          </Button>
-        </Box>
-      )}
-      
       <Box sx={{ mt: 3, textAlign: 'center' }}>
         <Button 
-          variant="text" 
+          variant="contained" 
+          color="primary"
           size="small"
           onClick={() => navigate('/gamified-progress')}
-          sx={{ textTransform: 'none' }}
+          sx={{ 
+            textTransform: 'none',
+            borderRadius: 20,
+            boxShadow: '0 2px 8px rgba(25, 118, 210, 0.3)',
+            '&:hover': {
+              boxShadow: '0 4px 12px rgba(25, 118, 210, 0.4)'
+            }
+          }}
         >
           View Full Leaderboard
         </Button>

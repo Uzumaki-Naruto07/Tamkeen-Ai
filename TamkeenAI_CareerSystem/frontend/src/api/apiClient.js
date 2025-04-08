@@ -162,13 +162,28 @@ apiClient.interceptors.response.use(
         localStorage.removeItem('token');
         errorObj.message = 'Authentication failed. Please log in again.';
       }
+      
+      // Handle server errors with mock data in development
+      if (error.response.status >= 500 && isDevelopment) {
+        console.warn('Development mode - Server error detected, using mock fallbacks');
+        return Promise.resolve({ 
+          data: { 
+            success: true, 
+            data: {}, 
+            message: 'Mock data response (server error fallback)' 
+          } 
+        });
+      }
     } else if (error.request) {
       // The request was made but no response was received
       errorObj.message = 'No response from server. Please try again later.';
       
       // In development mode, handle CORS errors more gracefully
-      if (isDevelopment && error.message && error.message.includes('Network Error')) {
-        console.warn('Development mode - CORS or Network error detected, using mock fallbacks');
+      if (isDevelopment && error.message && (
+        error.message.includes('Network Error') || 
+        error.message.includes('ECONNREFUSED')
+      )) {
+        console.warn('Development mode - Network error detected, using mock fallbacks');
         // Let the function handle mock fallbacks
         if (useMockData) {
           return Promise.resolve({ 
@@ -243,6 +258,13 @@ export const api = {
           return getMockJobData(url, params);
         }
         
+        // Handle jobs endpoints (plural form)
+        if (url.includes('/jobs/')) {
+          console.log('Using mock data for jobs endpoint:', url);
+          await simulateNetworkDelay();
+          return getMockJobData(url, params);
+        }
+        
         // Handle profile endpoint
         if (url.includes('/profile/')) {
           console.log('Using mock data for profile endpoint');
@@ -255,6 +277,13 @@ export const api = {
           console.log('Using mock data for assessment endpoint');
           await simulateNetworkDelay();
           return getMockAssessmentData(url);
+        }
+        
+        // Handle user endpoints
+        if (url.includes('/user/')) {
+          console.log('Using mock data for user endpoint:', url);
+          await simulateNetworkDelay();
+          return getMockUserData(url);
         }
         
         // If we get here, try the real API
@@ -307,6 +336,24 @@ export const api = {
           console.log('Falling back to mock data for job endpoint after failure:', url);
           await simulateNetworkDelay();
           return getMockJobData(url, params);
+        }
+        
+        if (url.includes('/jobs/')) {
+          console.log('Falling back to mock data for jobs endpoint after failure:', url);
+          await simulateNetworkDelay();
+          return getMockJobData(url, params);
+        }
+        
+        if (url.includes('/user/')) {
+          console.log('Falling back to mock data for user endpoint after failure:', url);
+          await simulateNetworkDelay();
+          return getMockUserData(url);
+        }
+        
+        if (url.includes('/profile/')) {
+          console.log('Falling back to mock data for profile endpoint after failure:', url);
+          await simulateNetworkDelay();
+          return getMockProfileData(url);
         }
         
       throw error;
@@ -462,7 +509,7 @@ export const api = {
         }
         
         // If we get here, try the real API
-        const response = await api.put(url, data);
+        const response = await apiClient.put(url, data);
         return response.data;
       } catch (error) {
         console.error(`API PUT error for ${url}:`, error);
@@ -477,7 +524,7 @@ export const api = {
         throw error;
       }
     } else {
-      const response = await api.put(url, data);
+      const response = await apiClient.put(url, data);
       return response.data;
     }
   },
@@ -500,7 +547,7 @@ export const api = {
         }
         
         // If we get here, try the real API
-        const response = await api.delete(url);
+        const response = await apiClient.delete(url);
         return response.data;
       } catch (error) {
         console.error(`API DELETE error for ${url}:`, error);
@@ -518,15 +565,17 @@ export const api = {
         throw error;
       }
     } else {
-      const response = await api.delete(url);
+      const response = await apiClient.delete(url);
       return response.data;
     }
   },
+  
   upload: (url, formData) => apiClient.post(url, formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
   }),
+  
   // Helper method to clear any pending login requests (for testing/debugging)
   clearPendingLogin: () => {
     pendingLoginRequest = null;
@@ -2780,6 +2829,94 @@ export const getProxyUrl = (url) => {
   }
   
   return url;
+};
+
+/**
+ * Generates mock user data for various user endpoints
+ */
+const getMockUserData = (url) => {
+  // User activities endpoint
+  if (url.includes('/user/activities')) {
+    return {
+      data: {
+        success: true,
+        data: [
+          {
+            id: 1,
+            type: 'resume',
+            action: 'created',
+            details: 'Created a new resume',
+            timestamp: new Date(Date.now() - 86400000).toISOString() // Yesterday
+          },
+          {
+            id: 2,
+            type: 'job',
+            action: 'applied',
+            details: 'Applied for Software Engineer position at Google',
+            timestamp: new Date(Date.now() - 172800000).toISOString() // 2 days ago
+          },
+          {
+            id: 3,
+            type: 'interview',
+            action: 'completed',
+            details: 'Completed mock interview practice',
+            timestamp: new Date(Date.now() - 259200000).toISOString() // 3 days ago
+          },
+          {
+            id: 4,
+            type: 'assessment',
+            action: 'completed',
+            details: 'Completed skills assessment',
+            timestamp: new Date(Date.now() - 345600000).toISOString() // 4 days ago
+          },
+          {
+            id: 5,
+            type: 'learning',
+            action: 'completed',
+            details: 'Completed JavaScript course',
+            timestamp: new Date(Date.now() - 432000000).toISOString() // 5 days ago
+          }
+        ]
+      }
+    };
+  }
+  
+  // User profile endpoint
+  if (url.includes('/user/profile')) {
+    return {
+      data: {
+        success: true,
+        data: {
+          id: 1,
+          name: 'John Doe',
+          email: 'john@example.com',
+          title: 'Software Engineer',
+          bio: 'Experienced software engineer with 5+ years in web development',
+          skills: ['JavaScript', 'React', 'Node.js', 'Python', 'SQL'],
+          location: 'San Francisco, CA',
+          phone: '555-123-4567',
+          website: 'https://johndoe.dev',
+          social: {
+            linkedin: 'https://linkedin.com/in/johndoe',
+            github: 'https://github.com/johndoe',
+            twitter: 'https://twitter.com/johndoe'
+          }
+        }
+      }
+    };
+  }
+  
+  // Default fallback for any other user endpoint
+  return {
+    data: {
+      success: true,
+      data: {
+        id: 1,
+        name: 'John Doe',
+        email: 'john@example.com'
+      }
+    }
+  };
 };
 
 export default apiClient; 

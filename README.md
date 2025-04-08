@@ -235,6 +235,96 @@ chmod +x setup_tamkeen.sh
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:5001/api
 
+### Running Backend Servers Manually
+
+If you need to run the backend servers manually (without using the scripts), follow these steps:
+
+#### Main Backend Server
+
+The main backend server provides the core API functionality for the application:
+
+```bash
+cd TamkeenAI_CareerSystem/backend
+python app.py
+```
+
+This server will run on http://localhost:5001 by default and provides all the main API endpoints including:
+- User authentication
+- Resume management
+- Interview simulation
+- Career advice
+- Health check endpoint at http://localhost:5001/api/health-check
+
+#### Predict API Server
+
+The Predict API server provides specialized AI prediction functionality:
+
+```bash
+cd TamkeenAI_CareerSystem/backend
+python predict_api_server.py
+```
+
+This server will run on http://localhost:8000 by default and provides AI prediction endpoints:
+- Resume analysis
+- Career advice generation
+- Job matching
+- Health check endpoint at http://localhost:8000/health
+
+You can customize the port using the `--port` parameter:
+```bash
+python predict_api_server.py --port 5004
+```
+
+#### Verifying Server Status
+
+You can verify each server is running correctly by checking their health endpoints:
+
+```bash
+# Check main backend
+curl http://localhost:5001/api/health-check
+
+# Check predict API
+curl http://localhost:8000/health
+```
+
+### Configuring Hugging Face Integration
+
+The application uses Hugging Face for natural language processing and AI features. To set it up:
+
+1. **Get a Hugging Face API Token**
+   - Visit [Hugging Face](https://huggingface.co/settings/tokens) and create a free account if you don't have one
+   - Generate a new access token with read permissions
+
+2. **Add the Token to Your Environment**
+   
+   Add to your `.env` file in the backend directory:
+   ```
+   HF_TOKEN=your_huggingface_token_here
+   ```
+
+3. **Test the Connection**
+   
+   With the backend server running, test the connection:
+   ```bash
+   curl http://localhost:5001/api/huggingface/status
+   ```
+   
+   A successful response:
+   ```json
+   {"connected":true,"message":"Successfully connected to Hugging Face API"}
+   ```
+
+4. **Troubleshooting**
+   
+   If connection fails:
+   - Verify the token is correct
+   - Make sure the token is properly loaded in the environment
+   - Check if Hugging Face services are accessible from your network
+   - Ensure the huggingface_hub package is installed:
+     ```bash
+     pip install huggingface_hub
+     ```
+
 ### Alternative Setup Methods
 
 #### Backend-only Mode

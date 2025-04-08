@@ -41,6 +41,10 @@ if command -v lsof &> /dev/null; then
         echo -e "${RED}Error: Port 5001 is already in use (backend). Please free this port.${NC}"
         exit 1
     fi
+    if lsof -i:5002 &>/dev/null; then
+        echo -e "${RED}Error: Port 5002 is already in use (interview API). Please free this port.${NC}"
+        exit 1
+    fi
     if lsof -i:3000 &>/dev/null; then
         echo -e "${RED}Error: Port 3000 is already in use (frontend). Please free this port.${NC}"
         exit 1
@@ -70,8 +74,8 @@ echo -e " - Real ATS analysis (no mock data)"
 echo -e " - Uvicorn server for faster performance"
 echo -e " - Optimized text extraction"
 
-# Start interview API on port 5001
-echo -e "${BLUE}Starting interview API on port 5001...${NC}"
+# Start interview API on port 5002
+echo -e "${BLUE}Starting interview API on port 5002...${NC}"
 chmod +x "${SCRIPT_DIR}/run_interview_api.sh"
 "${SCRIPT_DIR}/run_interview_api.sh" &
 INTERVIEW_API_PID=$!
@@ -105,7 +109,7 @@ if [ ! -f "$FRONTEND_ENV" ]; then
     cat > "$FRONTEND_ENV" << EOL
 # TamkeenAI Frontend Environment Variables
 VITE_API_URL=http://localhost:5001
-VITE_INTERVIEW_API_URL=http://localhost:5001
+VITE_INTERVIEW_API_URL=http://localhost:5002
 VITE_ENABLE_MOCK_DATA=true
 VITE_ENABLE_BACKEND_CHECK=true
 VITE_DISABLE_ATS_MOCK_DATA=true
@@ -115,7 +119,7 @@ else
     # Update existing .env file
     echo -e "${YELLOW}Updating frontend .env file...${NC}"
     sed -i.bak 's#VITE_API_URL=.*#VITE_API_URL=http://localhost:5001#g' "$FRONTEND_ENV"
-    sed -i.bak 's#VITE_INTERVIEW_API_URL=.*#VITE_INTERVIEW_API_URL=http://localhost:5001#g' "$FRONTEND_ENV"
+    sed -i.bak 's#VITE_INTERVIEW_API_URL=.*#VITE_INTERVIEW_API_URL=http://localhost:5002#g' "$FRONTEND_ENV"
     echo -e "${GREEN}Updated frontend .env with API configuration${NC}"
 fi
 
@@ -156,7 +160,7 @@ fi
 echo ""
 echo -e "${GREEN}TamkeenAI Career Intelligence System is now running!${NC}"
 echo -e "${BLUE}Backend URL: ${GREEN}http://localhost:5001/api${NC}"
-echo -e "${BLUE}Interview API URL: ${GREEN}http://localhost:5001/api/interviews${NC}"
+echo -e "${BLUE}Interview API URL: ${GREEN}http://localhost:5002/api/interviews${NC}"
 echo -e "${BLUE}Frontend URL: ${GREEN}http://localhost:3000${NC}"
 echo ""
 echo -e "${YELLOW}New features available:${NC}"

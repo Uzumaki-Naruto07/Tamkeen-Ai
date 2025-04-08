@@ -13,8 +13,15 @@ def setup_huggingface_api(api_token: Optional[str] = None) -> str:
     Returns:
         The API token that was used for login
     """
+    # Add debug prints
+    print("DEBUG: Trying to setup Hugging Face API")
+    print(f"DEBUG: api_token provided: {api_token is not None}")
+    print(f"DEBUG: HF_TOKEN from env module: {HF_TOKEN}")
+    print(f"DEBUG: HF_TOKEN from os.environ: {os.environ.get('HF_TOKEN')}")
+    
     # Use provided token or get from environment
     hf_token = api_token or HF_TOKEN or os.environ.get("HF_TOKEN")
+    print(f"DEBUG: Final hf_token: {hf_token is not None}")
     
     if not hf_token:
         raise ValueError(

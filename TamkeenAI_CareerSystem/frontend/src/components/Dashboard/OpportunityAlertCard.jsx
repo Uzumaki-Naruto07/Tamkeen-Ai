@@ -26,6 +26,58 @@ import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import CloseIcon from '@mui/icons-material/Close';
 import { styled } from '@mui/material/styles';
 
+// Mock data for opportunities
+const mockOpportunities = [
+  {
+    id: 1,
+    title: "Frontend Developer",
+    company: "TechNova Solutions",
+    location: "Dubai, UAE",
+    salary: "20,000 - 25,000 AED/month",
+    type: "Full-time",
+    matchPercentage: 92,
+    deadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
+    logo: "https://randomuser.me/api/portraits/men/32.jpg",
+    applyUrl: "https://example.com/apply",
+    description: "Exciting opportunity to work with cutting-edge technologies in a fast-paced environment.",
+    requirements: ["3+ years React experience", "Strong TypeScript skills", "UI/UX knowledge"],
+    relevantSkills: ["React", "TypeScript", "Material UI", "Frontend Development"],
+    source: "LinkedIn"
+  },
+  {
+    id: 2,
+    title: "AI Engineer",
+    company: "InnovateAI",
+    location: "Abu Dhabi, UAE",
+    salary: "30,000 - 35,000 AED/month",
+    type: "Full-time",
+    matchPercentage: 85,
+    deadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days from now
+    logo: "https://randomuser.me/api/portraits/women/44.jpg",
+    applyUrl: "https://example.com/apply",
+    description: "Join our AI team to develop next-generation models for enterprise clients.",
+    requirements: ["Experience with ML frameworks", "Python expertise", "Understanding of neural networks"],
+    relevantSkills: ["Python", "TensorFlow", "Machine Learning", "Data Science"],
+    source: "Indeed"
+  },
+  {
+    id: 3,
+    title: "Data Scientist",
+    company: "DataFirst Analytics",
+    location: "Remote",
+    salary: "27,000 - 32,000 AED/month",
+    type: "Contract",
+    matchPercentage: 78,
+    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+    logo: "https://randomuser.me/api/portraits/men/68.jpg",
+    applyUrl: "https://example.com/apply",
+    description: "Help transform business data into actionable insights for global clients.",
+    requirements: ["Statistical analysis", "Data visualization", "SQL proficiency"],
+    relevantSkills: ["Python", "SQL", "Tableau", "Statistical Analysis"],
+    source: "Glassdoor"
+  }
+];
+
 // Styled components
 const UrgencyChip = styled(Chip)(({ theme, urgency }) => ({
   fontWeight: 'bold',
@@ -72,9 +124,15 @@ const AEDIcon = (props) => (
   </SvgIcon>
 );
 
-const OpportunityAlertCard = ({ opportunity, onSave, onApply, onDismiss }) => {
-  // Handle the case where opportunity is undefined
-  if (!opportunity) {
+const OpportunityAlertCard = ({ opportunity, opportunities, onSave, onApply, onDismiss }) => {
+  // Use the provided opportunity, or the first one from opportunities array,
+  // or fall back to mock data if nothing is provided
+  const allOpportunities = opportunities || mockOpportunities;
+  const [currentOpportunityIndex, setCurrentOpportunityIndex] = useState(0);
+  const currentOpportunity = opportunity || allOpportunities[currentOpportunityIndex];
+  
+  // Handle the case where no opportunity data is available even after mock data fallback
+  if (!currentOpportunity) {
     return (
       <Card variant="outlined" sx={{ mb: 2, p: 2 }}>
         <Typography variant="body1">No opportunity data available</Typography>
@@ -82,7 +140,7 @@ const OpportunityAlertCard = ({ opportunity, onSave, onApply, onDismiss }) => {
     );
   }
   
-  const [saved, setSaved] = useState(opportunity.saved || false);
+  const [saved, setSaved] = useState(currentOpportunity.saved || false);
   
   const {
     id,
@@ -99,7 +157,7 @@ const OpportunityAlertCard = ({ opportunity, onSave, onApply, onDismiss }) => {
     requirements = [],
     relevantSkills = [],
     source
-  } = opportunity;
+  } = currentOpportunity;
   
   const urgencyInfo = getUrgencyInfo(deadline);
   
@@ -123,9 +181,105 @@ const OpportunityAlertCard = ({ opportunity, onSave, onApply, onDismiss }) => {
   const handleDismiss = () => {
     if (onDismiss) {
       onDismiss(id);
+    } else {
+      // If no dismiss handler is provided, just show the next opportunity
+      setCurrentOpportunityIndex((prevIndex) => 
+        (prevIndex + 1) % allOpportunities.length
+      );
     }
   };
   
+  // Function to view next opportunity
+  const handleNextOpportunity = () => {
+    setCurrentOpportunityIndex((prevIndex) => 
+      (prevIndex + 1) % allOpportunities.length
+    );
+    setSaved(allOpportunities[(currentOpportunityIndex + 1) % allOpportunities.length].saved || false);
+  };
+  
+  // Show a compact version for the dashboard widget view
+  const renderCompactView = () => (
+    <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <CardContent sx={{ pb: 0 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+          <Typography variant="h6" component="div" sx={{ fontSize: '1rem', fontWeight: 'bold' }}>
+            {title}
+          </Typography>
+          <Chip 
+            label={`${matchPercentage}% Match`} 
+            color={getMatchLevel(matchPercentage)} 
+            size="small"
+            sx={{ fontSize: '0.7rem' }}
+          />
+        </Box>
+        
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.85rem' }}>
+          {company}
+        </Typography>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+          <LocationOnIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary', fontSize: '0.8rem' }} />
+          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{location}</Typography>
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+          <WorkIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary', fontSize: '0.8rem' }} />
+          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{type}</Typography>
+        </Box>
+        
+        <UrgencyChip
+          icon={<AccessTimeIcon sx={{ fontSize: '0.8rem' }} />}
+          label={urgencyInfo.text}
+          size="small"
+          urgency={urgencyInfo.level}
+          sx={{ fontSize: '0.7rem', mt: 1 }}
+        />
+      </CardContent>
+      
+      <CardActions sx={{ justifyContent: 'space-between', pt: 0 }}>
+        <Box>
+          <Tooltip title={saved ? "Remove from saved" : "Save for later"}>
+            <IconButton 
+              onClick={handleSave} 
+              color={saved ? "primary" : "default"}
+              aria-label={saved ? "unsave opportunity" : "save opportunity"}
+              size="small"
+            >
+              {saved ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+          
+          <Tooltip title="Next opportunity">
+            <IconButton 
+              onClick={handleNextOpportunity}
+              aria-label="next opportunity"
+              size="small"
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+        
+        <Button 
+          variant="outlined" 
+          color="primary" 
+          size="small"
+          startIcon={<LaunchIcon fontSize="small" />}
+          onClick={handleApply}
+          sx={{ textTransform: 'none', fontSize: '0.8rem' }}
+        >
+          Apply
+        </Button>
+      </CardActions>
+    </Card>
+  );
+  
+  // If we're in the dashboard widget view (restricted height), use compact view
+  if (window.location.pathname.includes('dashboard')) {
+    return renderCompactView();
+  }
+  
+  // Otherwise, return the full detailed view
   return (
     <Card variant="outlined" sx={{ mb: 2, position: 'relative', overflow: 'visible' }}>
       {/* Urgency flag in corner */}

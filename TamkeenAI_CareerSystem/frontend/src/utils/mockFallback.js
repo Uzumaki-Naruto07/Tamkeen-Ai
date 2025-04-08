@@ -99,6 +99,15 @@ const processMockData = (data, params) => {
 };
 
 /**
+ * Check if we should use mock data
+ */
+export const useMockData = () => {
+  return import.meta.env.VITE_USE_MOCK_DATA === 'true' || 
+         import.meta.env.VITE_ENABLE_MOCK_DATA === 'true' ||
+         import.meta.env.DEV; // Always use mock data in development
+};
+
+/**
  * Execute an API call with mock data fallback
  * @param {Function} apiCall - The API function to call
  * @param {string} mockDataKey - The key in mockData to use as fallback

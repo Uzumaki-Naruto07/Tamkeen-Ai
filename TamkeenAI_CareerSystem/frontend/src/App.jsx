@@ -85,6 +85,13 @@ const LearningResources = lazyLoad(() => import('./pages/LearningResources'));
 const InterviewResults = lazyLoad(() => import('./pages/InterviewResults'));
 // Add ApplicationTips component
 const ApplicationTips = lazyLoad(() => import('./pages/ApplicationTips'));
+// Add GamifiedProgress component
+const GamifiedProgress = lazyLoad(() => import('./pages/GamifiedProgress'));
+// Add CareerAssessment component
+const CareerAssessment = lazyLoad(() => import('./pages/CareerAssessment'));
+
+// Import the PredictApiDemo component
+import PredictApiDemo from './components/ats/PredictApiDemo';
 
 // Suspense fallback component
 const SuspenseFallback = () => (
@@ -140,7 +147,7 @@ const router = createBrowserRouter(
       
       {/* Protected routes with navigation */}
       <Route element={<MainLayout />}>
-        <Route path="/" element={<Navigate to="/user-profile" />} />
+        <Route path="/" element={<Navigate to="/dashboard" />} />
         <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
         <Route path="/resume-analysis" element={<ProtectedRoute element={<ResumeAnalysis />} />} />
         
@@ -149,6 +156,10 @@ const router = createBrowserRouter(
         <Route path="/resumePage/:resumeId?" element={<ProtectedRoute element={<ResumePage />} />} />
         <Route path="/resume-score-tracker" element={<ProtectedRoute element={<ResumeScoreTracker />} />} />
         <Route path="/skills-assessment" element={<ProtectedRoute element={<SkillsAssessment />} />} />
+        
+        {/* Add missing routes */}
+        <Route path="/gamified-progress" element={<ProtectedRoute element={<GamifiedProgress />} />} />
+        <Route path="/career-assessment" element={<ProtectedRoute element={<CareerAssessment />} />} />
         
         {/* Add Job routes */}
         <Route path="/jobs" element={<Navigate to="/job-search" replace />} />
@@ -229,6 +240,9 @@ const router = createBrowserRouter(
         {/* Redirect /profile to /user-profile to fix 404 */}
         <Route path="/profile" element={<Navigate to="/user-profile" replace />} />
         <Route path="/profile/:username" element={<Navigate to={params => `/user-profile/${params.username}`} replace />} />
+        
+        {/* Add the PredictApiDemo route */}
+        <Route path="/predict-api-demo" element={<ProtectedRoute element={<PredictApiDemo />} />} />
         
         {/* 404 - Not Found */}
         <Route path="*" element={<NotFound />} errorElement={<RouteErrorBoundary />} />

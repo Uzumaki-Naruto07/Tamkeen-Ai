@@ -17,6 +17,12 @@ export default defineConfig({
     open: true,
     cors: true, // Enable CORS for all requests
     proxy: {
+      '/api/interviews': {
+        target: 'http://localhost:5002',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path
+      },
       '/api': {
         target: 'http://localhost:5001',
         changeOrigin: true,
@@ -25,8 +31,9 @@ export default defineConfig({
       }
     },
     hmr: {
-      // Don't specify clientPort to let it automatically match whatever port the server uses
-      // clientPort: getPort(),
+      clientPort: 3000, // Explicitly set client port for WebSocket connection
+      host: 'localhost', // Ensure WebSocket connects to localhost
+      protocol: 'ws', // Use WebSocket protocol
       overlay: true, // Show errors as overlay
     }
   },
@@ -59,6 +66,16 @@ export default defineConfig({
     exclude: [],
   },
   optimizeDeps: {
+    include: [
+      'react', 
+      'react-dom', 
+      'react-router-dom',
+      'date-fns',
+      '@mui/material',
+      '@mui/icons-material',
+      '@mui/x-date-pickers',
+      '@mui/x-date-pickers/AdapterDateFns'
+    ],
     esbuildOptions: {
       loader: {
         '.js': 'jsx',

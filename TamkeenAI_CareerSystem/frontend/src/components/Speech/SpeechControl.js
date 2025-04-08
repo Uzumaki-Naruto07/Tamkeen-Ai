@@ -178,7 +178,7 @@ const SpeechControl = ({
       
       // Analyze emotion if enabled
       if (analyzeEmotion) {
-        analyzeEmotion(blob);
+        performEmotionAnalysis(blob);
       }
     } catch (error) {
       setError('Transcription error: ' + error.message);
@@ -189,7 +189,7 @@ const SpeechControl = ({
   };
   
   // Analyze emotion in speech
-  const analyzeEmotion = async (blob) => {
+  const performEmotionAnalysis = async (blob) => {
     if (!blob) return;
     
     setIsAnalyzingEmotion(true);

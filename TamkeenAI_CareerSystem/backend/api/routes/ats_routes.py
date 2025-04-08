@@ -19,6 +19,9 @@ from werkzeug.utils import secure_filename
 from ..services.ats.ats_analyzer import create_ats_analyzer
 from ..services.ats.resume_extractor import extract_text_from_resume
 
+# Import the new DeepSeekClient
+from ..services.predict_api import DeepSeekClient
+
 # Create blueprint
 ats_bp = Blueprint('ats', __name__, url_prefix='/api/ats')
 
@@ -479,4 +482,95 @@ def test_deepseek_connection():
     
     except Exception as e:
         logger.error(f"Error testing DeepSeek connection: {str(e)}")
-        return jsonify({"error": str(e)}), 500 
+        return jsonify({"error": str(e)}), 500
+
+@ats_bp.route('/analyze-with-predictapi', methods=['POST'])
+def analyze_resume_with_predictapi():
+    """
+    Analyze a resume using the new PredictAPI with DeepSeek integration
+    
+    Expects:
+    - file: Resume file (PDF, DOCX, TXT)
+    - job_title: Job title
+    - job_description: Job description for matching
+    
+    Returns:
+        JSON with analysis results
+    """
+    try:
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+        
+        file = request.files['file']
+        
+        # Check if filename is empty
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Get job details
+        job_title = request.form.get('job_title', '')
+        job_description = request.form.get('job_description', '')
+        
+        if not job_description:
+            return jsonify({"error": "Job description is required"}), 400
+        
+        # Get API key from environment
+        api_key = current_app.config.get('DEEPSEEK_API_KEY') or os.environ.get('DEEPSEEK_API_KEY')
+        
+        # Initialize DeepSeekClient from the new predictAPI
+        deepseek_client = DeepSeekClient(api_key=api_key)
+        
+        # Log API availability
+        logger.info(f"PredictAPI using mock data: {deepseek_client.is_using_mock()}")
+        
+        # Save file to temporary location
+        temp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp:
+                file.save(temp.name)
+                temp_path = temp.name
+            
+            # Extract text from resume
+            resume_text = extract_text_from_resume(temp_path)
+            
+            # Analyze resume with DeepSeek through PredictAPI
+            analysis_results = deepseek_client.analyze_resume(
+                resume_text=resume_text,
+                job_description=job_description,
+                job_title=job_title,
+                detailed=True
+            )
+            
+            # Clean up temporary file
+            if temp_path and os.path.exists(temp_path):
+                os.unlink(temp_path)
+            
+            # Add filename to results
+            analysis_results['filename'] = file.filename
+            analysis_results['job_title'] = job_title
+            
+            # Return results
+            return jsonify(analysis_results)
+            
+        except Exception as e:
+            # Clean up temporary file in case of error
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.unlink(temp_path)
+                except:
+                    pass
+            
+            logger.error(f"PredictAPI analysis failed: {str(e)}")
+            
+            return jsonify({
+                "error": f"PredictAPI analysis failed: {str(e)}",
+                "status": "predictapi_analysis_failed"
+            }), 500
+    
+    except Exception as e:
+        logger.error(f"Error in PredictAPI analysis route: {str(e)}")
+        return jsonify({
+            "error": f"Error in PredictAPI analysis: {str(e)}",
+            "status": "route_exception"
+        }), 500 

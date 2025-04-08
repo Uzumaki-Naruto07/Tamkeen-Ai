@@ -614,9 +614,11 @@ const MarketInsightsSection = ({ marketInsights, insights }) => {
   );
   
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>Market Insights</Typography>
+    <Card sx={{ height: '100%', overflow: 'hidden' }}>
+      <CardContent sx={{ height: 'calc(100% - 40px)', overflow: 'auto', p: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          Market Insights
+        </Typography>
         
         {/* Companies Hiring Now ticker - shown above tabs */}
         {hiring_companies.length > 0 && <CompaniesHiringSection />}
@@ -626,7 +628,7 @@ const MarketInsightsSection = ({ marketInsights, insights }) => {
           onChange={handleTabChange}
           variant="scrollable"
           scrollButtons="auto"
-          sx={{ mb: 3 }}
+          sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
         >
           <Tab label="Salary Data" value="salary" />
           <Tab label="Regional Demand" value="regions" />
