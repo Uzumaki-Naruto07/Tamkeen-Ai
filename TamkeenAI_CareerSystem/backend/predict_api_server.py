@@ -277,6 +277,9 @@ if __name__ == '__main__':
         os.environ['USE_MOCK_DATA'] = 'true'
         logger.info("Forcing mock data mode")
     
+    # Use environment PORT variable if set (for cloud deployment), otherwise use args.port
+    port = int(os.environ.get('PORT', args.port))
+    
     # Start server
-    logger.info(f"Starting PredictAPI Server on {args.host}:{args.port}")
-    app.run(host=args.host, port=args.port, debug=args.debug) 
+    logger.info(f"Starting PredictAPI Server on {args.host}:{port}")
+    app.run(host=args.host, port=port, debug=args.debug) 

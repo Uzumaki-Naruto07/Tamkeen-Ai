@@ -475,13 +475,11 @@ def options_handler(path):
     return response
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Simple Interview API Server')
-    parser.add_argument('--port', type=int, default=5001,
-                        help='Port to run the server on (default: 5001)')
+    parser = argparse.ArgumentParser(description='Simple Interview API')
+    parser.add_argument('--port', type=int, default=5001, help='Port to run the API on')
     args = parser.parse_args()
     
-    # Set port in environment for route messages
-    os.environ['PORT'] = str(args.port)
-    
-    logger.info(f"Starting Simple Interview API server on port {args.port}")
-    app.run(host='0.0.0.0', port=args.port) 
+    # Use environment PORT variable if set (for cloud deployment), otherwise use args.port
+    port = int(os.environ.get('PORT', args.port))
+    print(f"Starting Simple Interview API on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=True) 

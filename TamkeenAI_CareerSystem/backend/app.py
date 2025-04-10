@@ -349,8 +349,8 @@ def parse_args():
     parser.add_argument('--debug', action='store_true', help='Run in debug mode')
     return parser.parse_args()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = parse_args()
     app = create_app()
-    logger.info(f"Starting server on {args.host}:{args.port}")
-    app.run(host=args.host, port=args.port, debug=args.debug)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=args.debug)
