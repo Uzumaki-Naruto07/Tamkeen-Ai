@@ -60,7 +60,7 @@ import axios from 'axios';
 import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
-function LinkedinAutomation() {
+function LinkedInAutomation() {
   const theme = useTheme();
   const navigate = useNavigate();
   const { profile } = useUser();
@@ -151,7 +151,7 @@ function LinkedinAutomation() {
       
       // Disclaimers
       simulationDisclaimer: "SIMULATION DISCLAIMER",
-      simulationOnly: "This is a simulation only. These settings will be used to demonstrate what automation could look like, but no actual LinkedIn automation will occur.",
+      simulationOnlyDisclaimer: "This is a simulation only. These settings will be used to demonstrate what automation could look like, but no actual LinkedIn automation will occur.",
       
       // Review section
       reviewStart: "Review & Start Automation",
@@ -277,7 +277,7 @@ function LinkedinAutomation() {
       
       // Disclaimers
       simulationDisclaimer: "إخلاء مسؤولية المحاكاة",
-      simulationOnly: "هذه محاكاة فقط. سيتم استخدام هذه الإعدادات لعرض ما يمكن أن تبدو عليه الأتمتة، ولكن لن تحدث أي أتمتة فعلية على لينكد إن.",
+      simulationOnlyDisclaimer: "هذه محاكاة فقط. سيتم استخدام هذه الإعدادات لعرض ما يمكن أن تبدو عليه الأتمتة، ولكن لن تحدث أي أتمتة فعلية على لينكد إن.",
       
       // Review section
       reviewStart: "مراجعة وبدء الأتمتة",
@@ -1210,7 +1210,7 @@ function LinkedinAutomation() {
                       ⚠️ {getText('simulationDisclaimer')}
                     </Typography>
                     <Typography variant="body2">
-                      {getText('simulationOnly')}
+                      {getText('simulationOnlyDisclaimer')}
                     </Typography>
                   </Box>
                 </Box>
@@ -1634,4 +1634,4 @@ function LinkedinAutomation() {
   );
 }
 
-export default LinkedinAutomation;
+export default LinkedInAutomation;

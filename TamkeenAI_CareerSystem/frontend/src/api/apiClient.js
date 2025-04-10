@@ -18,16 +18,28 @@ let pendingLoginRequest = null;
 // Configuration
 const MOCK_ENABLED = process.env.NODE_ENV === 'development';
 
+// Direct backend URLs
+const MAIN_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const INTERVIEW_API_URL = import.meta.env.VITE_INTERVIEW_API_URL || 'http://localhost:5002';
+const UPLOAD_API_URL = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:5004';
+
+// CORS proxy configuration
+// Use a more reliable CORS proxy - Netlify function if available, or fallback to allorigins
+const NETLIFY_FUNCTION_URL = '/.netlify/functions/cors-proxy';
+const CORS_PROXY_URL = isDevelopment 
+  ? 'https://api.allorigins.win/raw?url=' 
+  : NETLIFY_FUNCTION_URL;
+
 // Create an axios instance with default config
 const apiClient = axios.create({
   baseURL: isDevelopment 
     ? '/api' // This will use the Vite proxy defined in vite.config.js
-    : (import.meta.env.VITE_API_URL || 'http://localhost:5001/api'),
+    : MAIN_API_URL, // Use direct API URL
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: isDevelopment ? false : true
+  withCredentials: true // Enable withCredentials for cross-domain cookie support
 });
 
 // Mock data for development mode
@@ -106,18 +118,73 @@ const mockLogin = (credentials) => {
 // Request interceptor for adding the auth token
 apiClient.interceptors.request.use(
   (config) => {
-    // Prevent double '/api' prefixes in URLs
-    if (config.url && config.url.startsWith('/api/')) {
-      // Remove the '/api' prefix from the URL since baseURL already has it
-      config.url = config.url.substring(4); // Remove '/api'
-    } else if (config.url && config.url.startsWith('api/')) {
-      // Remove the 'api/' prefix from the URL since baseURL already has it
-      config.url = config.url.substring(4); // Remove 'api/'
+    // In development mode, we need to handle the /api prefix
+    if (isDevelopment) {
+      // Prevent double '/api' prefixes in URLs
+      if (config.url && config.url.startsWith('/api/')) {
+        // Remove the '/api' prefix from the URL since baseURL already has it
+        config.url = config.url.substring(4); // Remove '/api'
+      } else if (config.url && config.url.startsWith('api/')) {
+        // Remove the 'api/' prefix from the URL since baseURL already has it
+        config.url = config.url.substring(4); // Remove 'api/'
+      }
+    } else {
+      // In production, ensure URL has the correct API path
+      // Check if the URL already has /api
+      const needsApiPrefix = !config.url.startsWith('/api/') && !config.url.startsWith('api/');
+      
+      // Only add /api if needed
+      if (needsApiPrefix) {
+        // Add /api prefix if it's missing
+        config.url = '/api' + (config.url.startsWith('/') ? config.url : '/' + config.url);
+      }
     }
     
-    // Ensure URL starts with a slash if it doesn't already
-    if (config.url && !config.url.startsWith('/')) {
-      config.url = '/' + config.url;
+    // Check if this is an auth-related endpoint
+    const isAuthEndpoint = config.url && (
+      config.url.includes('/auth/login') || 
+      config.url.includes('/auth/register') ||
+      config.url.includes('/auth/refresh') ||
+      config.url.includes('/auth/logout') ||
+      config.url.includes('/auth/verify') ||
+      config.url.includes('/auth/reset-password') ||
+      config.url.includes('/auth/change-password') ||
+      config.url.includes('/auth/status')
+    );
+    
+    // For auth endpoints in production, use direct API connection instead of CORS proxy
+    if (!isDevelopment && isAuthEndpoint) {
+      // Override the baseURL to use direct API connection for auth endpoints
+      config.baseURL = MAIN_API_URL;
+      console.log(`Auth endpoint detected - using direct connection: ${config.baseURL}${config.url}`);
+      config.skipCorsProxy = true;
+    }
+    // When in production, use the CORS proxy for non-auth API calls
+    else if (!isDevelopment && !config.skipCorsProxy && !isAuthEndpoint) {
+      if (CORS_PROXY_URL === NETLIFY_FUNCTION_URL) {
+        // For Netlify function proxy, use POST method
+        const originalUrl = `${config.baseURL}${config.url}`;
+        const originalMethod = config.method;
+        const originalData = config.data;
+        
+        // Modify the request to use the Netlify function
+        config.url = CORS_PROXY_URL;
+        config.baseURL = ''; // Clear baseURL to use relative URL for Netlify function
+        config.method = 'post';
+        config.data = {
+          url: originalUrl,
+          method: originalMethod,
+          data: originalData
+        };
+      } else {
+        // For allorigins or other GET-based CORS proxies
+        const originalUrl = `${config.baseURL}${config.url}`;
+        config.baseURL = '';
+        config.url = `${CORS_PROXY_URL}${encodeURIComponent(originalUrl)}`;
+      }
+      
+      // Don't apply the interceptor recursively
+      config.skipCorsProxy = true;
     }
     
     // Additional logging for debugging URL construction

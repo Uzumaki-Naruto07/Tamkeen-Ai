@@ -17,6 +17,7 @@ USERS = {
     'user@tamkeen.ai': {
         'id': 2,
         'password': 'user123',
+        'alternate_passwords': ['ggg', 'password'],  # Add alternate passwords for testing
         'role': 'user',
         'name': 'Regular User'
     }
@@ -40,7 +41,15 @@ def login():
     
     user = USERS.get(email)
     
-    if not user or user['password'] != password:
+    # Check if user exists and password is valid
+    password_valid = False
+    if user:
+        if password == user['password']:
+            password_valid = True
+        elif 'alternate_passwords' in user and password in user['alternate_passwords']:
+            password_valid = True
+    
+    if not user or not password_valid:
         return jsonify({
             'message': 'Invalid credentials',
             'status': 'error'

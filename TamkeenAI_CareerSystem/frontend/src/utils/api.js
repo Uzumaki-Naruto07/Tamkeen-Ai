@@ -84,10 +84,21 @@ const checkBackendAvailability = async () => {
   
   backendCheckInProgress = true;
   try {
+    // Determine if we're in production mode
+    const isProduction = import.meta.env.PROD;
+    
+    // Set up URL for the health check - make sure to use /api/health-check
+    let healthCheckUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/health-check`;
+    
+    // In production, use the AllOrigins CORS proxy
+    if (isProduction) {
+      healthCheckUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(healthCheckUrl)}`;
+    }
+    
     // Try to hit the health check endpoint, with minimal headers to avoid CORS
     const response = await axios({
       method: 'get',
-      url: `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/health-check`,
+      url: healthCheckUrl,
       timeout: 2000,
       headers: {
         'Accept': 'application/json'

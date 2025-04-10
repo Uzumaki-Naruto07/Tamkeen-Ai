@@ -104,20 +104,28 @@ def create_app():
         # Get origin from request
         origin = request.headers.get('Origin', '*')
         
-        # Now add the headers consistently
-        if os.getenv('FLASK_ENV') != 'production' or app.debug:
+        # Get allowed origins from environment or use default list
+        cors_origins_env = os.getenv('CORS_ORIGINS', '')
+        allowed_origins = cors_origins_env.split(',') if cors_origins_env else [
+            "http://localhost:3000", 
+            "http://127.0.0.1:3000", 
+            "http://localhost:5173", 
+            "http://127.0.0.1:5173",
+            "http://localhost:3001",
+            "http://127.0.0.1:3001",
+            "https://hessa-tamkeen-ai.netlify.app",  # Add Netlify domain
+            "https://hessa-tamkeen-ai.onrender.com"  # Add Render domain
+        ]
+        
+        # Check if wildcard is in the list
+        if '*' in allowed_origins or 'https://*.netlify.app' in allowed_origins:
             response.headers['Access-Control-Allow-Origin'] = origin
-        else:
-            allowed_origins = [
-                "http://localhost:3000", 
-                "http://127.0.0.1:3000", 
-                "http://localhost:5173", 
-                "http://127.0.0.1:5173",
-                "http://localhost:3001",
-                "http://127.0.0.1:3001"
-            ]
-            if origin in allowed_origins:
-                response.headers['Access-Control-Allow-Origin'] = origin
+        # Otherwise check if the origin is in the allowed list
+        elif origin in allowed_origins or any(origin.endswith(domain.replace('*.', '.')) for domain in allowed_origins if '*.' in domain):
+            response.headers['Access-Control-Allow-Origin'] = origin
+        # In development mode, be permissive
+        elif os.getenv('FLASK_ENV') != 'production' or app.debug:
+            response.headers['Access-Control-Allow-Origin'] = origin
             
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, X-Force-Real-API, X-Skip-Mock, x-auth-token'

@@ -84,7 +84,7 @@ const CertificationsAchievements = lazyLoad(() => import('./pages/Certifications
 // Add Settings component
 const Settings = lazyLoad(() => import('./pages/Settings'));
 // Add LinkedIn Automation component
-const LinkedInAutomation = lazyLoad(() => import('./pages/LinkedinAutomation'));
+const LinkedInAutomation = lazyLoad(() => import('./pages/LinkedInAutomation'));
 // Add Learning Resources component
 const LearningResources = lazyLoad(() => import('./pages/LearningResources'));
 // Add InterviewResults component
