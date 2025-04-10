@@ -24,6 +24,7 @@ import WorkIcon from '@mui/icons-material/Work';
 import SchoolIcon from '@mui/icons-material/School';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import { styled } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 
 // Transition for the dialog
 const Transition = React.forwardRef(function Transition(props, ref) {
@@ -32,21 +33,27 @@ const Transition = React.forwardRef(function Transition(props, ref) {
 
 // Styled components
 const FeatureCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(2),
-  height: '100%',
+  padding: theme.spacing(2.5),
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'flex-start',
-  borderRadius: theme.spacing(1.5),
-  transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+  alignItems: 'center',
+  textAlign: 'center',
+  height: '100%',
+  backgroundColor: theme.palette.background.default,
+  transition: 'transform 0.2s, box-shadow 0.2s',
   '&:hover': {
     transform: 'translateY(-4px)',
-    boxShadow: '0 8px 16px rgba(0,0,0,0.1)'
+    boxShadow: theme.shadows[4],
   }
 }));
 
 const IconWrapper = styled(Box)(({ theme }) => ({
-  backgroundColor: theme.palette.primary.light,
+  backgroundColor: theme.palette.background.paper,
+  width: 64,
+  height: 64,
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
   borderRadius: '50%',
   padding: theme.spacing(1.5),
   marginBottom: theme.spacing(1.5),
@@ -55,6 +62,7 @@ const IconWrapper = styled(Box)(({ theme }) => ({
 
 const ResumeExpertPrompt = ({ open, onClose }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleNavigateToResume = () => {
     navigate('/resumePage');
@@ -64,23 +72,23 @@ const ResumeExpertPrompt = ({ open, onClose }) => {
   const resumeFeatures = [
     {
       icon: <BuildIcon fontSize="large" />,
-      title: 'AI-Powered Resume Analysis',
-      description: 'Get instant feedback on your resume with our AI analysis tool'
+      title: t('resumeExpert.aiPoweredAnalysis', 'AI-Powered Resume Analysis'),
+      description: t('resumeExpert.instantFeedback', 'Get instant feedback on your resume with our AI analysis tool')
     },
     {
       icon: <WorkIcon fontSize="large" />,
-      title: 'Job-Specific Optimization',
-      description: 'Customize your resume for specific job listings and increase your chances'
+      title: t('resumeExpert.jobSpecificOptimization', 'Job-Specific Optimization'),
+      description: t('resumeExpert.customizeResume', 'Customize your resume for specific job listings and increase your chances')
     },
     {
       icon: <SchoolIcon fontSize="large" />,
-      title: 'Skills Enhancement Suggestions',
-      description: 'Discover skills that will make your resume stand out to employers'
+      title: t('resumeExpert.skillsEnhancement', 'Skills Enhancement Suggestions'),
+      description: t('resumeExpert.discoverSkills', 'Discover skills that will make your resume stand out to employers')
     },
     {
       icon: <EmojiEventsIcon fontSize="large" />,
-      title: 'ATS Compatibility Score',
-      description: 'Ensure your resume passes through Applicant Tracking Systems'
+      title: t('resumeExpert.atsCompatibility', 'ATS Compatibility Score'),
+      description: t('resumeExpert.ensureResumePasses', 'Ensure your resume passes through Applicant Tracking Systems')
     }
   ];
 
@@ -98,28 +106,27 @@ const ResumeExpertPrompt = ({ open, onClose }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
           <DescriptionIcon color="primary" sx={{ fontSize: 28, mr: 1.5 }} />
           <Typography variant="h5" component="div" fontWeight="bold">
-            Resume Expert
+            {t('resumeExpert.title', 'Resume Expert')}
           </Typography>
           <Chip 
-            label="AI-Powered" 
+            label={t('resumeExpert.aiPowered', 'AI-Powered')}
             size="small" 
             color="secondary" 
             sx={{ ml: 2 }} 
           />
         </Box>
         <Typography variant="body2" color="text.secondary">
-          Enhance your job search with our AI-powered resume tools
+          {t('resumeExpert.enhanceJobSearch', 'Enhance your job search with our AI-powered resume tools')}
         </Typography>
       </DialogTitle>
       
       <DialogContent>
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" gutterBottom fontWeight="medium">
-            Why Complete Your Resume?
+            {t('resumeExpert.whyComplete', 'Why Complete Your Resume?')}
           </Typography>
           <Typography variant="body1" paragraph>
-            An optimized resume significantly increases your chances of getting noticed by employers and landing your ideal role.
-            Our Resume Expert uses advanced AI to help you create a standout resume tailored to your career goals.
+            {t('resumeExpert.optimizedResume', 'An optimized resume significantly increases your chances of getting noticed by employers and landing your ideal role. Our Resume Expert uses advanced AI to help you create a standout resume tailored to your career goals.')}
           </Typography>
           
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mt: 3 }}>
@@ -143,7 +150,7 @@ const ResumeExpertPrompt = ({ open, onClose }) => {
         
         <Box>
           <Typography variant="h6" gutterBottom fontWeight="medium">
-            What You'll Get
+            {t('resumeExpert.whatYouGet', 'What You\'ll Get')}
           </Typography>
           <List>
             <ListItem>
@@ -151,8 +158,8 @@ const ResumeExpertPrompt = ({ open, onClose }) => {
                 <ArrowForwardIcon color="primary" />
               </ListItemIcon>
               <ListItemText 
-                primary="Professional, ATS-friendly resume formats" 
-                secondary="Designed for maximum impact and readability" 
+                primary={t('resumeExpert.atsFriendlyFormats', 'Professional, ATS-friendly resume formats')}
+                secondary={t('resumeExpert.designedForImpact', 'Designed for maximum impact and readability')}
               />
             </ListItem>
             <ListItem>
@@ -160,8 +167,8 @@ const ResumeExpertPrompt = ({ open, onClose }) => {
                 <ArrowForwardIcon color="primary" />
               </ListItemIcon>
               <ListItemText 
-                primary="Content optimization suggestions" 
-                secondary="Powerful language improvements for better impact" 
+                primary={t('resumeExpert.contentOptimization', 'Content optimization suggestions')}
+                secondary={t('resumeExpert.powerfulLanguage', 'Powerful language improvements for better impact')}
               />
             </ListItem>
             <ListItem>
@@ -169,8 +176,8 @@ const ResumeExpertPrompt = ({ open, onClose }) => {
                 <ArrowForwardIcon color="primary" />
               </ListItemIcon>
               <ListItemText 
-                primary="Real-time scoring and analysis" 
-                secondary="Track your resume's improvement with our scoring system" 
+                primary={t('resumeExpert.realtimeScoring', 'Real-time scoring and analysis')}
+                secondary={t('resumeExpert.trackImprovement', 'Track your resume\'s improvement with our scoring system')}
               />
             </ListItem>
             <ListItem>
@@ -178,8 +185,8 @@ const ResumeExpertPrompt = ({ open, onClose }) => {
                 <ArrowForwardIcon color="primary" />
               </ListItemIcon>
               <ListItemText 
-                primary="Tailored recommendations" 
-                secondary="Industry-specific advice based on your career goals" 
+                primary={t('resumeExpert.tailoredRecommendations', 'Tailored recommendations')}
+                secondary={t('resumeExpert.industrySpecificAdvice', 'Industry-specific advice based on your career goals')}
               />
             </ListItem>
           </List>
@@ -192,7 +199,7 @@ const ResumeExpertPrompt = ({ open, onClose }) => {
           color="inherit"
           sx={{ borderRadius: 2 }}
         >
-          Maybe Later
+          {t('resumeExpert.maybeLater', 'Maybe Later')}
         </Button>
         <Button 
           onClick={handleNavigateToResume} 
@@ -205,7 +212,7 @@ const ResumeExpertPrompt = ({ open, onClose }) => {
           }}
           endIcon={<ArrowForwardIcon />}
         >
-          Build My Resume Now
+          {t('resumeExpert.buildMyResumeNow', 'Build My Resume Now')}
         </Button>
       </DialogActions>
     </Dialog>

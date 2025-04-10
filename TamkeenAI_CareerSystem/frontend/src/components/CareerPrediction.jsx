@@ -448,9 +448,63 @@ const CareerPrediction = ({ onComplete, loading = false }) => {
         llmAnalysis: getFallbackData(),
         personalityType: determinePersonalityType(scores).type,
         recommendedCareers: [
-          { title: 'Data Scientist', match: 98 },
-          { title: 'AI Engineer', match: 95 },
-          { title: 'UX Researcher', match: 92 }
+          { 
+            title: 'Data Scientist', 
+            titleAr: 'عالم بيانات',
+            match: 98,
+            description: 'Your analytical abilities and interest in patterns suggest data science would be an excellent fit for your skills and interests.',
+            descriptionAr: 'تشير قدراتك التحليلية واهتمامك بالأنماط إلى أن علم البيانات سيكون مناسبًا بشكل ممتاز لمهاراتك واهتماماتك.',
+            skills: [
+              { name: 'Data Analysis', nameAr: 'تحليل البيانات' },
+              { name: 'Python', nameAr: 'بايثون' },
+              { name: 'Machine Learning', nameAr: 'تعلم الآلة' },
+              { name: 'Statistics', nameAr: 'الإحصاء' }
+            ],
+            growthTrack: 'High growth field',
+            growthTrackAr: 'مجال نمو مرتفع',
+            education: 'Bachelor\'s in Computer Science or related field',
+            educationAr: 'بكالوريوس في علوم الحاسوب أو مجال ذي صلة',
+            demand: 'Very High',
+            demandAr: 'مرتفع جدًا'
+          },
+          { 
+            title: 'AI Engineer', 
+            titleAr: 'مهندس ذكاء اصطناعي',
+            match: 95,
+            description: 'Your technical aptitude and problem-solving align perfectly with artificial intelligence engineering roles.',
+            descriptionAr: 'تتوافق قدراتك التقنية ومهارات حل المشكلات بشكل مثالي مع أدوار هندسة الذكاء الاصطناعي.',
+            skills: [
+              { name: 'Deep Learning', nameAr: 'التعلم العميق' },
+              { name: 'TensorFlow', nameAr: 'تنسرفلو' },
+              { name: 'Python', nameAr: 'بايثون' },
+              { name: 'Neural Networks', nameAr: 'الشبكات العصبية' }
+            ],
+            growthTrack: 'Emerging field',
+            growthTrackAr: 'مجال ناشئ',
+            education: 'Master\'s degree preferred',
+            educationAr: 'يفضل درجة الماجستير',
+            demand: 'High',
+            demandAr: 'مرتفع'
+          },
+          { 
+            title: 'UX Researcher', 
+            titleAr: 'باحث تجربة المستخدم',
+            match: 92,
+            description: 'Your combination of analytical skills and social understanding would make you excellent at researching user needs.',
+            descriptionAr: 'سيجعلك مزيج مهاراتك التحليلية والفهم الاجتماعي ممتازًا في البحث عن احتياجات المستخدم.',
+            skills: [
+              { name: 'User Testing', nameAr: 'اختبار المستخدم' },
+              { name: 'Interviews', nameAr: 'المقابلات' },
+              { name: 'Data Analysis', nameAr: 'تحليل البيانات' },
+              { name: 'Prototyping', nameAr: 'النمذجة' }
+            ],
+            growthTrack: 'Steady growth',
+            growthTrackAr: 'نمو ثابت',
+            education: 'Bachelor\'s in Psychology, HCI, or related field',
+            educationAr: 'بكالوريوس في علم النفس، تفاعل الإنسان والحاسوب، أو مجال ذي صلة',
+            demand: 'Medium',
+            demandAr: 'متوسط'
+          }
         ],
         explanation: "Your assessment reveals exceptional analytical abilities paired with openness to new ideas. You enjoy solving complex problems and have excellent technical aptitude.",
         skillGaps: [
@@ -537,18 +591,60 @@ const CareerPrediction = ({ onComplete, loading = false }) => {
       recommendedCareers: [
         { 
           title: 'Data Scientist', 
+          titleAr: 'عالم بيانات',
           match: 98, 
-          description: 'Your analytical abilities and interest in patterns suggest data science would be an excellent fit for your skills and interests.'
+          description: 'Your analytical abilities and interest in patterns suggest data science would be an excellent fit for your skills and interests.',
+          descriptionAr: 'تشير قدراتك التحليلية واهتمامك بالأنماط إلى أن علم البيانات سيكون مناسبًا بشكل ممتاز لمهاراتك واهتماماتك.',
+          skills: [
+            { name: 'Data Analysis', nameAr: 'تحليل البيانات' },
+            { name: 'Python', nameAr: 'بايثون' },
+            { name: 'Machine Learning', nameAr: 'تعلم الآلة' },
+            { name: 'Statistics', nameAr: 'الإحصاء' }
+          ],
+          growthTrack: 'High growth field',
+          growthTrackAr: 'مجال نمو مرتفع',
+          education: 'Bachelor\'s in Computer Science or related field',
+          educationAr: 'بكالوريوس في علوم الحاسوب أو مجال ذي صلة',
+          demand: 'Very High',
+          demandAr: 'مرتفع جدًا'
         },
         { 
           title: 'AI Engineer', 
+          titleAr: 'مهندس ذكاء اصطناعي',
           match: 95, 
-          description: 'Your technical aptitude and problem-solving align perfectly with artificial intelligence engineering roles.'
+          description: 'Your technical aptitude and problem-solving align perfectly with artificial intelligence engineering roles.',
+          descriptionAr: 'تتوافق قدراتك التقنية ومهارات حل المشكلات بشكل مثالي مع أدوار هندسة الذكاء الاصطناعي.',
+          skills: [
+            { name: 'Deep Learning', nameAr: 'التعلم العميق' },
+            { name: 'TensorFlow', nameAr: 'تنسرفلو' },
+            { name: 'Python', nameAr: 'بايثون' },
+            { name: 'Neural Networks', nameAr: 'الشبكات العصبية' }
+          ],
+          growthTrack: 'Emerging field',
+          growthTrackAr: 'مجال ناشئ',
+          education: 'Master\'s degree preferred',
+          educationAr: 'يفضل درجة الماجستير',
+          demand: 'High',
+          demandAr: 'مرتفع'
         },
         { 
           title: 'UX Researcher', 
+          titleAr: 'باحث تجربة المستخدم',
           match: 92, 
-          description: 'Your combination of analytical skills and social understanding would make you excellent at researching user needs.'
+          description: 'Your combination of analytical skills and social understanding would make you excellent at researching user needs.',
+          descriptionAr: 'سيجعلك مزيج مهاراتك التحليلية والفهم الاجتماعي ممتازًا في البحث عن احتياجات المستخدم.',
+          skills: [
+            { name: 'User Testing', nameAr: 'اختبار المستخدم' },
+            { name: 'Interviews', nameAr: 'المقابلات' },
+            { name: 'Data Analysis', nameAr: 'تحليل البيانات' },
+            { name: 'Prototyping', nameAr: 'النمذجة' }
+          ],
+          growthTrack: 'Steady growth',
+          growthTrackAr: 'نمو ثابت',
+          education: 'Bachelor\'s in Psychology, HCI, or related field',
+          educationAr: 'بكالوريوس في علم النفس، تفاعل الإنسان والحاسوب، أو مجال ذي صلة',
+          demand: 'Medium',
+          demandAr: 'متوسط'
         }
       ],
       personalityType: "Analytical Problem-Solver with Creative Elements",

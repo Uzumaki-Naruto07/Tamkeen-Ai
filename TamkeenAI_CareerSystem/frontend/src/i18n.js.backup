@@ -1,0 +1,3948 @@
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
+// Translation resources
+const resources = {
+  en: {
+    translation: {
+      // Auth pages
+      'Welcome to Tamkeen!': 'Welcome to Tamkeen!',
+      'Please sign-in to your account and start the adventure': 'Please sign-in to your account and start the adventure',
+      'Email and password are required': 'Email and password are required',
+      'Login failed. Please try again.': 'Login failed. Please try again.',
+      'An unexpected error occurred': 'An unexpected error occurred',
+      'Email or Username': 'Email or Username',
+      'Enter your email or username': 'Enter your email or username',
+      'Password': 'Password',
+      'Enter your password': 'Enter your password',
+      'Remember Me': 'Remember Me',
+      'Forgot Password?': 'Forgot Password?',
+      'Sign in': 'Sign in',
+      'Signing in...': 'Signing in...',
+      'New on our platform?': 'New on our platform?',
+      'Create an account': 'Create an account',
+      'or': 'or',
+      'Don\'t have an account?': 'Don\'t have an account?',
+      'Register': 'Register',
+      '"We, as a people, are not satisfied with anything but first place." 🇦🇪': '"We, as a people, are not satisfied with anything but first place." 🇦🇪',
+      
+      // Dashboard
+      dashboard: {
+        title: 'Dashboard',
+        yourCareerDashboard: 'Your Career Dashboard',
+        widgets: {
+          userProgress: 'Your Progress',
+          resumeScore: 'Resume Score',
+          skillGap: 'Skill Gap Analysis',
+          aiRecommendation: 'AI Recommendations',
+          careerJourney: 'Career Journey',
+          badges: 'Achievements',
+          careerPrediction: 'Career Predictions',
+          learningPaths: 'Learning Paths',
+          marketInsights: 'Market Insights',
+          leaderboard: 'Leaderboard',
+          activityLog: 'Recent Activities',
+          opportunityAlert: 'Opportunity Alerts',
+          learningRoadmap: 'Learning Roadmap'
+        },
+        actions: {
+          refresh: 'Refresh Dashboard',
+          customize: 'Customize Dashboard',
+          resetLayout: 'Reset Layout',
+          hide: 'Hide Widget',
+          show: 'Show Widget',
+          dragToReorder: 'Drag to reorder'
+        },
+        errors: {
+          loadFailed: 'Failed to load dashboard data. Please try again.',
+          refreshFailed: 'Failed to refresh dashboard data. Please try again.'
+        },
+        // Resume ATS score translations
+        resumeAts: {
+          score: 'درجة تقييم السيرة الذاتية',
+          average: 'المتوسط',
+          latest: 'آخر تحديث',
+          atsScore: 'درجة ATS',
+          resumeKeywordMatch: 'تطابق الكلمات الرئيسية للسيرة الذاتية',
+          missingKeywords: 'الكلمات الرئيسية المفقودة',
+          noKeywordMatches: 'لا يوجد تطابق للكلمات الرئيسية',
+          noMissingKeywords: 'لم يتم اكتشاف كلمات رئيسية مفقودة',
+          suggestion: 'اقتراح:',
+          addTo: 'أضف إلى',
+          relevantSection: 'القسم ذو الصلة',
+          importance: 'الأهمية:',
+          high: 'عالية',
+          aiResumeFix: 'تصحيح السيرة الذاتية بالذكاء الاصطناعي',
+          aiImprovements: 'تحسينات السيرة الذاتية بالذكاء الاصطناعي',
+          close: 'إغلاق',
+          applyChanges: 'تطبيق التغييرات',
+          resumeVersions: 'إصدارات السيرة الذاتية:',
+          improvement: 'التحسين:',
+          points: 'نقاط',
+          noScoresAvailable: 'لا توجد درجات متاحة بعد. قم بتحميل سيرتك الذاتية للبدء.',
+          noDataAvailable: 'لا توجد بيانات متاحة لدرجة السيرة الذاتية',
+          uploadResume: 'قم بتحميل سيرتك الذاتية للحصول على درجة ATS والتوصيات',
+          version: 'الإصدار'
+        }
+      },
+      
+      // Navigation items
+      navigation: {
+        dashboard: 'Dashboard',
+        jobs: 'Jobs',
+        aiCoach: 'AI Coach',
+        resumeBuilder: 'Resume Builder',
+        skillBuilder: 'Skill Builder',
+        achievements: 'Achievements',
+        settings: 'Settings',
+        profile: 'Profile',
+        logout: 'Logout',
+        automationLinkedin: 'LinkedIn Automation',
+        aiRecommendations: 'AI Recommendations',
+        resumeScore: 'Resume Score'
+      },
+      
+      // Notifications
+      notifications: {
+        newJobRecommendation: 'New job recommendation',
+        resumeUpdate: 'Your resume needs updating',
+        skillGap: 'Skill gap detected',
+        mockInterview: 'Mock interview completed',
+        newAchievement: 'New achievement unlocked!',
+        markAllRead: 'Mark all read',
+        read: 'Read',
+        new: 'New',
+        empty: 'No notifications',
+        viewAll: 'View all notifications'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التطابق',
+        timeToAchieve: 'الوقت للإنجاز',
+        skillsRequired: 'المهارات المطلوبة',
+        viewMoreDetails: 'عرض المزيد من التفاصيل',
+        exploreCareer: 'استكشاف المسار المهني',
+        trending: 'رائج',
+        highDemand: 'طلب مرتفع',
+        emergingRole: 'دور ناشئ',
+        months: 'أشهر',
+        years: 'سنوات'
+      },
+      
+      // Skill Gap Analysis
+      skillGapAnalysis: {
+        title: 'تحليل فجوة المهارات',
+        currentSkills: 'المهارات الحالية',
+        requiredSkills: 'المهارات المطلوبة',
+        gapScore: 'درجة الفجوة',
+        recommendation: 'توصية',
+        priorityLevel: 'مستوى الأولوية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        course: 'دورة',
+        mentor: 'مرشد',
+        project: 'مشروع',
+        percentComplete: 'نسبة الإكمال',
+        skillLevel: 'مستوى المهارة',
+        beginner: 'مبتدئ',
+        intermediate: 'متوسط',
+        advanced: 'متقدم',
+        expert: 'خبير'
+      },
+      
+      // AI Recommendation Card
+      aiRecommendationCard: {
+        title: 'توصيات الذكاء الاصطناعي',
+        personalizedFor: 'مخصص لـ',
+        basedOn: 'بناءً على',
+        yourProfile: 'ملفك الشخصي',
+        yourGoals: 'أهدافك',
+        marketTrends: 'اتجاهات السوق',
+        recommendedCourses: 'الدورات الموصى بها',
+        recommendedCertifications: 'الشهادات الموصى بها',
+        recommendedMentors: 'المرشدين الموصى بهم',
+        recommendedProjects: 'المشاريع الموصى بها',
+        viewAll: 'عرض الكل',
+        refreshRecommendations: 'تحديث التوصيات',
+        seeMore: 'رؤية المزيد'
+      },
+      
+      // Skill Transition Chart
+      skillTransitionChart: {
+        title: 'مخطط انتقال المهارات',
+        currentSkillset: 'مجموعة المهارات الحالية',
+        targetSkillset: 'مجموعة المهارات المستهدفة',
+        transitionPath: 'مسار الانتقال',
+        timeEstimate: 'تقدير الوقت',
+        difficultyLevel: 'مستوى الصعوبة',
+        resourcesNeeded: 'الموارد المطلوبة',
+        startTransition: 'بدء الانتقال',
+        skillConnections: 'روابط المهارات',
+        transferableSkills: 'المهارات القابلة للنقل',
+        skillGaps: 'فجوات المهارات',
+        easy: 'سهل',
+        moderate: 'معتدل',
+        challenging: 'صعب',
+        complex: 'معقد'
+      },
+      
+      // Opportunity Alert Card
+      opportunityAlerts: {
+        title: 'تنبيهات الفرص',
+        newOpportunities: 'فرص جديدة',
+        matchScore: 'درجة التطابق',
+        deadline: 'الموعد النهائي',
+        location: 'الموقع',
+        remote: 'عن بعد',
+        hybrid: 'هجين',
+        complex: 'معقد',
+        latestAssessment: 'أحدث تقييم',
+        correctAnswers: 'الإجابات الصحيحة',
+        problemSolving: 'حل المشكلات',
+        technicalKnowledge: 'المعرفة التقنية',
+        dataStructures: 'هياكل البيانات',
+        algorithms: 'الخوارزميات',
+        systemDesign: 'تصميم النظام',
+        objectOrientedProgramming: 'البرمجة كائنية التوجه',
+        userExperience: 'تجربة المستخدم',
+        databaseDesign: 'تصميم قواعد البيانات',
+        noOpportunities: 'لا توجد فرص متاحة حاليًا',
+        match: 'تطابق',
+        save: 'حفظ',
+        next: 'التالي',
+        dismiss: 'تجاهل',
+        apply: 'تقديم',
+        applyNow: 'تقدم الآن',
+        via: 'عبر',
+        matchingSkills: 'المهارات المتطابقة'
+      },
+      
+      // Common elements
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        tryAgain: 'Try Again',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        view: 'View',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        apply: 'Apply',
+        reset: 'Reset',
+        submit: 'Submit',
+        next: 'Next',
+        previous: 'Previous',
+        back: 'Back',
+        success: 'Success',
+        failure: 'Failure',
+        confirm: 'Confirm',
+        reject: 'Reject',
+        user: 'User',
+        login: 'Login',
+        logout: 'Logout',
+        profile: 'Profile',
+        settings: 'Settings',
+        notifications: 'Notifications',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      },
+      
+      // User Progress Card
+      userProgressCard: {
+        title: 'بطاقة تقدم المستخدم',
+        overallProgress: 'التقدم الكلي',
+        skillsAcquired: 'المهارات المكتسبة',
+        coursesCompleted: 'الدورات المكتملة',
+        certificationsEarned: 'الشهادات المكتسبة',
+        goalsAchieved: 'الأهداف المحققة',
+        nextMilestone: 'المعلم التالي',
+        learningHours: 'ساعات التعلم',
+        personalBest: 'أفضل إنجاز شخصي',
+        skillGrowth: 'نمو المهارات',
+        viewDetails: 'عرض التفاصيل',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        yearly: 'سنوي',
+        trending: 'الاتجاه',
+        up: 'تصاعدي',
+        down: 'تنازلي'
+      },
+      
+      // Activity Log Section
+      activityLogSection: {
+        title: 'سجل النشاط',
+        today: 'اليوم',
+        yesterday: 'أمس',
+        thisWeek: 'هذا الأسبوع',
+        lastWeek: 'الأسبوع الماضي',
+        viewAll: 'عرض الكل',
+        filter: 'تصفية',
+        noActivities: 'لا توجد أنشطة لعرضها',
+        assessmentCompleted: 'تم إكمال التقييم',
+        courseEnrolled: 'تم التسجيل في الدورة',
+        courseCompleted: 'تم إكمال الدورة',
+        certificateEarned: 'تم الحصول على الشهادة',
+        skillAcquired: 'تم اكتساب المهارة',
+        goalAchieved: 'تم تحقيق الهدف',
+        leveledUp: 'ارتقاء المستوى',
+        badgeEarned: 'تم الحصول على الشارة',
+        journeyStarted: 'بدأت الرحلة',
+        journeyCompleted: 'اكتملت الرحلة',
+        recommendation: 'توصية',
+        opportunity: 'فرصة',
+        timeAgo: 'منذ {time}'
+      },
+      
+      // Career Prediction Section
+      careerPredictionSection: {
+        title: 'تنبؤات المسار المهني',
+        yourCurrentRole: 'وظيفتك الحالية',
+        potentialPaths: 'المسارات المحتملة',
+        matchPercentage: 'نسبة التوافق',
+      }      }
+    }
+  }
+};
+
+i18n
+  .use(initReactI18next)
+  .init({
+    resources,
+    lng: localStorage.getItem('language') || 'en',
+    fallbackLng: 'en',
+    interpolation: {
+      escapeValue: false,
+    },
+    react: {
+      useSuspense: true,
+    },
+  });
+
+export default i18n;
+
+export const changeLanguage = (lang) => {
+  localStorage.setItem('language', lang);
+  i18n.changeLanguage(lang);
+  if (lang === 'ar') {
+    document.documentElement.setAttribute('dir', 'rtl');
+    document.body.classList.add('rtl-mode');
+  } else {
+    document.documentElement.setAttribute('dir', 'ltr');
+    document.body.classList.remove('rtl-mode');
+  }
+  document.documentElement.setAttribute('lang', lang);
+  return lang;
+};
+
+export const getDirection = () => {
+  return i18n.language === 'ar' ? 'rtl' : 'ltr';
+};
+
+const initializeLanguage = () => {
+  const savedLanguage = localStorage.getItem('language') || 'en';
+  changeLanguage(savedLanguage);
+};
+
+initializeLanguage();

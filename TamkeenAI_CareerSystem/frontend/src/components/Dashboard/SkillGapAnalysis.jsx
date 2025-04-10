@@ -69,6 +69,7 @@ import CloudOffIcon from '@mui/icons-material/CloudOff';
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import DashboardAPI from '../../api/DashboardAPI';
 import chatService from '../../api/chatgpt';
+import { useTranslation } from 'react-i18next';
 
 // Category icon mapping
 const categoryIcons = {
@@ -125,6 +126,7 @@ const resourceTypeIcons = {
 };
 
 const SkillGapAnalysis = ({ skillData, targetRole }) => {
+  const { t } = useTranslation();
   const [assessmentHistory, setAssessmentHistory] = useState([]);
   const [latestAssessment, setLatestAssessment] = useState(null);
   const [error, setError] = useState(null);
@@ -186,7 +188,7 @@ const SkillGapAnalysis = ({ skillData, targetRole }) => {
     return (
       <Paper elevation={3} sx={{ mb: 4, p: 3, borderRadius: 2 }}>
         <Typography variant="h6" gutterBottom>
-          Latest Assessment: {latestAssessment.categoryName}
+          {t('skillGap.latestAssessmentTitle', 'Latest Assessment:')} {latestAssessment.categoryName}
         </Typography>
         
         <Grid container spacing={3}>
@@ -221,7 +223,7 @@ const SkillGapAnalysis = ({ skillData, targetRole }) => {
                     {latestAssessment.score}%
                   </Typography>
                   <Typography variant="caption" component="div" color="text.secondary">
-                    Score
+                    {t('skillGap.score', 'Score')}
                   </Typography>
                 </Box>
               </Box>
@@ -238,7 +240,7 @@ const SkillGapAnalysis = ({ skillData, targetRole }) => {
           
           <Grid item xs={12} md={8}>
             <Typography variant="subtitle1" gutterBottom>
-              Skills Profile
+              {t('skillGap.skillsProfile', 'Skills Profile')}
             </Typography>
             
             <Box sx={{ height: 300 }}>
@@ -261,7 +263,7 @@ const SkillGapAnalysis = ({ skillData, targetRole }) => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle1" gutterBottom>
-              Strengths
+              {t('skillGap.strengths', 'Strengths')}
             </Typography>
             
             <List dense>
@@ -278,7 +280,7 @@ const SkillGapAnalysis = ({ skillData, targetRole }) => {
           
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle1" gutterBottom>
-              Areas for Improvement
+              {t('skillGap.areasForImprovement', 'Areas for Improvement')}
             </Typography>
             
             <List dense>

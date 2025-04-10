@@ -66,7 +66,7 @@ const Notifications = () => {
   
   const navigate = useNavigate();
   const { profile, user } = useUser();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   
   const [standardNotifications, setStandardNotifications] = useState([
     { 
@@ -489,21 +489,21 @@ const Notifications = () => {
     }
   };
   
-  // Get title based on notification type - modified for the new design
+  // Get notification title
   const getNotificationTitle = (notification) => {
-    switch(notification.type) {
-      case 'job': return 'Job Recommendation';
-      case 'resume': return 'Resume Update Required';
-      case 'skill': return 'Skill Gap Detected';
-      case 'application': return 'Application Update';
-      case 'interview': return 'Interview Schedule';
-      case 'message': return 'New Message';
-      case 'learning': return 'Learning Opportunity';
-      case 'system': return 'System Update';
-      case 'alert': return 'Important Alert';
-      case 'booking_reminder': return 'Coaching Session Booked';
-      case 'payment': return 'Payment Notification';
-      default: return 'Notification';
+    if (notification.title) return notification.title;
+    
+    switch (notification.type) {
+      case 'application': return i18n.language === 'ar' ? 'تحديث الطلب' : 'Application Update';
+      case 'interview': return i18n.language === 'ar' ? 'تذكير المقابلة' : 'Interview Reminder';
+      case 'job': return i18n.language === 'ar' ? 'وظيفة موصى بها' : 'Recommended Job';
+      case 'message': return i18n.language === 'ar' ? 'رسالة جديدة' : 'New Message';
+      case 'learning': return i18n.language === 'ar' ? 'فرصة تعليمية' : 'Learning Opportunity';
+      case 'system': return i18n.language === 'ar' ? 'تحديث النظام' : 'System Update';
+      case 'alert': return i18n.language === 'ar' ? 'تنبيه هام' : 'Important Alert';
+      case 'booking_reminder': return i18n.language === 'ar' ? 'تم حجز جلسة تدريب' : 'Coaching Session Booked';
+      case 'payment': return i18n.language === 'ar' ? 'إشعار الدفع' : 'Payment Notification';
+      default: return i18n.language === 'ar' ? 'إشعار' : 'Notification';
     }
   };
   
@@ -613,7 +613,7 @@ const Notifications = () => {
                 }
               }} 
             />
-            Notifications
+            {i18n.language === 'ar' ? 'الإشعارات' : 'Notifications'}
           </Typography>
         </Fade>
         <Fade in={true} timeout={1000}>
@@ -631,7 +631,7 @@ const Notifications = () => {
               variant="outlined"
               startIcon={<CheckCircleOutline />}
             >
-              Mark all as read
+              {i18n.language === 'ar' ? 'وضع علامة على الكل كمقروء' : 'Mark all as read'}
             </Button>
             <Button 
               startIcon={<DeleteSweep />}
@@ -646,7 +646,7 @@ const Notifications = () => {
                 }
               }}
             >
-              Clear all
+              {i18n.language === 'ar' ? 'مسح الكل' : 'Clear all'}
             </Button>
           </Box>
         </Fade>
@@ -661,6 +661,50 @@ const Notifications = () => {
           }}
         />
       </Box>
+      
+      {/* Update Tabs */}
+      <Tabs
+        value={activeTab}
+        onChange={(e, newValue) => setActiveTab(newValue)}
+        sx={{ 
+          mb: 2, 
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          '& .MuiTab-root': {
+            minWidth: 100,
+            fontWeight: 500,
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              opacity: 0.7
+            }
+          }
+        }}
+      >
+        <Tab 
+          label={i18n.language === 'ar' ? 'الكل' : 'All'} 
+          icon={<FormatListBulleted />} 
+          iconPosition="start"
+        />
+        <Tab 
+          label={i18n.language === 'ar' ? 'غير مقروءة' : 'Unread'} 
+          icon={<VisibilityOff />} 
+          iconPosition="start"
+          sx={{
+            '& .MuiBadge-badge': {
+              right: -3,
+              top: 3,
+              padding: '0 4px',
+              height: 16,
+              minWidth: 16
+            }
+          }}
+        />
+        <Tab 
+          label={i18n.language === 'ar' ? 'مقروءة' : 'Read'} 
+          icon={<Visibility />} 
+          iconPosition="start"
+        />
+      </Tabs>
       
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -1176,14 +1220,16 @@ const Notifications = () => {
       <Dialog
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        maxWidth="sm"
+        maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>Notification Settings</DialogTitle>
+        <DialogTitle>
+          {i18n.language === 'ar' ? 'إعدادات الإشعارات' : 'Notification Settings'}
+        </DialogTitle>
         
         <DialogContent>
-          <Typography variant="subtitle1" gutterBottom sx={{ mt: 1 }}>
-            General Settings
+          <Typography variant="subtitle2" gutterBottom>
+            {i18n.language === 'ar' ? 'قنوات الإشعار' : 'Notification Channels'}
           </Typography>
           
           <FormControlLabel
@@ -1196,7 +1242,7 @@ const Notifications = () => {
                 })}
               />
             }
-            label="Receive Email Notifications"
+            label={i18n.language === 'ar' ? 'إشعارات البريد الإلكتروني' : 'Email Notifications'}
             sx={{ display: 'block', mb: 1 }}
           />
           
@@ -1210,37 +1256,31 @@ const Notifications = () => {
                 })}
               />
             }
-            label="Receive Push Notifications"
-            sx={{ display: 'block', mb: 1 }}
+            label={i18n.language === 'ar' ? 'إشعارات الدفع' : 'Push Notifications'}
+            sx={{ display: 'block', mb: 3 }}
           />
           
-          {notificationSettings.emailNotifications && (
-            <FormControl fullWidth margin="normal" size="small">
-              <InputLabel>Email Frequency</InputLabel>
-              <Select
-                value={notificationSettings.emailFrequency}
-                onChange={(e) => setNotificationSettings({
-                  ...notificationSettings,
-                  emailFrequency: e.target.value
-                })}
-                label="Email Frequency"
-              >
-                <MenuItem value="immediate">Immediate</MenuItem>
-                <MenuItem value="daily">Daily Digest</MenuItem>
-                <MenuItem value="weekly">Weekly Digest</MenuItem>
-                <MenuItem value="none">No Emails</MenuItem>
-              </Select>
-            </FormControl>
-          )}
-          
-          <Divider sx={{ my: 2 }} />
-          
-          <Typography variant="subtitle1" gutterBottom>
-            Notification Types
+          <Typography variant="subtitle2" gutterBottom>
+            {i18n.language === 'ar' ? 'تردد البريد الإلكتروني' : 'Email Frequency'}
           </Typography>
           
-          <Typography variant="body2" color="text.secondary" paragraph>
-            Select which types of notifications you want to receive:
+          <FormControl fullWidth sx={{ mb: 3 }}>
+            <Select
+              value={notificationSettings.emailFrequency}
+              onChange={(e) => setNotificationSettings({
+                ...notificationSettings,
+                emailFrequency: e.target.value
+              })}
+            >
+              <MenuItem value="immediate">{i18n.language === 'ar' ? 'فوري' : 'Immediate'}</MenuItem>
+              <MenuItem value="daily">{i18n.language === 'ar' ? 'يومياً' : 'Daily Digest'}</MenuItem>
+              <MenuItem value="weekly">{i18n.language === 'ar' ? 'أسبوعياً' : 'Weekly Digest'}</MenuItem>
+              <MenuItem value="none">{i18n.language === 'ar' ? 'لا شيء' : 'None'}</MenuItem>
+            </Select>
+          </FormControl>
+          
+          <Typography variant="subtitle2" gutterBottom>
+            {i18n.language === 'ar' ? 'أنواع الإشعارات' : 'Notification Types'}
           </Typography>
           
           <FormControlLabel
@@ -1256,7 +1296,7 @@ const Notifications = () => {
                 })}
               />
             }
-            label="Application Updates"
+            label={i18n.language === 'ar' ? 'تحديثات التطبيق' : 'Application Updates'}
             sx={{ display: 'block', mb: 1 }}
           />
           
@@ -1273,7 +1313,7 @@ const Notifications = () => {
                 })}
               />
             }
-            label="Interview Reminders"
+            label={i18n.language === 'ar' ? 'تذكيرات المقابلة' : 'Interview Reminders'}
             sx={{ display: 'block', mb: 1 }}
           />
           
@@ -1290,7 +1330,7 @@ const Notifications = () => {
                 })}
               />
             }
-            label="Messages"
+            label={i18n.language === 'ar' ? 'الرسائل' : 'Messages'}
             sx={{ display: 'block', mb: 1 }}
           />
           
@@ -1307,7 +1347,7 @@ const Notifications = () => {
                 })}
               />
             }
-            label="Job Recommendations"
+            label={i18n.language === 'ar' ? 'توصيات الوظائف' : 'Job Recommendations'}
             sx={{ display: 'block', mb: 1 }}
           />
           
@@ -1324,7 +1364,7 @@ const Notifications = () => {
                 })}
               />
             }
-            label="Learning Resources"
+            label={i18n.language === 'ar' ? 'موارد التعلم' : 'Learning Resources'}
             sx={{ display: 'block', mb: 1 }}
           />
           
@@ -1341,20 +1381,20 @@ const Notifications = () => {
                 })}
               />
             }
-            label="System Notifications"
+            label={i18n.language === 'ar' ? 'إشعارات النظام' : 'System Notifications'}
             sx={{ display: 'block', mb: 1 }}
           />
         </DialogContent>
         
         <DialogActions>
           <Button onClick={() => setSettingsOpen(false)}>
-            Cancel
+            {i18n.language === 'ar' ? 'إلغاء' : 'Cancel'}
           </Button>
           <Button
             variant="contained"
             onClick={handleSaveSettings}
           >
-            Save Settings
+            {i18n.language === 'ar' ? 'حفظ الإعدادات' : 'Save Settings'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1393,7 +1433,7 @@ const Notifications = () => {
                   {getNotificationIcon(selectedNotification)}
                 </Avatar>
                 <Typography variant="h6" fontWeight={600}>
-                  {selectedNotification.title || 'Notification Details'}
+                  {selectedNotification.title || i18n.language === 'ar' ? 'تفاصيل الإشعار' : 'Notification Details'}
                 </Typography>
               </Box>
             </DialogTitle>
@@ -1452,7 +1492,7 @@ const Notifications = () => {
                         }
                       }}
                     >
-                      View Details
+                      {i18n.language === 'ar' ? 'عرض التفاصيل' : 'View Details'}
                     </Button>
                   )}
                 </Box>
@@ -1465,7 +1505,7 @@ const Notifications = () => {
                 variant="outlined"
                 sx={{ borderRadius: '8px' }}
               >
-                Close
+                {i18n.language === 'ar' ? 'إغلاق' : 'Close'}
               </Button>
               
               <Button
@@ -1487,7 +1527,7 @@ const Notifications = () => {
                 }}
                 startIcon={<CheckCircleOutline />}
               >
-                Mark as Read
+                {i18n.language === 'ar' ? 'وضع علامة كمقروء' : 'Mark as Read'}
               </Button>
             </DialogActions>
           </>

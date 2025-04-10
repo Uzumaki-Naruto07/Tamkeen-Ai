@@ -7,7 +7,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Menu, MenuItem, InputAdornment, Switch, FormControlLabel,
   LinearProgress, Rating, Tooltip, Snackbar, Checkbox,
-  Container
+  Container, Link
 } from '@mui/material';
 import {
   Edit, Save, CloudUpload, Delete, PersonOutline,
@@ -95,6 +95,8 @@ const UserProfile = () => {
   });
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmDialogAction, setConfirmDialogAction] = useState(null);
+  const [socialLinkDialogOpen, setSocialLinkDialogOpen] = useState(false);
+  const [currentSocialLink, setCurrentSocialLink] = useState({type: '', url: ''});
   
   // Move state from dialog rendering functions to the component top level
   const [educationForm, setEducationForm] = useState({
@@ -269,14 +271,28 @@ const UserProfile = () => {
               email: otherUserProfile.email
             });
             
-            setProfileVisibility(otherUserProfile.visibility);
-            setSocialLinks(otherUserProfile.socialLinks);
+            setProfileVisibility(otherUserProfile.visibility || {
+              isPublic: true,
+              showEmail: false,
+              showPhone: false,
+              showEducation: true,
+              showExperience: true,
+              showSkills: true
+            });
+            
+            setSocialLinks(otherUserProfile.socialLinks || {
+              linkedin: '',
+              github: '',
+              twitter: '',
+              portfolio: ''
+            });
+            
             setProfileUrl(`${window.location.origin}/profile/${otherUserProfile.username}`);
             
-            // Empty arrays for other profile data
-            setSkills([]);
-            setEducation([]);
-            setWorkExperience([]);
+            // Empty arrays for other profile data if not loaded above
+            if (!otherUserProfile.skills) setSkills([]);
+            if (!otherUserProfile.education) setEducation([]);
+            if (!otherUserProfile.experiences) setWorkExperience([]);
             
             // Viewing someone else's profile - not in edit mode
             setEditMode(false);
@@ -348,8 +364,8 @@ const UserProfile = () => {
               ownUserProfile = {
                 id: mockUserId,
                 userId: mockUserId,
-                username: 'zayed',
-                firstName: 'Zayed',
+                username: 'Hessa',
+                firstName: 'Hessa',
                 lastName: '',
                 title: '',
                 bio: '',
@@ -370,8 +386,21 @@ const UserProfile = () => {
                   github: '',
                   twitter: '',
                   portfolio: ''
-                }
+                },
+                education: [],
+                experiences: [],
+                skills: []
               };
+              
+              // Save the default profile to localStorage for future use
+              if (import.meta.env.DEV) {
+                try {
+                  localStorage.setItem(`profile_${mockUserId}`, JSON.stringify(ownUserProfile));
+                  console.log('DEV MODE: Created and saved default profile to localStorage');
+                } catch (err) {
+                  console.warn('Failed to save default profile to localStorage:', err);
+                }
+              }
             }
             
             // Set local state
@@ -389,7 +418,8 @@ const UserProfile = () => {
                   lastName: ownUserProfile.lastName,
                   fullName: ownUserProfile.firstName + (ownUserProfile.lastName ? ` ${ownUserProfile.lastName}` : ''),
                   bio: ownUserProfile.bio,
-                  avatar: ownUserProfile.avatar
+                  avatar: ownUserProfile.avatar,
+                  socialLinks: ownUserProfile.socialLinks
                 });
               } catch (err) {
                 console.warn("DEV MODE: Couldn't sync with context", err);
@@ -425,10 +455,10 @@ const UserProfile = () => {
             
             setProfileUrl(`${window.location.origin}/profile/${ownUserProfile.username || ownUserProfile.id}`);
             
-            // Set empty skills, education and work experience for user to fill
-            setSkills([]);
-            setEducation([]);
-            setWorkExperience([]);
+            // Set empty skills, education and work experience if not already loaded
+            if (!ownUserProfile.skills) setSkills([]);
+            if (!ownUserProfile.education) setEducation([]);
+            if (!ownUserProfile.experiences) setWorkExperience([]);
             
             setEditMode(true); // Allow editing for own profile
             setLoading(false);
@@ -658,7 +688,8 @@ const UserProfile = () => {
         ...updatedProfile,
         firstName: profileFieldsEdited.firstName,
         lastName: profileFieldsEdited.lastName,
-        fullName: `${profileFieldsEdited.firstName} ${profileFieldsEdited.lastName}`.trim()
+        fullName: `${profileFieldsEdited.firstName} ${profileFieldsEdited.lastName}`.trim(),
+        socialLinks: socialLinks
       }));
       
       // Update AppContext if available
@@ -671,22 +702,18 @@ const UserProfile = () => {
             lastName: profileFieldsEdited.lastName,
             fullName: `${profileFieldsEdited.firstName} ${profileFieldsEdited.lastName}`.trim(),
             id: profileData.userId || profileData.id,
-            userId: profileData.userId || profileData.id
+            userId: profileData.userId || profileData.id,
+            socialLinks: socialLinks
           };
           
           await updateUserProfile(contextProfileUpdate);
           console.log('Profile synced with app context successfully', contextProfileUpdate);
           
-          // Ensure the local storage is updated in development mode
+          // Ensure the local storage is updated in development mode for persistence
           if (import.meta.env.DEV) {
             const userId = profileData.userId || profileData.id;
-            
-            try {
-              localStorage.setItem(`profile_${userId}`, JSON.stringify(updatedProfile));
-              console.log('DEV MODE: Directly saved profile to localStorage:', updatedProfile);
-            } catch (err) {
-              console.warn('Failed to save profile to localStorage:', err);
-            }
+            // Use the comprehensive sync function
+            syncProfileWithLocalStorage(userId, updatedProfile);
           }
         } catch (err) {
           console.warn("Couldn't sync profile with context", err);
@@ -710,25 +737,10 @@ const UserProfile = () => {
       }, 300); // Reduced from 1000ms to 300ms for faster transition
       
     } catch (err) {
-      console.error('Error updating profile:', err);
-      let errorMessage = 'Failed to update profile';
-      
-      if (err.response) {
-        // Server responded with error
-        errorMessage = err.response.data?.message || `Server error: ${err.response.status}`;
-        console.error('API error details:', err.response.data);
-      } else if (err.request) {
-        // Request made but no response
-        errorMessage = 'No response from server. Please check your connection';
-        console.error('No response received:', err.request);
-      } else {
-        // Something else went wrong
-        errorMessage = err.message || 'Unknown error occurred';
-      }
-      
-      setError(errorMessage);
-      setSnackbarMessage(errorMessage);
+      console.error('Failed to update profile:', err);
+      setError('Failed to update profile: ' + (err.message || 'Unknown error'));
       setSnackbarSeverity('error');
+      setSnackbarMessage('Failed to update profile: ' + (err.message || 'Unknown error'));
       setSnackbarOpen(true);
     } finally {
       setSaving(false);
@@ -795,51 +807,31 @@ const UserProfile = () => {
             }
           }
           
-          // Save to localStorage directly as well for better sync
-          try {
-            // Save to userProfile in localStorage
-            const localUserProfile = JSON.parse(localStorage.getItem(`profile_${devUserId}`) || '{}');
-            localUserProfile.avatar = avatarUrl;
-            localStorage.setItem(`profile_${devUserId}`, JSON.stringify(localUserProfile));
-            
-            // Also update the main user profile in local storage to ensure nav bar display
-            const userProfileData = JSON.parse(localStorage.getItem('userProfile') || '{}');
-            userProfileData.profileImage = avatarUrl;
-            localStorage.setItem('userProfile', JSON.stringify(userProfileData));
-            
-            console.log('User profile and avatar updated in localStorage');
-          } catch (localStorageErr) {
-            console.warn('Failed to update avatar in localStorage:', localStorageErr);
-          }
+          // Use the utility function to sync avatar across all localStorage locations
+          syncAvatarInLocalStorage(devUserId, avatarUrl);
           
-          // Force the snackbar to appear by using setTimeout
-          setTimeout(() => {
-            console.log('DEV MODE: Showing success message for cleared avatar');
-            setSnackbarSeverity('success');
-            setSnackbarMessage('Profile picture cleared successfully');
-            setSnackbarOpen(true);
-          }, 100);
-          
-          setSaving(false);
+          // Close dialog and show success message
           setPhotoDialogOpen(false);
+          setSnackbarSeverity('success');
+          setSnackbarMessage('Profile picture updated successfully');
+          setSnackbarOpen(true);
+          
           return;
         }
       }
       
-      // Normal flow when a file is selected
-      const file = fileInputRef.current?.files?.[0];
+      // Handle the case where a file is selected
+      const file = fileInputRef.current.files[0];
       if (!file) {
-        if (import.meta.env.DEV) {
-          // For development, just close the dialog without an error
-          setSaving(false);
-          setPhotoDialogOpen(false);
-          return;
-        }
-        throw new Error('No file selected');
+        setSnackbarSeverity('error');
+        setSnackbarMessage('No image file selected');
+        setSnackbarOpen(true);
+        setSaving(false);
+        return;
       }
       
-      // Read the file as DataURL to store in localStorage
       const reader = new FileReader();
+      
       reader.onload = async (e) => {
         const avatarDataUrl = e.target.result;
         
@@ -857,21 +849,16 @@ const UserProfile = () => {
             avatar: avatarDataUrl
           }));
           
-          // Save to localStorage
-          try {
-            // Save to userProfile in localStorage
-            const localUserProfile = JSON.parse(localStorage.getItem(`profile_${userId}`) || '{}');
-            localUserProfile.avatar = avatarDataUrl;
-            localStorage.setItem(`profile_${userId}`, JSON.stringify(localUserProfile));
-            
-            // Also update the main user profile in local storage to ensure nav bar display
-            const userProfileData = JSON.parse(localStorage.getItem('userProfile') || '{}');
-            userProfileData.profileImage = avatarDataUrl;
-            localStorage.setItem('userProfile', JSON.stringify(userProfileData));
-            
-            console.log('User profile and avatar updated in localStorage');
-          } catch (localStorageErr) {
-            console.warn('Failed to update avatar in localStorage:', localStorageErr);
+          // Update in development mode - use comprehensive sync function to ensure all profile data is kept
+          if (import.meta.env.DEV) {
+            const currentProfile = {
+              ...userProfile,
+              avatar: avatarDataUrl
+            };
+            syncProfileWithLocalStorage(userId, currentProfile);
+          } else {
+            // Just sync the avatar in production mode
+            syncAvatarInLocalStorage(userId, avatarDataUrl);
           }
           
           // Update in the main app context if available
@@ -943,6 +930,59 @@ const UserProfile = () => {
   const showSnackbar = (message) => {
     setSnackbarMessage(message);
     setSnackbarOpen(true);
+  };
+  
+  // Open social link dialog
+  const handleOpenSocialLinkDialog = (type) => {
+    setCurrentSocialLink({
+      type,
+      url: socialLinks[type] || ''
+    });
+    setSocialLinkDialogOpen(true);
+  };
+  
+  // Save social link
+  const handleSaveSocialLink = async () => {
+    setSaving(true);
+    
+    try {
+      // Validate URL if not empty
+      if (currentSocialLink.url && !currentSocialLink.url.startsWith('http')) {
+        // Add https:// prefix if missing
+        currentSocialLink.url = `https://${currentSocialLink.url}`;
+      }
+      
+      // Update socialLinks state
+      const updatedSocialLinks = {
+        ...socialLinks,
+        [currentSocialLink.type]: currentSocialLink.url
+      };
+      
+      setSocialLinks(updatedSocialLinks);
+      
+      // Update in localStorage for development mode
+      if (import.meta.env.DEV && userProfile?.id) {
+        // Use the comprehensive sync function
+        const currentProfile = {
+          ...userProfile,
+          socialLinks: updatedSocialLinks
+        };
+        syncProfileWithLocalStorage(userProfile.id, currentProfile);
+      }
+      
+      // Show success message
+      setSnackbarMessage('Social link updated successfully');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error('Error saving social link:', err);
+      setSnackbarMessage('Failed to update social link');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    } finally {
+      setSaving(false);
+      setSocialLinkDialogOpen(false);
+    }
   };
   
   // Render functions
@@ -1263,14 +1303,23 @@ const UserProfile = () => {
                       </ListItemIcon>
                       <ListItemText 
                         primary="LinkedIn" 
-                        secondary={socialLinks.linkedin || 'Not connected'}
+                        secondary={
+                          socialLinks.linkedin ? (
+                            <Link 
+                              href={socialLinks.linkedin.startsWith('http') ? socialLinks.linkedin : `https://${socialLinks.linkedin}`} 
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              underline="hover"
+                            >
+                              {socialLinks.linkedin}
+                            </Link>
+                          ) : 'Not connected'
+                        }
                       />
                       <Button
                         size="small"
                         variant="outlined"
-                        onClick={() => {
-                          // Open dialog to edit LinkedIn URL
-                        }}
+                        onClick={() => handleOpenSocialLinkDialog('linkedin')}
                       >
                         {socialLinks.linkedin ? 'Edit' : 'Add'}
                       </Button>
@@ -1282,14 +1331,23 @@ const UserProfile = () => {
                 </ListItemIcon>
                       <ListItemText 
                         primary="GitHub" 
-                        secondary={socialLinks.github || 'Not connected'}
+                        secondary={
+                          socialLinks.github ? (
+                            <Link 
+                              href={socialLinks.github.startsWith('http') ? socialLinks.github : `https://${socialLinks.github}`} 
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              underline="hover"
+                            >
+                              {socialLinks.github}
+                            </Link>
+                          ) : 'Not connected'
+                        }
                       />
                       <Button
                         size="small"
                         variant="outlined"
-                        onClick={() => {
-                          // Open dialog to edit GitHub URL
-                        }}
+                        onClick={() => handleOpenSocialLinkDialog('github')}
                       >
                         {socialLinks.github ? 'Edit' : 'Add'}
                       </Button>
@@ -1301,14 +1359,23 @@ const UserProfile = () => {
                       </ListItemIcon>
                       <ListItemText 
                         primary="Twitter" 
-                        secondary={socialLinks.twitter || 'Not connected'}
+                        secondary={
+                          socialLinks.twitter ? (
+                            <Link 
+                              href={socialLinks.twitter.startsWith('http') ? socialLinks.twitter : `https://${socialLinks.twitter}`} 
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              underline="hover"
+                            >
+                              {socialLinks.twitter}
+                            </Link>
+                          ) : 'Not connected'
+                        }
                       />
                       <Button
                         size="small"
                         variant="outlined"
-                        onClick={() => {
-                          // Open dialog to edit Twitter URL
-                        }}
+                        onClick={() => handleOpenSocialLinkDialog('twitter')}
                       >
                         {socialLinks.twitter ? 'Edit' : 'Add'}
                       </Button>
@@ -1320,14 +1387,23 @@ const UserProfile = () => {
                 </ListItemIcon>
                       <ListItemText 
                         primary="Portfolio Website" 
-                        secondary={socialLinks.portfolio || 'Not added'}
+                        secondary={
+                          socialLinks.portfolio ? (
+                            <Link 
+                              href={socialLinks.portfolio.startsWith('http') ? socialLinks.portfolio : `https://${socialLinks.portfolio}`} 
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              underline="hover"
+                            >
+                              {socialLinks.portfolio}
+                            </Link>
+                          ) : 'Not added'
+                        }
                       />
                       <Button
                         size="small"
                         variant="outlined"
-                        onClick={() => {
-                          // Open dialog to edit Portfolio URL
-                        }}
+                        onClick={() => handleOpenSocialLinkDialog('portfolio')}
                       >
                         {socialLinks.portfolio ? 'Edit' : 'Add'}
                       </Button>
@@ -2591,6 +2667,136 @@ const UserProfile = () => {
       </Dialog>
     );
   };
+  
+  // Render social link dialog
+  const renderSocialLinkDialog = () => {
+    // Get label and placeholder text based on type
+    const getLinkInfo = () => {
+      switch(currentSocialLink.type) {
+        case 'linkedin':
+          return {
+            label: 'LinkedIn URL',
+            placeholder: 'https://linkedin.com/in/yourusername',
+            title: 'LinkedIn Profile',
+            icon: <LinkedIn />
+          };
+        case 'github':
+          return {
+            label: 'GitHub URL',
+            placeholder: 'https://github.com/yourusername',
+            title: 'GitHub Profile',
+            icon: <GitHub />
+          };
+        case 'twitter':
+          return {
+            label: 'Twitter URL',
+            placeholder: 'https://twitter.com/yourusername',
+            title: 'Twitter Profile',
+            icon: <Twitter />
+          };
+        case 'portfolio':
+          return {
+            label: 'Portfolio URL',
+            placeholder: 'https://yourwebsite.com',
+            title: 'Portfolio Website',
+            icon: <Language />
+          };
+        default:
+          return {
+            label: 'URL',
+            placeholder: 'https://',
+            title: 'Link',
+            icon: <LinkIcon />
+          };
+      }
+    };
+    
+    const linkInfo = getLinkInfo();
+    
+    return (
+      <Dialog 
+        open={socialLinkDialogOpen} 
+        onClose={() => setSocialLinkDialogOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {linkInfo.icon}
+            <Typography variant="h6" sx={{ ml: 1 }}>
+              {socialLinks[currentSocialLink.type] ? `Edit ${linkInfo.title}` : `Add ${linkInfo.title}`}
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label={linkInfo.label}
+            placeholder={linkInfo.placeholder}
+            value={currentSocialLink.url}
+            onChange={(e) => setCurrentSocialLink({...currentSocialLink, url: e.target.value})}
+            margin="normal"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LinkIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+          {currentSocialLink.url && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {currentSocialLink.url.startsWith('http') ? 
+                'Valid URL format' : 
+                'URL will be prefixed with https:// if needed'}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          {socialLinks[currentSocialLink.type] && (
+            <Button 
+              color="error" 
+              onClick={() => {
+                // Remove the social link
+                const updatedSocialLinks = {...socialLinks};
+                updatedSocialLinks[currentSocialLink.type] = '';
+                setSocialLinks(updatedSocialLinks);
+                
+                // Update in localStorage for development mode
+                if (import.meta.env.DEV && userProfile?.id) {
+                  // Use comprehensive sync function
+                  const currentProfile = {
+                    ...userProfile,
+                    socialLinks: updatedSocialLinks
+                  };
+                  syncProfileWithLocalStorage(userProfile.id, currentProfile);
+                }
+                
+                setSocialLinkDialogOpen(false);
+                setSnackbarMessage('Social link removed');
+                setSnackbarSeverity('success');
+                setSnackbarOpen(true);
+              }}
+              startIcon={<Delete />}
+            >
+              Remove
+            </Button>
+          )}
+          <Button onClick={() => setSocialLinkDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            color="primary"
+            onClick={handleSaveSocialLink}
+            disabled={saving}
+          >
+            {saving ? <CircularProgress size={24} /> : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
 
   // Render not found state
   const renderProfileNotFound = () => {
@@ -2660,6 +2866,144 @@ const UserProfile = () => {
       } catch (err) {
         console.warn('Failed to update visibility settings in localStorage:', err);
       }
+    }
+  };
+
+  // Utility function to sync avatar across all localStorage locations
+  const syncAvatarInLocalStorage = (userId, avatarUrl) => {
+    console.log('Syncing avatar in localStorage for user:', userId);
+    
+    // List of all possible localStorage keys containing user avatar
+    const storageKeys = [
+      // User-specific profile
+      `profile_${userId}`,
+      // Main user data
+      'user',
+      // App context user profile
+      'userProfile',
+      // Auth user
+      'authUser',
+      // UAE PASS user data (if applicable)
+      'user_data',
+      // User data for admin users
+      'admin_user'
+    ];
+    
+    try {
+      storageKeys.forEach(key => {
+        try {
+          const storedData = localStorage.getItem(key);
+          if (storedData) {
+            const parsedData = JSON.parse(storedData);
+            
+            // Update avatar in the object
+            if (typeof parsedData === 'object' && parsedData !== null) {
+              // Update all possible avatar-related fields
+              if (key === 'userProfile') {
+                parsedData.profileImage = avatarUrl;
+                parsedData.avatar = avatarUrl;
+              } else {
+                parsedData.avatar = avatarUrl;
+              }
+              
+              // Save back to localStorage
+              localStorage.setItem(key, JSON.stringify(parsedData));
+              console.log(`Updated avatar in localStorage for key: ${key}`);
+            }
+          }
+        } catch (err) {
+          console.warn(`Failed to update avatar for key ${key}:`, err);
+        }
+      });
+      
+      console.log('Avatar successfully synced across all localStorage locations');
+    } catch (mainErr) {
+      console.error('Error in syncAvatarInLocalStorage:', mainErr);
+    }
+  };
+
+  // Utility function to sync entire profile data with localStorage
+  const syncProfileWithLocalStorage = (userId, profileData) => {
+    if (!import.meta.env.DEV || !userId) return;
+    
+    console.log('Syncing full profile in localStorage for user:', userId);
+    
+    try {
+      // First, update the main profile object
+      const profileKey = `profile_${userId}`;
+      
+      // Get current stored profile if exists
+      let existingProfile = {};
+      try {
+        const storedProfile = localStorage.getItem(profileKey);
+        if (storedProfile) {
+          existingProfile = JSON.parse(storedProfile);
+        }
+      } catch (err) {
+        console.warn('Failed to parse existing profile from localStorage:', err);
+      }
+      
+      // Merge with new data, ensuring we don't lose any fields
+      const updatedProfile = {
+        ...existingProfile,
+        ...profileData,
+        // Ensure these are explicitly set
+        id: userId,
+        userId: userId,
+        firstName: profileData.firstName || existingProfile.firstName,
+        lastName: profileData.lastName || existingProfile.lastName,
+        fullName: profileData.fullName || `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim(),
+        visibility: profileData.visibility || existingProfile.visibility,
+        socialLinks: profileData.socialLinks || existingProfile.socialLinks,
+        // Keep avatar if present
+        avatar: profileData.avatar || existingProfile.avatar
+      };
+      
+      // Save merged profile back to localStorage
+      localStorage.setItem(profileKey, JSON.stringify(updatedProfile));
+      console.log('DEV MODE: Updated full profile in localStorage:', updatedProfile);
+      
+      // Also update related localStorage items - user data for UI context
+      const contextKeys = ['user', 'userProfile', 'authUser'];
+      
+      contextKeys.forEach(key => {
+        try {
+          const storedData = localStorage.getItem(key);
+          if (storedData) {
+            const parsedData = JSON.parse(storedData);
+            
+            if (typeof parsedData === 'object' && parsedData !== null) {
+              // Update with essential profile fields
+              const updatedData = {
+                ...parsedData,
+                firstName: updatedProfile.firstName,
+                lastName: updatedProfile.lastName,
+                fullName: updatedProfile.fullName,
+                avatar: updatedProfile.avatar,
+                // Include these if the UI might use them
+                title: updatedProfile.title,
+                bio: updatedProfile.bio,
+                socialLinks: updatedProfile.socialLinks
+              };
+              
+              localStorage.setItem(key, JSON.stringify(updatedData));
+              console.log(`DEV MODE: Updated profile data in localStorage for key: ${key}`);
+            }
+          }
+        } catch (err) {
+          console.warn(`Failed to update profile for key ${key}:`, err);
+        }
+      });
+      
+      console.log('Profile successfully synced across all localStorage locations');
+      
+      // If avatar exists, also sync it separately to ensure all references are updated
+      if (updatedProfile.avatar) {
+        syncAvatarInLocalStorage(userId, updatedProfile.avatar);
+      }
+      
+    } catch (mainErr) {
+      console.error('Error in syncProfileWithLocalStorage:', mainErr);
     }
   };
 
@@ -2740,6 +3084,7 @@ const UserProfile = () => {
       {renderSkillDialog()}
       {renderPhotoDialog()}
       {renderConfirmDialog()}
+      {renderSocialLinkDialog()}
       
       {/* Notification Snackbar */}
       <Snackbar

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { 
   Card,
   CardContent,
@@ -106,6 +107,7 @@ const colorPalette = {
 };
 
 const SkillTransitionChart = ({ skillData, targetRole }) => {
+  const { t } = useTranslation();
   const [assessmentHistory, setAssessmentHistory] = useState([]);
   const [latestAssessment, setLatestAssessment] = useState(null);
   const [error, setError] = useState(null);
@@ -193,19 +195,38 @@ const SkillTransitionChart = ({ skillData, targetRole }) => {
             mb: 1.5
           }}
         >
-          Latest Assessment: {latestAssessment.categoryName}
+          {t('skillsProfile.latestAssessment', 'Latest Assessment')}: {latestAssessment.categoryName || t('skillsProfile.problemSolving', 'Problem Solving')}
         </Typography>
         
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
-            <Box sx={{ textAlign: 'center' }}>
-              <Box sx={{ position: 'relative', display: 'inline-flex', mb: 2 }}>
+        <Grid container spacing={2}>
+          {/* Score display */}
+          <Grid item xs={12} sm={4} md={4}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center',
+              justifyContent: 'center',
+              p: 2,
+              position: 'relative'
+            }}>
+              <Box
+                sx={{
+                  position: 'relative',
+                  display: 'inline-flex',
+                  mb: 2
+                }}
+              >
                 <CircularProgress
                   variant="determinate"
                   value={latestAssessment.score}
                   size={120}
-                  thickness={4}
-                  sx={{ color: scoreColor }}
+                  thickness={5}
+                  sx={{
+                    color: scoreColor,
+                    '& .MuiCircularProgress-circle': {
+                      strokeLinecap: 'round',
+                    },
+                  }}
                 />
                 <Box
                   sx={{
@@ -220,69 +241,80 @@ const SkillTransitionChart = ({ skillData, targetRole }) => {
                     flexDirection: 'column'
                   }}
                 >
-                  <Typography variant="h4" component="div" sx={{ fontWeight: 'bold', color: scoreColor }}>
+                  <Typography
+                    variant="h4"
+                    component="div"
+                    sx={{ fontWeight: 'bold', color: scoreColor }}
+                  >
                     {latestAssessment.score}%
                   </Typography>
-                  <Typography variant="caption" component="div" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                    Score
+                  <Typography variant="caption" component="div" color="text.secondary">
+                    {t('skillsProfile.score', 'Score')}
                   </Typography>
-        </Box>
-      </Box>
-              
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
-                {new Date(latestAssessment.timestamp).toLocaleDateString()}
-      </Typography>
-              
-              <Typography variant="body1" sx={{ mt: 1.5, fontSize: '1rem' }}>
-                {latestAssessment.correctAnswers} of {latestAssessment.totalQuestions} correct
-      </Typography>
-    </Box>
+                </Box>
+              </Box>
+            
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  {new Date(latestAssessment.timestamp).toLocaleDateString()}
+                </Typography>
+                
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  {latestAssessment.totalCorrect || 2} {t('skillsProfile.of', 'of')} {latestAssessment.totalQuestions || 3} {t('skillsProfile.correct', 'correct')}
+                </Typography>
+              </Box>
+            </Box>
           </Grid>
           
-          <Grid item xs={12} md={8}>
-            <Typography variant="subtitle1" gutterBottom sx={{ color: colorPalette.darkGrey, fontSize: '1rem', mb: 1 }}>
-              Skills Profile
-      </Typography>
-            
-            <Box sx={{ height: 260 }}>
+          {/* Radar chart */}
+          <Grid item xs={12} sm={8} md={8}>
+            <Box sx={{ height: 300, width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarChartData}>
-                  <PolarGrid stroke={colorPalette.lightGrey} />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: colorPalette.darkGrey, fontSize: 11 }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: colorPalette.darkGrey, fontSize: 11 }} />
-          <Radar 
-                    name="Skill Level" 
-                    dataKey="A" 
-                    stroke={colorPalette.chartStroke} 
-                    fill={colorPalette.chartFill} 
-                    fillOpacity={0.7} 
+                <RadarChart outerRadius={90} data={radarChartData}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: colorPalette.darkGrey, fontSize: 12 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                  <Radar
+                    name={t('skillsProfile.skillLevel', 'Skill Level')}
+                    dataKey="A"
+                    stroke={colorPalette.primary}
+                    fill={colorPalette.chartFill}
+                    fillOpacity={0.6}
                   />
-                  <Legend iconSize={12} wrapperStyle={{ fontSize: '12px' }} />
-        </RadarChart>
-      </ResponsiveContainer>
-    </Box>
+                  <Legend />
+                </RadarChart>
+              </ResponsiveContainer>
+            </Box>
           </Grid>
         </Grid>
         
         <Divider sx={{ my: 2 }} />
         
         <Grid container spacing={3}>
+          {/* Strengths section */}
           <Grid item xs={12} md={6}>
-            <Typography variant="subtitle1" gutterBottom sx={{ color: colorPalette.darkGrey, fontSize: '1rem' }}>
-              Strengths
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                fontWeight: 600, 
+                mb: 1.5,
+                color: colorPalette.success
+              }}
+            >
+              {t('skillsProfile.strengths', 'Strengths')}
             </Typography>
             
-            <List dense sx={{ maxHeight: '180px', overflow: 'auto' }}>
-              {latestAssessment.strengths.map((strength, index) => (
-                <ListItem key={index} sx={{ py: 0.75 }}>
-                  <ListItemIcon sx={{ minWidth: '36px' }}>
-                    <CheckCircleIcon sx={{ color: colorPalette.success, fontSize: '1.2rem' }} />
+            <List dense>
+              {latestAssessment.strengths && latestAssessment.strengths.map((strength, index) => (
+                <ListItem key={index} sx={{ py: 0.5 }}>
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    <CheckCircleIcon sx={{ color: colorPalette.success }} />
                   </ListItemIcon>
                   <ListItemText 
                     primary={strength} 
                     primaryTypographyProps={{ 
-                      fontSize: '1rem',
-                      fontWeight: 500
+                      variant: 'body2',
+                      fontWeight: 'medium'
                     }} 
                   />
                 </ListItem>
@@ -290,22 +322,30 @@ const SkillTransitionChart = ({ skillData, targetRole }) => {
             </List>
           </Grid>
           
+          {/* Areas for improvement section */}
           <Grid item xs={12} md={6}>
-            <Typography variant="subtitle1" gutterBottom sx={{ color: colorPalette.darkGrey, fontSize: '1rem' }}>
-              Areas for Improvement
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                fontWeight: 600, 
+                mb: 1.5,
+                color: colorPalette.warning
+              }}
+            >
+              {t('skillsProfile.areasForImprovement', 'Areas for Improvement')}
             </Typography>
             
-            <List dense sx={{ maxHeight: '180px', overflow: 'auto' }}>
-              {latestAssessment.weaknesses.map((weakness, index) => (
-                <ListItem key={index} sx={{ py: 0.75 }}>
-                  <ListItemIcon sx={{ minWidth: '36px' }}>
-                    <PriorityHighIcon sx={{ color: colorPalette.warning, fontSize: '1.2rem' }} />
+            <List dense>
+              {latestAssessment.weaknesses && latestAssessment.weaknesses.map((weakness, index) => (
+                <ListItem key={index} sx={{ py: 0.5 }}>
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    <PriorityHighIcon sx={{ color: colorPalette.warning }} />
                   </ListItemIcon>
                   <ListItemText 
                     primary={weakness} 
                     primaryTypographyProps={{ 
-                      fontSize: '1rem',
-                      fontWeight: 500
+                      variant: 'body2',
+                      fontWeight: 'medium'
                     }} 
                   />
                 </ListItem>
@@ -317,6 +357,20 @@ const SkillTransitionChart = ({ skillData, targetRole }) => {
     );
   };
 
+  // Render the main content when no data is available
+  if (error || (!latestAssessment && assessmentHistory.length === 0)) {
+    return (
+      <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', p: 3 }}>
+        <Typography variant="h6" gutterBottom textAlign="center">
+          {error || t('skillsProfile.noAssessmentData', 'No assessment data available yet')}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" textAlign="center">
+          {t('skillsProfile.completeAssessment', 'Complete a skills assessment to see your results here')}
+        </Typography>
+      </Card>
+    );
+  }
+
   return (
     <Box sx={{ height: '100%', overflow: 'hidden' }}>
       {error && (
@@ -327,27 +381,7 @@ const SkillTransitionChart = ({ skillData, targetRole }) => {
       
       {/* Render only the latest assessment component */}
       {latestAssessment && renderLatestAssessment()}
-      
-      {!latestAssessment && !error && (
-        <Paper 
-          elevation={2} 
-        sx={{ 
-          p: 2, 
-            textAlign: 'center', 
-            borderRadius: 2, 
-            backgroundColor: colorPalette.lightGrey,
-            border: `1px solid ${colorPalette.lightGrey}`
-          }}
-        >
-          <Typography variant="body1" color="text.secondary">
-            No assessment data available yet.
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Complete a skill assessment to see your results here.
-          </Typography>
-        </Paper>
-      )}
-      </Box>
+    </Box>
   );
 };
 

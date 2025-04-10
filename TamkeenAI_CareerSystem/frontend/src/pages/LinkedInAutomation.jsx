@@ -58,12 +58,14 @@ import { useUser, useResume } from '../context/AppContext';
 import { JOB_ENDPOINTS } from '../utils/endpoints';
 import axios from 'axios';
 import { alpha } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 
 function LinkedinAutomation() {
   const theme = useTheme();
   const navigate = useNavigate();
   const { profile } = useUser();
   const { currentResume } = useResume();
+  const { t, i18n } = useTranslation();
   
   // States
   const [activeStep, setActiveStep] = useState(0);
@@ -93,6 +95,268 @@ function LinkedinAutomation() {
     logs: []
   });
   const [showCompetitionDisclaimer, setShowCompetitionDisclaimer] = useState(true);
+
+  // Translation objects for all the strings in the component
+  const translations = {
+    en: {
+      // Disclaimer messages
+      demoMode: "DEMONSTRATION MODE ONLY - NO ACTUAL LINKEDIN AUTOMATION WILL OCCUR",
+      importantNotice: "Important Notice: Demonstration Mode Only",
+      linkedinAutomationFeature: "This LinkedIn automation feature is for competition demonstration purposes only",
+      visuallySimulates: "It visually simulates how automation tools might work but does not perform any actual automation on LinkedIn.",
+      important: "Important:",
+      automatingLinkedin: "Automating LinkedIn actions would violate their terms of service. This demonstration is intentionally designed to",
+      preventRealApplications: "prevent any real applications",
+      fromBeingSubmitted: "from being submitted.",
+      noLinkedinData: "No LinkedIn data will be accessed, no automation will be performed, and no job applications will be submitted. This is purely a visual simulation for educational purposes.",
+      iUnderstand: "I Understand",
+      competitionDemo: "Competition Demo Feature",
+      demonstratesAutomated: "This tool demonstrates automated LinkedIn job applications for the competition. It shows how automation could work without actually performing real actions on LinkedIn.",
+      
+      // LinkedIn Automation Page
+      linkedinJobAutomation: "LinkedIn Job Application Automation",
+      defineJobSearch: "Define Job Search Criteria",
+      enterJobSearch: "Enter your job search criteria to find relevant positions on LinkedIn.",
+      jobTitle: "Job Title",
+      location: "Location",
+      jobDescriptionKeywords: "Job Description Keywords (optional)",
+      enterKeywords: "Enter keywords to match in job descriptions",
+      continue: "Continue",
+      
+      // Settings
+      configureAutomation: "Configure Automation Settings",
+      customizeAutomation: "Customize how the automation simulation will run:",
+      applicationFilters: "Application Filters",
+      easyApplyOnly: "Easy Apply jobs only",
+      remoteOnly: "Remote jobs only",
+      jobDescriptionFilters: "Job Description Filters",
+      requiredKeywords: "Required Keywords (comma separated)",
+      blacklistedKeywords: "Blacklisted Keywords (comma separated)",
+      blacklistedCompanies: "Blacklisted Companies (comma separated)",
+      applicationSettings: "Application Settings",
+      attachResume: "Attach resume",
+      includeCoverLetter: "Include cover letter",
+      defaultCoverLetter: "Default Cover Letter Template",
+      enterDefaultCover: "Enter your default cover letter text. Use {company} and {position} as placeholders.",
+      aiCustomize: "The simulation will use AI to customize this template for each job application.",
+      followCompanies: "Follow companies after applying",
+      customizeResume: "Auto-customize resume based on job description",
+      
+      // Application Questions
+      commonApplicationQuestions: "Common Application Questions",
+      yearsOfExperience: "Years of Experience",
+      expectedSalary: "Expected Salary",
+      noticePeriod: "Notice Period (days)",
+      currentCity: "Current City",
+      
+      // Disclaimers
+      simulationDisclaimer: "SIMULATION DISCLAIMER",
+      simulationOnly: "This is a simulation only. These settings will be used to demonstrate what automation could look like, but no actual LinkedIn automation will occur.",
+      
+      // Review section
+      reviewStart: "Review & Start Automation",
+      reviewSettings: "Review your settings and start the LinkedIn automation process.",
+      jobSearchCriteria: "Job Search Criteria",
+      applicationPreferences: "Application Preferences",
+      skillsFromResume: "Skills From Your Resume",
+      theseSkillsUsed: "These skills will be used to match you with relevant jobs",
+      noSkillsFound: "No skills found in your resume. Default skills will be used for matching.",
+      competitionDemoFeature: "Competition Demo Feature",
+      demonstrateAutomation: "This will demonstrate LinkedIn automation by simulating the process of logging in, searching for jobs, and applying. No actual LinkedIn actions will be performed.",
+      
+      // TOS section
+      tosCompliance: "Terms of Service Compliance",
+      importantTos: "Important: This demonstration intentionally prevents any real applications to LinkedIn to comply with their terms of service which prohibit automated actions.",
+      inRealApplication: "In a real application, any automation of LinkedIn would require explicit permission and compliance with their API terms.",
+      
+      // Buttons
+      back: "Back",
+      processing: "Processing",
+      startSimulation: "Start LinkedIn Automation Simulation",
+      
+      // Simulation section
+      simulationInProgress: "Simulation in Progress",
+      demonstrationInProgress: "Demonstration of LinkedIn automation is in progress. This is a visual simulation only.",
+      simulationMode: "SIMULATION MODE - No Real LinkedIn Actions Are Being Performed",
+      simulationProgress: "Simulation Progress",
+      status: "Status:",
+      running: "Running",
+      completed: "Completed",
+      error: "Error",
+      idle: "Idle",
+      jobsFound: "Jobs Found:",
+      jobsApplied: "Jobs Applied:",
+      currentJob: "Current Job:",
+      simulationLog: "Simulation Log",
+      viewResults: "View Simulation Results",
+      viewErrorSummary: "View Error Summary",
+      
+      // Results section
+      simulationResults: "Simulation Results",
+      automationCompleted: "LinkedIn automation simulation has been completed.",
+      demoResults: "DEMONSTRATION RESULTS - No Real LinkedIn Applications Were Submitted",
+      demoCompletedSuccess: "Demonstration Completed Successfully",
+      demoCompletedIssues: "Demonstration Completed with Issues",
+      simulationOnly: "SIMULATION ONLY:",
+      noRealApplications: "Note: No real LinkedIn applications were submitted during this demonstration.",
+      summary: "Summary",
+      matchingCriteria: "Matching Criteria:",
+      applicationsSubmitted: "Applications Sent:",
+      alreadyApplied: "Already Applied:",
+      appliedJobs: "Applied Jobs",
+      viewAllApplied: "View All Applied Jobs",
+      skills: "Skills:",
+      applied: "Applied",
+      startNewSimulation: "Start New Simulation",
+      backToJobSearch: "Back to Job Search",
+      
+      // Final disclaimer
+      competitionDisclaimer: "Competition Demonstration Disclaimer",
+      disclaimerText: "This demonstration shows what automation could look like, but intentionally prevents real LinkedIn automation to comply with their Terms of Service. In a real application, any interaction with LinkedIn would require manual user actions or proper API authorization. This simulation is for educational purposes only.",
+      
+      // Credentials Dialog
+      simulatedCredentials: "Simulated Credentials (Demonstration Only)",
+      demoModeNotReal: "DEMONSTRATION MODE - NOT REAL AUTHENTICATION",
+      credentialsSimulation: "These credentials are only used for simulation purposes. No actual LinkedIn authentication will occur. You can enter any text.",
+      enterDemoCredentials: "Enter demonstration credentials below. These will only be used in the simulation and are not sent to LinkedIn or stored anywhere.",
+      simulatedLinkedInEmail: "Simulated LinkedIn Email (any text)",
+      simulatedPassword: "Simulated Password (any text)",
+      cancel: "Cancel",
+      continueSimulation: "Continue Simulation"
+    },
+    ar: {
+      // Disclaimer messages
+      demoMode: "وضع العرض التوضيحي فقط - لن يتم تنفيذ أي أتمتة فعلية على لينكد إن",
+      importantNotice: "إشعار هام: وضع العرض التوضيحي فقط",
+      linkedinAutomationFeature: "ميزة أتمتة لينكد إن هذه مخصصة لأغراض عرض المنافسة فقط",
+      visuallySimulates: "تحاكي بصريًا كيف يمكن أن تعمل أدوات الأتمتة ولكنها لا تنفذ أي أتمتة فعلية على لينكد إن.",
+      important: "هام:",
+      automatingLinkedin: "أتمتة إجراءات لينكد إن ستنتهك شروط الخدمة الخاصة بهم. تم تصميم هذا العرض التوضيحي عمدًا",
+      preventRealApplications: "لمنع أي طلبات حقيقية",
+      fromBeingSubmitted: "من التقديم.",
+      noLinkedinData: "لن يتم الوصول إلى بيانات لينكد إن، ولن يتم تنفيذ أي أتمتة، ولن يتم تقديم طلبات وظائف. هذه محاكاة بصرية فقط لأغراض تعليمية.",
+      iUnderstand: "أنا أفهم",
+      competitionDemo: "ميزة عرض المنافسة",
+      demonstratesAutomated: "تعرض هذه الأداة عملية أتمتة طلبات وظائف لينكد إن للمنافسة. توضح كيف يمكن أن تعمل الأتمتة دون تنفيذ إجراءات فعلية على لينكد إن.",
+      
+      // LinkedIn Automation Page
+      linkedinJobAutomation: "أتمتة طلبات وظائف لينكد إن",
+      defineJobSearch: "تحديد معايير البحث عن الوظائف",
+      enterJobSearch: "أدخل معايير البحث عن الوظائف للعثور على المناصب ذات الصلة على لينكد إن.",
+      jobTitle: "المسمى الوظيفي",
+      location: "الموقع",
+      jobDescriptionKeywords: "كلمات مفتاحية لوصف الوظيفة (اختياري)",
+      enterKeywords: "أدخل الكلمات المفتاحية للمطابقة في أوصاف الوظائف",
+      continue: "متابعة",
+      
+      // Settings
+      configureAutomation: "تكوين إعدادات الأتمتة",
+      customizeAutomation: "تخصيص كيفية تشغيل محاكاة الأتمتة:",
+      applicationFilters: "تصفية الطلبات",
+      easyApplyOnly: "وظائف التقديم السهل فقط",
+      remoteOnly: "الوظائف عن بعد فقط",
+      jobDescriptionFilters: "تصفية وصف الوظيفة",
+      requiredKeywords: "الكلمات المفتاحية المطلوبة (مفصولة بفواصل)",
+      blacklistedKeywords: "الكلمات المفتاحية المحظورة (مفصولة بفواصل)",
+      blacklistedCompanies: "الشركات المحظورة (مفصولة بفواصل)",
+      applicationSettings: "إعدادات الطلب",
+      attachResume: "إرفاق السيرة الذاتية",
+      includeCoverLetter: "تضمين خطاب تغطية",
+      defaultCoverLetter: "نموذج خطاب التغطية الافتراضي",
+      enterDefaultCover: "أدخل نص خطاب التغطية الافتراضي الخاص بك. استخدم {company} و {position} كعناصر نائبة.",
+      aiCustomize: "ستستخدم المحاكاة الذكاء الاصطناعي لتخصيص هذا النموذج لكل طلب وظيفة.",
+      followCompanies: "متابعة الشركات بعد التقديم",
+      customizeResume: "تخصيص السيرة الذاتية تلقائيًا بناءً على وصف الوظيفة",
+      
+      // Application Questions
+      commonApplicationQuestions: "أسئلة الطلب الشائعة",
+      yearsOfExperience: "سنوات الخبرة",
+      expectedSalary: "الراتب المتوقع",
+      noticePeriod: "فترة الإشعار (أيام)",
+      currentCity: "المدينة الحالية",
+      
+      // Disclaimers
+      simulationDisclaimer: "إخلاء مسؤولية المحاكاة",
+      simulationOnly: "هذه محاكاة فقط. سيتم استخدام هذه الإعدادات لعرض ما يمكن أن تبدو عليه الأتمتة، ولكن لن تحدث أي أتمتة فعلية على لينكد إن.",
+      
+      // Review section
+      reviewStart: "مراجعة وبدء الأتمتة",
+      reviewSettings: "راجع إعداداتك وابدأ عملية أتمتة لينكد إن.",
+      jobSearchCriteria: "معايير البحث عن الوظائف",
+      applicationPreferences: "تفضيلات الطلب",
+      skillsFromResume: "المهارات من سيرتك الذاتية",
+      theseSkillsUsed: "سيتم استخدام هذه المهارات لمطابقتك مع الوظائف ذات الصلة",
+      noSkillsFound: "لم يتم العثور على مهارات في سيرتك الذاتية. سيتم استخدام المهارات الافتراضية للمطابقة.",
+      competitionDemoFeature: "ميزة عرض المنافسة",
+      demonstrateAutomation: "سيعرض هذا أتمتة لينكد إن من خلال محاكاة عملية تسجيل الدخول والبحث عن الوظائف والتقديم. لن يتم تنفيذ أي إجراءات فعلية على لينكد إن.",
+      
+      // TOS section
+      tosCompliance: "الامتثال لشروط الخدمة",
+      importantTos: "هام: يمنع هذا العرض التوضيحي عمدًا أي طلبات حقيقية إلى لينكد إن للامتثال لشروط الخدمة الخاصة بهم التي تحظر الإجراءات الآلية.",
+      inRealApplication: "في التطبيق الحقيقي، ستتطلب أي أتمتة للينكد إن إذنًا صريحًا والامتثال لشروط واجهة برمجة التطبيقات الخاصة بهم.",
+      
+      // Buttons
+      back: "رجوع",
+      processing: "جارٍ المعالجة",
+      startSimulation: "بدء محاكاة أتمتة لينكد إن",
+      
+      // Simulation section
+      simulationInProgress: "المحاكاة قيد التقدم",
+      demonstrationInProgress: "عرض أتمتة لينكد إن قيد التقدم. هذه محاكاة بصرية فقط.",
+      simulationMode: "وضع المحاكاة - لا يتم تنفيذ أي إجراءات فعلية على لينكد إن",
+      simulationProgress: "تقدم المحاكاة",
+      status: "الحالة:",
+      running: "قيد التشغيل",
+      completed: "مكتمل",
+      error: "خطأ",
+      idle: "خامل",
+      jobsFound: "تم العثور على وظائف:",
+      jobsApplied: "تم التقديم للوظائف:",
+      currentJob: "الوظيفة الحالية:",
+      simulationLog: "سجل المحاكاة",
+      viewResults: "عرض نتائج المحاكاة",
+      viewErrorSummary: "عرض ملخص الخطأ",
+      
+      // Results section
+      simulationResults: "نتائج المحاكاة",
+      automationCompleted: "تم إكمال محاكاة أتمتة لينكد إن.",
+      demoResults: "نتائج العرض التوضيحي - لم يتم تقديم أي طلبات حقيقية على لينكد إن",
+      demoCompletedSuccess: "تم إكمال العرض التوضيحي بنجاح",
+      demoCompletedIssues: "تم إكمال العرض التوضيحي مع وجود مشكلات",
+      simulationOnly: "محاكاة فقط:",
+      noRealApplications: "ملاحظة: لم يتم تقديم أي طلبات حقيقية على لينكد إن خلال هذا العرض التوضيحي.",
+      summary: "ملخص",
+      matchingCriteria: "معايير المطابقة:",
+      applicationsSubmitted: "تم إرسال الطلبات:",
+      alreadyApplied: "تم التقديم بالفعل:",
+      appliedJobs: "الوظائف المقدم لها",
+      viewAllApplied: "عرض جميع الوظائف المقدم لها",
+      skills: "المهارات:",
+      applied: "تم التقديم",
+      startNewSimulation: "بدء محاكاة جديدة",
+      backToJobSearch: "العودة إلى البحث عن وظائف",
+      
+      // Final disclaimer
+      competitionDisclaimer: "إخلاء مسؤولية عرض المنافسة",
+      disclaimerText: "يوضح هذا العرض التوضيحي ما يمكن أن تبدو عليه الأتمتة، ولكنه يمنع عمدًا أتمتة لينكد إن الحقيقية للامتثال لشروط الخدمة الخاصة بهم. في التطبيق الحقيقي، سيتطلب أي تفاعل مع لينكد إن إجراءات يدوية من المستخدم أو تفويضًا مناسبًا لواجهة برمجة التطبيقات. هذه المحاكاة لأغراض تعليمية فقط.",
+      
+      // Credentials Dialog
+      simulatedCredentials: "بيانات اعتماد محاكاة (للعرض التوضيحي فقط)",
+      demoModeNotReal: "وضع العرض التوضيحي - ليس مصادقة حقيقية",
+      credentialsSimulation: "تُستخدم بيانات الاعتماد هذه لأغراض المحاكاة فقط. لن تحدث أي مصادقة فعلية على لينكد إن. يمكنك إدخال أي نص.",
+      enterDemoCredentials: "أدخل بيانات اعتماد العرض التوضيحي أدناه. سيتم استخدام هذه فقط في المحاكاة ولن يتم إرسالها إلى لينكد إن أو تخزينها في أي مكان.",
+      simulatedLinkedInEmail: "بريد لينكد إن المحاكى (أي نص)",
+      simulatedPassword: "كلمة المرور المحاكاة (أي نص)",
+      cancel: "إلغاء",
+      continueSimulation: "متابعة المحاكاة"
+    }
+  };
+
+  // Get the current language translations
+  const getText = (key) => {
+    const currentLang = i18n.language || 'en';
+    return translations[currentLang][key] || translations['en'][key];
+  };
 
   // Pre-fill job title from profile if available
   useEffect(() => {
@@ -526,7 +790,7 @@ function LinkedinAutomation() {
       >
         <WarningIcon sx={{ mr: 1 }} />
         <Typography variant="h6" align="center">
-          DEMONSTRATION MODE ONLY - NO ACTUAL LINKEDIN AUTOMATION WILL OCCUR
+          {getText('demoMode')}
         </Typography>
       </Box>
 
@@ -538,29 +802,27 @@ function LinkedinAutomation() {
         <DialogTitle>
           <Box display="flex" alignItems="center">
             <WarningIcon color="warning" sx={{ mr: 1 }} />
-            Important Notice: Demonstration Mode Only
+            {getText('importantNotice')}
           </Box>
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
             <Typography paragraph>
-              This LinkedIn automation feature is for <strong>competition demonstration purposes only</strong>. 
-              It visually simulates how automation tools might work but <strong>does not</strong> perform any actual 
-              automation on LinkedIn.
+              {getText('linkedinAutomationFeature')}. 
+              {getText('visuallySimulates')}
             </Typography>
             <Typography paragraph>
-              <strong>Important:</strong> Automating LinkedIn actions would violate their terms of service. 
-              This demonstration is intentionally designed to <strong>prevent any real applications</strong> from being submitted.
+              <strong>{getText('important')}</strong> {getText('automatingLinkedin')} 
+              <strong>{getText('preventRealApplications')}</strong> {getText('fromBeingSubmitted')}
             </Typography>
             <Typography paragraph>
-              No LinkedIn data will be accessed, no automation will be performed, and no job applications 
-              will be submitted. This is purely a visual simulation for educational purposes.
+              {getText('noLinkedinData')}
             </Typography>
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowCompetitionDisclaimer(false)} color="primary">
-            I Understand
+            {getText('iUnderstand')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -573,7 +835,7 @@ function LinkedinAutomation() {
         <DialogTitle>
           <Box display="flex" alignItems="center">
             <LockPersonIcon sx={{ mr: 1 }} />
-            Simulated Credentials (Demonstration Only)
+            {getText('simulatedCredentials')}
           </Box>
         </DialogTitle>
         <DialogContent>
@@ -586,23 +848,21 @@ function LinkedinAutomation() {
             borderColor: 'info.main'
           }}>
             <Typography variant="subtitle2" gutterBottom>
-              ⚠️ DEMONSTRATION MODE - NOT REAL AUTHENTICATION
+              ⚠️ {getText('demoModeNotReal')}
             </Typography>
             <Typography variant="body2">
-              These credentials are only used for simulation purposes. 
-              No actual LinkedIn authentication will occur. You can enter any text.
+              {getText('credentialsSimulation')}
             </Typography>
           </Box>
         
           <DialogContentText sx={{ mb: 2 }}>
-            Enter demonstration credentials below. These will only be used in the simulation
-            and are not sent to LinkedIn or stored anywhere.
+            {getText('enterDemoCredentials')}
           </DialogContentText>
           <TextField
             autoFocus
             margin="dense"
             name="email"
-            label="Simulated LinkedIn Email (any text)"
+            label={getText('simulatedLinkedInEmail')}
             type="email"
             fullWidth
             variant="outlined"
@@ -613,7 +873,7 @@ function LinkedinAutomation() {
           <TextField
             margin="dense"
             name="password"
-            label="Simulated Password (any text)"
+            label={getText('simulatedPassword')}
             type="password"
             fullWidth
             variant="outlined"
@@ -623,13 +883,13 @@ function LinkedinAutomation() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowCredentialsDialog(false)}>
-            Cancel
+            {getText('cancel')}
           </Button>
           <Button onClick={() => {
             setShowCredentialsDialog(false);
             simulateAutomation();
           }} variant="contained" color="primary">
-            Continue Simulation
+            {getText('continueSimulation')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -654,33 +914,32 @@ function LinkedinAutomation() {
               sx={{ fontSize: 40, color: '#0A66C2', mr: 2 }}
             />
             <Typography variant="h4" component="h1" gutterBottom>
-              LinkedIn Job Application Automation
+              {getText('linkedinJobAutomation')}
             </Typography>
           </Box>
           
           <Alert severity="info" sx={{ mb: 4 }}>
-            <AlertTitle>Competition Demo Feature</AlertTitle>
-            This tool demonstrates automated LinkedIn job applications for the competition.
-            It shows how automation could work without actually performing real actions on LinkedIn.
+            <AlertTitle>{getText('competitionDemo')}</AlertTitle>
+            {getText('demonstratesAutomated')}
           </Alert>
 
           <Stepper activeStep={activeStep} orientation="vertical">
             {/* Step 1: Job Search Criteria */}
             <Step>
               <StepLabel>
-                <Typography variant="h6">Define Job Search Criteria</Typography>
+                <Typography variant="h6">{getText('defineJobSearch')}</Typography>
               </StepLabel>
               <StepContent>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body1" sx={{ mb: 2 }}>
-                    Enter your job search criteria to find relevant positions on LinkedIn.
+                    {getText('enterJobSearch')}
                   </Typography>
                   
                   <Grid container spacing={3}>
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
-                        label="Job Title"
+                        label={getText('jobTitle')}
                         variant="outlined"
                         value={jobTitle}
                         onChange={(e) => setJobTitle(e.target.value)}
@@ -691,7 +950,7 @@ function LinkedinAutomation() {
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
-                        label="Location"
+                        label={getText('location')}
                         variant="outlined"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
@@ -702,13 +961,13 @@ function LinkedinAutomation() {
                     <Grid item xs={12}>
                       <TextField
                         fullWidth
-                        label="Job Description Keywords (optional)"
+                        label={getText('jobDescriptionKeywords')}
                         variant="outlined"
                         value={jobDescription}
                         onChange={(e) => setJobDescription(e.target.value)}
                         multiline
                         rows={3}
-                        placeholder="Enter keywords to match in job descriptions"
+                        placeholder={getText('enterKeywords')}
                         margin="normal"
                       />
                     </Grid>
@@ -721,7 +980,7 @@ function LinkedinAutomation() {
                       sx={{ mt: 1, mr: 1 }}
                       disabled={!jobTitle}
                     >
-                      Continue
+                      {getText('continue')}
                     </Button>
                   </Box>
                 </Box>
@@ -733,18 +992,18 @@ function LinkedinAutomation() {
               <StepLabel>
                 <Typography variant="h6">
                   <SettingsIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-                  Configure Automation Settings
+                  {getText('configureAutomation')}
                 </Typography>
               </StepLabel>
               <StepContent>
                 <Box sx={{ mt: 2, mb: 3 }}>
                   <Typography variant="subtitle1" gutterBottom>
-                    Customize how the automation simulation will run:
+                    {getText('customizeAutomation')}
                   </Typography>
                   
                   <Paper elevation={2} sx={{ p: 2, mb: 3, backgroundColor: alpha(theme.palette.background.paper, 0.7) }}>
                     <Typography variant="subtitle2" color="primary" gutterBottom>
-                      Application Filters
+                      {getText('applicationFilters')}
                     </Typography>
                     
                     <Grid container spacing={2}>
@@ -758,7 +1017,7 @@ function LinkedinAutomation() {
                               color="primary"
                             />
                           }
-                          label="Easy Apply jobs only"
+                          label={getText('easyApplyOnly')}
                         />
                       </Grid>
                       <Grid item xs={12} sm={6}>
@@ -771,22 +1030,22 @@ function LinkedinAutomation() {
                               color="primary"
                             />
                           }
-                          label="Remote jobs only"
+                          label={getText('remoteOnly')}
                         />
                       </Grid>
                       
                       <Grid item xs={12}>
                         <Divider sx={{ my: 1 }} />
                         <Typography variant="subtitle2" color="primary" gutterBottom sx={{ mt: 1 }}>
-                          Job Description Filters
+                          {getText('jobDescriptionFilters')}
                         </Typography>
                         
                         <TextField
                           fullWidth
                           variant="outlined"
                           size="small"
-                          label="Required Keywords (comma separated)"
-                          placeholder="react, javascript, frontend"
+                          label={getText('requiredKeywords')}
+                          placeholder={getText('requiredKeywords')}
                           margin="normal"
                         />
                         
@@ -794,8 +1053,8 @@ function LinkedinAutomation() {
                           fullWidth
                           variant="outlined"
                           size="small"
-                          label="Blacklisted Keywords (comma separated)"
-                          placeholder="php, wordpress, salesforce"
+                          label={getText('blacklistedKeywords')}
+                          placeholder={getText('blacklistedKeywords')}
                           margin="normal"
                         />
                         
@@ -803,8 +1062,8 @@ function LinkedinAutomation() {
                           fullWidth
                           variant="outlined"
                           size="small"
-                          label="Blacklisted Companies (comma separated)"
-                          placeholder="company1, company2"
+                          label={getText('blacklistedCompanies')}
+                          placeholder={getText('blacklistedCompanies')}
                           margin="normal"
                         />
                       </Grid>
@@ -813,7 +1072,7 @@ function LinkedinAutomation() {
                   
                   <Paper elevation={2} sx={{ p: 2, mb: 3, backgroundColor: alpha(theme.palette.background.paper, 0.7) }}>
                     <Typography variant="subtitle2" color="primary" gutterBottom>
-                      Application Settings
+                      {getText('applicationSettings')}
                     </Typography>
                     
                     <Grid container spacing={2}>
@@ -827,7 +1086,7 @@ function LinkedinAutomation() {
                               color="primary"
                             />
                           }
-                          label="Attach resume"
+                          label={getText('attachResume')}
                         />
                       </Grid>
                       <Grid item xs={12} sm={6}>
@@ -840,7 +1099,7 @@ function LinkedinAutomation() {
                               color="primary"
                             />
                           }
-                          label="Include cover letter"
+                          label={getText('includeCoverLetter')}
                         />
                       </Grid>
                       
@@ -851,13 +1110,13 @@ function LinkedinAutomation() {
                             multiline
                             rows={4}
                             variant="outlined"
-                            label="Default Cover Letter Template"
-                            placeholder="Enter your default cover letter text. Use {company} and {position} as placeholders."
+                            label={getText('defaultCoverLetter')}
+                            placeholder={getText('enterDefaultCover')}
                             value={customMessage}
                             onChange={(e) => setCustomMessage(e.target.value)}
                           />
                           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                            The simulation will use AI to customize this template for each job application.
+                            {getText('aiCustomize')}
                           </Typography>
                         </Grid>
                       )}
@@ -869,7 +1128,7 @@ function LinkedinAutomation() {
                               color="primary"
                             />
                           }
-                          label="Follow companies after applying"
+                          label={getText('followCompanies')}
                         />
                       </Grid>
                       
@@ -880,7 +1139,7 @@ function LinkedinAutomation() {
                               color="primary"
                             />
                           }
-                          label="Auto-customize resume based on job description"
+                          label={getText('customizeResume')}
                         />
                       </Grid>
                     </Grid>
@@ -888,7 +1147,7 @@ function LinkedinAutomation() {
                   
                   <Paper elevation={2} sx={{ p: 2, backgroundColor: alpha(theme.palette.background.paper, 0.7) }}>
                     <Typography variant="subtitle2" color="primary" gutterBottom>
-                      Common Application Questions
+                      {getText('commonApplicationQuestions')}
                     </Typography>
                     
                     <Grid container spacing={2}>
@@ -897,7 +1156,7 @@ function LinkedinAutomation() {
                           fullWidth
                           variant="outlined"
                           size="small"
-                          label="Years of Experience"
+                          label={getText('yearsOfExperience')}
                           placeholder={profile?.yearsOfExperience?.toString() || "5"}
                           defaultValue={profile?.yearsOfExperience?.toString() || ""}
                           margin="normal"
@@ -908,7 +1167,7 @@ function LinkedinAutomation() {
                           fullWidth
                           variant="outlined"
                           size="small"
-                          label="Expected Salary"
+                          label={getText('expectedSalary')}
                           placeholder={profile?.expectedSalary?.toString() || "80000"}
                           defaultValue={profile?.expectedSalary?.toString() || ""}
                           margin="normal"
@@ -919,7 +1178,7 @@ function LinkedinAutomation() {
                           fullWidth
                           variant="outlined"
                           size="small"
-                          label="Notice Period (days)"
+                          label={getText('noticePeriod')}
                           placeholder={profile?.noticePeriod?.toString() || "14"}
                           defaultValue={profile?.noticePeriod?.toString() || ""}
                           margin="normal"
@@ -930,7 +1189,7 @@ function LinkedinAutomation() {
                           fullWidth
                           variant="outlined"
                           size="small"
-                          label="Current City"
+                          label={getText('currentCity')}
                           placeholder={profile?.location || "New York"}
                           defaultValue={profile?.location || ""}
                           margin="normal"
@@ -948,11 +1207,10 @@ function LinkedinAutomation() {
                     borderColor: 'info.main'
                   }}>
                     <Typography variant="subtitle2" gutterBottom>
-                      ⚠️ SIMULATION DISCLAIMER
+                      ⚠️ {getText('simulationDisclaimer')}
                     </Typography>
                     <Typography variant="body2">
-                      This is a simulation only. These settings will be used to demonstrate what automation could look like, 
-                      but no actual LinkedIn automation will occur.
+                      {getText('simulationOnly')}
                     </Typography>
                   </Box>
                 </Box>
@@ -964,13 +1222,13 @@ function LinkedinAutomation() {
                       onClick={handleNext}
                       sx={{ mt: 1, mr: 1 }}
                     >
-                      Continue
+                      {getText('continue')}
                     </Button>
                     <Button
                       onClick={handleBack}
                       sx={{ mt: 1, mr: 1 }}
                     >
-                      Back
+                      {getText('back')}
                     </Button>
                   </div>
                 </Box>
@@ -980,29 +1238,29 @@ function LinkedinAutomation() {
             {/* Step 3: Review & Submit */}
             <Step>
               <StepLabel>
-                <Typography variant="h6">Review & Start Automation</Typography>
+                <Typography variant="h6">{getText('reviewStart')}</Typography>
               </StepLabel>
               <StepContent>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body1" sx={{ mb: 3 }}>
-                    Review your settings and start the LinkedIn automation process.
+                    {getText('reviewSettings')}
                   </Typography>
                   
                   <Card variant="outlined" sx={{ mb: 3 }}>
-                    <CardHeader title="Job Search Criteria" />
+                    <CardHeader title={getText('jobSearchCriteria')} />
                     <CardContent>
                       <Grid container spacing={2}>
                         <Grid item xs={6}>
-                          <Typography variant="subtitle2">Job Title:</Typography>
+                          <Typography variant="subtitle2">{getText('jobTitle')}:</Typography>
                           <Typography variant="body1">{jobTitle}</Typography>
                         </Grid>
                         <Grid item xs={6}>
-                          <Typography variant="subtitle2">Location:</Typography>
+                          <Typography variant="subtitle2">{getText('location')}:</Typography>
                           <Typography variant="body1">{location || 'Any'}</Typography>
                         </Grid>
                         {jobDescription && (
                           <Grid item xs={12}>
-                            <Typography variant="subtitle2">Keywords:</Typography>
+                            <Typography variant="subtitle2">{getText('jobDescriptionKeywords')}:</Typography>
                             <Typography variant="body1">{jobDescription}</Typography>
                           </Grid>
                         )}
@@ -1011,26 +1269,26 @@ function LinkedinAutomation() {
                   </Card>
                   
                   <Card variant="outlined" sx={{ mb: 3 }}>
-                    <CardHeader title="Application Preferences" />
+                    <CardHeader title={getText('applicationPreferences')} />
                     <CardContent>
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                         {preferences.remoteOnly && (
-                          <Chip label="Remote Only" color="primary" size="small" />
+                          <Chip label={getText('remoteOnly')} color="primary" size="small" />
                         )}
                         {preferences.easyApply && (
-                          <Chip label="Easy Apply" color="primary" size="small" />
+                          <Chip label={getText('easyApplyOnly')} color="primary" size="small" />
                         )}
                         {preferences.includeResume && (
-                          <Chip label="Include Resume" color="primary" size="small" />
+                          <Chip label={getText('attachResume')} color="primary" size="small" />
                         )}
                         {preferences.includeCustomMessage && (
-                          <Chip label="Custom Message" color="primary" size="small" />
+                          <Chip label={getText('includeCoverLetter')} color="primary" size="small" />
                         )}
                       </Box>
                       
                       {preferences.includeCustomMessage && customMessage && (
                         <Box sx={{ mt: 2 }}>
-                          <Typography variant="subtitle2">Custom Message:</Typography>
+                          <Typography variant="subtitle2">{getText('defaultCoverLetter')}:</Typography>
                           <Paper variant="outlined" sx={{ p: 2, mt: 1, bgcolor: 'background.default' }}>
                             <Typography variant="body2">{customMessage}</Typography>
                           </Paper>
@@ -1041,8 +1299,8 @@ function LinkedinAutomation() {
                   
                   <Card variant="outlined" sx={{ mb: 3 }}>
                     <CardHeader 
-                      title="Skills From Your Resume" 
-                      subheader="These skills will be used to match you with relevant jobs"
+                      title={getText('skillsFromResume')} 
+                      subheader={getText('theseSkillsUsed')}
                     />
                     <CardContent>
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -1056,7 +1314,7 @@ function LinkedinAutomation() {
                         ))}
                         {extractSkillsFromResume().length === 0 && (
                           <Typography variant="body2" color="text.secondary">
-                            No skills found in your resume. Default skills will be used for matching.
+                            {getText('noSkillsFound')}
                           </Typography>
                         )}
                       </Box>
@@ -1064,20 +1322,17 @@ function LinkedinAutomation() {
                   </Card>
                   
                   <Alert severity="warning" sx={{ mb: 3 }}>
-                    <AlertTitle>Competition Demo Feature</AlertTitle>
-                    This will demonstrate LinkedIn automation by simulating the process of logging in, 
-                    searching for jobs, and applying. No actual LinkedIn actions will be performed.
+                    <AlertTitle>{getText('competitionDemoFeature')}</AlertTitle>
+                    {getText('demonstrateAutomation')}
                   </Alert>
 
                   <Alert severity="error" sx={{ mb: 3 }}>
-                    <AlertTitle>Terms of Service Compliance</AlertTitle>
+                    <AlertTitle>{getText('tosCompliance')}</AlertTitle>
                     <Typography paragraph>
-                      <strong>Important:</strong> This demonstration intentionally prevents any real applications to 
-                      LinkedIn to comply with their terms of service which prohibit automated actions.
+                      <strong>{getText('importantTos')}</strong> {getText('inRealApplication')}
                     </Typography>
                     <Typography paragraph>
-                      In a real application, any automation of LinkedIn would require explicit permission 
-                      and compliance with their API terms.
+                      {getText('importantTos')}
                     </Typography>
                   </Alert>
 
@@ -1089,7 +1344,7 @@ function LinkedinAutomation() {
 
                   <Box sx={{ mt: 3 }}>
                     <Button onClick={handleBack} sx={{ mt: 1, mr: 1 }}>
-                      Back
+                      {getText('back')}
                     </Button>
                     <Button
                       variant="contained"
@@ -1098,7 +1353,7 @@ function LinkedinAutomation() {
                       disabled={loading}
                       startIcon={loading ? <CircularProgress size={24} /> : <PlayArrowIcon />}
                     >
-                      {loading ? 'Processing' : 'Start LinkedIn Automation Simulation'}
+                      {loading ? getText('processing') : getText('startSimulation')}
                     </Button>
                   </Box>
                 </Box>
@@ -1108,12 +1363,12 @@ function LinkedinAutomation() {
             {/* Step 4: Simulation in Progress */}
             <Step>
               <StepLabel>
-                <Typography variant="h6">Simulation in Progress</Typography>
+                <Typography variant="h6">{getText('simulationInProgress')}</Typography>
               </StepLabel>
               <StepContent>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body1" sx={{ mb: 3 }}>
-                    Demonstration of LinkedIn automation is in progress. This is a visual simulation only.
+                    {getText('demonstrationInProgress')}
                   </Typography>
                   
                   {/* Add simulation badge */}
@@ -1128,21 +1383,21 @@ function LinkedinAutomation() {
                     borderColor: 'warning.main'
                   }}>
                     <Typography variant="body1" fontWeight="bold">
-                      🎬 SIMULATION MODE - No Real LinkedIn Actions Are Being Performed
+                      🎬 {getText('simulationMode')}
                     </Typography>
                   </Box>
                   
                   <Box sx={{ mb: 3 }}>
                     <Typography variant="h6" gutterBottom>
-                      Simulation Progress
+                      {getText('simulationProgress')}
                     </Typography>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                      <Typography>Status:</Typography>
+                      <Typography>{getText('status')}:</Typography>
                       <Chip 
                         label={
-                          automationProgress.status === 'running' ? 'Running' :
-                          automationProgress.status === 'completed' ? 'Completed' :
-                          automationProgress.status === 'error' ? 'Error' : 'Idle'
+                          automationProgress.status === 'running' ? getText('running') :
+                          automationProgress.status === 'completed' ? getText('completed') :
+                          automationProgress.status === 'error' ? getText('error') : getText('idle')
                         }
                         color={
                           automationProgress.status === 'running' ? 'primary' :
@@ -1152,16 +1407,16 @@ function LinkedinAutomation() {
                       />
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                      <Typography>Jobs Found:</Typography>
+                      <Typography>{getText('jobsFound')}:</Typography>
                       <Typography>{automationProgress.jobsFound}</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                      <Typography>Jobs Applied:</Typography>
+                      <Typography>{getText('jobsApplied')}:</Typography>
                       <Typography>{automationProgress.jobsApplied}</Typography>
                     </Box>
                     {automationProgress.currentJob && (
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                        <Typography>Current Job:</Typography>
+                        <Typography>{getText('currentJob')}:</Typography>
                         <Typography>{automationProgress.currentJob.title} at {automationProgress.currentJob.company}</Typography>
                       </Box>
                     )}
@@ -1169,7 +1424,7 @@ function LinkedinAutomation() {
 
                   <Box sx={{ mb: 3 }}>
                     <Typography variant="h6" gutterBottom>
-                      Simulation Log
+                      {getText('simulationLog')}
                     </Typography>
                     <Paper variant="outlined" sx={{ p: 2, maxHeight: 300, overflow: 'auto' }}>
                       {automationProgress.logs.map((log, index) => (
@@ -1197,7 +1452,7 @@ function LinkedinAutomation() {
                       sx={{ mt: 1, mr: 1 }}
                       disabled={automationProgress.status !== 'completed' && automationProgress.status !== 'error'}
                     >
-                      {automationProgress.status === 'error' ? 'View Error Summary' : 'View Simulation Results'}
+                      {automationProgress.status === 'error' ? getText('viewErrorSummary') : getText('viewResults')}
                     </Button>
                   </Box>
                 </Box>
@@ -1207,12 +1462,12 @@ function LinkedinAutomation() {
             {/* Step 5: Results */}
             <Step>
               <StepLabel>
-                <Typography variant="h6">Simulation Results</Typography>
+                <Typography variant="h6">{getText('simulationResults')}</Typography>
               </StepLabel>
               <StepContent>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body1" sx={{ mb: 3 }}>
-                    LinkedIn automation simulation has been completed.
+                    {getText('automationCompleted')}
                   </Typography>
                   
                   {/* Add demo badge */}
@@ -1227,7 +1482,7 @@ function LinkedinAutomation() {
                     borderColor: 'info.main'
                   }}>
                     <Typography variant="body1" fontWeight="bold">
-                      🔍 DEMONSTRATION RESULTS - No Real LinkedIn Applications Were Submitted
+                      🔍 {getText('demoResults')}
                     </Typography>
                   </Box>
                   
@@ -1239,47 +1494,47 @@ function LinkedinAutomation() {
                       >
                         <AlertTitle>
                           {applicationResults.success 
-                            ? "Demonstration Completed Successfully" 
-                            : "Demonstration Completed with Issues"
+                            ? getText('demoCompletedSuccess') 
+                            : getText('demoCompletedIssues')
                           }
                         </AlertTitle>
                         <Typography paragraph>
-                          <strong>SIMULATION ONLY:</strong> {applicationResults.message}
+                          <strong>{getText('simulationOnly')}</strong> {applicationResults.message}
                         </Typography>
                         <Typography variant="caption" display="block">
-                          Note: No real LinkedIn applications were submitted during this demonstration.
+                          {getText('noRealApplications')}
                         </Typography>
                       </Alert>
                       
                       <Card variant="outlined" sx={{ mb: 3 }}>
-                        <CardHeader title="Summary" />
+                        <CardHeader title={getText('summary')} />
                         <CardContent>
                           <Grid container spacing={2}>
                             <Grid item xs={6} md={3}>
-                              <Typography variant="subtitle2">Jobs Found:</Typography>
+                              <Typography variant="subtitle2">{getText('jobsFound')}:</Typography>
                               <Typography variant="h6">{applicationResults.totalJobs || 0}</Typography>
                             </Grid>
                             <Grid item xs={6} md={3}>
-                              <Typography variant="subtitle2">Matching Criteria:</Typography>
+                              <Typography variant="subtitle2">{getText('matchingCriteria')}:</Typography>
                               <Typography variant="h6">{applicationResults.matchingJobs || 0}</Typography>
                             </Grid>
                             <Grid item xs={6} md={3}>
-                              <Typography variant="subtitle2">Applications Sent:</Typography>
+                              <Typography variant="subtitle2">{getText('applicationsSubmitted')}:</Typography>
                               <Typography variant="h6">{automationProgress.jobsApplied || 0}</Typography>
                             </Grid>
                             <Grid item xs={6} md={3}>
-                              <Typography variant="subtitle2">Already Applied:</Typography>
+                              <Typography variant="subtitle2">{getText('alreadyApplied')}:</Typography>
                               <Typography variant="h6">{applicationResults.alreadyApplied || 0}</Typography>
                             </Grid>
                           </Grid>
                         </CardContent>
                       </Card>
 
-                      <Typography variant="h6" gutterBottom>Applied Jobs</Typography>
+                      <Typography variant="h6" gutterBottom>{getText('appliedJobs')}</Typography>
                       
                       <Accordion>
                         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                          <Typography>View All Applied Jobs ({automationProgress.jobsApplied})</Typography>
+                          <Typography>{getText('viewAllApplied')} ({automationProgress.jobsApplied})</Typography>
                         </AccordionSummary>
                         <AccordionDetails>
                           <List sx={{ width: '100%' }}>
@@ -1304,7 +1559,7 @@ function LinkedinAutomation() {
                                         <Box component="span" sx={{ display: 'block', mt: 1 }}>
                                           <CodeIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
                                           <Typography variant="caption" component="span">
-                                            Skills: {job.requiredSkills.slice(0, 3).join(', ')}
+                                            {getText('skills')}: {job.requiredSkills.slice(0, 3).join(', ')}
                                             {job.requiredSkills.length > 3 && ` +${job.requiredSkills.length - 3} more`}
                                           </Typography>
                                         </Box>
@@ -1323,7 +1578,7 @@ function LinkedinAutomation() {
                                     sx={{ mb: 1 }}
                                   />
                                   <Typography variant="caption" color="text.secondary">
-                                    Applied {new Date().toLocaleDateString()}
+                                    {getText('applied')} {new Date().toLocaleDateString()}
                                   </Typography>
                                 </Box>
                               </ListItem>
@@ -1347,14 +1602,14 @@ function LinkedinAutomation() {
                             });
                           }}
                         >
-                          Start New Simulation
+                          {getText('startNewSimulation')}
                         </Button>
                         
                         <Button
                           variant="contained"
                           onClick={() => navigate('/job-search')}
                         >
-                          Back to Job Search
+                          {getText('backToJobSearch')}
                         </Button>
                       </Box>
                     </>
@@ -1363,13 +1618,10 @@ function LinkedinAutomation() {
                   {/* Add final disclaimer */}
                   <Box sx={{ mt: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      Competition Demonstration Disclaimer
+                      {getText('competitionDisclaimer')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      This demonstration shows what automation could look like, but intentionally prevents real 
-                      LinkedIn automation to comply with their Terms of Service. In a real application, any interaction 
-                      with LinkedIn would require manual user actions or proper API authorization. This simulation is for 
-                      educational purposes only.
+                      {getText('disclaimerText')}
                     </Typography>
                   </Box>
                 </Box>

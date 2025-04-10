@@ -101,6 +101,9 @@ import LearningProcessCard from '../components/Dashboard/LearningProcessCard';
 // Import context
 import { useUser } from '../context/AppContext';
 
+// Import useTranslation
+import { useTranslation } from 'react-i18next';
+
 // Define dashboard widgets with updated sizes
 const widgetMap = {
   applicationStats: {
@@ -292,6 +295,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
+  const { t } = useTranslation();
   
   // Log mock data availability on mount
   useEffect(() => {
@@ -1052,18 +1056,11 @@ const Dashboard = () => {
   // Get chip color for event type
   const getEventChipColor = (type) => {
     switch (type) {
-      case 'Interview':
-        return 'primary';
-      case 'Meeting':
-        return 'info';
-      case 'Deadline':
-        return 'error';
-      case 'Networking':
-        return 'secondary';
-      case 'Learning':
-        return 'success';
-      default:
-        return 'default';
+      case 'interview': return 'primary';
+      case 'application': return 'success';
+      case 'deadline': return 'error';
+      case 'learning': return 'secondary';
+      default: return 'default';
     }
   };
   
@@ -1666,10 +1663,10 @@ const Dashboard = () => {
             <DescriptionIcon sx={{ mr: 2, color: 'warning.dark' }} />
             <Box>
               <Typography variant="subtitle1" fontWeight="bold">
-                Your resume needs your attention!
+                {t('dashboard.resumeAlert.needsAttention')}
               </Typography>
               <Typography variant="body2">
-                Complete your resume to increase your visibility to potential employers.
+                {t('dashboard.resumeAlert.completeResume')}
               </Typography>
             </Box>
           </Box>
@@ -1687,7 +1684,7 @@ const Dashboard = () => {
               }
             }}
           >
-            Build My Resume
+            {t('dashboard.buildMyResume')}
           </Button>
         </Paper>
       )}
@@ -1705,10 +1702,10 @@ const Dashboard = () => {
       >
         <Box>
           <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-            Your Career Dashboard
+            {t('dashboard.yourCareerDashboard')}
           </Typography>
           <Typography variant="subtitle1" color="text.secondary" sx={{ mt: -1 }}>
-            Welcome back, {profile?.firstName || 'there'}! {dashboardData?.lastLogin && 
+            {t('dashboard.welcomeBack')} {profile?.firstName || 'there'}! {dashboardData?.lastLogin && 
               `Last visit was ${formatDistance(new Date(dashboardData.lastLogin), new Date(), { addSuffix: true })}.`
             }
           </Typography>
@@ -1749,31 +1746,28 @@ const Dashboard = () => {
               px: 2
             }}
           >
-            Reset Layout
+            {t('dashboard.resetLayout')}
           </Button>
           
-          <Tooltip title="Refresh Dashboard">
-            <Button 
-              variant="contained" 
-              color="primary"
-              onClick={refreshDashboard} 
+          <Tooltip title={t('dashboard.refreshDashboard')}>
+            <IconButton 
+              onClick={handleRefresh} 
               disabled={loading}
               sx={{
-                mt: 2,
-                mb: 2,
-                fontWeight: 'bold'
+                backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                '&:hover': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.12)'
+                }
               }}
             >
-              Refresh Dashboard
               <RefreshIcon sx={{ 
-                ml: 1,
                 animation: loading ? 'spin 1s linear infinite' : 'none',
                 '@keyframes spin': {
                   '0%': { transform: 'rotate(0deg)' },
                   '100%': { transform: 'rotate(360deg)' }
                 }
               }} />
-            </Button>
+            </IconButton>
           </Tooltip>
         </Box>
       </Box>
@@ -1789,217 +1783,765 @@ const Dashboard = () => {
         mb: 3, 
         borderRadius: 2,
         background: 'linear-gradient(120deg, #1976d2 0%, #5e93d1 100%)',
+        backgroundSize: '200% 200%',
+        animation: 'gradientShift 15s ease infinite',
+        '@keyframes gradientShift': {
+          '0%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+          '100%': { backgroundPosition: '0% 50%' }
+        },
         color: 'white',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+        boxShadow: '0 10px 30px rgba(25, 118, 210, 0.3)',
+        overflow: 'hidden',
+        position: 'relative'
       }}>
-        <Grid container spacing={2} alignItems="center">
+        {/* Animated background elements */}
+        <Box sx={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          overflow: 'hidden',
+          zIndex: 0,
+          opacity: 0.4
+        }}>
+          {/* Particle effects */}
+          {Array.from({ length: 20 }).map((_, index) => (
+            <motion.div
+              key={index}
+              style={{
+                position: 'absolute',
+                width: Math.random() * 6 + 2,
+                height: Math.random() * 6 + 2,
+                borderRadius: '50%',
+                background: `rgba(255,255,255,${Math.random() * 0.5 + 0.2})`,
+                top: `${Math.random() * 100}%`,
+                left: `${Math.random() * 100}%`,
+              }}
+              animate={{
+                y: [0, -20, 0],
+                opacity: [0.7, 1, 0.7],
+              }}
+              transition={{
+                duration: Math.random() * 5 + 3,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: Math.random() * 2,
+              }}
+            />
+          ))}
+          
+          <motion.div
+            style={{
+              position: 'absolute',
+              top: '-10%',
+              left: '-10%',
+              width: '40%',
+              height: '40%',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(64,223,255,0.8) 0%, rgba(64,223,255,0) 70%)',
+            }}
+            animate={{
+              x: [0, 30, 0],
+              y: [0, 20, 0],
+              scale: [1, 1.1, 1],
+            }}
+            transition={{
+              duration: 15,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          
+          <motion.div
+            style={{
+              position: 'absolute',
+              bottom: '-5%',
+              right: '-5%',
+              width: '30%',
+              height: '30%',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(255,223,0,0.6) 0%, rgba(255,223,0,0) 70%)',
+            }}
+            animate={{
+              x: [0, -20, 0],
+              y: [0, -15, 0],
+              scale: [1, 1.2, 1],
+            }}
+            transition={{
+              duration: 12,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          
+          <motion.div
+            style={{
+              position: 'absolute',
+              top: '60%',
+              left: '10%',
+              width: '25%',
+              height: '25%',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(138,43,226,0.4) 0%, rgba(138,43,226,0) 70%)',
+            }}
+            animate={{
+              x: [0, 25, 0],
+              y: [0, -15, 0],
+              scale: [1, 1.1, 1],
+            }}
+            transition={{
+              duration: 10,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          
+          {/* Animated network lines */}
+          <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, opacity: 0.15 }}>
+            <motion.path
+              d="M0,50 Q150,150 300,50 T600,50"
+              fill="none"
+              stroke="rgba(255,255,255,0.5)"
+              strokeWidth="2"
+              initial={{ pathLength: 0, pathOffset: 0 }}
+              animate={{ pathLength: 1, pathOffset: 1 }}
+              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.path
+              d="M0,100 Q200,50 400,100 T800,100"
+              fill="none"
+              stroke="rgba(255,255,255,0.3)"
+              strokeWidth="1.5"
+              initial={{ pathLength: 0, pathOffset: 0 }}
+              animate={{ pathLength: 1, pathOffset: 1 }}
+              transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.path
+              d="M0,150 Q300,100 600,150 T1200,150"
+              fill="none"
+              stroke="rgba(255,255,255,0.2)"
+              strokeWidth="1"
+              initial={{ pathLength: 0, pathOffset: 0 }}
+              animate={{ pathLength: 1, pathOffset: 1 }}
+              transition={{ duration: 22, repeat: Infinity, ease: "linear" }}
+            />
+          </svg>
+        </Box>
+         
+        <Grid container spacing={2} alignItems="center" sx={{ position: 'relative', zIndex: 1 }}>
           <Grid item xs={12} md={5}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Avatar 
-                src={(() => {
-                  // Try to get profile image from localStorage first
-                  try {
-                    const savedProfile = localStorage.getItem('userProfile');
-                    if (savedProfile) {
-                      const parsedProfile = JSON.parse(savedProfile);
-                      if (parsedProfile.profileImage) {
-                        return parsedProfile.profileImage;
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                >
+                  <Avatar 
+                    src={(() => {
+                      try {
+                        const savedProfile = localStorage.getItem('userProfile');
+                        if (savedProfile) {
+                          const parsedProfile = JSON.parse(savedProfile);
+                          if (parsedProfile.profileImage) {
+                            return parsedProfile.profileImage;
+                          }
+                        }
+                      } catch (error) {
+                        console.warn('Failed to load profile image from localStorage in avatar:', error);
                       }
-                    }
-                  } catch (error) {
-                    console.warn('Failed to load profile image from localStorage in avatar:', error);
-                  }
-                  // Fall back to profile avatar if localStorage fails
-                  return profile?.avatar;
-                })()}
-                sx={{ 
-                  width: 64, 
-                  height: 64, 
-                  mr: 2, 
-                  border: '2px solid white',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-                }}
-              >
-                {profile?.firstName?.charAt(0) || "U"}
-              </Avatar>
-              <Box>
-                <Typography variant="h5" fontWeight="bold" sx={{
-                  background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', // Gold gradient
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                }}>
-                  {profile?.firstName ? `${profile?.firstName} ${profile?.lastName || ''}` : 'User'}
-                </Typography>
-                <Typography variant="body1" sx={{ 
-                  color: '#f5f5f5',
-                  fontWeight: 'medium',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                }}>
-                  {dashboardData?.progress?.rank || 'Career Explorer'} - Level {dashboardData?.progress?.level || 1}
-                </Typography>
-                <Typography variant="caption" sx={{ 
-                  color: 'rgba(255,223,0,0.9)',
-                  display: 'block', 
-                  mt: 0.5,
-                  fontWeight: 'medium',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.4)'
-                }}>
-                  {dashboardData?.progress?.nextMilestone || 'Complete your profile to see your next career milestone'}
-                </Typography>
+                      return profile?.avatar;
+                    })()}
+                    sx={{ 
+                      width: 70, 
+                      height: 70, 
+                      mr: 2, 
+                      border: '3px solid white',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                      position: 'relative',
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: -4,
+                        left: -4,
+                        right: -4,
+                        bottom: -4,
+                        borderRadius: '50%',
+                        background: 'linear-gradient(45deg, #FFD700, #FF6B6B, #4158D0, #FFD700)',
+                        backgroundSize: '300% 300%',
+                        animation: 'borderGradient 3s ease alternate infinite',
+                        zIndex: -1,
+                      },
+                      '@keyframes borderGradient': {
+                        '0%': { backgroundPosition: '0% 50%' },
+                        '100%': { backgroundPosition: '100% 50%' }
+                      }
+                    }}
+                  >
+                    {profile?.firstName?.charAt(0) || "U"}
+                  </Avatar>
+                </motion.div>
+                <Box>
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <Typography variant="h5" fontWeight="bold" sx={{
+                      background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+                      backgroundSize: '200% 200%',
+                      animation: 'shimmer 2s ease-in-out infinite',
+                      '@keyframes shimmer': {
+                        '0%': { backgroundPosition: '0% 50%' },
+                        '100%': { backgroundPosition: '100% 50%' }
+                      },
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      textShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                    }}>
+                      {profile?.firstName ? `${profile?.firstName} ${profile?.lastName || ''}` : 'User'}
+                    </Typography>
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                  >
+                    <Typography variant="body1" sx={{ 
+                      color: '#f5f5f5',
+                      fontWeight: 'bold',
+                      textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                    }}>
+                      <motion.span
+                        style={{ display: 'inline-block' }}
+                        whileHover={{ scale: 1.05, color: '#FFD700' }}
+                      >
+                        {dashboardData?.progress?.rank || 'Career Explorer'} - Level {dashboardData?.progress?.level || 1}
+                      </motion.span>
+                    </Typography>
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                  >
+                    <Typography variant="caption" sx={{ 
+                      color: 'rgba(255,223,0,0.9)',
+                      display: 'block', 
+                      mt: 0.5,
+                      fontWeight: 'medium',
+                      textShadow: '0 2px 4px rgba(0,0,0,0.4)'
+                    }}>
+                      {dashboardData?.progress?.nextMilestone || t('userProgress.completeProfile', 'Complete your profile to see your next career milestone')}
+                    </Typography>
+                  </motion.div>
+                </Box>
               </Box>
-            </Box>
+            </motion.div>
           </Grid>
           <Grid item xs={12} md={7}>
             <Grid container spacing={2}>
               <Grid item xs={6} sm={3}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4" fontWeight="bold">
-                    {dashboardData?.progress?.xp || 0}
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Career Points
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <Box sx={{ 
-                  textAlign: 'center',
-                  position: 'relative',
-                  cursor: 'pointer',
-                  '&:hover': { opacity: 0.9 }
-                }} onClick={() => setShowProfilePrompt(true)}>
-                  <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                    <CircularProgress
-                      variant="determinate"
-                      value={profileCompletionPercentage}
-                      sx={{ 
-                        color: 'white', 
-                        opacity: 0.9,
-                        '& .MuiCircularProgress-circle': {
-                          strokeLinecap: 'round',
-                          strokeWidth: 4,
-                        }
-                      }}
-                      size={50}
-                    />
-                    <Box
-                      sx={{
-                        top: 0,
-                        left: 0,
-                        bottom: 0,
-                        right: 0,
-                        position: 'absolute',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: 0.5 }}
+                  whileHover={{ 
+                    scale: 1.05, 
+                    boxShadow: '0 0 15px rgba(255,255,255,0.5)' 
+                  }}
+                  style={{ 
+                    borderRadius: 8,
+                    padding: 8,
+                    background: 'linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05))',
+                    backdropFilter: 'blur(4px)',
+                    WebkitBackdropFilter: 'blur(4px)'
+                  }}
+                >
+                  <Box sx={{ textAlign: 'center' }}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.6 }}
                     >
-                      <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-                        {`${profileCompletionPercentage}%`}
+                      <Typography variant="h4" fontWeight="bold" sx={{ 
+                        color: '#FFD700',
+                        textShadow: '0 0 10px rgba(255,215,0,0.5)'
+                      }}>
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ 
+                            opacity: 1,
+                            filter: ['drop-shadow(0 0 0px #FFD700)', 'drop-shadow(0 0 5px #FFD700)', 'drop-shadow(0 0 0px #FFD700)']
+                          }}
+                          transition={{ 
+                            duration: 2, 
+                            repeat: Infinity, 
+                            repeatType: 'reverse' 
+                          }}
+                        >
+                          {dashboardData?.progress?.xp || 0}
+                        </motion.span>
                       </Typography>
-                    </Box>
+                    </motion.div>
+                    <Typography variant="body2" sx={{ 
+                      opacity: 0.9,
+                      fontWeight: 'bold'
+                    }}>
+                      {t('userProgress.careerPoints', 'Career Points')}
+                    </Typography>
                   </Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
-                    Profile
-                    {profileCompletionPercentage < 100 && (
-                      <Chip 
-                        label="Improve" 
-                        size="small" 
-                        sx={{ ml: 1, height: 20, bgcolor: 'rgba(255,255,255,0.2)' }} 
-                        onClick={() => setShowProfilePrompt(true)}
-                      />
-                    )}
-                  </Typography>
-                </Box>
+                </motion.div>
               </Grid>
               <Grid item xs={6} sm={3}>
-                <Box sx={{ 
-                  textAlign: 'center',
-                  position: 'relative',
-                  cursor: 'pointer',
-                  '&:hover': { opacity: 0.9 }
-                }} onClick={() => setShowResumePrompt(true)}>
-                  <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                    <CircularProgress
-                      variant="determinate"
-                      value={profile?.resumeScore || 0}
-                      sx={{ 
-                        color: 'white', 
-                        opacity: 0.9,
-                        '& .MuiCircularProgress-circle': {
-                          strokeLinecap: 'round',
-                          strokeWidth: 4,
-                        }
-                      }}
-                      size={50}
-                    />
-                    <Box
-                      sx={{
-                        top: 0,
-                        left: 0,
-                        bottom: 0,
-                        right: 0,
-                        position: 'absolute',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: 0.6 }}
+                  whileHover={{ 
+                    scale: 1.05,
+                    boxShadow: '0 0 15px rgba(255,255,255,0.5)' 
+                  }}
+                  style={{ 
+                    borderRadius: 8,
+                    padding: 8,
+                    background: 'linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05))',
+                    backdropFilter: 'blur(4px)',
+                    WebkitBackdropFilter: 'blur(4px)'
+                  }}
+                >
+                  <Box sx={{ 
+                    textAlign: 'center',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    '&:hover': { opacity: 0.9 }
+                  }} onClick={() => setShowProfilePrompt(true)}>
+                    <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                      {/* Outer animated rings */}
+                      {[1, 2, 3].map((ring) => (
+                        <motion.div
+                          key={ring}
+                          animate={{ rotate: 360 * (ring % 2 === 0 ? -1 : 1) }}
+                          transition={{ duration: 10 + ring * 5, repeat: Infinity, ease: "linear" }}
+                          style={{ 
+                            position: 'absolute', 
+                            width: '100%', 
+                            height: '100%',
+                            opacity: 0.4 - (ring * 0.1)
+                          }}
+                        >
+                          <CircularProgress
+                            variant="determinate"
+                            value={100}
+                            sx={{ 
+                              color: ring === 1 ? '#64B5F6' : ring === 2 ? '#81C784' : '#FFB74D', 
+                              position: 'absolute',
+                              opacity: 0.7,
+                              '& .MuiCircularProgress-circle': {
+                                strokeLinecap: 'round',
+                                strokeWidth: 2,
+                                strokeDasharray: '1, 3'
+                              }
+                            }}
+                            size={55 + (ring * 5)}
+                          />
+                        </motion.div>
+                      ))}
+                      
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1, delay: 0.7 }}
+                      >
+                        <CircularProgress
+                          variant="determinate"
+                          value={profileCompletionPercentage}
+                          sx={{ 
+                            color: profileCompletionPercentage < 40 ? '#FF6B6B' : 
+                                  profileCompletionPercentage < 70 ? '#FFCE56' : '#66BB6A', 
+                            '& .MuiCircularProgress-circle': {
+                              strokeLinecap: 'round',
+                              strokeWidth: 4,
+                              filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.5))'
+                            }
+                          }}
+                          size={50}
+                        />
+                      </motion.div>
+                      <Box
+                        sx={{
+                          top: 0,
+                          left: 0,
+                          bottom: 0,
+                          right: 0,
+                          position: 'absolute',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 15, delay: 0.8 }}
+                        >
+                          <Typography variant="h6" component="div" sx={{ 
+                            fontWeight: 'bold',
+                            color: profileCompletionPercentage < 40 ? '#FF6B6B' : 
+                                  profileCompletionPercentage < 70 ? '#FFCE56' : '#66BB6A',
+                            textShadow: '0 0 5px rgba(0,0,0,0.3)',
+                          }}>
+                            {`${profileCompletionPercentage}%`}
+                          </Typography>
+                        </motion.div>
+                      </Box>
+                    </Box>
+                    <Typography variant="body2" sx={{ opacity: 0.9, mt: 1, fontWeight: 'bold' }}>
+                      Profile
+                      {profileCompletionPercentage < 100 && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.5, delay: 0.9 }}
+                          whileHover={{ 
+                            scale: 1.1,
+                            background: 'linear-gradient(90deg, #FFB74D, #FF8A65)'
+                          }}
+                          style={{ display: 'inline-block' }}
+                        >
+                          <Chip 
+                            label={t('userProgress.improve', 'Improve')} 
+                            size="small" 
+                            sx={{ 
+                              ml: 1, 
+                              height: 20, 
+                              bgcolor: 'rgba(255,255,255,0.2)',
+                              fontWeight: 'bold',
+                              '&:hover': {
+                                background: 'linear-gradient(90deg, #FFB74D, #FF8A65)'
+                              }
+                            }} 
+                            onClick={() => setShowProfilePrompt(true)}
+                          />
+                        </motion.div>
+                      )}
+                    </Typography>
+                  </Box>
+                </motion.div>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: 0.7 }}
+                  whileHover={{ 
+                    scale: 1.05,
+                    boxShadow: '0 0 15px rgba(255,255,255,0.5)' 
+                  }}
+                  style={{ 
+                    borderRadius: 8,
+                    padding: 8,
+                    background: 'linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05))',
+                    backdropFilter: 'blur(4px)',
+                    WebkitBackdropFilter: 'blur(4px)'
+                  }}
+                >
+                  <Box sx={{ 
+                    textAlign: 'center',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    '&:hover': { opacity: 0.9 }
+                  }} onClick={() => setShowResumePrompt(true)}>
+                    <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                      {/* Outer animated rings */}
+                      {[1, 2, 3].map((ring) => (
+                        <motion.div
+                          key={ring}
+                          animate={{ rotate: 360 * (ring % 2 === 0 ? 1 : -1) }}
+                          transition={{ duration: 12 + ring * 4, repeat: Infinity, ease: "linear" }}
+                          style={{ 
+                            position: 'absolute', 
+                            width: '100%', 
+                            height: '100%',
+                            opacity: 0.4 - (ring * 0.1)
+                          }}
+                        >
+                          <CircularProgress
+                            variant="determinate"
+                            value={100}
+                            sx={{ 
+                              color: ring === 1 ? '#FF8A65' : ring === 2 ? '#BA68C8' : '#4FC3F7', 
+                              position: 'absolute',
+                              opacity: 0.7,
+                              '& .MuiCircularProgress-circle': {
+                                strokeLinecap: 'round',
+                                strokeWidth: 2,
+                                strokeDasharray: '1, 3'
+                              }
+                            }}
+                            size={55 + (ring * 5)}
+                          />
+                        </motion.div>
+                      ))}
+                      
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1, delay: 0.8 }}
+                      >
+                        <CircularProgress
+                          variant="determinate"
+                          value={profile?.resumeScore || 0}
+                          sx={{ 
+                            color: (!profile?.resumeScore || profile?.resumeScore < 40) ? '#FF6B6B' : 
+                                  (!profile?.resumeScore || profile?.resumeScore < 70) ? '#FFCE56' : '#66BB6A', 
+                            '& .MuiCircularProgress-circle': {
+                              strokeLinecap: 'round',
+                              strokeWidth: 4,
+                              filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.5))'
+                            }
+                          }}
+                          size={50}
+                        />
+                      </motion.div>
+                      <Box
+                        sx={{
+                          top: 0,
+                          left: 0,
+                          bottom: 0,
+                          right: 0,
+                          position: 'absolute',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 15, delay: 0.9 }}
+                        >
+                          <Typography variant="h6" component="div" sx={{ 
+                            fontWeight: 'bold',
+                            color: (!profile?.resumeScore || profile?.resumeScore < 40) ? '#FF6B6B' : 
+                                  (!profile?.resumeScore || profile?.resumeScore < 70) ? '#FFCE56' : '#66BB6A',
+                            textShadow: '0 0 5px rgba(0,0,0,0.3)',
+                          }}>
+                            {`${profile?.resumeScore || 0}%`}
+                          </Typography>
+                        </motion.div>
+                      </Box>
+                    </Box>
+                    <Typography variant="body2" sx={{ opacity: 0.9, mt: 1, fontWeight: 'bold' }}>
+                      Resume
+                      {(!profile?.resumeScore || profile?.resumeScore < 85) && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.5, delay: 1 }}
+                          whileHover={{ 
+                            scale: 1.1,
+                            background: 'linear-gradient(90deg, #4FC3F7, #BA68C8)'
+                          }}
+                          style={{ display: 'inline-block' }}
+                        >
+                          <Chip 
+                            label={t('userProgress.improve', 'Improve')} 
+                            size="small" 
+                            sx={{ 
+                              ml: 1, 
+                              height: 20, 
+                              bgcolor: 'rgba(255,255,255,0.2)',
+                              fontWeight: 'bold',
+                              '&:hover': {
+                                background: 'linear-gradient(90deg, #4FC3F7, #BA68C8)'
+                              }
+                            }} 
+                            onClick={() => setShowResumePrompt(true)}
+                          />
+                        </motion.div>
+                      )}
+                    </Typography>
+                  </Box>
+                </motion.div>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: 0.8 }}
+                  whileHover={{ 
+                    scale: 1.05,
+                    boxShadow: '0 0 15px rgba(255,255,255,0.5)' 
+                  }}
+                  style={{ 
+                    borderRadius: 8,
+                    padding: 8,
+                    background: 'linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05))',
+                    backdropFilter: 'blur(4px)',
+                    WebkitBackdropFilter: 'blur(4px)'
+                  }}
+                >
+                  <Box sx={{ textAlign: 'center' }}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.9 }}
                     >
-                      <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-                        {`${profile?.resumeScore || 0}%`}
+                      <Typography variant="h4" fontWeight="bold" sx={{ 
+                        color: '#A5D6A7',
+                        textShadow: '0 0 10px rgba(165,214,167,0.5)'
+                      }}>
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ 
+                            opacity: 1,
+                            filter: ['drop-shadow(0 0 0px #A5D6A7)', 'drop-shadow(0 0 5px #A5D6A7)', 'drop-shadow(0 0 0px #A5D6A7)']
+                          }}
+                          transition={{ 
+                            duration: 2.5, 
+                            repeat: Infinity, 
+                            repeatType: 'reverse' 
+                          }}
+                        >
+                          {dashboardData?.progress?.completedGoals || 0}
+                        </motion.span>
                       </Typography>
-                    </Box>
+                    </motion.div>
+                    <Typography variant="body2" sx={{ 
+                      opacity: 0.9,
+                      fontWeight: 'bold'
+                    }}>
+                      {t('userProgress.goalsAchieved', 'Goals Achieved')}
+                    </Typography>
                   </Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
-                    Resume
-                    {(!profile?.resumeScore || profile?.resumeScore < 85) && (
-                      <Chip 
-                        label="Improve" 
-                        size="small" 
-                        sx={{ ml: 1, height: 20, bgcolor: 'rgba(255,255,255,0.2)' }} 
-                        onClick={() => setShowResumePrompt(true)}
-                      />
-                    )}
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4" fontWeight="bold">
-                    {dashboardData?.progress?.completedGoals || 0}
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Goals Achieved
-                  </Typography>
-                </Box>
+                </motion.div>
               </Grid>
             </Grid>
             
             {/* Skills Progress - Mini Bar */}
-            <Box sx={{ mt: 2, p: 1, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 1 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
-                  Top Skills Progress
-                </Typography>
-                <Typography variant="caption">
-                  {Math.round((dashboardData?.progress?.skillsProgress || 0) * 100) / 100}%
-                </Typography>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 1 }}
+              whileHover={{ 
+                scale: 1.02,
+                boxShadow: '0 0 15px rgba(255,255,255,0.3)' 
+              }}
+            >
+              <Box sx={{ 
+                mt: 2, 
+                p: 1.5, 
+                borderRadius: 2,
+                background: 'linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05))',
+                backdropFilter: 'blur(4px)',
+                WebkitBackdropFilter: 'blur(4px)',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                  <Typography variant="caption" sx={{ 
+                    fontWeight: 'bold',
+                    fontSize: '0.85rem',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                  }}>
+                    <motion.span
+                      animate={{ 
+                        color: ['#FFFFFF', '#90CAF9', '#FFFFFF'] 
+                      }}
+                      transition={{ 
+                        duration: 3, 
+                        repeat: Infinity 
+                      }}
+                    >
+                      {t('userProgress.topSkillsProgress', 'Top Skills Progress')}
+                    </motion.span>
+                  </Typography>
+                  <Typography variant="caption" sx={{ 
+                    fontWeight: 'bold',
+                    fontSize: '0.85rem',
+                    color: '#FFD54F',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                  }}>
+                    {Math.round((dashboardData?.progress?.skillsProgress || 0) * 100) / 100}%
+                  </Typography>
+                </Box>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: 1, delay: 1.1 }}
+                >
+                  <Box sx={{ position: 'relative', height: 8, borderRadius: 4, overflow: 'hidden' }}>
+                    <Box sx={{ 
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'rgba(255,255,255,0.1)',
+                      backgroundImage: 'linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px)',
+                      backgroundSize: '10px 10px'
+                    }} />
+                    
+                    <LinearProgress 
+                      variant="determinate" 
+                      value={dashboardData?.progress?.skillsProgress || 0} 
+                      sx={{ 
+                        height: 8, 
+                        borderRadius: 4,
+                        position: 'relative',
+                        zIndex: 2,
+                        bgcolor: 'rgba(0,0,0,0.2)',
+                        '& .MuiLinearProgress-bar': {
+                          background: 'linear-gradient(90deg, #64B5F6, #81C784, #FFB74D)',
+                          backgroundSize: '200% 200%',
+                          animation: 'gradientMove 5s ease infinite',
+                          '@keyframes gradientMove': {
+                            '0%': { backgroundPosition: '0% 50%' },
+                            '50%': { backgroundPosition: '100% 50%' },
+                            '100%': { backgroundPosition: '0% 50%' }
+                          },
+                          transition: 'transform 1.5s cubic-bezier(0.65, 0, 0.35, 1)',
+                          boxShadow: '0 0 10px rgba(255,255,255,0.5)'
+                        }
+                      }}
+                    />
+                    
+                    {/* Animated particles along the progress bar */}
+                    {[...Array(5)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        style={{
+                          position: 'absolute',
+                          bottom: '50%',
+                          left: `${Math.min((dashboardData?.progress?.skillsProgress || 0), 100) * Math.random()}%`,
+                          width: 3,
+                          height: 3,
+                          borderRadius: '50%',
+                          backgroundColor: 'white',
+                          zIndex: 3
+                        }}
+                        animate={{
+                          y: [0, -10, 0],
+                          opacity: [0, 1, 0]
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          delay: i * 0.4,
+                          ease: 'easeInOut'
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </motion.div>
               </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={dashboardData?.progress?.skillsProgress || 0} 
-                sx={{ 
-                  height: 6, 
-                  borderRadius: 5,
-                  bgcolor: 'rgba(255,255,255,0.2)',
-                  '& .MuiLinearProgress-bar': {
-                    bgcolor: 'white'
-                  }
-                }}
-              />
-            </Box>
+            </motion.div>
           </Grid>
         </Grid>
       </Paper>
@@ -2462,9 +3004,6 @@ const Dashboard = () => {
           </Grid>
         </Box>
       )}
-      
-      {/* Debug info - only shown in development */}
-      {process.env.NODE_ENV === 'development' && renderDebugInfo()}
     </Container>
     </>
   );

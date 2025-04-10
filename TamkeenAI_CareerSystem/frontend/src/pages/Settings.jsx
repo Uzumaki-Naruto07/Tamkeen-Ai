@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Paper, Typography, TextField, Button, Divider,
   Grid, Card, CardContent, CardActions, IconButton,
@@ -6,7 +6,9 @@ import {
   FormControlLabel, Alert, Snackbar, CircularProgress,
   Dialog, DialogTitle, DialogContent, DialogActions,
   FormControl, InputLabel, Select, MenuItem, Avatar,
-  Tabs, Tab, Chip, Tooltip, Badge, InputAdornment
+  Tabs, Tab, Chip, Tooltip, Badge, InputAdornment,
+  RadioGroup, FormControlLabel as MuiFormControlLabel,
+  Radio, ListItemButton, Checkbox
 } from '@mui/material';
 import {
   Settings as SettingsIcon, Person, Security, Notifications,
@@ -17,13 +19,149 @@ import {
   VerifiedUser, Email, Phone, CreditCard, CloudUpload,
   Backup, Style, FormatPaint, AccountCircle, Logout,
   VpnKey, PrivacyTip, Translate, FormatColorFill, Dashboard,
-  Bookmark, AccessTime, Business, Work, Description, Block
+  Bookmark, AccessTime, Business, Work, Description, Block,
+  People, Storage
 } from '@mui/icons-material';
 import { useUser } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useTheme } from '@mui/material/styles';
+
+// Utility functions for localStorage
+const getFromLocalStorage = (key) => {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  } catch (err) {
+    console.error(`Error getting ${key} from localStorage:`, err);
+    return null;
+  }
+};
+
+const saveToLocalStorage = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (err) {
+    console.error(`Error saving ${key} to localStorage:`, err);
+    return false;
+  }
+};
+
+// Utility function to synchronize settings with localStorage
+const syncSettingsWithLocalStorage = (userId, dataType, data) => {
+  if (!userId) userId = 'default-user';
+  console.log(`Syncing ${dataType} settings for user:`, userId);
+  
+  try {
+    // Main localStorage key for the specific settings type
+    const mainKey = dataType;
+    
+    // Save to the primary location
+    localStorage.setItem(mainKey, JSON.stringify(data));
+    
+    // Also save to user-specific storage if needed
+    const userKey = `${dataType}_${userId}`;
+    localStorage.setItem(userKey, JSON.stringify(data));
+    
+    // If this is profile data, update it across more places
+    if (dataType === 'userProfile') {
+      // Save to profile_{userId} for consistency with UserProfile component
+      const profileKey = `profile_${userId}`;
+      
+      // Get existing profile if available
+      let existingProfile = {};
+      try {
+        const storedProfile = localStorage.getItem(profileKey);
+        if (storedProfile) {
+          existingProfile = JSON.parse(storedProfile);
+        }
+      } catch (err) {
+        console.warn(`Failed to parse existing profile from ${profileKey}:`, err);
+      }
+      
+      // If we're updating profile with an image, ensure it's properly synced
+      if (data.profileImage || data.avatar) {
+        const imageUrl = data.profileImage || data.avatar;
+        
+        // Update all possible avatar fields
+        data.profileImage = imageUrl;
+        data.avatar = imageUrl;
+        
+        // Sync the image across multiple storage locations
+        const imageStorageKeys = [
+          'user',
+          'userProfile',
+          'authUser',
+          'user_data',
+          profileKey
+        ];
+        
+        imageStorageKeys.forEach(key => {
+          try {
+            const storedData = localStorage.getItem(key);
+            if (storedData) {
+              const parsedData = JSON.parse(storedData);
+              
+              if (typeof parsedData === 'object' && parsedData !== null) {
+                parsedData.profileImage = imageUrl;
+                parsedData.avatar = imageUrl;
+                localStorage.setItem(key, JSON.stringify(parsedData));
+              }
+            }
+          } catch (err) {
+            console.warn(`Failed to update image in ${key}:`, err);
+          }
+        });
+      }
+      
+      // Merge with existing profile data to ensure we don't lose any fields
+      const updatedProfile = {
+        ...existingProfile,
+        ...data,
+        // Ensure these fields are explicitly set
+        id: userId,
+        userId: userId
+      };
+      
+      // Save the merged profile
+      localStorage.setItem(profileKey, JSON.stringify(updatedProfile));
+      
+      // Update the shared user object if it exists
+      try {
+        const userObj = localStorage.getItem('user');
+        if (userObj) {
+          const parsedUser = JSON.parse(userObj);
+          
+          // Only update specific fields to avoid overwriting important data
+          const updatedUser = {
+            ...parsedUser,
+            name: data.name,
+            email: data.email,
+            profileImage: data.profileImage || data.avatar,
+            avatar: data.profileImage || data.avatar,
+            // Social links if they exist
+            website: data.website,
+            linkedin: data.linkedin,
+            github: data.github,
+            twitter: data.twitter
+          };
+          
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+      } catch (err) {
+        console.warn('Failed to update user object in localStorage:', err);
+      }
+    }
+    
+    console.log(`Successfully synced ${dataType} settings to localStorage`);
+    return true;
+  } catch (err) {
+    console.error(`Error syncing ${dataType} settings:`, err);
+    return false;
+  }
+};
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);
@@ -77,7 +215,9 @@ const Settings = () => {
     activityVisibility: 'connections',
     searchable: true,
     allowDataCollection: true,
-    allowThirdPartySharing: false
+    allowThirdPartySharing: false,
+    twoFactorEnabled: false,
+    loginAlerts: false
   });
   
   const [dataSettings, setDataSettings] = useState({
@@ -86,7 +226,7 @@ const Settings = () => {
   });
   
   const [exportOpen, setExportOpen] = useState(false);
-  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -96,7 +236,7 @@ const Settings = () => {
   const [previewImage, setPreviewImage] = useState(null);
   
   const navigate = useNavigate();
-  const { profile, updateUser, logout } = useUser();
+  const { profile, updateUserProfile, logout } = useUser();
   const theme = useTheme();
   
   useEffect(() => {
@@ -105,72 +245,135 @@ const Settings = () => {
       setError(null);
       
       try {
-        // Load profile from localStorage
-        const savedProfile = localStorage.getItem('userProfile');
-        if (savedProfile) {
-          const parsedProfile = JSON.parse(savedProfile);
+        const userId = profile?.id || 'default-user';
+        
+        // Try loading profile from different storage locations in priority order
+        let profileData = null;
+        
+        // Check potential profile storage locations
+        const profileStorageKeys = [
+          `profile_${userId}`,  // User-specific profile from UserProfile component
+          'userProfile',        // Standard profile storage from this component
+          'user'                // Main user object from authentication
+        ];
+        
+        // Try each location until we find valid profile data
+        for (const key of profileStorageKeys) {
+          try {
+            const savedData = localStorage.getItem(key);
+            if (savedData) {
+              const parsedData = JSON.parse(savedData);
+              if (parsedData && typeof parsedData === 'object') {
+                console.log(`Found profile data in ${key}:`, parsedData);
+                profileData = parsedData;
+                break;
+              }
+            }
+          } catch (err) {
+            console.warn(`Error parsing data from ${key}:`, err);
+          }
+        }
+        
+        // If we found profile data, use it
+        if (profileData) {
           setProfileForm({
-            name: parsedProfile.name || '',
-            email: parsedProfile.email || '',
-            phone: parsedProfile.phone || '',
-            bio: parsedProfile.bio || '',
-            location: parsedProfile.location || '',
-            website: parsedProfile.website || '',
-            linkedin: parsedProfile.linkedin || '',
-            github: parsedProfile.github || '',
-            twitter: parsedProfile.twitter || '',
-            showContactInfo: parsedProfile.showContactInfo !== undefined ? parsedProfile.showContactInfo : true,
-            profileVisibility: parsedProfile.profileVisibility || 'public'
+            name: profileData.name || profileData.firstName + ' ' + (profileData.lastName || '') || '',
+            email: profileData.email || '',
+            phone: profileData.phone || '',
+            bio: profileData.bio || '',
+            location: profileData.location || '',
+            website: profileData.website || '',
+            linkedin: profileData.linkedin || (profileData.socialLinks?.linkedin || ''),
+            github: profileData.github || (profileData.socialLinks?.github || ''),
+            twitter: profileData.twitter || (profileData.socialLinks?.twitter || ''),
+            showContactInfo: profileData.showContactInfo !== undefined ? profileData.showContactInfo : true,
+            profileVisibility: profileData.profileVisibility || (profileData.visibility?.isPublic ? 'public' : 'private') || 'public'
           });
 
-          // Set the profile image if available
-          if (parsedProfile.profileImage) {
-            setPreviewImage(parsedProfile.profileImage);
+          // Set the profile image if available - check multiple fields
+          if (profileData.profileImage || profileData.avatar) {
+            setPreviewImage(profileData.profileImage || profileData.avatar);
           }
-        } else if (profile?.id) {
-          // If nothing in localStorage but we have a profile in context
+        } 
+        // If no profile data found but we have a profile in context
+        else if (profile) {
           setProfileForm({
-            name: profile.name || '',
+            name: profile.name || profile.fullName || '',
             email: profile.email || '',
             phone: profile.phone || '',
             bio: profile.bio || '',
             location: profile.location || '',
             website: profile.website || '',
-            linkedin: profile.linkedin || '',
-            github: profile.github || '',
-            twitter: profile.twitter || '',
+            linkedin: profile.linkedin || (profile.socialLinks?.linkedin || ''),
+            github: profile.github || (profile.socialLinks?.github || ''),
+            twitter: profile.twitter || (profile.socialLinks?.twitter || ''),
             showContactInfo: profile.showContactInfo !== undefined ? profile.showContactInfo : true,
             profileVisibility: profile.profileVisibility || 'public'
           });
 
-          if (profile.profileImage) {
-            setPreviewImage(profile.profileImage);
+          if (profile.profileImage || profile.avatar) {
+            setPreviewImage(profile.profileImage || profile.avatar);
           }
         }
         
-        // Load notification settings from localStorage
-        const savedNotifications = localStorage.getItem('notificationSettings');
-        if (savedNotifications) {
-          setNotificationSettings(JSON.parse(savedNotifications));
-        }
+        // Load notification settings
+        const loadSetting = (settingName, defaultValue) => {
+          try {
+            // Try user-specific setting first
+            const userSpecificKey = `${settingName}_${userId}`;
+            let savedSetting = localStorage.getItem(userSpecificKey);
+            
+            // If not found, try general setting
+            if (!savedSetting) {
+              savedSetting = localStorage.getItem(settingName);
+            }
+            
+            if (savedSetting) {
+              return JSON.parse(savedSetting);
+            }
+          } catch (err) {
+            console.warn(`Failed to parse ${settingName}:`, err);
+          }
+          return defaultValue;
+        };
         
-        // Load appearance settings from localStorage
-        const savedAppearance = localStorage.getItem('appearanceSettings');
-        if (savedAppearance) {
-          setAppearanceSettings(JSON.parse(savedAppearance));
-        }
+        // Load each type of setting with defaults
+        setNotificationSettings(loadSetting('notificationSettings', {
+          emailNotifications: true,
+          pushNotifications: true,
+          notificationTypes: {
+            applications: true,
+            interviews: true,
+            messages: true,
+            jobs: true,
+            learning: true,
+            system: true
+          },
+          emailFrequency: 'immediate'
+        }));
         
-        // Load privacy settings from localStorage
-        const savedPrivacy = localStorage.getItem('privacySettings');
-        if (savedPrivacy) {
-          setPrivacySettings(JSON.parse(savedPrivacy));
-        }
+        setAppearanceSettings(loadSetting('appearanceSettings', {
+          theme: 'system',
+          primaryColor: '#1976d2',
+          fontSize: 'medium',
+          compactMode: false,
+          language: 'en'
+        }));
         
-        // Load data settings from localStorage
-        const savedData = localStorage.getItem('dataSettings');
-        if (savedData) {
-          setDataSettings(JSON.parse(savedData));
-        }
+        setPrivacySettings(loadSetting('privacySettings', {
+          profileVisibility: 'public',
+          activityVisibility: 'connections',
+          searchable: true,
+          allowDataCollection: true,
+          allowThirdPartySharing: false,
+          twoFactorEnabled: false,
+          loginAlerts: false
+        }));
+        
+        setDataSettings(loadSetting('dataSettings', {
+          autoBackup: false,
+          backupFrequency: 'weekly'
+        }));
         
         setLoading(false);
       } catch (err) {
@@ -186,30 +389,47 @@ const Settings = () => {
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
-      // Save to localStorage
+      // Create complete profile data object
       const userProfileData = {
         ...profileForm,
-        profileImage: previewImage
+        profileImage: previewImage,
+        avatar: previewImage,
+        // Ensure we include all necessary fields
+        id: profile?.id,
+        userId: profile?.id
       };
       
-      localStorage.setItem('userProfile', JSON.stringify(userProfileData));
+      // Use the comprehensive sync function
+      syncSettingsWithLocalStorage(profile?.id, 'userProfile', userProfileData);
       
-      // Update user context
-      updateUser({
-        ...profile,
-        name: profileForm.name,
-        email: profileForm.email,
-        phone: profileForm.phone,
-        bio: profileForm.bio,
-        location: profileForm.location,
-        website: profileForm.website,
-        linkedin: profileForm.linkedin,
-        github: profileForm.github,
-        twitter: profileForm.twitter,
-        showContactInfo: profileForm.showContactInfo,
-        profileVisibility: profileForm.profileVisibility,
-        profileImage: previewImage
-      });
+      // Update user context if the function exists
+      if (typeof updateUserProfile === 'function') {
+        try {
+          updateUserProfile({
+            ...profile,
+            name: profileForm.name,
+            email: profileForm.email,
+            phone: profileForm.phone,
+            bio: profileForm.bio,
+            location: profileForm.location,
+            website: profileForm.website,
+            linkedin: profileForm.linkedin,
+            github: profileForm.github,
+            twitter: profileForm.twitter,
+            showContactInfo: profileForm.showContactInfo,
+            profileVisibility: profileForm.profileVisibility,
+            profileImage: previewImage,
+            avatar: previewImage
+          });
+          console.log('Updated user context with new profile data');
+        } catch (contextErr) {
+          console.warn('Error updating user context:', contextErr);
+          // Continue with the operation even if context update fails
+        }
+      } else {
+        console.warn('updateUserProfile is not a function in current context. Skipping context update.');
+        // The profile is still saved to localStorage via syncSettingsWithLocalStorage
+      }
       
       setSnackbarMessage('Profile updated successfully');
       setSnackbarSeverity('success');
@@ -276,8 +496,8 @@ const Settings = () => {
   const handleSaveNotifications = async () => {
     setSaving(true);
     try {
-      // Save to localStorage
-      localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
+      // Save to localStorage using comprehensive function
+      syncSettingsWithLocalStorage(profile?.id, 'notificationSettings', notificationSettings);
       
       setSnackbarMessage('Notification settings updated successfully');
       setSnackbarSeverity('success');
@@ -299,11 +519,74 @@ const Settings = () => {
     }
   };
   
+  const handleSaveNotificationSettings = async () => {
+    if (!updateUserProfile) {
+      console.warn("updateUserProfile function is not available");
+      try {
+        // Save to localStorage as fallback
+        const userId = getFromLocalStorage('userId');
+        if (userId) {
+          const userProfile = getFromLocalStorage(`profile_${userId}`) || {};
+          saveToLocalStorage(`profile_${userId}`, {
+            ...userProfile,
+            notificationSettings
+          });
+          setSnackbarMessage("Notification settings saved locally");
+          setSnackbarSeverity("success");
+          setSnackbarOpen(true);
+        }
+      } catch (err) {
+        console.error("Failed to save notification settings locally", err);
+        setSnackbarMessage("Failed to save notification settings");
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
+      }
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateUserProfile({ notificationSettings });
+      setSnackbarMessage("Notification settings updated successfully");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error("Failed to update notification settings", err);
+      setSnackbarMessage("Failed to update notification settings");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  const handleToggleTwoFactor = async () => {
+    setPrivacySettings(prev => ({
+      ...prev,
+      twoFactorEnabled: !prev.twoFactorEnabled
+    }));
+    
+    setSnackbarMessage(`Two-factor authentication ${!privacySettings.twoFactorEnabled ? 'enabled' : 'disabled'}`);
+    setSnackbarSeverity("info");
+    setSnackbarOpen(true);
+  };
+  
+  const handleToggleLoginAlerts = async () => {
+    setPrivacySettings(prev => ({
+      ...prev,
+      loginAlerts: !prev.loginAlerts
+    }));
+    
+    setSnackbarMessage(`Login alerts ${!privacySettings.loginAlerts ? 'enabled' : 'disabled'}`);
+    setSnackbarSeverity("info");
+    setSnackbarOpen(true);
+  };
+  
   const handleSaveAppearance = async () => {
     setSaving(true);
     try {
-      // Save to localStorage
-      localStorage.setItem('appearanceSettings', JSON.stringify(appearanceSettings));
+      // Save to localStorage using comprehensive function
+      syncSettingsWithLocalStorage(profile?.id, 'appearanceSettings', appearanceSettings);
       
       // Apply appearance changes immediately
       document.documentElement.setAttribute('data-theme', 
@@ -332,26 +615,82 @@ const Settings = () => {
     }
   };
   
-  const handleSavePrivacy = async () => {
+  const handleSaveAppearanceSettings = async () => {
+    if (!updateUserProfile) {
+      console.warn("updateUserProfile function is not available");
+      try {
+        // Save to localStorage as fallback
+        const userId = getFromLocalStorage('userId');
+        if (userId) {
+          const userProfile = getFromLocalStorage(`profile_${userId}`) || {};
+          saveToLocalStorage(`profile_${userId}`, {
+            ...userProfile,
+            appearanceSettings
+          });
+          setSnackbarMessage("Appearance settings saved locally");
+          setSnackbarSeverity("success");
+          setSnackbarOpen(true);
+        }
+      } catch (err) {
+        console.error("Failed to save appearance settings locally", err);
+        setSnackbarMessage("Failed to save appearance settings");
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
+      }
+      return;
+    }
+
     setSaving(true);
     try {
-      // Save to localStorage
-      localStorage.setItem('privacySettings', JSON.stringify(privacySettings));
-      
-      setSnackbarMessage('Privacy settings updated successfully');
-      setSnackbarSeverity('success');
+      await updateUserProfile({ appearanceSettings });
+      setSnackbarMessage("Appearance settings updated successfully");
+      setSnackbarSeverity("success");
       setSnackbarOpen(true);
-      
-      // Try API call if available
-      try {
-        await apiEndpoints.settings.updatePrivacySettings(profile?.id, privacySettings);
-      } catch (apiErr) {
-        console.log('API not available, using local storage only');
-      }
     } catch (err) {
-      console.error('Error saving privacy settings:', err);
-      setSnackbarMessage('Failed to update privacy settings');
-      setSnackbarSeverity('error');
+      console.error("Failed to update appearance settings", err);
+      setSnackbarMessage("Failed to update appearance settings");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  const handleSavePrivacy = async () => {
+    if (!updateUserProfile) {
+      console.warn("updateUserProfile function is not available");
+      try {
+        // Save to localStorage as fallback
+        const userId = getFromLocalStorage('userId');
+        if (userId) {
+          const userProfile = getFromLocalStorage(`profile_${userId}`) || {};
+          saveToLocalStorage(`profile_${userId}`, {
+            ...userProfile,
+            privacySettings
+          });
+          setSnackbarMessage("Privacy settings saved locally");
+          setSnackbarSeverity("success");
+          setSnackbarOpen(true);
+        }
+      } catch (err) {
+        console.error("Failed to save privacy settings locally", err);
+        setSnackbarMessage("Failed to save privacy settings");
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
+      }
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateUserProfile({ privacySettings });
+      setSnackbarMessage("Privacy settings updated successfully");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error("Failed to update privacy settings", err);
+      setSnackbarMessage("Failed to update privacy settings");
+      setSnackbarSeverity("error");
       setSnackbarOpen(true);
     } finally {
       setSaving(false);
@@ -359,25 +698,40 @@ const Settings = () => {
   };
   
   const handleSaveDataSettings = async () => {
+    if (!updateUserProfile) {
+      console.warn("updateUserProfile function is not available");
+      try {
+        // Save to localStorage as fallback
+        const userId = getFromLocalStorage('userId');
+        if (userId) {
+          const userProfile = getFromLocalStorage(`profile_${userId}`) || {};
+          saveToLocalStorage(`profile_${userId}`, {
+            ...userProfile,
+            dataSettings
+          });
+          setSnackbarMessage("Data settings saved locally");
+          setSnackbarSeverity("success");
+          setSnackbarOpen(true);
+        }
+      } catch (err) {
+        console.error("Failed to save data settings locally", err);
+        setSnackbarMessage("Failed to save data settings");
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
+      }
+      return;
+    }
+
     setSaving(true);
     try {
-      // Save to localStorage
-      localStorage.setItem('dataSettings', JSON.stringify(dataSettings));
-      
-      setSnackbarMessage('Data settings updated successfully');
-      setSnackbarSeverity('success');
+      await updateUserProfile({ dataSettings });
+      setSnackbarMessage("Data settings updated successfully");
+      setSnackbarSeverity("success");
       setSnackbarOpen(true);
-      
-      // Try API call if available
-      try {
-        await apiEndpoints.settings.updateDataSettings(profile?.id, dataSettings);
-      } catch (apiErr) {
-        console.log('API not available, using local storage only');
-      }
     } catch (err) {
-      console.error('Error saving data settings:', err);
-      setSnackbarMessage('Failed to update data settings');
-      setSnackbarSeverity('error');
+      console.error("Failed to update data settings", err);
+      setSnackbarMessage("Failed to update data settings");
+      setSnackbarSeverity("error");
       setSnackbarOpen(true);
     } finally {
       setSaving(false);
@@ -401,14 +755,21 @@ const Settings = () => {
       localStorage.removeItem('privacySettings');
       localStorage.removeItem('dataSettings');
       
-      setDeleteAccountOpen(false);
+      setDeleteAccountConfirm(false);
       setSnackbarMessage('Your account has been deleted');
       setSnackbarSeverity('success');
       setSnackbarOpen(true);
       
       // Log the user out
       setTimeout(() => {
-        logout();
+        if (typeof logout === 'function') {
+          logout();
+        } else {
+          console.warn('logout is not a function in current context. Redirecting manually.');
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('user');
+        }
+        
         navigate('/login');
       }, 2000);
       
@@ -526,69 +887,53 @@ const Settings = () => {
       // Get the user's ID
       const userId = profile?.id || 'unknown-user';
       
-      // Save the image URL to localStorage and update all relevant storage locations
-      try {
-        // 1. Update main userProfile
-        const currentProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-        const updatedProfile = {
-          ...currentProfile,
-          profileImage: previewImage,
-          avatar: previewImage
-        };
-        localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
-        
-        // 2. Update profile_{userId} if it exists
-        const profileKey = `profile_${userId}`;
-        const userProfileData = JSON.parse(localStorage.getItem(profileKey) || '{}');
-        if (userProfileData) {
-          userProfileData.avatar = previewImage;
-          localStorage.setItem(profileKey, JSON.stringify(userProfileData));
-        }
-        
-        // 3. Update user_data for UAE PASS users
-        const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
-        if (userData && userData.id) {
-          userData.avatar = previewImage;
-          localStorage.setItem('user_data', JSON.stringify(userData));
-        }
-        
-        // Update user context with new image using the app's updateUserProfile function
-        if (typeof updateUserProfile === 'function') {
-          await updateUserProfile({
-            id: userId,
-            userId: userId,
-            avatar: previewImage
-          });
-        } else {
-          // Direct update if updateUserProfile not available
-          updateUser({
+      // Create complete profile data with the image
+      const profileData = {
+        ...profileForm,
+        profileImage: previewImage,
+        avatar: previewImage,
+        id: userId,
+        userId: userId
+      };
+      
+      // Use the comprehensive sync function to save image and update all relevant storage
+      syncSettingsWithLocalStorage(userId, 'userProfile', profileData);
+      
+      // Update user context with new image - check if updateUserProfile is a function first
+      if (typeof updateUserProfile === 'function') {
+        try {
+          updateUserProfile({
             ...profile,
             avatar: previewImage,
             profileImage: previewImage
           });
+          console.log('Updated user context with new profile image');
+        } catch (contextErr) {
+          console.warn('Error updating user context with new image:', contextErr);
+          // Continue with the operation even if context update fails
         }
-        
-        setImageUploadOpen(false);
-        setSnackbarMessage('Profile image updated successfully');
-        setSnackbarSeverity('success');
-        setSnackbarOpen(true);
-        
-        // Reset states
-        setProfileImage(null);
-        
-        // Try API call if available
-        try {
-          if (profile?.id && profileImage) {
-            const formData = new FormData();
-            formData.append('profileImage', profileImage);
-            await apiEndpoints.settings.uploadProfileImage(profile.id, formData);
-          }
-        } catch (apiErr) {
-          console.log('API not available, using local storage only', apiErr);
+      } else {
+        console.warn('updateUserProfile is not a function in current context. Skipping context update.');
+        // The image is still saved to localStorage via syncSettingsWithLocalStorage
+      }
+      
+      setImageUploadOpen(false);
+      setSnackbarMessage('Profile image updated successfully');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+      
+      // Reset states
+      setProfileImage(null);
+      
+      // Try API call if available
+      try {
+        if (profile?.id && profileImage) {
+          const formData = new FormData();
+          formData.append('profileImage', profileImage);
+          await apiEndpoints.settings.uploadProfileImage(profile.id, formData);
         }
-      } catch (storageErr) {
-        console.error('Error saving to localStorage:', storageErr);
-        throw new Error('Failed to save image to local storage');
+      } catch (apiErr) {
+        console.log('API not available, using local storage only', apiErr);
       }
     } catch (err) {
       console.error('Error uploading profile image:', err);
@@ -945,7 +1290,7 @@ const Settings = () => {
               />
               <Button
                 color="error"
-                onClick={() => setDeleteAccountOpen(true)}
+                onClick={() => setDeleteAccountConfirm(true)}
                 variant="outlined"
                 size="small"
               >
@@ -1245,233 +1590,339 @@ const Settings = () => {
     </Paper>
   );
   
-  return (
-    <Box sx={{ pb: 4 }}>
-      <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
-        Account Settings
-      </Typography>
-      
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <LoadingSpinner message="Loading settings..." />
-        </Box>
-      ) : error ? (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      ) : (
-        <>
-          <Paper sx={{ mb: 3 }}>
-            <Tabs
-              value={activeTab}
-              onChange={(e, newValue) => setActiveTab(newValue)}
-              variant="scrollable"
-              scrollButtons="auto"
-              sx={{ borderBottom: 1, borderColor: 'divider' }}
-            >
-              <Tab icon={<Person />} iconPosition="start" label="Profile" />
-              <Tab icon={<Security />} iconPosition="start" label="Security" />
-              <Tab icon={<Notifications />} iconPosition="start" label="Notifications" />
-              <Tab icon={<Palette />} iconPosition="start" label="Appearance" />
-              <Tab icon={<Lock />} iconPosition="start" label="Privacy" />
-              <Tab icon={<Backup />} iconPosition="start" label="Data & Backup" />
-            </Tabs>
-          </Paper>
-          
-          {activeTab === 0 && renderProfileSettings()}
-          {activeTab === 1 && renderSecuritySettings()}
-          {activeTab === 2 && renderNotificationSettings()}
-          {activeTab === 3 && renderAppearanceSettings()}
-          {activeTab === 4 && (
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Privacy Settings
+  const renderPrivacySettings = () => {
+    return (
+      <Paper elevation={0} className="settings-section" sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Privacy Settings
+        </Typography>
+        <Divider sx={{ mb: 3 }} />
+        
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Profile Visibility
               </Typography>
-              {/* Privacy settings content */}
-            </Paper>
-          )}
-          {activeTab === 5 && (
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Data Management
-              </Typography>
-              {/* Data management content */}
-            </Paper>
-          )}
-        </>
-      )}
-      
-      {/* Profile Image Upload Dialog */}
-      <Dialog
-        open={imageUploadOpen}
-        onClose={() => {
-          if (!saving) {
-            setImageUploadOpen(false);
-            setProfileImage(null);
-          }
-        }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Update Profile Picture</DialogTitle>
-        <DialogContent>
-          <Box sx={{ textAlign: 'center', my: 2 }}>
-            {previewImage ? (
-              <Avatar 
-                src={previewImage} 
-                sx={{ width: 150, height: 150, margin: '0 auto' }}
-              />
-            ) : (
-              <Avatar 
-                src={profile?.profileImage} 
-                sx={{ width: 150, height: 150, margin: '0 auto' }}
+              <RadioGroup
+                value={privacySettings.profileVisibility}
+                onChange={(e) => setPrivacySettings(prev => ({
+                  ...prev,
+                  profileVisibility: e.target.value
+                }))}
               >
-                {profileForm.name?.charAt(0) || <AccountCircle />}
-              </Avatar>
-            )}
-          </Box>
+                <FormControlLabel 
+                  value="public" 
+                  control={<Radio />} 
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Public sx={{ mr: 1 }} /> 
+                      <Typography>Public - Anyone can view your profile</Typography>
+                    </Box>
+                  } 
+                />
+                <FormControlLabel 
+                  value="connections" 
+                  control={<Radio />} 
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <People sx={{ mr: 1 }} /> 
+                      <Typography>Connections Only - Only people you've connected with can view your profile</Typography>
+                    </Box>
+                  } 
+                />
+                <FormControlLabel 
+                  value="private" 
+                  control={<Radio />} 
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Lock sx={{ mr: 1 }} /> 
+                      <Typography>Private - Only you can view your profile</Typography>
+                    </Box>
+                  } 
+                />
+              </RadioGroup>
+            </FormControl>
+          </Grid>
           
-          <Box sx={{ textAlign: 'center', my: 2 }}>
-            <Button
-              variant="outlined"
-              component="label"
-              startIcon={<CloudUpload />}
-              disabled={saving}
-            >
-              Choose Image
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={handleProfileImageChange}
-              />
-            </Button>
-            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-              Max size: 5MB. Formats: JPG, PNG, GIF
+          <Grid item xs={12}>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Activity Visibility
+              </Typography>
+              <RadioGroup
+                value={privacySettings.activityVisibility}
+                onChange={(e) => setPrivacySettings(prev => ({
+                  ...prev,
+                  activityVisibility: e.target.value
+                }))}
+              >
+                <FormControlLabel value="public" control={<Radio />} label="Public - Anyone can see your activity" />
+                <FormControlLabel value="connections" control={<Radio />} label="Connections Only - Only your connections can see your activity" />
+                <FormControlLabel value="private" control={<Radio />} label="Private - Your activity is only visible to you" />
+              </RadioGroup>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" gutterBottom>
+              Discovery Settings
             </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={privacySettings.searchable}
+                  onChange={(e) => setPrivacySettings(prev => ({
+                    ...prev,
+                    searchable: e.target.checked
+                  }))}
+                />
+              }
+              label="Make my profile searchable"
+            />
+            <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5, mb: 2 }}>
+              When enabled, your profile can be found in search results
+            </Typography>
+          </Grid>
+          
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" gutterBottom>
+              Data Collection
+            </Typography>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={privacySettings.allowDataCollection}
+                  onChange={(e) => setPrivacySettings(prev => ({
+                    ...prev,
+                    allowDataCollection: e.target.checked
+                  }))}
+                />
+              }
+              label="Allow data collection for platform improvement"
+            />
+            <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5, mb: 2 }}>
+              We use this information to improve your experience
+            </Typography>
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={privacySettings.allowThirdPartySharing}
+                  onChange={(e) => setPrivacySettings(prev => ({
+                    ...prev,
+                    allowThirdPartySharing: e.target.checked
+                  }))}
+                />
+              }
+              label="Allow sharing data with trusted partners"
+            />
+            <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5, mb: 2 }}>
+              This helps provide personalized services
+            </Typography>
+          </Grid>
+        </Grid>
+        
+        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
           <Button 
-            onClick={() => {
-              setImageUploadOpen(false);
-              setProfileImage(null);
-              setPreviewImage(null);
-            }}
+            variant="contained"
+            color="primary"
+            onClick={handleSavePrivacy}
             disabled={saving}
           >
-            Cancel
+            {saving ? 'Saving...' : 'Save Privacy Settings'}
           </Button>
-          <Button
-            variant="contained"
-            onClick={handleUploadProfileImage}
-            disabled={saving || (!profileImage && !previewImage)}
-            startIcon={saving ? <CircularProgress size={20} /> : null}
-          >
-            {saving ? 'Uploading...' : 'Upload'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-      
-      {/* Delete Account Dialog */}
-      <Dialog
-        open={deleteAccountOpen}
-        onClose={() => setDeleteAccountOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          <Typography color="error">Delete Account</Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Typography paragraph>
-            Warning: This action cannot be undone. All your data will be permanently deleted.
-          </Typography>
-          
-          <Typography paragraph>
-            Please type your email address to confirm deletion:
-          </Typography>
-          
-          <TextField
-            value={confirmationEmail}
-            onChange={(e) => setConfirmationEmail(e.target.value)}
-            fullWidth
-            placeholder={profileForm.email}
-            margin="normal"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteAccountOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleDeleteAccount}
-            disabled={confirmationEmail !== profileForm.email || saving}
-            startIcon={saving ? <CircularProgress size={20} /> : <Delete />}
-          >
-            Delete My Account
-          </Button>
-        </DialogActions>
-      </Dialog>
-      
-      {/* Export Data Dialog */}
-      <Dialog
-        open={exportOpen}
-        onClose={() => setExportOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Export Your Data</DialogTitle>
-        <DialogContent>
-          <Typography paragraph>
-            Download a copy of your data in the following formats:
-          </Typography>
-          
-          <List>
-            <ListItem button onClick={() => handleExportData('json')}>
-              <ListItemIcon>
-                <Description />
-              </ListItemIcon>
-              <ListItemText primary="JSON Format" secondary="Comprehensive data export" />
-            </ListItem>
+        </Box>
+      </Paper>
+    );
+  };
+  
+  const renderDataSettings = () => {
+    return (
+      <Paper elevation={0} className="settings-section" sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Data & Backup Settings
+        </Typography>
+        <Divider sx={{ mb: 3 }} />
+        
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" gutterBottom>
+              Automatic Backup
+            </Typography>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={dataSettings.autoBackup}
+                  onChange={(e) => setDataSettings(prev => ({
+                    ...prev,
+                    autoBackup: e.target.checked
+                  }))}
+                />
+              }
+              label="Enable automatic backup of your data"
+            />
             
-            <ListItem button onClick={() => handleExportData('csv')}>
-              <ListItemIcon>
-                <Description />
-              </ListItemIcon>
-              <ListItemText primary="CSV Format" secondary="Spreadsheet-compatible format" />
-            </ListItem>
+            {dataSettings.autoBackup && (
+              <FormControl fullWidth sx={{ mt: 2 }}>
+                <InputLabel id="backup-frequency-label">Backup Frequency</InputLabel>
+                <Select
+                  labelId="backup-frequency-label"
+                  id="backup-frequency"
+                  value={dataSettings.backupFrequency}
+                  label="Backup Frequency"
+                  onChange={(e) => setDataSettings(prev => ({
+                    ...prev,
+                    backupFrequency: e.target.value
+                  }))}
+                >
+                  <MenuItem value="daily">Daily</MenuItem>
+                  <MenuItem value="weekly">Weekly</MenuItem>
+                  <MenuItem value="monthly">Monthly</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+          </Grid>
+          
+          <Grid item xs={12} sx={{ mt: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Data Export
+            </Typography>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Export all your data as a zip file
+            </Typography>
             
-            <ListItem button onClick={() => handleExportData('pdf')}>
+            <Button
+              variant="outlined"
+              startIcon={<CloudDownload />}
+              onClick={() => setExportOpen(true)}
+            >
+              Export My Data
+            </Button>
+          </Grid>
+          
+          <Grid item xs={12} sx={{ mt: 3 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Delete Account
+            </Typography>
+            <Typography variant="body2" color="error" sx={{ mb: 2 }}>
+              Warning: This action cannot be undone. All your data will be permanently deleted.
+            </Typography>
+            
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => setDeleteAccountConfirm(true)}
+            >
+              Delete My Account
+            </Button>
+          </Grid>
+        </Grid>
+        
+        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button 
+            variant="contained"
+            color="primary"
+            onClick={handleSaveDataSettings}
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : 'Save Data Settings'}
+          </Button>
+        </Box>
+      </Paper>
+    );
+  };
+  
+  return (
+    <Box className="settings-page">
+      <Box className="settings-container">
+        <Paper className="settings-sidebar" elevation={0}>
+          <List component="nav">
+            <ListItemButton
+              selected={activeTab === 0}
+              onClick={() => setActiveTab(0)}
+            >
               <ListItemIcon>
-                <Description />
+                <Person />
               </ListItemIcon>
-              <ListItemText primary="PDF Report" secondary="Human-readable summary" />
-            </ListItem>
+              <ListItemText primary="Profile" />
+            </ListItemButton>
+
+            <ListItemButton
+              selected={activeTab === 1}
+              onClick={() => setActiveTab(1)}
+            >
+              <ListItemIcon>
+                <Security />
+              </ListItemIcon>
+              <ListItemText primary="Security" />
+            </ListItemButton>
+
+            <ListItemButton
+              selected={activeTab === 2}
+              onClick={() => setActiveTab(2)}
+            >
+              <ListItemIcon>
+                <Notifications />
+              </ListItemIcon>
+              <ListItemText primary="Notifications" />
+            </ListItemButton>
+
+            <ListItemButton
+              selected={activeTab === 3}
+              onClick={() => setActiveTab(3)}
+            >
+              <ListItemIcon>
+                <Palette />
+              </ListItemIcon>
+              <ListItemText primary="Appearance" />
+            </ListItemButton>
+
+            <ListItemButton
+              selected={activeTab === 4}
+              onClick={() => setActiveTab(4)}
+            >
+              <ListItemIcon>
+                <Lock />
+              </ListItemIcon>
+              <ListItemText primary="Privacy" />
+            </ListItemButton>
+
+            <ListItemButton
+              selected={activeTab === 5}
+              onClick={() => setActiveTab(5)}
+            >
+              <ListItemIcon>
+                <Storage />
+              </ListItemIcon>
+              <ListItemText primary="Data & Backup" />
+            </ListItemButton>
           </List>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setExportOpen(false)}>
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Paper>
+
+        <Box className="settings-content">
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : error ? (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          ) : (
+            <>
+              {activeTab === 0 && renderProfileSettings()}
+              {activeTab === 1 && renderSecuritySettings()}
+              {activeTab === 2 && renderNotificationSettings()}
+              {activeTab === 3 && renderAppearanceSettings()}
+              {activeTab === 4 && renderPrivacySettings()}
+              {activeTab === 5 && renderDataSettings()}
+            </>
+          )}
+        </Box>
+      </Box>
       
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={() => setSnackbarOpen(false)}
-      >
-        <Alert 
-          severity={snackbarSeverity} 
-          onClose={() => setSnackbarOpen(false)}
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
+      {/* Confirmation dialogs and snackbars as needed */}
     </Box>
   );
 };

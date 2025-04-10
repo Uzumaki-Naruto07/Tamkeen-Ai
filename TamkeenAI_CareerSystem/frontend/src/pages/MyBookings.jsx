@@ -44,10 +44,12 @@ import {
   Print
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const MyBookings = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const [bookings, setBookings] = useState([]);
   const [upcomingBookings, setUpcomingBookings] = useState([]);
   const [pastBookings, setPastBookings] = useState([]);
@@ -1086,7 +1088,7 @@ For any questions, please contact support@tamkeen-ai.com
       )}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4" component="h1">
-          My Bookings
+          {t('myBookings.title', 'My Bookings')}
         </Typography>
         
         <Box sx={{ display: 'flex', gap: 2 }}>
@@ -1098,7 +1100,7 @@ For any questions, please contact support@tamkeen-ai.com
             size="large"
             sx={{ fontWeight: 'bold', px: 3, py: 1 }}
           >
-            Book a Session
+            {t('myBookings.bookSession', 'Book a Session')}
           </Button>
           
           <Button 
@@ -1106,7 +1108,7 @@ For any questions, please contact support@tamkeen-ai.com
             startIcon={<ArrowBack />}
             onClick={() => navigate('/ai-coach')}
           >
-            Find More Coaches
+            {t('myBookings.findMoreCoaches', 'Find More Coaches')}
           </Button>
         </Box>
       </Box>
@@ -1114,10 +1116,10 @@ For any questions, please contact support@tamkeen-ai.com
       {bookings.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
           <Typography variant="h6" gutterBottom>
-            You don't have any bookings yet
+            {t('myBookings.noBookingsYet', "You don't have any bookings yet")}
           </Typography>
           <Typography variant="body1" paragraph>
-            Browse our interview coaches and book your first session!
+            {t('myBookings.browseCoaches', 'Browse our interview coaches and book your first session!')}
           </Typography>
         </Paper>
       ) : (
@@ -1132,17 +1134,17 @@ For any questions, please contact support@tamkeen-ai.com
                 centered
               >
                 <Tab 
-                  label={`Upcoming (${upcomingBookings.length})`} 
+                  label={`${t('myBookings.upcoming', 'Upcoming')} (${upcomingBookings.length})`} 
                   icon={<EventAvailable />} 
                   iconPosition="start" 
                 />
                 <Tab 
-                  label={`Past (${pastBookings.length})`} 
+                  label={`${t('myBookings.past', 'Past')} (${pastBookings.length})`} 
                   icon={<Event />} 
                   iconPosition="start" 
                 />
                 <Tab 
-                  label={`Payment History (${payments.length})`} 
+                  label={`${t('myBookings.paymentHistory', 'Payment History')} (${payments.length})`} 
                   icon={<Payment />} 
                   iconPosition="start" 
                 />
@@ -1153,11 +1155,11 @@ For any questions, please contact support@tamkeen-ai.com
               onClick={() => {
                 loadBookings();
                 loadPayments();
-                setSnackbarMessage('Bookings refreshed');
+                setSnackbarMessage(t('myBookings.bookingsRefreshed', 'Bookings refreshed'));
                 setSnackbarOpen(true);
               }}
               sx={{ ml: 2 }}
-              aria-label="Refresh bookings"
+              aria-label={t('myBookings.refreshBookings', 'Refresh bookings')}
             >
               <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
                 <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 132 28.5T720-690v-110h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 139-44t87-116h84q-28 106-114 173t-196 67Z"/>
@@ -1173,7 +1175,7 @@ For any questions, please contact support@tamkeen-ai.com
                 <Grid item xs={12}>
                   <Paper sx={{ p: 3, textAlign: 'center' }}>
                     <Typography variant="body1">
-                      You don't have any upcoming bookings.
+                      {t('myBookings.noUpcomingBookings', "You don't have any upcoming bookings.")}
                     </Typography>
                   </Paper>
                 </Grid>
@@ -1185,7 +1187,7 @@ For any questions, please contact support@tamkeen-ai.com
                 <Grid item xs={12}>
                   <Paper sx={{ p: 3, textAlign: 'center' }}>
                     <Typography variant="body1">
-                      You don't have any past bookings.
+                      {t('myBookings.noPastBookings', "You don't have any past bookings.")}
                     </Typography>
                   </Paper>
                 </Grid>
@@ -1196,10 +1198,10 @@ For any questions, please contact support@tamkeen-ai.com
                   <Grid item xs={12}>
                     <Box sx={{ mb: 4 }}>
                       <Typography variant="h5" gutterBottom>
-                        Payment History
+                        {t('myBookings.paymentHistory', 'Payment History')}
                       </Typography>
                       <Typography variant="body1">
-                        View all your payments for coaching sessions and packages
+                        {t('myBookings.viewAllPayments', 'View all your payments for coaching sessions and packages')}
                       </Typography>
                       <Divider sx={{ my: 2 }} />
                     </Box>
@@ -1210,7 +1212,7 @@ For any questions, please contact support@tamkeen-ai.com
                 <Grid item xs={12}>
                   <Paper sx={{ p: 3, textAlign: 'center' }}>
                     <Typography variant="body1">
-                      You don't have any payment history.
+                      {t('myBookings.noPaymentHistory', "You don't have any payment history.")}
                     </Typography>
                   </Paper>
                 </Grid>

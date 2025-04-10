@@ -29,6 +29,7 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import BuildIcon from '@mui/icons-material/Build';
 import { styled } from '@mui/material/styles';
 import { useUser } from '../../context/AppContext';
+import { useTranslation } from 'react-i18next';
 
 // Styled circular progress with label inside
 const StyledCircularProgress = styled(Box)(({ theme }) => ({
@@ -55,6 +56,8 @@ const ProfileCompletionPrompt = ({ open, onClose }) => {
     lastName: '',
     skills: ''
   });
+
+  const { t } = useTranslation();
 
   // Load profile image from localStorage
   useEffect(() => {
@@ -336,32 +339,32 @@ const ProfileCompletionPrompt = ({ open, onClose }) => {
     return (
       <Box sx={{ mt: 3, mb: 2 }}>
         <Typography variant="subtitle1" gutterBottom>
-          Quick Update
+          {t('profileCompletion.quickUpdate', 'Quick Update')}
         </Typography>
         <Alert severity="info" sx={{ mb: 2 }}>
-          You can quickly update these important fields now, or go to your profile for complete editing.
+          {t('profileCompletion.quickUpdateInfo', 'You can quickly update these important fields now, or go to your profile for complete editing.')}
         </Alert>
         
         {!hasLastName && (
           <TextField
-            label="Last Name"
+            label={t('profileCompletion.lastName', 'Last Name')}
             fullWidth
             value={quickEditValues.lastName}
             onChange={(e) => setQuickEditValues({...quickEditValues, lastName: e.target.value})}
             margin="normal"
-            placeholder="Enter your last name"
+            placeholder={t('profileCompletion.enterLastName', 'Enter your last name')}
           />
         )}
         
         {!hasSkills && (
           <TextField
-            label="Professional Skills"
+            label={t('profileCompletion.professionalSkills', 'Professional Skills')}
             fullWidth
             value={quickEditValues.skills}
             onChange={(e) => setQuickEditValues({...quickEditValues, skills: e.target.value})}
             margin="normal"
-            placeholder="Enter skills separated by commas (e.g. React, JavaScript, Project Management)"
-            helperText="Separate multiple skills with commas"
+            placeholder={t('profileCompletion.enterSkills', 'Enter skills separated by commas (e.g. React, JavaScript, Project Management)')}
+            helperText={t('profileCompletion.separateSkills', 'Separate multiple skills with commas')}
           />
         )}
       </Box>
@@ -376,12 +379,12 @@ const ProfileCompletionPrompt = ({ open, onClose }) => {
       onClose={onClose}
       aria-labelledby="profile-completion-dialog-title"
       aria-describedby="profile-completion-dialog-description"
-      maxWidth="sm"
+      maxWidth="md"
       fullWidth
     >
       <DialogTitle id="profile-completion-dialog-title">
         <Typography variant="h5" component="div" fontWeight="bold">
-          Complete Your Profile
+          {t('profileCompletion.completeYourProfile', 'Complete Your Profile')}
         </Typography>
       </DialogTitle>
       
@@ -398,10 +401,10 @@ const ProfileCompletionPrompt = ({ open, onClose }) => {
 
           <Box>
             <Typography variant="h6" gutterBottom>
-              Your Profile is {profileCompletion}% Complete
+              {t('profileCompletion.profileIsComplete', 'Your Profile is')} {profileCompletion}% {t('profileCompletion.complete', 'Complete')}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Complete your profile to unlock all features and improve job matching
+              {t('profileCompletion.completeToUnlock', 'Complete your profile to unlock all features and improve job matching')}
             </Typography>
           </Box>
         </Box>
@@ -438,12 +441,12 @@ const ProfileCompletionPrompt = ({ open, onClose }) => {
           
           <Box>
             <Typography variant="h6" gutterBottom>
-              Progress
+              {t('profileCompletion.progress', 'Progress')}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {profileCompletion < 30 ? 'Just getting started!' : 
-               profileCompletion < 70 ? 'Making good progress!' : 
-               profileCompletion < 100 ? 'Almost there!' : 'Complete!'}
+              {profileCompletion < 30 ? t('profileCompletion.justStarted', 'Just getting started!') : 
+               profileCompletion < 70 ? t('profileCompletion.makingGoodProgress', 'Making good progress!') : 
+               profileCompletion < 100 ? t('profileCompletion.almostThere', 'Almost there!') : t('profileCompletion.complete', 'Complete!')}
             </Typography>
           </Box>
         </Box>
@@ -451,7 +454,7 @@ const ProfileCompletionPrompt = ({ open, onClose }) => {
         {missingFields.length > 0 && (
           <>
             <Alert severity="info" sx={{ mb: 2 }}>
-              Please complete the following information to enhance your profile:
+              {t('profileCompletion.enhanceYourProfile', 'Please complete the following information to enhance your profile:')}
             </Alert>
             
             <List>
@@ -463,7 +466,7 @@ const ProfileCompletionPrompt = ({ open, onClose }) => {
                     </ListItemIcon>
                     <ListItemText 
                       primary={getFieldLabel(field)} 
-                      secondary="Required for optimal career matching" 
+                      secondary={t('profileCompletion.requiredForMatching', 'Required for optimal career matching')} 
                     />
                   </ListItem>
                   {index < missingFields.length - 1 && <Divider />}
@@ -477,7 +480,7 @@ const ProfileCompletionPrompt = ({ open, onClose }) => {
         {renderQuickEditFields()}
         
         <DialogContentText id="profile-completion-dialog-description" sx={{ mt: 2 }}>
-          A complete profile helps us provide more accurate career recommendations and increases your visibility to potential employers.
+          {t('profileCompletion.helpAccurateRecommendations', 'A complete profile helps us provide more accurate career recommendations and increases your visibility to potential employers.')}
         </DialogContentText>
       </DialogContent>
       
@@ -487,7 +490,7 @@ const ProfileCompletionPrompt = ({ open, onClose }) => {
           color="inherit"
           sx={{ borderRadius: 2 }}
         >
-          Remind Me Later
+          {t('profileCompletion.remindMeLater', 'Remind Me Later')}
         </Button>
         <Button 
           onClick={handleQuickUpdateProfile} 
@@ -501,7 +504,7 @@ const ProfileCompletionPrompt = ({ open, onClose }) => {
           }}
           startIcon={saving ? <CircularProgress size={20} /> : null}
         >
-          {saving ? 'Updating...' : 'Complete Profile Now'}
+          {saving ? t('profileCompletion.updating', 'Updating...') : t('profileCompletion.completeProfileNow', 'Complete Profile Now')}
         </Button>
       </DialogActions>
     </Dialog>

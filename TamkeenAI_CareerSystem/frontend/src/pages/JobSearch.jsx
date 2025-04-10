@@ -27,6 +27,7 @@ import {
   ArticleOutlined, CategoryOutlined, Add, SaveAlt
 } from '@mui/icons-material';
 import { useNavigate, useLocation as useRouterLocation, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useUser, useJob } from '../context/AppContext';
 import { JOB_ENDPOINTS } from '../utils/endpoints';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -44,6 +45,7 @@ const AEDIcon = (props) => (
 
 const JobSearch = () => {
   const theme = useTheme();
+  const { t, i18n } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -52,277 +54,523 @@ const JobSearch = () => {
     {
       id: 1,
       title: "Senior Software Engineer",
+      titleAr: "مهندس برمجيات أول",
       company: "Tech Solutions UAE",
+      companyAr: "تيك سوليوشنز الإمارات",
       location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "25,000 - 35,000 AED/month",
+      salaryRangeAr: "25,000 - 35,000 درهم/شهر",
       postedDate: "2 days ago",
+      postedDateAr: "منذ يومين",
       companyLogo: "https://logo.clearbit.com/microsoft.com",
       matchScore: 85,
       requiredSkills: ["React", "Node.js", "TypeScript", "AWS"],
       description: "Looking for an experienced software engineer to join our growing team.",
+      descriptionAr: "نبحث عن مهندس برمجيات ذو خبرة للانضمام إلى فريقنا المتنامي.",
       applicationStatus: "open"
     },
     {
       id: 2,
       title: "Marketing Manager",
+      titleAr: "مدير تسويق",
       company: "Global Marketing LLC",
+      companyAr: "جلوبال ماركتنج",
       location: "Abu Dhabi, UAE",
+      locationAr: "أبوظبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "20,000 - 30,000 AED/month",
+      salaryRangeAr: "20,000 - 30,000 درهم/شهر",
       postedDate: "1 week ago",
+      postedDateAr: "منذ أسبوع",
       matchScore: 75,
       requiredSkills: ["Digital Marketing", "Social Media", "Content Strategy"],
       description: "Join our dynamic marketing team in Abu Dhabi.",
+      descriptionAr: "انضم إلى فريق التسويق الديناميكي لدينا في أبوظبي.",
       applicationStatus: "open"
     },
     {
       id: 3,
       title: "Financial Analyst",
+      titleAr: "محلل مالي",
       company: "Emirates Investment Bank",
+      companyAr: "بنك الإمارات للاستثمار",
       location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "18,000 - 25,000 AED/month",
+      salaryRangeAr: "18,000 - 25,000 درهم/شهر",
       postedDate: "3 days ago",
+      postedDateAr: "منذ 3 أيام",
       companyLogo: "https://logo.clearbit.com/emiratesbank.ae",
       matchScore: 90,
       requiredSkills: ["Financial Modeling", "Excel", "PowerBI"],
       description: "Seeking a skilled financial analyst for our investment team.",
+      descriptionAr: "نبحث عن محلل مالي ماهر للانضمام إلى فريق الاستثمار لدينا.",
       applicationStatus: "open"
     },
     {
       id: 4,
       title: "HR Manager",
+      titleAr: "مدير الموارد البشرية",
       company: "Al Futtaim Group",
+      companyAr: "مجموعة الفطيم",
       location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "22,000 - 28,000 AED/month",
+      salaryRangeAr: "22,000 - 28,000 درهم/شهر",
       postedDate: "1 day ago",
+      postedDateAr: "منذ يوم واحد",
       matchScore: 80,
       requiredSkills: ["HR Management", "Recruitment", "Employee Relations"],
       description: "Leading HR initiatives for a major retail group.",
+      descriptionAr: "قيادة مبادرات الموارد البشرية لمجموعة تجزئة كبرى.",
       applicationStatus: "open"
     },
     {
       id: 5,
       title: "Project Manager",
+      titleAr: "مدير مشروع",
       company: "EMAAR Properties",
+      companyAr: "إعمار العقارية",
       location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "30,000 - 40,000 AED/month",
+      salaryRangeAr: "30,000 - 40,000 درهم/شهر",
       postedDate: "5 days ago",
+      postedDateAr: "منذ 5 أيام",
       companyLogo: "https://logo.clearbit.com/emaar.com",
       matchScore: 85,
       requiredSkills: ["Project Management", "Construction", "Stakeholder Management"],
       description: "Managing large-scale real estate development projects.",
+      descriptionAr: "إدارة مشاريع التطوير العقاري واسعة النطاق.",
       applicationStatus: "open"
     },
     {
       id: 6,
       title: "Data Scientist",
+      titleAr: "عالم بيانات",
       company: "Etisalat Digital",
+      companyAr: "اتصالات ديجيتال",
       location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "28,000 - 38,000 AED/month",
+      salaryRangeAr: "28,000 - 38,000 درهم/شهر",
       postedDate: "Just now",
+      postedDateAr: "الآن",
       companyLogo: "https://logo.clearbit.com/etisalat.ae",
       matchScore: 88,
       requiredSkills: ["Python", "Machine Learning", "SQL", "Deep Learning"],
       description: "Join our AI team to build next-generation solutions.",
+      descriptionAr: "انضم إلى فريق الذكاء الاصطناعي لدينا لبناء حلول الجيل القادم.",
       applicationStatus: "open"
     },
     {
       id: 7,
       title: "Sales Director",
+      titleAr: "مدير المبيعات",
       company: "Jumeirah Group",
+      companyAr: "مجموعة جميرا",
       location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "35,000 - 45,000 AED/month",
+      salaryRangeAr: "35,000 - 45,000 درهم/شهر",
       postedDate: "2 hours ago",
+      postedDateAr: "منذ ساعتين",
       companyLogo: "https://logo.clearbit.com/jumeirah.com",
       matchScore: 82,
       requiredSkills: ["Sales Strategy", "Team Leadership", "Hospitality"],
       description: "Lead our sales team in the luxury hospitality sector.",
+      descriptionAr: "قيادة فريق المبيعات لدينا في قطاع الضيافة الفاخرة.",
       applicationStatus: "open"
     },
     {
       id: 8,
       title: "Civil Engineer",
+      titleAr: "مهندس مدني",
       company: "AECOM Middle East",
+      companyAr: "إيكوم الشرق الأوسط",
       location: "Abu Dhabi, UAE",
+      locationAr: "أبوظبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "23,000 - 33,000 AED/month",
+      salaryRangeAr: "23,000 - 33,000 درهم/شهر",
       postedDate: "3 hours ago",
+      postedDateAr: "منذ 3 ساعات",
       matchScore: 79,
       requiredSkills: ["AutoCAD", "Construction Management", "Project Planning"],
       description: "Join our infrastructure development projects.",
+      descriptionAr: "انضم إلى مشاريع تطوير البنية التحتية لدينا.",
       applicationStatus: "open"
     },
     {
       id: 9,
       title: "Digital Marketing Specialist",
+      titleAr: "أخصائي تسويق رقمي",
       company: "Noon.com",
+      companyAr: "نون.كوم",
       location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "15,000 - 25,000 AED/month",
+      salaryRangeAr: "15,000 - 25,000 درهم/شهر",
       postedDate: "4 hours ago",
+      postedDateAr: "منذ 4 ساعات",
       companyLogo: "https://logo.clearbit.com/noon.com",
       matchScore: 92,
       requiredSkills: ["SEO", "SEM", "Social Media Marketing", "Content Creation"],
       description: "Drive our digital marketing initiatives.",
+      descriptionAr: "قيادة مبادرات التسويق الرقمي لدينا.",
       applicationStatus: "open"
     },
     {
       id: 10,
       title: "Operations Manager",
+      titleAr: "مدير العمليات",
       company: "DP World",
+      companyAr: "موانئ دبي العالمية",
       location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "25,000 - 35,000 AED/month",
+      salaryRangeAr: "25,000 - 35,000 درهم/شهر",
       postedDate: "5 hours ago",
+      postedDateAr: "منذ 5 ساعات",
       companyLogo: "https://logo.clearbit.com/dpworld.com",
       matchScore: 87,
       requiredSkills: ["Operations Management", "Supply Chain", "Team Leadership"],
       description: "Manage port operations and logistics.",
+      descriptionAr: "إدارة عمليات الموانئ والخدمات اللوجستية.",
       applicationStatus: "open"
     },
     {
       id: 11,
-      title: "Frontend Developer",
+      title: "UX/UI Designer",
+      titleAr: "مصمم تجربة/واجهة المستخدم",
       company: "Careem",
+      companyAr: "كريم",
       location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "20,000 - 30,000 AED/month",
-      postedDate: "6 hours ago",
+      salaryRangeAr: "20,000 - 30,000 درهم/شهر",
+      postedDate: "1 day ago",
+      postedDateAr: "منذ يوم واحد",
       companyLogo: "https://logo.clearbit.com/careem.com",
-      matchScore: 89,
-      requiredSkills: ["React", "Vue.js", "JavaScript", "CSS3"],
-      description: "Build amazing user experiences for our mobile apps.",
+      matchScore: 95,
+      requiredSkills: ["Figma", "Adobe XD", "User Research", "Prototyping"],
+      description: "Create intuitive user experiences for our mobile apps.",
+      descriptionAr: "إنشاء تجارب مستخدم بديهية لتطبيقات الهاتف المحمول لدينا.",
       applicationStatus: "open"
     },
     {
       id: 12,
-      title: "Business Development Manager",
-      company: "Majid Al Futtaim",
+      title: "Cybersecurity Analyst",
+      titleAr: "محلل أمن سيبراني",
+      company: "Emirates NBD",
+      companyAr: "الإمارات دبي الوطني",
       location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
-      salaryRange: "28,000 - 38,000 AED/month",
-      postedDate: "7 hours ago",
-      companyLogo: "https://logo.clearbit.com/majidalfuttaim.com",
-      matchScore: 84,
-      requiredSkills: ["Business Development", "Sales", "Retail", "Strategy"],
-      description: "Drive business growth in our retail division.",
+      jobTypeAr: "دوام كامل",
+      salaryRange: "25,000 - 35,000 AED/month",
+      salaryRangeAr: "25,000 - 35,000 درهم/شهر",
+      postedDate: "2 days ago",
+      postedDateAr: "منذ يومين",
+      companyLogo: "https://logo.clearbit.com/emiratesnbd.com",
+      matchScore: 83,
+      requiredSkills: ["Network Security", "Threat Analysis", "SIEM", "Penetration Testing"],
+      description: "Protect our banking systems from cyber threats.",
+      descriptionAr: "حماية أنظمة البنوك لدينا من التهديدات السيبرانية.",
       applicationStatus: "open"
     },
     {
       id: 13,
-      title: "Arabic Content Writer",
-      company: "MBC Group",
+      title: "Legal Counsel",
+      titleAr: "مستشار قانوني",
+      company: "Mashreq Bank",
+      companyAr: "بنك المشرق",
       location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
-      salaryRange: "15,000 - 22,000 AED/month",
-      postedDate: "8 hours ago",
-      companyLogo: "https://logo.clearbit.com/mbc.net",
-      matchScore: 91,
-      requiredSkills: ["Arabic Writing", "Content Creation", "SEO", "Social Media"],
-      description: "Create engaging Arabic content for our digital platforms.",
+      jobTypeAr: "دوام كامل",
+      salaryRange: "30,000 - 40,000 AED/month",
+      salaryRangeAr: "30,000 - 40,000 درهم/شهر",
+      postedDate: "3 days ago",
+      postedDateAr: "منذ 3 أيام",
+      companyLogo: "https://logo.clearbit.com/mashreqbank.com",
+      matchScore: 78,
+      requiredSkills: ["Corporate Law", "Banking Regulation", "Contract Negotiation"],
+      description: "Provide legal guidance for banking operations.",
+      descriptionAr: "تقديم التوجيه القانوني للعمليات المصرفية.",
       applicationStatus: "open"
     },
     {
       id: 14,
-      title: "Mechanical Engineer",
-      company: "ADNOC",
-      location: "Abu Dhabi, UAE",
+      title: "Supply Chain Manager",
+      titleAr: "مدير سلسلة التوريد",
+      company: "Majid Al Futtaim",
+      companyAr: "ماجد الفطيم",
+      location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "25,000 - 35,000 AED/month",
-      postedDate: "9 hours ago",
-      companyLogo: "https://logo.clearbit.com/adnoc.ae",
+      salaryRangeAr: "25,000 - 35,000 درهم/شهر",
+      postedDate: "1 week ago",
+      postedDateAr: "منذ أسبوع واحد",
+      companyLogo: "https://logo.clearbit.com/majidalfuttaim.com",
       matchScore: 86,
-      requiredSkills: ["Mechanical Engineering", "AutoCAD", "Project Management"],
-      description: "Join our oil and gas engineering team.",
+      requiredSkills: ["Supply Chain Management", "Logistics", "Inventory Control"],
+      description: "Optimize our retail supply chain operations.",
+      descriptionAr: "تحسين عمليات سلسلة التوريد لتجارة التجزئة لدينا.",
       applicationStatus: "open"
     },
     {
       id: 15,
-      title: "Legal Counsel",
-      company: "Emirates NBD",
+      title: "Product Manager",
+      titleAr: "مدير منتج",
+      company: "Microsoft",
+      companyAr: "مايكروسوفت",
       location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "35,000 - 45,000 AED/month",
-      postedDate: "10 hours ago",
-      companyLogo: "https://logo.clearbit.com/emiratesnbd.com",
-      matchScore: 88,
-      requiredSkills: ["Corporate Law", "Banking Law", "Contract Management"],
-      description: "Handle legal matters for our banking operations.",
+      salaryRangeAr: "35,000 - 45,000 درهم/شهر",
+      postedDate: "2 days ago",
+      postedDateAr: "منذ يومين",
+      companyLogo: "https://logo.clearbit.com/microsoft.com",
+      matchScore: 91,
+      requiredSkills: ["Product Management", "Agile Methodology", "User Experience", "Analytics"],
+      description: "Lead product development for our cloud services.",
+      descriptionAr: "قيادة تطوير المنتجات لخدمات السحابة لدينا.",
       applicationStatus: "open"
     },
     {
       id: 16,
-      title: "UI/UX Designer",
-      company: "Dubizzle",
-      location: "Dubai, UAE",
+      title: "Research Scientist",
+      titleAr: "باحث علمي",
+      company: "NYU Abu Dhabi",
+      companyAr: "جامعة نيويورك أبوظبي",
+      location: "Abu Dhabi, UAE",
+      locationAr: "أبوظبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
-      salaryRange: "18,000 - 28,000 AED/month",
-      postedDate: "11 hours ago",
-      companyLogo: "https://logo.clearbit.com/dubizzle.com",
-      matchScore: 93,
-      requiredSkills: ["Figma", "Adobe XD", "User Research", "Prototyping"],
-      description: "Design intuitive user experiences for our platforms.",
+      jobTypeAr: "دوام كامل",
+      salaryRange: "20,000 - 30,000 AED/month",
+      salaryRangeAr: "20,000 - 30,000 درهم/شهر",
+      postedDate: "3 weeks ago",
+      postedDateAr: "منذ 3 أسابيع",
+      companyLogo: "https://logo.clearbit.com/nyu.edu",
+      matchScore: 89,
+      requiredSkills: ["Research Methods", "Data Analysis", "Academic Writing", "PhD"],
+      description: "Conduct research in artificial intelligence and machine learning.",
+      descriptionAr: "إجراء البحوث في مجال الذكاء الاصطناعي والتعلم الآلي.",
       applicationStatus: "open"
     },
     {
       id: 17,
-      title: "Supply Chain Manager",
-      company: "Amazon UAE",
-      location: "Dubai, UAE",
+      title: "Architectural Engineer",
+      titleAr: "مهندس معماري",
+      company: "Arabtec",
+      companyAr: "أرابتك",
+      location: "Abu Dhabi, UAE",
+      locationAr: "أبوظبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
-      salaryRange: "30,000 - 40,000 AED/month",
-      postedDate: "12 hours ago",
-      companyLogo: "https://logo.clearbit.com/amazon.com",
-      matchScore: 85,
-      requiredSkills: ["Supply Chain", "Logistics", "Inventory Management"],
-      description: "Optimize our regional supply chain operations.",
+      jobTypeAr: "دوام كامل",
+      salaryRange: "22,000 - 32,000 AED/month",
+      salaryRangeAr: "22,000 - 32,000 درهم/شهر",
+      postedDate: "4 days ago",
+      postedDateAr: "منذ 4 أيام",
+      companyLogo: "https://logo.clearbit.com/arabtec.ae",
+      matchScore: 84,
+      requiredSkills: ["AutoCAD", "Revit", "3D Modeling", "Construction Documentation"],
+      description: "Design innovative structures for major development projects.",
+      descriptionAr: "تصميم هياكل مبتكرة لمشاريع التطوير الرئيسية.",
       applicationStatus: "open"
     },
     {
       id: 18,
-      title: "Healthcare Administrator",
-      company: "Cleveland Clinic Abu Dhabi",
-      location: "Abu Dhabi, UAE",
+      title: "DevOps Engineer",
+      titleAr: "مهندس ديف أوبس",
+      company: "Souq.com",
+      companyAr: "سوق.كوم",
+      location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
-      salaryRange: "22,000 - 32,000 AED/month",
-      postedDate: "13 hours ago",
-      companyLogo: "https://logo.clearbit.com/clevelandclinicabudhabi.ae",
-      matchScore: 87,
-      requiredSkills: ["Healthcare Administration", "Patient Care", "Medical Records"],
-      description: "Manage healthcare operations in our facility.",
+      jobTypeAr: "دوام كامل",
+      salaryRange: "25,000 - 35,000 AED/month",
+      salaryRangeAr: "25,000 - 35,000 درهم/شهر",
+      postedDate: "1 day ago",
+      postedDateAr: "منذ يوم واحد",
+      companyLogo: "https://logo.clearbit.com/souq.com",
+      matchScore: 93,
+      requiredSkills: ["Docker", "Kubernetes", "CI/CD", "AWS", "Terraform"],
+      description: "Build and maintain our cloud infrastructure and deployment pipelines.",
+      descriptionAr: "بناء وصيانة البنية التحتية السحابية وخطوط النشر لدينا.",
       applicationStatus: "open"
     },
     {
       id: 19,
-      title: "Cybersecurity Analyst",
-      company: "Dubai Electronic Security Center",
+      title: "Hotel Manager",
+      titleAr: "مدير فندق",
+      company: "Rotana Hotels",
+      companyAr: "فنادق روتانا",
       location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
       salaryRange: "25,000 - 35,000 AED/month",
-      postedDate: "14 hours ago",
-      matchScore: 90,
-      requiredSkills: ["Information Security", "Network Security", "Threat Analysis"],
-      description: "Protect digital assets and infrastructure.",
+      salaryRangeAr: "25,000 - 35,000 درهم/شهر",
+      postedDate: "2 days ago",
+      postedDateAr: "منذ يومين",
+      companyLogo: "https://logo.clearbit.com/rotana.com",
+      matchScore: 81,
+      requiredSkills: ["Hospitality Management", "Customer Service", "Revenue Management"],
+      description: "Oversee all aspects of our luxury hotel operations.",
+      descriptionAr: "الإشراف على جميع جوانب عمليات الفندق الفاخرة لدينا.",
       applicationStatus: "open"
     },
     {
       id: 20,
-      title: "Hotel Manager",
-      company: "Address Hotels + Resorts",
-      location: "Dubai, UAE",
+      title: "Petroleum Engineer",
+      titleAr: "مهندس بترول",
+      company: "ADNOC",
+      companyAr: "أدنوك",
+      location: "Abu Dhabi, UAE",
+      locationAr: "أبوظبي، الإمارات العربية المتحدة",
       jobType: "Full-time",
-      salaryRange: "28,000 - 38,000 AED/month",
-      postedDate: "15 hours ago",
-      companyLogo: "https://logo.clearbit.com/addresshotels.com",
-      matchScore: 86,
-      requiredSkills: ["Hospitality Management", "Customer Service", "Team Leadership"],
-      description: "Lead operations at our luxury hotel property.",
+      jobTypeAr: "دوام كامل",
+      salaryRange: "35,000 - 45,000 AED/month",
+      salaryRangeAr: "35,000 - 45,000 درهم/شهر",
+      postedDate: "3 days ago",
+      postedDateAr: "منذ 3 أيام",
+      companyLogo: "https://logo.clearbit.com/adnoc.ae",
+      matchScore: 85,
+      requiredSkills: ["Reservoir Engineering", "Drilling Operations", "Production Optimization"],
+      description: "Develop and optimize oil and gas extraction methods.",
+      descriptionAr: "تطوير وتحسين طرق استخراج النفط والغاز.",
+      applicationStatus: "open"
+    },
+    {
+      id: 21,
+      title: "Medical Director",
+      titleAr: "مدير طبي",
+      company: "Cleveland Clinic Abu Dhabi",
+      companyAr: "كليفلاند كلينك أبوظبي",
+      location: "Abu Dhabi, UAE",
+      locationAr: "أبوظبي، الإمارات العربية المتحدة",
+      jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
+      salaryRange: "50,000 - 70,000 AED/month",
+      salaryRangeAr: "50,000 - 70,000 درهم/شهر",
+      postedDate: "1 week ago",
+      postedDateAr: "منذ أسبوع واحد",
+      companyLogo: "https://logo.clearbit.com/clevelandclinicabudhabi.ae",
+      matchScore: 82,
+      requiredSkills: ["Healthcare Administration", "Medical Leadership", "Clinical Excellence"],
+      description: "Provide clinical leadership for our healthcare facility.",
+      descriptionAr: "تقديم القيادة السريرية لمنشأتنا الصحية.",
+      applicationStatus: "open"
+    },
+    {
+      id: 22,
+      title: "Airline Pilot",
+      titleAr: "طيار",
+      company: "Emirates Airlines",
+      companyAr: "طيران الإمارات",
+      location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
+      jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
+      salaryRange: "45,000 - 60,000 AED/month",
+      salaryRangeAr: "45,000 - 60,000 درهم/شهر",
+      postedDate: "2 weeks ago",
+      postedDateAr: "منذ أسبوعين",
+      companyLogo: "https://logo.clearbit.com/emirates.com",
+      matchScore: 79,
+      requiredSkills: ["Commercial Pilot License", "Multi-engine Rating", "Flight Experience"],
+      description: "Join our world-class team of pilots flying international routes.",
+      descriptionAr: "انضم إلى فريق الطيارين العالمي لدينا للطيران على الطرق الدولية.",
+      applicationStatus: "open"
+    },
+    {
+      id: 23,
+      title: "Arabic Translator",
+      titleAr: "مترجم عربي",
+      company: "Al Jazeera Media Network",
+      companyAr: "شبكة الجزيرة الإعلامية",
+      location: "Doha, Qatar",
+      locationAr: "الدوحة، قطر",
+      jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
+      salaryRange: "20,000 - 30,000 QAR/month",
+      salaryRangeAr: "20,000 - 30,000 ريال/شهر",
+      postedDate: "3 days ago",
+      postedDateAr: "منذ 3 أيام",
+      companyLogo: "https://logo.clearbit.com/aljazeera.com",
+      matchScore: 94,
+      requiredSkills: ["Arabic", "English", "Translation", "Media"],
+      description: "Translate news content between Arabic and English.",
+      descriptionAr: "ترجمة المحتوى الإخباري بين العربية والإنجليزية.",
+      applicationStatus: "open"
+    },
+    {
+      id: 24,
+      title: "Chef de Cuisine",
+      titleAr: "رئيس الطهاة",
+      company: "Atlantis The Palm",
+      companyAr: "أتلانتس النخلة",
+      location: "Dubai, UAE",
+      locationAr: "دبي، الإمارات العربية المتحدة",
+      jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
+      salaryRange: "25,000 - 35,000 AED/month",
+      salaryRangeAr: "25,000 - 35,000 درهم/شهر",
+      postedDate: "4 days ago",
+      postedDateAr: "منذ 4 أيام",
+      companyLogo: "https://logo.clearbit.com/atlantis.com",
+      matchScore: 87,
+      requiredSkills: ["Culinary Arts", "Menu Development", "Kitchen Management"],
+      description: "Lead our signature restaurant and culinary team.",
+      descriptionAr: "قيادة مطعمنا المميز وفريق الطهي لدينا.",
+      applicationStatus: "open"
+    },
+    {
+      id: 25,
+      title: "Artificial Intelligence Researcher",
+      titleAr: "باحث ذكاء اصطناعي",
+      company: "Mohamed bin Hessa University of AI",
+      companyAr: "جامعة محمد بن زايد للذكاء الاصطناعي",
+      location: "Abu Dhabi, UAE",
+      locationAr: "أبوظبي، الإمارات العربية المتحدة",
+      jobType: "Full-time",
+      jobTypeAr: "دوام كامل",
+      salaryRange: "35,000 - 50,000 AED/month",
+      salaryRangeAr: "35,000 - 50,000 درهم/شهر",
+      postedDate: "1 week ago",
+      postedDateAr: "منذ أسبوع واحد",
+      companyLogo: "https://logo.clearbit.com/mbzuai.ac.ae",
+      matchScore: 96,
+      requiredSkills: ["Machine Learning", "Neural Networks", "Research Publications", "PhD"],
+      description: "Conduct cutting-edge research in artificial intelligence.",
+      descriptionAr: "إجراء أبحاث متطورة في مجال الذكاء الاصطناعي.",
       applicationStatus: "open"
     }
   ]);
@@ -370,10 +618,23 @@ const JobSearch = () => {
   const [loadingSimilarJobs, setLoadingSimilarJobs] = useState(false);
   const [sortMenuAnchorEl, setSortMenuAnchorEl] = useState(null);
   const [popularSkills, setPopularSkills] = useState([
-    'Arabic', 'English', 'Microsoft Office', 'Project Management', 
-    'Customer Service', 'Sales', 'Marketing', 'Data Analysis',
-    'Leadership', 'Communication', 'Accounting', 'AutoCAD',
-    'React', 'JavaScript', 'Python', 'SQL', 'Business Development'
+    { name: 'Arabic', nameAr: 'العربية' },
+    { name: 'English', nameAr: 'الإنجليزية' },
+    { name: 'Microsoft Office', nameAr: 'مايكروسوفت أوفيس' },
+    { name: 'Project Management', nameAr: 'إدارة المشاريع' },
+    { name: 'Customer Service', nameAr: 'خدمة العملاء' },
+    { name: 'Sales', nameAr: 'المبيعات' },
+    { name: 'Marketing', nameAr: 'التسويق' },
+    { name: 'Data Analysis', nameAr: 'تحليل البيانات' },
+    { name: 'Leadership', nameAr: 'القيادة' },
+    { name: 'Communication', nameAr: 'مهارات التواصل' },
+    { name: 'Accounting', nameAr: 'المحاسبة' },
+    { name: 'AutoCAD', nameAr: 'أوتوكاد' },
+    { name: 'React', nameAr: 'رياكت' },
+    { name: 'JavaScript', nameAr: 'جافا سكريبت' },
+    { name: 'Python', nameAr: 'بايثون' },
+    { name: 'SQL', nameAr: 'إس كيو إل' },
+    { name: 'Business Development', nameAr: 'تطوير الأعمال' }
   ]);
   const [skillRequirementType, setSkillRequirementType] = useState({});
   const [showAIJobSuggestions, setShowAIJobSuggestions] = useState(false);
@@ -1136,14 +1397,14 @@ const JobSearch = () => {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Typography variant="h6" gutterBottom>
-          Filters
+          {i18n.language === 'ar' ? 'المرشحات' : 'Filters'}
         </Typography>
          
         {/* Emirates Filter - UAE specific */}
       <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="subtitle2" gutterBottom>
-              Emirates
+              {i18n.language === 'ar' ? 'الإمارات' : 'Emirates'}
             </Typography>
             {filters.emirates.length > 0 && (
               <Button 
@@ -1154,7 +1415,7 @@ const JobSearch = () => {
                 }}
                 startIcon={<Clear fontSize="small" />}
               >
-                Clear
+                {i18n.language === 'ar' ? 'مسح' : 'Clear'}
               </Button>
             )}
           </Box>
@@ -1181,20 +1442,32 @@ const JobSearch = () => {
                   }}
                 />
               }
-              label={<Typography fontWeight="medium">Select All Emirates</Typography>}
+              label={<Typography fontWeight="medium">{i18n.language === 'ar' ? 'اختيار كل الإمارات' : 'Select All Emirates'}</Typography>}
             />
-            {['Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman', 'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah'].map((emirate) => (
-              <FormControlLabel
-                key={emirate}
-                control={
-                  <Checkbox
-                    checked={filters.emirates.includes(emirate)}
-                    onChange={(e) => handleFilterChange('emirates', emirate, e.target.checked)}
-                  />
-                }
-                label={emirate}
-              />
-            ))}
+            {['Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman', 'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah'].map((emirate) => {
+              const arabicEmirateNames = {
+                'Abu Dhabi': 'أبوظبي',
+                'Dubai': 'دبي',
+                'Sharjah': 'الشارقة',
+                'Ajman': 'عجمان',
+                'Umm Al Quwain': 'أم القيوين',
+                'Ras Al Khaimah': 'رأس الخيمة',
+                'Fujairah': 'الفجيرة'
+              };
+              
+              return (
+                <FormControlLabel
+                  key={emirate}
+                  control={
+                    <Checkbox
+                      checked={filters.emirates.includes(emirate)}
+                      onChange={(e) => handleFilterChange('emirates', emirate, e.target.checked)}
+                    />
+                  }
+                  label={i18n.language === 'ar' ? arabicEmirateNames[emirate] : emirate}
+                />
+              );
+            })}
           </FormGroup>
         </Box>
         
@@ -1202,7 +1475,7 @@ const JobSearch = () => {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="subtitle2" gutterBottom>
-              Job Type
+              {i18n.language === 'ar' ? 'نوع الوظيفة' : 'Job Type'}
             </Typography>
             {filters.jobTypes.length > 0 && (
               <Button 
@@ -1213,7 +1486,7 @@ const JobSearch = () => {
                 }}
                 startIcon={<Clear fontSize="small" />}
               >
-                Clear
+                {i18n.language === 'ar' ? 'مسح' : 'Clear'}
               </Button>
             )}
           </Box>
@@ -1240,20 +1513,31 @@ const JobSearch = () => {
                   }}
                 />
               }
-              label={<Typography fontWeight="medium">Select All Job Types</Typography>}
+              label={<Typography fontWeight="medium">{i18n.language === 'ar' ? 'اختيار كل أنواع الوظائف' : 'Select All Job Types'}</Typography>}
             />
-            {['Full-time', 'Part-time', 'Contract', 'Internship', 'Temporary', 'Freelance'].map((type) => (
-              <FormControlLabel
-                key={type}
-                control={
-                  <Checkbox
-                    checked={filters.jobTypes.includes(type)}
-                    onChange={(e) => handleFilterChange('jobTypes', type, e.target.checked)}
-                  />
-                }
-                label={type}
-              />
-            ))}
+            {['Full-time', 'Part-time', 'Contract', 'Internship', 'Temporary', 'Freelance'].map((type) => {
+              const arabicJobTypes = {
+                'Full-time': 'دوام كامل',
+                'Part-time': 'دوام جزئي',
+                'Contract': 'عقد',
+                'Internship': 'تدريب',
+                'Temporary': 'مؤقت',
+                'Freelance': 'عمل حر'
+              };
+              
+              return (
+                <FormControlLabel
+                  key={type}
+                  control={
+                    <Checkbox
+                      checked={filters.jobTypes.includes(type)}
+                      onChange={(e) => handleFilterChange('jobTypes', type, e.target.checked)}
+                    />
+                  }
+                  label={i18n.language === 'ar' ? arabicJobTypes[type] : type}
+                />
+              );
+            })}
           </FormGroup>
         </Box>
         
@@ -1261,7 +1545,7 @@ const JobSearch = () => {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="subtitle2" gutterBottom>
-              Visa Status
+              {i18n.language === 'ar' ? 'حالة التأشيرة' : 'Visa Status'}
             </Typography>
             {filters.visaStatus.length > 0 && (
               <Button 
@@ -1272,7 +1556,7 @@ const JobSearch = () => {
                 }}
                 startIcon={<Clear fontSize="small" />}
               >
-                Clear
+                {i18n.language === 'ar' ? 'مسح' : 'Clear'}
               </Button>
             )}
           </Box>
@@ -1299,53 +1583,62 @@ const JobSearch = () => {
                   }}
                 />
               }
-              label={<Typography fontWeight="medium">Select All Visa Statuses</Typography>}
+              label={<Typography fontWeight="medium">{i18n.language === 'ar' ? 'اختيار كل حالات التأشيرة' : 'Select All Visa Statuses'}</Typography>}
             />
-            {['Employment Visa Provided', 'Visit Visa Accepted', 'Residence Visa Required', 'Any Visa Status'].map((status) => (
-              <FormControlLabel
-                key={status}
-                control={
-                  <Checkbox
-                    checked={filters.visaStatus.includes(status)}
-                    onChange={(e) => handleFilterChange('visaStatus', status, e.target.checked)}
-                  />
-                }
-                label={status}
-              />
-            ))}
+            {['Employment Visa Provided', 'Visit Visa Accepted', 'Residence Visa Required', 'Any Visa Status'].map((status) => {
+              const arabicVisaStatus = {
+                'Employment Visa Provided': 'توفير تأشيرة عمل',
+                'Visit Visa Accepted': 'قبول تأشيرة زيارة',
+                'Residence Visa Required': 'مطلوب تأشيرة إقامة',
+                'Any Visa Status': 'أي حالة تأشيرة'
+              };
+              
+              return (
+                <FormControlLabel
+                  key={status}
+                  control={
+                    <Checkbox
+                      checked={filters.visaStatus.includes(status)}
+                      onChange={(e) => handleFilterChange('visaStatus', status, e.target.checked)}
+                    />
+                  }
+                  label={i18n.language === 'ar' ? arabicVisaStatus[status] : status}
+                />
+              );
+            })}
           </FormGroup>
         </Box>
         
         {/* Sector Type - UAE specific */}
         <Box>
           <Typography variant="subtitle2" gutterBottom>
-            Sector
+            {i18n.language === 'ar' ? 'القطاع' : 'Sector'}
           </Typography>
           <RadioGroup
             value={filters.sectorType}
             onChange={(e) => setFilters({ ...filters, sectorType: e.target.value })}
             name="sector-type"
           >
-            <FormControlLabel value="all" control={<Radio />} label="All Sectors" />
-            <FormControlLabel value="government" control={<Radio />} label="Government" />
-            <FormControlLabel value="private" control={<Radio />} label="Private" />
-            <FormControlLabel value="semi-government" control={<Radio />} label="Semi-Government" />
+            <FormControlLabel value="all" control={<Radio />} label={i18n.language === 'ar' ? 'جميع القطاعات' : 'All Sectors'} />
+            <FormControlLabel value="government" control={<Radio />} label={i18n.language === 'ar' ? 'حكومي' : 'Government'} />
+            <FormControlLabel value="private" control={<Radio />} label={i18n.language === 'ar' ? 'خاص' : 'Private'} />
+            <FormControlLabel value="semi-government" control={<Radio />} label={i18n.language === 'ar' ? 'شبه حكومي' : 'Semi-Government'} />
           </RadioGroup>
         </Box>
         
         {/* Company Location - UAE specific */}
         <Box>
           <Typography variant="subtitle2" gutterBottom>
-            Company Location
+            {i18n.language === 'ar' ? 'موقع الشركة' : 'Company Location'}
           </Typography>
           <RadioGroup
             value={filters.companyLocation}
             onChange={(e) => setFilters({ ...filters, companyLocation: e.target.value })}
             name="company-location"
           >
-            <FormControlLabel value="all" control={<Radio />} label="All Locations" />
-            <FormControlLabel value="mainland" control={<Radio />} label="Mainland" />
-            <FormControlLabel value="freezone" control={<Radio />} label="Free Zone" />
+            <FormControlLabel value="all" control={<Radio />} label={i18n.language === 'ar' ? 'جميع المواقع' : 'All Locations'} />
+            <FormControlLabel value="mainland" control={<Radio />} label={i18n.language === 'ar' ? 'البر الرئيسي' : 'Mainland'} />
+            <FormControlLabel value="freezone" control={<Radio />} label={i18n.language === 'ar' ? 'المنطقة الحرة' : 'Free Zone'} />
           </RadioGroup>
         </Box>
         
@@ -1353,7 +1646,7 @@ const JobSearch = () => {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="subtitle2" gutterBottom>
-              Experience Level
+              {i18n.language === 'ar' ? 'مستوى الخبرة' : 'Experience Level'}
             </Typography>
             {filters.experience.length > 0 && (
               <Button 
@@ -1364,7 +1657,7 @@ const JobSearch = () => {
                 }}
                 startIcon={<Clear fontSize="small" />}
               >
-                Clear
+                {i18n.language === 'ar' ? 'مسح' : 'Clear'}
               </Button>
             )}
           </Box>
@@ -1391,20 +1684,30 @@ const JobSearch = () => {
                   }}
                 />
               }
-              label={<Typography fontWeight="medium">Select All Experience Levels</Typography>}
+              label={<Typography fontWeight="medium">{i18n.language === 'ar' ? 'اختيار كل مستويات الخبرة' : 'Select All Experience Levels'}</Typography>}
             />
-            {['Entry level', 'Mid level', 'Senior level', 'Manager', 'Executive'].map((level) => (
-              <FormControlLabel
-                key={level}
-                control={
-                  <Checkbox
-                    checked={filters.experience.includes(level)}
-                    onChange={(e) => handleFilterChange('experience', level, e.target.checked)}
-                  />
-                }
-                label={level}
-              />
-            ))}
+            {['Entry level', 'Mid level', 'Senior level', 'Manager', 'Executive'].map((level) => {
+              const arabicExperienceLevels = {
+                'Entry level': 'مستوى مبتدئ',
+                'Mid level': 'مستوى متوسط',
+                'Senior level': 'مستوى متقدم',
+                'Manager': 'مدير',
+                'Executive': 'تنفيذي'
+              };
+              
+              return (
+                <FormControlLabel
+                  key={level}
+                  control={
+                    <Checkbox
+                      checked={filters.experience.includes(level)}
+                      onChange={(e) => handleFilterChange('experience', level, e.target.checked)}
+                    />
+                  }
+                  label={i18n.language === 'ar' ? arabicExperienceLevels[level] : level}
+                />
+              );
+            })}
           </FormGroup>
         </Box>
         
@@ -1412,7 +1715,7 @@ const JobSearch = () => {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="subtitle2" gutterBottom>
-              Salary Range (AED)
+              {i18n.language === 'ar' ? 'نطاق الراتب (درهم إماراتي)' : 'Salary Range (AED)'}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <FormControl size="small" sx={{ minWidth: 90, mr: 1 }}>
@@ -1424,8 +1727,8 @@ const JobSearch = () => {
                   id="salary-type-select"
                   name="salary-type"
                 >
-                  <MenuItem value="monthly">Monthly</MenuItem>
-                  <MenuItem value="annual">Annual</MenuItem>
+                  <MenuItem value="monthly">{i18n.language === 'ar' ? 'شهري' : 'Monthly'}</MenuItem>
+                  <MenuItem value="annual">{i18n.language === 'ar' ? 'سنوي' : 'Annual'}</MenuItem>
                 </Select>
               </FormControl>
               <Button 
@@ -1436,7 +1739,7 @@ const JobSearch = () => {
                 }}
                 startIcon={<Clear fontSize="small" />}
               >
-                Reset
+                {i18n.language === 'ar' ? 'إعادة تعيين' : 'Reset'}
               </Button>
             </Box>
           </Box>
@@ -1451,18 +1754,20 @@ const JobSearch = () => {
               step={filters.salaryType === 'monthly' ? 1000 : 10000}
               valueLabelFormat={(value) => 
                 filters.salaryType === 'monthly'
-                  ? `${value.toLocaleString()} AED/mo`
-                  : `${value.toLocaleString()} AED/yr`
+                  ? `${value.toLocaleString()} ${i18n.language === 'ar' ? 'درهم/شهر' : 'AED/mo'}`
+                  : `${value.toLocaleString()} ${i18n.language === 'ar' ? 'درهم/سنة' : 'AED/yr'}`
               }
               id="salary-range-slider"
               name="salary-range"
             />
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
               <Typography variant="caption" color="text.secondary">
-                0 AED
+                {i18n.language === 'ar' ? '0 درهم' : '0 AED'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {filters.salaryType === 'monthly' ? '50,000+ AED/mo' : '1,000,000+ AED/yr'}
+                {filters.salaryType === 'monthly' 
+                  ? (i18n.language === 'ar' ? '+50,000 درهم/شهر' : '50,000+ AED/mo')
+                  : (i18n.language === 'ar' ? '+1,000,000 درهم/سنة' : '1,000,000+ AED/yr')}
               </Typography>
             </Box>
           </Box>
@@ -1472,7 +1777,7 @@ const JobSearch = () => {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="subtitle2" gutterBottom>
-              Benefits
+              {i18n.language === 'ar' ? 'المزايا' : 'Benefits'}
             </Typography>
             {filters.benefits.length > 0 && (
               <Button 
@@ -1483,7 +1788,7 @@ const JobSearch = () => {
                 }}
                 startIcon={<Clear fontSize="small" />}
               >
-                Clear
+                {i18n.language === 'ar' ? 'مسح' : 'Clear'}
               </Button>
             )}
           </Box>
@@ -1517,7 +1822,7 @@ const JobSearch = () => {
                   }}
                 />
               }
-              label={<Typography fontWeight="medium">Select All Benefits</Typography>}
+              label={<Typography fontWeight="medium">{i18n.language === 'ar' ? 'اختيار كل المزايا' : 'Select All Benefits'}</Typography>}
             />
             {[
               'Housing Allowance', 
@@ -1526,18 +1831,29 @@ const JobSearch = () => {
               'Family Sponsorship',
               'Annual Tickets',
               'Education Allowance'
-            ].map((benefit) => (
-              <FormControlLabel
-                key={benefit}
-                control={
-                  <Checkbox
-                    checked={filters.benefits.includes(benefit)}
-                    onChange={(e) => handleFilterChange('benefits', benefit, e.target.checked)}
-                  />
-                }
-                label={benefit}
-              />
-            ))}
+            ].map((benefit) => {
+              const arabicBenefits = {
+                'Housing Allowance': 'بدل سكن',
+                'Transportation Allowance': 'بدل مواصلات',
+                'Health Insurance': 'تأمين صحي',
+                'Family Sponsorship': 'كفالة عائلية',
+                'Annual Tickets': 'تذاكر سنوية',
+                'Education Allowance': 'بدل تعليم'
+              };
+              
+              return (
+                <FormControlLabel
+                  key={benefit}
+                  control={
+                    <Checkbox
+                      checked={filters.benefits.includes(benefit)}
+                      onChange={(e) => handleFilterChange('benefits', benefit, e.target.checked)}
+                    />
+                  }
+                  label={i18n.language === 'ar' ? arabicBenefits[benefit] : benefit}
+                />
+              );
+            })}
           </FormGroup>
         </Box>
         
@@ -1550,24 +1866,24 @@ const JobSearch = () => {
                 onChange={(e) => setFilters({ ...filters, remote: e.target.checked })}
               />
             }
-            label="Remote Only"
+            label={i18n.language === 'ar' ? 'عن بعد فقط' : 'Remote Only'}
           />
         </Box>
         
         {/* Date Posted Filter */}
         <Box>
           <Typography variant="subtitle2" gutterBottom>
-            Date Posted
+            {i18n.language === 'ar' ? 'تاريخ النشر' : 'Date Posted'}
           </Typography>
           <RadioGroup
             value={filters.datePosted}
             onChange={(e) => setFilters({ ...filters, datePosted: e.target.value })}
             name="date-posted"
           >
-            <FormControlLabel value="any" control={<Radio />} label="Any time" />
-            <FormControlLabel value="today" control={<Radio />} label="Today" />
-            <FormControlLabel value="week" control={<Radio />} label="Past week" />
-            <FormControlLabel value="month" control={<Radio />} label="Past month" />
+            <FormControlLabel value="any" control={<Radio />} label={i18n.language === 'ar' ? 'أي وقت' : 'Any time'} />
+            <FormControlLabel value="today" control={<Radio />} label={i18n.language === 'ar' ? 'اليوم' : 'Today'} />
+            <FormControlLabel value="week" control={<Radio />} label={i18n.language === 'ar' ? 'الأسبوع الماضي' : 'Past week'} />
+            <FormControlLabel value="month" control={<Radio />} label={i18n.language === 'ar' ? 'الشهر الماضي' : 'Past month'} />
           </RadioGroup>
         </Box>
         
@@ -1575,7 +1891,7 @@ const JobSearch = () => {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="subtitle2" gutterBottom>
-              Industries
+              {i18n.language === 'ar' ? 'الصناعات' : 'Industries'}
             </Typography>
             {filters.industries && filters.industries.length > 0 && (
               <Button 
@@ -1588,7 +1904,7 @@ const JobSearch = () => {
                 startIcon={<Clear fontSize="small" />}
                 type="button"
               >
-                Clear
+                {i18n.language === 'ar' ? 'مسح' : 'Clear'}
               </Button>
             )}
           </Box>
@@ -1607,21 +1923,39 @@ const JobSearch = () => {
               'Logistics',
               'Government',
               'Telecommunications'
-            ].map((industry) => (
-              <Chip
-                key={industry}
-                label={industry}
-                onClick={(e) => {
-                  console.log(`Clicked industry chip: ${industry}`);
-                  // Pass the event to handleFilterChange
-                  handleFilterChange('industries', industry, null, e);
-                }}
-                color={filters.industries && filters.industries.includes(industry) ? "primary" : "default"}
-                variant={filters.industries && filters.industries.includes(industry) ? "filled" : "outlined"}
-                size="small"
-                sx={{ cursor: 'pointer' }}
-              />
-            ))}
+            ].map((industry) => {
+              const arabicIndustries = {
+                'Oil & Gas': 'النفط والغاز',
+                'Banking & Finance': 'البنوك والتمويل',
+                'Real Estate': 'العقارات',
+                'Construction': 'البناء والتشييد',
+                'Technology': 'التكنولوجيا',
+                'Healthcare': 'الرعاية الصحية',
+                'Education': 'التعليم',
+                'Tourism & Hospitality': 'السياحة والضيافة',
+                'Retail': 'تجارة التجزئة',
+                'Media': 'الإعلام',
+                'Logistics': 'الخدمات اللوجستية',
+                'Government': 'الحكومة',
+                'Telecommunications': 'الاتصالات'
+              };
+              
+              return (
+                <Chip
+                  key={industry}
+                  label={i18n.language === 'ar' ? arabicIndustries[industry] : industry}
+                  onClick={(e) => {
+                    console.log(`Clicked industry chip: ${industry}`);
+                    // Pass the event to handleFilterChange
+                    handleFilterChange('industries', industry, null, e);
+                  }}
+                  color={filters.industries && filters.industries.includes(industry) ? "primary" : "default"}
+                  variant={filters.industries && filters.industries.includes(industry) ? "filled" : "outlined"}
+                  size="small"
+                  sx={{ cursor: 'pointer' }}
+                />
+              );
+            })}
           </Box>
         </Box>
         
@@ -1629,7 +1963,7 @@ const JobSearch = () => {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="subtitle2" gutterBottom>
-              Skills
+              {i18n.language === 'ar' ? 'المهارات' : 'Skills'}
             </Typography>
             {filters.skills && filters.skills.length > 0 && (
               <Button 
@@ -1640,7 +1974,7 @@ const JobSearch = () => {
                 }}
                 startIcon={<Clear fontSize="small" />}
               >
-                Clear
+                {i18n.language === 'ar' ? 'مسح' : 'Clear'}
               </Button>
             )}
           </Box>
@@ -1651,7 +1985,7 @@ const JobSearch = () => {
               size="small"
               value={skillsInputValue}
               onChange={(e) => setSkillsInputValue(e.target.value)}
-              placeholder="Add a skill"
+              placeholder={i18n.language === 'ar' ? 'أضف مهارة' : 'Add a skill'}
               onFocus={() => setShowSkillsSuggestions(true)}
               inputRef={skillsInputRef}
               id="skills-input"
@@ -1714,38 +2048,38 @@ const JobSearch = () => {
           </Box>
           
           <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-            Popular skills:
+            {i18n.language === 'ar' ? 'المهارات الشائعة:' : 'Popular skills:'}
           </Typography>
           
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
             {popularSkills.slice(0, 8).map((skill) => (
               <Chip
-                key={skill}
-                label={skill}
+                key={skill.name}
+                label={i18n.language === 'ar' ? skill.nameAr : skill.name}
                 size="small"
-                variant={filters.skills && filters.skills.includes(skill) ? "filled" : "outlined"}
-                color={filters.skills && filters.skills.includes(skill) ? "primary" : "default"}
+                variant={filters.skills && filters.skills.includes(skill.name) ? "filled" : "outlined"}
+                color={filters.skills && filters.skills.includes(skill.name) ? "primary" : "default"}
                 onClick={(e) => {
-                  console.log("Clicked popular skill chip:", skill);
+                  console.log("Clicked popular skill chip:", skill.name);
                   // Instead of calling handleAddSkill, handle the event directly here
                   e.preventDefault();
                   e.stopPropagation();
                   
                   // Check if skill already exists
-                  if (filters.skills && filters.skills.includes(skill)) {
-                    console.log(`Skill "${skill}" already added, removing it`);
-                    handleFilterChange('skills', skill, false, e);
+                  if (filters.skills && filters.skills.includes(skill.name)) {
+                    console.log(`Skill "${skill.name}" already added, removing it`);
+                    handleFilterChange('skills', skill.name, false, e);
                     
                     // Also remove from requirement types if it exists
-                    if (skillRequirementType[skill]) {
+                    if (skillRequirementType[skill.name]) {
                       const newTypes = { ...skillRequirementType };
-                      delete newTypes[skill];
+                      delete newTypes[skill.name];
                       setSkillRequirementType(newTypes);
                     }
                   } else {
-                    console.log(`Adding skill: ${skill}`);
+                    console.log(`Adding skill: ${skill.name}`);
                     // Add the skill
-                    handleFilterChange('skills', skill, true, e);
+                    handleFilterChange('skills', skill.name, true, e);
                     
                     // Set default requirement type
                     setSkillRequirementType(prev => ({
@@ -1762,7 +2096,7 @@ const JobSearch = () => {
           {filters.skills && filters.skills.length > 0 && (
             <>
               <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                Selected skills (click to toggle required/preferred):
+                {i18n.language === 'ar' ? 'المهارات المحددة (انقر للتبديل بين مطلوب/مفضل):' : 'Selected skills (click to toggle required/preferred):'}
               </Typography>
               
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
@@ -1819,7 +2153,9 @@ const JobSearch = () => {
             return activeFilters > 0 ? (
               <Paper sx={{ p: 1, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
                 <Typography variant="body2" align="center">
-                  {activeFilters} active {activeFilters === 1 ? 'filter' : 'filters'}
+                  {i18n.language === 'ar' 
+                    ? `${activeFilters} ${activeFilters === 1 ? 'مرشح نشط' : 'مرشحات نشطة'}`
+                    : `${activeFilters} active ${activeFilters === 1 ? 'filter' : 'filters'}`}
                 </Typography>
               </Paper>
             ) : null;
@@ -1836,7 +2172,7 @@ const JobSearch = () => {
             startIcon={<FilterList />}
             sx={{ mb: 2 }}
           >
-            Apply Filters
+            {i18n.language === 'ar' ? 'تطبيق المرشحات' : 'Apply Filters'}
           </Button>
           
           <Button 
@@ -1850,7 +2186,7 @@ const JobSearch = () => {
               '&:hover': { borderWidth: '2px' }
             }}
           >
-            Clear All Filters
+            {i18n.language === 'ar' ? 'مسح جميع المرشحات' : 'Clear All Filters'}
           </Button>
         </Box>
       </Box>
@@ -1896,11 +2232,13 @@ const JobSearch = () => {
     return (
       <>
         <Typography variant="h4" gutterBottom>
-          Job Search
+          {i18n.language === 'ar' ? 'البحث عن وظيفة' : 'Job Search'}
         </Typography>
         
         <Typography variant="body1" color="text.secondary" gutterBottom sx={{ mb: 3 }}>
-          Find your dream job from thousands of opportunities in the UAE
+          {i18n.language === 'ar' 
+            ? 'ابحث عن وظيفة أحلامك من بين آلاف الفرص في الإمارات العربية المتحدة' 
+            : 'Find your dream job from thousands of opportunities in the UAE'}
         </Typography>
         
         <Paper
@@ -1925,7 +2263,7 @@ const JobSearch = () => {
           
           <InputBase
             sx={{ ml: 1, flex: 1 }}
-            placeholder="Job title, keyword, or company"
+            placeholder={i18n.language === 'ar' ? "المسمى الوظيفي، الكلمة المفتاحية، أو الشركة" : "Job title, keyword, or company"}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             inputProps={{ 'aria-label': 'search jobs' }}
@@ -1939,9 +2277,9 @@ const JobSearch = () => {
           
           <InputBase
             sx={{ ml: 1, flex: 1 }}
-            placeholder="Location (city or emirate)"
-              value={locationSearch}
-              onChange={(e) => setLocationSearch(e.target.value)}
+            placeholder={i18n.language === 'ar' ? "الموقع (المدينة أو الإمارة)" : "Location (city or emirate)"}
+            value={locationSearch}
+            onChange={(e) => setLocationSearch(e.target.value)}
             inputProps={{ 'aria-label': 'location' }}
             endAdornment={
               (searchTerm || locationSearch) && (
@@ -1971,7 +2309,7 @@ const JobSearch = () => {
             sx={{ px: 3, py: 1 }}
             type="submit"
             >
-              Search
+              {i18n.language === 'ar' ? 'بحث' : 'Search'}
             </Button>
         </Paper>
         
@@ -1986,7 +2324,7 @@ const JobSearch = () => {
               onClick={handleResetAll}
               type="button"
             >
-              Reset All
+              {i18n.language === 'ar' ? 'إعادة تعيين الكل' : 'Reset All'}
             </Button>
           </Box>
           
@@ -2001,7 +2339,7 @@ const JobSearch = () => {
               }}
               type="button"
             >
-              Save Search
+              {i18n.language === 'ar' ? 'حفظ البحث' : 'Save Search'}
             </Button>
             
             <Button
@@ -2014,7 +2352,7 @@ const JobSearch = () => {
               }}
               type="button"
             >
-              Sort: {getSortLabel(sortBy)}
+              {i18n.language === 'ar' ? 'ترتيب: ' : 'Sort: '}{getSortLabel(sortBy)}
             </Button>
             
             <Button
@@ -2026,7 +2364,7 @@ const JobSearch = () => {
               startIcon={<LinkedInIcon />}
               type="button"
             >
-              LinkedIn Automation
+              {i18n.language === 'ar' ? 'أتمتة لينكد إن' : 'LinkedIn Automation'}
             </Button>
             
             <Button
@@ -2041,7 +2379,7 @@ const JobSearch = () => {
               }}
               type="button"
             >
-              AI Job Suggestions
+              {i18n.language === 'ar' ? 'اقتراحات وظائف الذكاء الاصطناعي' : 'AI Job Suggestions'}
             </Button>
           </Box>
         </Box>
@@ -2069,17 +2407,19 @@ const JobSearch = () => {
           textColor="primary"
         >
           <Tab 
-            label="Job Search" 
+            label={i18n.language === 'ar' ? "البحث عن وظيفة" : "Job Search"}
             icon={<Search fontSize="small" />} 
             iconPosition="start"
           />
           <Tab 
-            label={`Saved Jobs (${savedJobs?.length || 0})`} 
+            label={i18n.language === 'ar' 
+              ? `الوظائف المحفوظة (${savedJobs?.length || 0})` 
+              : `Saved Jobs (${savedJobs?.length || 0})`} 
             icon={<Bookmark fontSize="small" />} 
             iconPosition="start"
           />
           <Tab 
-            label="Search History" 
+            label={i18n.language === 'ar' ? "سجل البحث" : "Search History"} 
             icon={<History fontSize="small" />} 
             iconPosition="start"
           />
@@ -2094,10 +2434,12 @@ const JobSearch = () => {
           <>
             {renderTabs()}
             <Box sx={{ textAlign: 'center', p: 4 }}>
-              <Typography variant="h6" gutterBottom>No jobs found</Typography>
+              <Typography variant="h6" gutterBottom>{i18n.language === 'ar' ? 'لم يتم العثور على وظائف' : 'No jobs found'}</Typography>
               <Typography variant="body2" color="text.secondary">
-                Try adjusting your search criteria or explore our recommendations instead
-          </Typography>
+                {i18n.language === 'ar' 
+                  ? 'حاول تعديل معايير البحث أو استكشاف توصياتنا بدلاً من ذلك' 
+                  : 'Try adjusting your search criteria or explore our recommendations instead'}
+              </Typography>
               <Button
                 variant="outlined"
                 color="primary"
@@ -2105,9 +2447,9 @@ const JobSearch = () => {
                 sx={{ mt: 2 }}
                 onClick={handleClearFilters}
               >
-                Reset All Filters
+                {i18n.language === 'ar' ? 'إعادة تعيين كافة المرشحات' : 'Reset All Filters'}
               </Button>
-        </Box>
+            </Box>
           </>
       );
     }
@@ -2117,7 +2459,9 @@ const JobSearch = () => {
           {renderTabs()}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="subtitle1">
-              Showing {Math.min((page - 1) * pageSize + 1, totalJobs)} to {Math.min(page * pageSize, totalJobs)} of {totalJobs} jobs
+              {i18n.language === 'ar' 
+                ? `عرض ${Math.min((page - 1) * pageSize + 1, totalJobs)} إلى ${Math.min(page * pageSize, totalJobs)} من إجمالي ${totalJobs} وظيفة` 
+                : `Showing ${Math.min((page - 1) * pageSize + 1, totalJobs)} to ${Math.min(page * pageSize, totalJobs)} of ${totalJobs} jobs`}
             </Typography>
           </Box>
           
@@ -2161,10 +2505,10 @@ const JobSearch = () => {
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                         <Box sx={{ pr: 8 }}>
                           <Typography variant="h6" component="div" sx={{ fontSize: '1.1rem', lineHeight: 1.3 }}>
-                      {job.title}
+                      {i18n.language === 'ar' && job.titleAr ? job.titleAr : job.title}
                     </Typography>
                           <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
-                      {job.company}
+                      {i18n.language === 'ar' && job.companyAr ? job.companyAr : job.company}
                     </Typography>
                         </Box>
                         
@@ -2199,14 +2543,14 @@ const JobSearch = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.75, mt: 0.5 }}>
                       <LocationOn fontSize="small" color="action" sx={{ mr: 0.5 }} />
                       <Typography variant="body2" color="text.secondary">
-                        {job.location}
+                        {i18n.language === 'ar' && job.locationAr ? job.locationAr : job.location}
                       </Typography>
                       </Box>
                       
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 0.75 }}>
                         <Chip 
                           size="small" 
-                          label={job.jobType}
+                          label={i18n.language === 'ar' && job.jobTypeAr ? job.jobTypeAr : job.jobType}
                           variant="outlined"
                           sx={{ fontSize: '0.7rem', height: 22 }}
                         />
@@ -2214,7 +2558,7 @@ const JobSearch = () => {
                         {job.salaryRange && (
                         <Chip
                           size="small"
-                            label={job.salaryRange}
+                            label={i18n.language === 'ar' && job.salaryRangeAr ? job.salaryRangeAr : job.salaryRange}
                           variant="outlined"
                             icon={<AEDIcon fontSize="small" />}
                             sx={{ fontSize: '0.7rem', height: 22 }}
@@ -2225,7 +2569,7 @@ const JobSearch = () => {
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', mb: 0.75 }}>
                         <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', mr: 1, color: 'text.secondary' }}>
                           <AccessTime fontSize="small" sx={{ mr: 0.5, fontSize: 14 }} />
-                          Posted: {job.postedDate}
+                          {i18n.language === 'ar' ? 'نشرت: ' : 'Posted: '}{i18n.language === 'ar' && job.postedDateAr ? job.postedDateAr : job.postedDate}
                         </Typography>
                         
                         {job.matchScore && (
@@ -2234,16 +2578,31 @@ const JobSearch = () => {
                             <Tooltip 
                               title={
                                 <Box>
-                                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>Match Analysis:</Typography>
+                                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                                    {i18n.language === 'ar' ? 'تحليل التطابق:' : 'Match Analysis:'}
+                                  </Typography>
                                   <Box sx={{ mt: 0.5 }}>
                                     {job.matchInsights ? (
                                       <>
-                                        <Typography variant="caption" display="block">✅ Matched Skills: {job.matchInsights.matchedSkills}/{job.matchInsights.totalSkills}</Typography>
-                                        <Typography variant="caption" display="block">✅ Keyword Overlap: {job.matchInsights.keywordOverlap}%</Typography>
-                                        <Typography variant="caption" display="block">✅ Title Similarity: {job.matchInsights.titleSimilarity}</Typography>
+                                        <Typography variant="caption" display="block">
+                                          ✅ {i18n.language === 'ar' ? 'المهارات المتطابقة: ' : 'Matched Skills: '}
+                                          {job.matchInsights.matchedSkills}/{job.matchInsights.totalSkills}
+                                        </Typography>
+                                        <Typography variant="caption" display="block">
+                                          ✅ {i18n.language === 'ar' ? 'تداخل الكلمات المفتاحية: ' : 'Keyword Overlap: '}
+                                          {job.matchInsights.keywordOverlap}%
+                                        </Typography>
+                                        <Typography variant="caption" display="block">
+                                          ✅ {i18n.language === 'ar' ? 'تشابه العنوان: ' : 'Title Similarity: '}
+                                          {job.matchInsights.titleSimilarity}
+                                        </Typography>
                                       </>
                                     ) : (
-                                      <Typography variant="caption">Based on your resume, skills, and experience</Typography>
+                                      <Typography variant="caption">
+                                        {i18n.language === 'ar' 
+                                          ? 'بناءً على سيرتك الذاتية ومهاراتك وخبرتك' 
+                                          : 'Based on your resume, skills, and experience'}
+                                      </Typography>
                                     )}
                                   </Box>
                                 </Box>
@@ -2260,62 +2619,32 @@ const JobSearch = () => {
                                   textUnderlineOffset: '2px'
                                 }}
                               >
-                                {job.matchScore}% Match
+                                {job.matchScore}% {i18n.language === 'ar' ? 'تطابق' : 'Match'}
                               </Typography>
                             </Tooltip>
                           </>
                         )}
                           
-                        {job.requiredSkills && Array.isArray(job.requiredSkills) && filters.skills && Array.isArray(filters.skills) && filters.skills.length > 0 && (
-                          <>
-                            <Typography variant="caption" sx={{ mx: 1, color: 'text.secondary' }}>•</Typography>
-                            <Tooltip
-                              title={
-                                <Box>
-                                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>Skills you may need:</Typography>
-                                  <Box sx={{ mt: 0.5 }}>
-                                    {job.requiredSkills
-                                      .filter(skill => {
-                                        if (!skill) return false;
-                                        
-                                        return !filters.skills.some(s => {
-                                          if (typeof s === 'string') {
-                                            return s.toLowerCase() === skill.toLowerCase();
-                                          } 
-                                          return s && s.skill && skill && s.skill.toLowerCase() === skill.toLowerCase();
-                                        });
-                                      })
-                                      .slice(0, 5)
-                                      .map((skill, index) => (
-                                        <Typography key={index} variant="caption" display="block">
-                                          • {skill}
-                                        </Typography>
-                                      ))
-                                    }
-                                  </Box>
-                                </Box>
-                              }
-                              arrow
-                            >
-                        <Chip
-                                label={`${job.requiredSkills.filter(skill => {
-                                  if (!skill) return false;
-                                    
-                                  return !filters.skills.some(s => {
-                                    if (typeof s === 'string') {
-                                      return s.toLowerCase() === skill.toLowerCase();
-                                    }
-                                    return s && s.skill && skill && s.skill.toLowerCase() === skill.toLowerCase();
-                                  });
-                                }).length} Skills Gap`} 
-                          size="small"
-                          variant="outlined"
-                                  color="warning" 
-                                  icon={<Psychology fontSize="small" />}
-                                  sx={{ height: 22, fontSize: '0.7rem' }} 
-                                />
-                            </Tooltip>
-                          </>
+                        {job.requiredSkills && Array.isArray(job.requiredSkills) && job.requiredSkills.length > 0 && (
+                          <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                            {job.requiredSkills.slice(0, 3).map((skill, index) => (
+                              <Chip
+                                key={index}
+                                label={i18n.language === 'ar' ? i18n.t(`skills.${skill}`, { defaultValue: skill }) : skill}
+                                size="small"
+                                variant="outlined"
+                                sx={{ fontSize: '0.675rem', height: 22 }}
+                              />
+                            ))}
+                            {job.requiredSkills.length > 3 && (
+                              <Chip
+                                label={`+${job.requiredSkills.length - 3}`}
+                                size="small"
+                                variant="outlined"
+                                sx={{ fontSize: '0.675rem', height: 22 }}
+                              />
+                            )}
+                          </Box>
                         )}
                       </Box>
                       
@@ -2331,14 +2660,14 @@ const JobSearch = () => {
                           }}
                           sx={{ fontSize: '0.7rem', py: 0.25, px: 1 }}
                         >
-                          AI Apply
+                          {i18n.language === 'ar' ? 'تقديم ذكي' : 'AI Apply'}
                         </Button>
                         
                         {job.applicationStatus && (
                           <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, maxWidth: 'calc(100% - 90px)' }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                               <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-                                Application Progress
+                                {i18n.language === 'ar' ? 'تقدم الطلب' : 'Application Progress'}
                               </Typography>
                               <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>
                                 {job.applicationStagePercent || 0}%
@@ -2378,15 +2707,15 @@ const JobSearch = () => {
           {renderTabs()}
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle1">
-              {savedJobs.length} saved jobs
+              {i18n.language === 'ar' ? `${savedJobs.length} وظيفة محفوظة` : `${savedJobs.length} saved jobs`}
             </Typography>
           </Box>
           
           {savedJobs.length === 0 ? (
             <Box sx={{ textAlign: 'center', p: 4 }}>
-              <Typography variant="h6" gutterBottom>No saved jobs</Typography>
+              <Typography variant="h6" gutterBottom>{i18n.language === 'ar' ? 'لا توجد وظائف محفوظة' : 'No saved jobs'}</Typography>
               <Typography variant="body2" color="text.secondary">
-                Save jobs to easily find them later
+                {i18n.language === 'ar' ? 'احفظ الوظائف للعثور عليها بسهولة لاحقًا' : 'Save jobs to easily find them later'}
               </Typography>
             </Box>
           ) : (
@@ -2469,7 +2798,7 @@ const JobSearch = () => {
                           {job.salaryRange && (
                             <Chip
                               size="small"
-                              label={job.salaryRange}
+                              label={i18n.language === 'ar' && job.salaryRangeAr ? job.salaryRangeAr : job.salaryRange}
                               variant="outlined"
                               icon={<AEDIcon fontSize="small" />}
                               sx={{ fontSize: '0.7rem', height: 22 }}
@@ -2489,7 +2818,7 @@ const JobSearch = () => {
                       }}
                             sx={{ fontSize: '0.7rem', py: 0.25, px: 1 }}
                     >
-                            AI Apply
+                            {i18n.language === 'ar' ? 'تقديم ذكي' : 'AI Apply'}
                           </Button>
                         </Box>
                   </Box>
@@ -2510,15 +2839,15 @@ const JobSearch = () => {
           {renderTabs()}
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle1">
-              {searchHistory.length} recent searches
+              {i18n.language === 'ar' ? `${searchHistory.length} عمليات بحث حديثة` : `${searchHistory.length} recent searches`}
             </Typography>
         </Box>
           
           {searchHistory.length === 0 ? (
             <Box sx={{ textAlign: 'center', p: 4 }}>
-              <Typography variant="h6" gutterBottom>No search history</Typography>
+              <Typography variant="h6" gutterBottom>{i18n.language === 'ar' ? 'لا يوجد سجل بحث' : 'No search history'}</Typography>
               <Typography variant="body2" color="text.secondary">
-                Your recent searches will appear here
+                {i18n.language === 'ar' ? 'ستظهر عمليات البحث الأخيرة هنا' : 'Your recent searches will appear here'}
               </Typography>
             </Box>
           ) : (
@@ -2554,7 +2883,7 @@ const JobSearch = () => {
                           <>
                             {search.search && (
                               <Typography variant="body2" component="span" color="text.secondary" sx={{ mx: 1 }}>
-                                in
+                                {i18n.language === 'ar' ? 'في' : 'in'}
                               </Typography>
                             )}
                             <Typography variant="body2" component="span" fontWeight="medium">
@@ -2566,7 +2895,9 @@ const JobSearch = () => {
                     }
                     secondary={
                       <Typography variant="caption" color="text.secondary">
-                        {search.date ? format(new Date(search.date), 'MMM d, yyyy') : 'Recent search'}
+                        {search.date 
+                          ? format(new Date(search.date), 'MMM d, yyyy') 
+                          : (i18n.language === 'ar' ? 'بحث حديث' : 'Recent search')}
                       </Typography>
                     }
                   />
@@ -2594,7 +2925,7 @@ const JobSearch = () => {
           }}
           selected={sortBy === 'relevance'}
         >
-          Relevance
+          {i18n.language === 'ar' ? 'الصلة' : 'Relevance'}
         </MenuItem>
         <MenuItem 
           onClick={() => {
@@ -2603,7 +2934,7 @@ const JobSearch = () => {
           }}
           selected={sortBy === 'dateDesc'}
         >
-          Most Recent
+          {i18n.language === 'ar' ? 'الأحدث' : 'Most Recent'}
         </MenuItem>
         <MenuItem 
           onClick={() => {
@@ -2612,7 +2943,7 @@ const JobSearch = () => {
           }}
           selected={sortBy === 'dateAsc'}
         >
-          Oldest First
+          {i18n.language === 'ar' ? 'الأقدم أولاً' : 'Oldest First'}
         </MenuItem>
         <MenuItem 
           onClick={() => {
@@ -2621,7 +2952,7 @@ const JobSearch = () => {
           }}
           selected={sortBy === 'salaryDesc'}
         >
-          Highest Salary
+          {i18n.language === 'ar' ? 'الراتب الأعلى' : 'Highest Salary'}
         </MenuItem>
         <MenuItem 
           onClick={() => {
@@ -2630,7 +2961,7 @@ const JobSearch = () => {
           }}
           selected={sortBy === 'salaryAsc'}
         >
-          Lowest Salary
+          {i18n.language === 'ar' ? 'الراتب الأدنى' : 'Lowest Salary'}
         </MenuItem>
       </Menu>
     );
@@ -2748,20 +3079,20 @@ const JobSearch = () => {
     setSavedSearches([searchToSave, ...savedSearches]);
       
       // Show success message
-      setSnackbarMessage('Search saved successfully');
+      setSnackbarMessage(i18n.language === 'ar' ? 'تم حفظ البحث بنجاح' : 'Search saved successfully');
       setSnackbarOpen(true);
   };
   
   // Handle automated job application
   const handleAutoApply = async (job) => {
     if (!profile?.id) {
-      setSnackbarMessage('Please login to apply for jobs');
+      setSnackbarMessage(i18n.language === 'ar' ? 'الرجاء تسجيل الدخول للتقديم على الوظائف' : 'Please login to apply for jobs');
       setSnackbarOpen(true);
       return;
     }
     
     try {
-      setSnackbarMessage('AI is preparing your application...');
+      setSnackbarMessage(i18n.language === 'ar' ? 'الذكاء الاصطناعي يقوم بإعداد طلبك...' : 'AI is preparing your application...');
       setSnackbarOpen(true);
       
       // Mock successful response - don't actually call the API during development due to CORS issues
@@ -2777,7 +3108,9 @@ const JobSearch = () => {
       
       // Simulate success response
       setTimeout(() => {
-        setSnackbarMessage('AI application submitted successfully! You can track your application status in your dashboard.');
+        setSnackbarMessage(i18n.language === 'ar' 
+          ? 'تم تقديم طلب الذكاء الاصطناعي بنجاح! يمكنك تتبع حالة طلبك في لوحة القيادة الخاصة بك.' 
+          : 'AI application submitted successfully! You can track your application status in your dashboard.');
         setSnackbarOpen(true);
         
         // Update application status in job list
@@ -2793,8 +3126,10 @@ const JobSearch = () => {
       
       // Even on error, show success for development
       setTimeout(() => {
-        setSnackbarMessage('AI application submitted successfully! You can track your application status in your dashboard.');
-      setSnackbarOpen(true);
+        setSnackbarMessage(i18n.language === 'ar' 
+          ? 'تم تقديم طلب الذكاء الاصطناعي بنجاح! يمكنك تتبع حالة طلبك في لوحة القيادة الخاصة بك.' 
+          : 'AI application submitted successfully! You can track your application status in your dashboard.');
+        setSnackbarOpen(true);
         
         // Update application status in job list
         const updatedJobs = jobs.map(j => 
@@ -2810,11 +3145,13 @@ const JobSearch = () => {
   return (
     <Box sx={{ py: 2, px: { xs: 2, md: 3 } }}>
       <Typography variant="h4" gutterBottom>
-        Job Search
+        {i18n.language === 'ar' ? 'البحث عن وظيفة' : 'Job Search'}
       </Typography>
       
       <Typography variant="body1" color="text.secondary" gutterBottom sx={{ mb: 3 }}>
-        Find your dream job from thousands of opportunities in the UAE
+        {i18n.language === 'ar' 
+          ? 'ابحث عن وظيفة أحلامك من بين آلاف الفرص في الإمارات العربية المتحدة' 
+          : 'Find your dream job from thousands of opportunities in the UAE'}
       </Typography>
       
       <Grid container spacing={3}>
@@ -2841,26 +3178,26 @@ const JobSearch = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Share Job</DialogTitle>
+        <DialogTitle>{i18n.language === 'ar' ? 'مشاركة الوظيفة' : 'Share Job'}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" gutterBottom>Share via Email</Typography>
+          <Typography variant="body2" gutterBottom>{i18n.language === 'ar' ? 'المشاركة عبر البريد الإلكتروني' : 'Share via Email'}</Typography>
           <TextField
             fullWidth
             variant="outlined"
-            label="Email Address"
+            label={i18n.language === 'ar' ? 'عنوان البريد الإلكتروني' : 'Email Address'}
             margin="normal"
             value={shareEmail}
             onChange={(e) => setShareEmail(e.target.value)}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShareJobDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setShareJobDialogOpen(false)}>{i18n.language === 'ar' ? 'إلغاء' : 'Cancel'}</Button>
                 <Button 
                   variant="contained"
             onClick={handleEmailShare}
             disabled={!shareEmail}
           >
-            Send
+            {i18n.language === 'ar' ? 'إرسال' : 'Send'}
                 </Button>
         </DialogActions>
       </Dialog>
@@ -2875,12 +3212,14 @@ const JobSearch = () => {
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Psychology sx={{ mr: 1, color: 'success.main' }} />
-            Personalized Job Recommendations
+            {i18n.language === 'ar' ? 'توصيات الوظائف المخصصة' : 'Personalized Job Recommendations'}
           </Box>
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" paragraph>
-            Based on your profile, skills, and preferences, we've identified these job opportunities that closely match your qualifications.
+            {i18n.language === 'ar' 
+              ? 'بناءً على ملفك الشخصي ومهاراتك وتفضيلاتك، حددنا فرص العمل هذه التي تتطابق بشكل وثيق مع مؤهلاتك.' 
+              : 'Based on your profile, skills, and preferences, we\'ve identified these job opportunities that closely match your qualifications.'}
           </Typography>
           
           {suggestedJobs.length > 0 ? (
@@ -2916,7 +3255,7 @@ const JobSearch = () => {
                         <Typography variant="subtitle1">{job.title}</Typography>
                         <Chip
                           size="small"
-                          label={`${job.matchScore}% Match`}
+                          label={i18n.language === 'ar' ? `${job.matchScore}% تطابق` : `${job.matchScore}% Match`}
                           color={job.matchScore > 80 ? "success" : job.matchScore > 60 ? "primary" : "default"}
                         />
                       </Box>
@@ -2945,7 +3284,7 @@ const JobSearch = () => {
                             }}
                             sx={{ fontSize: '0.7rem', py: 0.25, px: 1 }}
                           >
-                            AI Apply
+                            {i18n.language === 'ar' ? 'تقديم ذكي' : 'AI Apply'}
                           </Button>
                         </Box>
                       </>
@@ -2958,13 +3297,13 @@ const JobSearch = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
               <CircularProgress sx={{ mb: 2 }} />
               <Typography variant="body1">
-                Analyzing your profile to find the best matches...
+                {i18n.language === 'ar' ? 'تحليل ملفك الشخصي للعثور على أفضل التطابقات...' : 'Analyzing your profile to find the best matches...'}
               </Typography>
             </Box>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowAIJobSuggestions(false)}>Close</Button>
+          <Button onClick={() => setShowAIJobSuggestions(false)}>{i18n.language === 'ar' ? 'إغلاق' : 'Close'}</Button>
         </DialogActions>
       </Dialog>
     </Box>

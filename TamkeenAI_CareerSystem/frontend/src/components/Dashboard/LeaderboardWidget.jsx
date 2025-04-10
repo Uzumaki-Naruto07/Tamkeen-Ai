@@ -13,7 +13,11 @@ import {
   Chip,
   LinearProgress,
   ToggleButtonGroup,
-  ToggleButton
+  ToggleButton,
+  Card,
+  CardContent,
+  Tabs,
+  Tab
 } from '@mui/material';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import PersonIcon from '@mui/icons-material/Person';
@@ -21,6 +25,7 @@ import GroupIcon from '@mui/icons-material/Group';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // Mock data - will be replaced with API calls
 const mockLeaderboardData = {
@@ -36,6 +41,7 @@ const mockLeaderboardData = {
     {
       "id": 1,
       "name": "Fatima Al Mansoori",
+      "nameAr": "فاطمة المنصوري",
       "avatar": "/avatars/emirati-woman-1.jpg",
       "points": 1250,
       "position": 1
@@ -43,6 +49,7 @@ const mockLeaderboardData = {
     {
       "id": 2,
       "name": "Mohammed Al Hashimi",
+      "nameAr": "محمد الهاشمي",
       "avatar": "/avatars/emirati-man-1.jpg",
       "points": 980,
       "position": 2
@@ -50,6 +57,7 @@ const mockLeaderboardData = {
     {
       "id": 3,
       "name": "Aisha Al Nuaimi",
+      "nameAr": "عائشة النعيمي",
       "avatar": "/avatars/emirati-woman-2.jpg",
       "points": 850,
       "position": 3
@@ -57,6 +65,7 @@ const mockLeaderboardData = {
     {
       "id": 5,
       "name": "Omar Al Shamsi",
+      "nameAr": "عمر الشامسي",
       "avatar": "/avatars/emirati-man-2.jpg",
       "points": 820,
       "position": 4
@@ -64,6 +73,7 @@ const mockLeaderboardData = {
     {
       "id": 6,
       "name": "Mariam Al Zaabi",
+      "nameAr": "مريم الزعابي",
       "avatar": "/avatars/emirati-woman-3.jpg",
       "points": 765,
       "position": 5
@@ -73,6 +83,7 @@ const mockLeaderboardData = {
     {
       "id": 1,
       "name": "Fatima Al Mansoori",
+      "nameAr": "فاطمة المنصوري",
       "avatar": "/avatars/emirati-woman-1.jpg",
       "points": 1250,
       "position": 1
@@ -80,6 +91,7 @@ const mockLeaderboardData = {
     {
       "id": 5,
       "name": "Omar Al Shamsi",
+      "nameAr": "عمر الشامسي",
       "avatar": "/avatars/emirati-man-2.jpg",
       "points": 820,
       "position": 4
@@ -87,6 +99,7 @@ const mockLeaderboardData = {
     {
       "id": 6,
       "name": "Mariam Al Zaabi",
+      "nameAr": "مريم الزعابي",
       "avatar": "/avatars/emirati-woman-3.jpg",
       "points": 765,
       "position": 5
@@ -134,6 +147,7 @@ const RankSparkline = ({ data, height = 20, width = 60 }) => {
 };
 
 const LeaderboardWidget = () => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [view, setView] = useState('global');
   const [showAll, setShowAll] = useState(false);
@@ -154,16 +168,21 @@ const LeaderboardWidget = () => {
     const list = view === 'global' ? mockLeaderboardData.leaderboard : mockLeaderboardData.friends;
     return list.slice(0, 3);
   };
+
+  // Get appropriate name based on current language
+  const getName = (user) => {
+    return i18n.language === 'ar' && user.nameAr ? user.nameAr : user.name;
+  };
   
   return (
     <Paper sx={{ p: 3, overflow: 'visible', height: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
           <EmojiEventsIcon color="primary" sx={{ mr: 1 }} />
-          Career Leaderboard
+          {t('leaderboard.title', 'Leaderboard')}
         </Typography>
         <Chip 
-          label={`${mockLeaderboardData.position.total_users} Members`} 
+          label={`${mockLeaderboardData.position.total_users} ${t('leaderboard.members', 'Members')}`} 
           size="small" 
           color="primary" 
           variant="outlined"
@@ -185,7 +204,7 @@ const LeaderboardWidget = () => {
         }}>
           <Box>
             <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 'medium' }}>
-              Your Rank
+              {t('leaderboard.yourRank', 'Your Rank')}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Typography variant="h4" component="div" sx={{ fontWeight: 'bold', mr: 1 }}>
@@ -194,18 +213,18 @@ const LeaderboardWidget = () => {
               <RankSparkline data={mockLeaderboardData.position.rank_history} />
             </Box>
             <Typography variant="body2" sx={{ opacity: 0.9 }}>
-              Top {mockLeaderboardData.position.top_percentile}%
+              {t('leaderboard.topPercentile', 'Top {percentile}%')}
             </Typography>
           </Box>
           <Box>
             <Typography variant="body2" sx={{ opacity: 0.9, textAlign: 'right', fontWeight: 'medium' }}>
-              Career Points
+              {t('leaderboard.careerPoints', 'Career Points')}
             </Typography>
             <Typography variant="h4" component="div" sx={{ fontWeight: 'bold', textAlign: 'right' }}>
               {mockLeaderboardData.position.points}
             </Typography>
             <Typography variant="body2" sx={{ opacity: 0.9, textAlign: 'right' }}>
-              Next: {mockLeaderboardData.position.next_milestone}
+              {t('leaderboard.nextMilestone', 'Next: {next_milestone}')}
             </Typography>
           </Box>
         </Box>
@@ -227,11 +246,11 @@ const LeaderboardWidget = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <EmojiEventsIcon sx={{ fontSize: 32, mr: 1 }} />
             <Typography variant="h5" component="div" fontWeight="bold">
-              Join the Leaderboard!
+              {t('leaderboard.joinLeaderboard', 'Join the Leaderboard!')}
             </Typography>
           </Box>
           <Typography variant="body1" sx={{ mb: 2 }}>
-            Complete tasks to earn points and secure your rank
+            {t('leaderboard.completeTasks', 'Complete tasks to earn points and secure your rank')}
           </Typography>
           <Button 
             variant="contained" 
@@ -245,14 +264,14 @@ const LeaderboardWidget = () => {
               boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
             }}
           >
-            Start Earning Points
+            {t('leaderboard.startEarningPoints', 'Start Earning Points')}
           </Button>
         </Box>
       )}
       
       <Box sx={{ mb: 3 }}>
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          Points to next milestone
+          {t('leaderboard.pointsToNextMilestone', 'Points to next milestone')}
         </Typography>
         <LinearProgress 
           variant="determinate" 
@@ -261,10 +280,10 @@ const LeaderboardWidget = () => {
         />
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
           <Typography variant="body2" color="text.secondary">
-            {mockLeaderboardData.position.points} points
+            {mockLeaderboardData.position.points} {t('leaderboard.points', 'points')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {mockLeaderboardData.position.next_milestone} points
+            {mockLeaderboardData.position.next_milestone} {t('leaderboard.points', 'points')}
           </Typography>
         </Box>
       </Box>
@@ -273,7 +292,7 @@ const LeaderboardWidget = () => {
       
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-          {view === 'global' ? 'Top Performers' : 'Friends Comparison'}
+          {view === 'global' ? t('leaderboard.topPerformers', 'Top Performers') : t('leaderboard.friendsComparison', 'Friends Comparison')}
         </Typography>
         <ToggleButtonGroup
           size="small"
@@ -339,7 +358,7 @@ const LeaderboardWidget = () => {
             <ListItemAvatar>
               <Avatar 
                 src={user.avatar} 
-                alt={user.name}
+                alt={getName(user)}
                 sx={{ 
                   bgcolor: !user.avatar ? 'primary.main' : undefined,
                   border: user.isCurrentUser ? '2px solid #1976d2' : (user.isFriend ? '2px solid #4caf50' : '1px solid #eee'),
@@ -362,11 +381,11 @@ const LeaderboardWidget = () => {
                     component="span"
                     sx={{ fontWeight: user.isCurrentUser ? 'bold' : 'normal' }}
                   >
-                    {user.name}
+                    {getName(user)}
                   </Typography>
                   {user.isCurrentUser && (
                     <Chip 
-                      label="You" 
+                      label={t('leaderboard.you', 'You')} 
                       size="small" 
                       color="primary" 
                       sx={{ ml: 1, height: 20 }} 
@@ -374,7 +393,7 @@ const LeaderboardWidget = () => {
                   )}
                   {user.isFriend && !user.isCurrentUser && (
                     <Chip 
-                      label="Friend" 
+                      label={t('leaderboard.friend', 'Friend')} 
                       size="small" 
                       color="success" 
                       sx={{ ml: 1, height: 20 }} 
@@ -394,10 +413,10 @@ const LeaderboardWidget = () => {
               secondary={
                 <Box component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Typography variant="body2" color="text.secondary" component="span">
-                    {user.team || "Team Member"}
+                    {user.team || t('leaderboard.teamMember', 'Team Member')}
                   </Typography>
                   <Typography variant="body2" component="span" sx={{ fontWeight: 'bold' }}>
-                    {user.points} pts
+                    {user.points} {t('leaderboard.pts', 'pts')}
                   </Typography>
                 </Box>
               }
@@ -421,7 +440,7 @@ const LeaderboardWidget = () => {
             }
           }}
         >
-          View Full Leaderboard
+          {t('leaderboard.viewFullLeaderboard', 'View Full Leaderboard')}
         </Button>
       </Box>
     </Paper>

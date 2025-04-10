@@ -32,6 +32,7 @@ import Confetti from 'react-confetti';
 import useWindowSize from 'react-use/lib/useWindowSize';
 import { useTheme } from '../contexts/ThemeContext';
 import { alpha } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 
 // Define AddIcon to ensure it's properly accessible throughout the component
 const AddIcon = Add;
@@ -208,137 +209,182 @@ const MOCK_LEADERBOARD = [
   {
     id: 'user-1',
     name: 'Fatima Al Mansoori',
+    nameAr: 'فاطمة المنصوري',
     level: 1,
     role: 'Team Member',
+    roleAr: 'عضو فريق',
     points: 1250,
     avatar: null,
-    trend: 'stable'
+    trend: 'stable',
+    trendAr: 'مستقر'
   },
   {
     id: 'user-2',
     name: 'Mohammed Al Hashimi',
+    nameAr: 'محمد الهاشمي',
     level: 1,
     role: 'Team Member',
+    roleAr: 'عضو فريق',
     points: 980,
     avatar: null,
-    trend: 'up'
+    trend: 'up',
+    trendAr: 'صاعد'
   },
   {
     id: 'user-3',
     name: 'Aisha Al Nuaimi',
+    nameAr: 'عائشة النعيمي',
     level: 1,
     role: 'Team Member',
+    roleAr: 'عضو فريق',
     points: 810,
     avatar: null,
-    trend: 'up'
+    trend: 'up',
+    trendAr: 'صاعد'
   },
   {
     id: 'user-4',
     name: 'Ahmed Al Mazrouei',
+    nameAr: 'أحمد المزروعي',
     level: 2,
     role: 'Associate',
+    roleAr: 'مساعد',
     points: 760,
     avatar: null,
-    trend: 'down'
+    trend: 'down',
+    trendAr: 'هابط'
   },
   {
     id: 'user-5',
     name: 'Noura Al Dhaheri',
+    nameAr: 'نورة الظاهري',
     level: 1,
     role: 'Team Member',
+    roleAr: 'عضو فريق',
     points: 720,
     avatar: null,
-    trend: 'up'
+    trend: 'down',
+    trendAr: 'هابط'
   },
   {
     id: 'user-6',
     name: 'Khalid Al Shamsi',
+    nameAr: 'خالد الشامسي',
     level: 2,
     role: 'Associate',
+    roleAr: 'مساعد',
     points: 695,
     avatar: null,
-    trend: 'down'
+    trend: 'down',
+    trendAr: 'هابط'
   },
   {
     id: 'user-7',
     name: 'Maryam Al Marzooqi',
+    nameAr: 'مريم المرزوقي',
     level: 1,
     role: 'Team Member',
+    roleAr: 'عضو فريق',
     points: 670,
     avatar: null,
-    trend: 'up'
+    trend: 'up',
+    trendAr: 'صاعد'
   },
   {
     id: 'user-8',
     name: 'Saeed Al Ameri',
+    nameAr: 'سعيد العامري',
     level: 1,
     role: 'Team Member',
+    roleAr: 'عضو فريق',
     points: 640,
     avatar: null,
-    trend: 'stable'
+    trend: 'stable',
+    trendAr: 'مستقر'
   },
   {
     id: 'user-9',
     name: 'Huda Al Ali',
+    nameAr: 'هدى العلي',
     level: 1,
     role: 'Team Member',
+    roleAr: 'عضو فريق',
     points: 590,
     avatar: null,
-    trend: 'up'
+    trend: 'up',
+    trendAr: 'صاعد'
   },
   {
     id: 'user-10',
     name: 'Omar Al Suwaidi',
+    nameAr: 'عمر السويدي',
     level: 2,
     role: 'Associate',
+    roleAr: 'مساعد',
     points: 560,
     avatar: null,
-    trend: 'down'
+    trend: 'down',
+    trendAr: 'هابط'
   },
   {
     id: 'user-11',
     name: 'Layla Al Qubaisi',
+    nameAr: 'ليلى القبيسي',
     level: 1,
     role: 'Team Member',
+    roleAr: 'عضو فريق',
     points: 540,
     avatar: null,
-    trend: 'up'
+    trend: 'up',
+    trendAr: 'صاعد'
   },
   {
     id: 'user-12',
     name: 'Ibrahim Al Balushi',
+    nameAr: 'إبراهيم البلوشي',
     level: 1,
     role: 'Team Member',
+    roleAr: 'عضو فريق',
     points: 510,
     avatar: null,
-    trend: 'stable'
+    trend: 'stable',
+    trendAr: 'مستقر'
   },
   {
     id: 'user-13',
     name: 'Reem Al Falasi',
+    nameAr: 'ريم الفلاسي',
     level: 1,
     role: 'Team Member',
+    roleAr: 'عضو فريق',
     points: 490,
     avatar: null,
-    trend: 'up'
+    trend: 'up',
+    trendAr: 'صاعد'
   },
   {
     id: 'user-14',
     name: 'Yousef Al Zaabi',
+    nameAr: 'يوسف الزعابي',
     level: 1,
     role: 'Team Member',
+    roleAr: 'عضو فريق',
     points: 460,
     avatar: null,
-    trend: 'stable'
+    trend: 'stable',
+    trendAr: 'مستقر'
   },
   {
     id: 'user-15',
     name: 'Salama Al Kaabi',
+    nameAr: 'سلامة الكعبي',
     level: 1,
     role: 'Team Member',
-    points: 430,
+    roleAr: 'عضو فريق',
+    points: 440,
     avatar: null,
-    trend: 'up'
+    trend: 'up',
+    trendAr: 'صاعد'
   }
 ];
 
@@ -437,6 +483,7 @@ const GamifiedProgress = () => {
   const [pageAnimationComplete, setPageAnimationComplete] = useState(false);
   const { width, height } = useWindowSize();
   const { isDarkMode } = useTheme();
+  const { t, i18n } = useTranslation();
   
   const { profile } = useUser();
   
@@ -521,50 +568,65 @@ const GamifiedProgress = () => {
           {
             id: 'badge-1',
             name: 'Profile Master',
+            nameAr: 'محترف الملف الشخصي',
             description: 'Completed your profile with all details',
+            descriptionAr: 'أكملت ملفك الشخصي بجميع التفاصيل',
             category: 'profile',
             color: '#4CAF50',
             unlocked: true,
             dateAchieved: '2023-02-15T10:30:00Z',
-            criteria: ['Complete personal info', 'Add profile picture', 'Add a resume']
+            criteria: ['Complete personal info', 'Add profile picture', 'Add a resume'],
+            criteriaAr: ['إكمال المعلومات الشخصية', 'إضافة صورة الملف الشخصي', 'إضافة السيرة الذاتية']
           },
           {
             id: 'badge-2',
             name: 'Job Seeker',
+            nameAr: 'باحث عن عمل',
             description: 'Applied to 10 jobs',
+            descriptionAr: 'تقدمت لـ 10 وظائف',
             category: 'jobs',
             color: '#2196F3',
             unlocked: true,
             dateAchieved: '2023-03-10T14:15:00Z',
-            criteria: ['Apply to 10 jobs']
+            criteria: ['Apply to 10 jobs'],
+            criteriaAr: ['التقدم لـ 10 وظائف']
           },
           {
             id: 'badge-3',
             name: 'Skill Builder',
+            nameAr: 'بناء المهارات',
             description: 'Added 15 skills to your profile',
+            descriptionAr: 'أضفت 15 مهارة إلى ملفك الشخصي',
             category: 'skills',
             color: '#9C27B0',
             unlocked: true,
             dateAchieved: '2023-03-05T09:45:00Z',
-            criteria: ['Add 15 skills to your profile']
+            criteria: ['Add 15 skills to your profile'],
+            criteriaAr: ['إضافة 15 مهارة إلى ملفك الشخصي']
           },
           {
             id: 'badge-4',
             name: 'Interview Ace',
+            nameAr: 'متميز في المقابلات',
             description: 'Complete 5 mock interviews',
+            descriptionAr: 'أكمل 5 مقابلات تجريبية',
             category: 'interview',
             color: '#F44336',
             unlocked: false,
-            criteria: ['Complete 5 mock interviews with a score of 80% or higher']
+            criteria: ['Complete 5 mock interviews with a score of 80% or higher'],
+            criteriaAr: ['إكمال 5 مقابلات تجريبية بنتيجة 80٪ أو أعلى']
           },
           {
             id: 'badge-5',
             name: 'Networking Pro',
+            nameAr: 'محترف التواصل',
             description: 'Connected with 10 professionals',
+            descriptionAr: 'تواصلت مع 10 محترفين',
             category: 'networking',
             color: '#FF9800',
             unlocked: false,
-            criteria: ['Connect with 10 professionals in your industry']
+            criteria: ['Connect with 10 professionals in your industry'],
+            criteriaAr: ['التواصل مع 10 محترفين في مجال عملك']
           }
         ];
         
@@ -573,7 +635,9 @@ const GamifiedProgress = () => {
           {
             id: 'achieve-1',
             name: 'First Job Application',
+            nameAr: 'أول تقديم للوظيفة',
             description: 'Applied to your first job',
+            descriptionAr: 'تقدمت لأول وظيفة لك',
             category: 'jobs',
             points: 50,
             achieved: true,
@@ -582,7 +646,9 @@ const GamifiedProgress = () => {
           {
             id: 'achieve-2',
             name: 'Resume Uploaded',
+            nameAr: 'تم رفع السيرة الذاتية',
             description: 'Uploaded your first resume',
+            descriptionAr: 'رفعت سيرتك الذاتية الأولى',
             category: 'profile',
             points: 30,
             achieved: true,
@@ -591,7 +657,9 @@ const GamifiedProgress = () => {
           {
             id: 'achieve-3',
             name: 'Skill Assessment Completed',
+            nameAr: 'اكتمال تقييم المهارات',
             description: 'Completed your first skill assessment',
+            descriptionAr: 'أكملت أول تقييم للمهارات الخاصة بك',
             category: 'skills',
             points: 75,
             achieved: true,
@@ -600,7 +668,9 @@ const GamifiedProgress = () => {
           {
             id: 'achieve-4',
             name: 'Interview Feedback',
+            nameAr: 'تقييم المقابلة',
             description: 'Received feedback from 3 mock interviews',
+            descriptionAr: 'تلقيت تقييمات من 3 مقابلات تجريبية',
             category: 'interview',
             points: 60,
             achieved: true,
@@ -609,7 +679,9 @@ const GamifiedProgress = () => {
           {
             id: 'achieve-5',
             name: 'Learning Streak',
+            nameAr: 'تتابع التعلم',
             description: 'Learned for 7 consecutive days',
+            descriptionAr: 'تعلمت لمدة 7 أيام متتالية',
             category: 'learning',
             points: 100,
             achieved: false
@@ -621,36 +693,48 @@ const GamifiedProgress = () => {
           {
             id: 'challenge-1',
             name: 'Resume Optimizer',
+            nameAr: 'محسن السيرة الذاتية',
             description: 'Improve your resume score by 15%',
+            descriptionAr: 'حسّن نتيجة سيرتك الذاتية بنسبة 15٪',
             category: 'resume',
             difficulty: 'medium',
+            difficultyAr: 'متوسط',
             xpReward: 150,
             deadline: '2023-04-15T23:59:59Z',
             status: 'in-progress',
+            statusAr: 'قيد التقدم',
             progress: 60,
             accepted: true
           },
           {
             id: 'challenge-2',
             name: 'Interview Preparation',
+            nameAr: 'التحضير للمقابلة',
             description: 'Complete 3 mock interviews this week',
+            descriptionAr: 'أكمل 3 مقابلات تجريبية هذا الأسبوع',
             category: 'interview',
             difficulty: 'hard',
+            difficultyAr: 'صعب',
             xpReward: 200,
             deadline: '2023-04-10T23:59:59Z',
             status: 'not-started',
+            statusAr: 'لم يبدأ',
             progress: 0,
             accepted: false
           },
           {
             id: 'challenge-3',
             name: 'Skill Development',
+            nameAr: 'تطوير المهارات',
             description: 'Complete 2 skill courses',
+            descriptionAr: 'أكمل دورتين تدريبيتين للمهارات',
             category: 'learning',
             difficulty: 'easy',
+            difficultyAr: 'سهل',
             xpReward: 100,
             deadline: '2023-04-20T23:59:59Z',
             status: 'completed',
+            statusAr: 'مكتمل',
             progress: 100,
             accepted: true
           }
@@ -885,11 +969,16 @@ const GamifiedProgress = () => {
           name: profile?.firstName && profile?.lastName 
             ? `${profile.firstName} ${profile.lastName}`
             : profile?.displayName || "You",
+          nameAr: profile?.firstName && profile?.lastName 
+            ? `${profile.firstName} ${profile.lastName}`
+            : profile?.displayName || "أنت",
           level: userLevel || 4, // Use the current level
           role: profile.role || 'Team Member',
+          roleAr: profile.role || 'عضو فريق',
           points: 1100, // Higher points to ensure top 5 placement
           avatar: profile.avatar || null,
           trend: 'up',
+          trendAr: 'صاعد',
           isCurrentUser: true // Explicitly mark as current user
         };
         
@@ -912,18 +1001,18 @@ const GamifiedProgress = () => {
         const userPosition = filteredLeaderboard.findIndex(user => user.isCurrentUser);
         
         if (userPosition >= 0) {
-          setUserRank(userPosition + 1);
+          setUserRank(userPosition + 1); // Save user's leaderboard position (1-indexed)
         }
         
-        // Update the leaderboard state
+        // Save to state
         setLeaderboard(filteredLeaderboard);
       } else {
-        // Default fallback if no profile
-        setUserRank(3);
-        setLeaderboard(MOCK_LEADERBOARD);
+        // If no profile, just use the mock data
+        setLeaderboard(leaderboardData);
       }
     };
     
+    // Call the function
     prepareLeaderboardWithCurrentUser();
   }, [profile, userLevel]);
 
@@ -1082,7 +1171,7 @@ const GamifiedProgress = () => {
                         mb: 0.5
                       }}
                     >
-                      Current Career Level
+                      {i18n.language === 'ar' ? 'مستوى المسار المهني الحالي' : 'Current Career Level'}
                     </Typography>
                     
                     <Typography 
@@ -1096,9 +1185,9 @@ const GamifiedProgress = () => {
                         alignItems: 'center'
                       }}
                     >
-                      Level {userLevel}
+                      {i18n.language === 'ar' ? `المستوى ${userLevel}` : `Level ${userLevel}`}
                       <Chip
-                        label={userLevel === 5 ? "MAX" : ""}
+                        label={userLevel === 5 ? (i18n.language === 'ar' ? "الحد الأقصى" : "MAX") : ""}
                         size="small"
                         color="secondary"
                         sx={{ 
@@ -1120,7 +1209,9 @@ const GamifiedProgress = () => {
                       }}
                     >
                       <TrendingUp sx={{ mr: 0.5, fontSize: 18 }} />
-                      {calculateXPPercentage().toFixed(1)}% progress to Level {userLevel + 1}
+                      {i18n.language === 'ar' 
+                        ? `${calculateXPPercentage().toFixed(1)}% تقدم للمستوى ${userLevel + 1}`
+                        : `${calculateXPPercentage().toFixed(1)}% progress to Level ${userLevel + 1}`}
                     </Typography>
                   </Box>
                 </Grid>
@@ -1149,7 +1240,7 @@ const GamifiedProgress = () => {
                       endIcon={<ArrowForward />}
                       onClick={handleViewRewards}
                     >
-                      View Rewards
+                      {i18n.language === 'ar' ? 'عرض المكافآت' : 'View Rewards'}
                     </Button>
                   </motion.div>
                 </Grid>
@@ -1200,12 +1291,12 @@ const GamifiedProgress = () => {
                 variant="scrollable"
                 scrollButtons="auto"
               >
-                <Tab icon={<Stars />} label="Badges" />
-                <Tab icon={<EmojiEvents />} label="Achievements" />
-                <Tab icon={<FlagCircle />} label="Challenges" />
-                <Tab icon={<Psychology />} label="Skills" />
-                <Tab icon={<Timeline />} label="Activity" />
-                <Tab icon={<Leaderboard />} label="Leaderboard" />
+                <Tab icon={<Stars />} label={i18n.language === 'ar' ? 'الشارات' : 'Badges'} />
+                <Tab icon={<EmojiEvents />} label={i18n.language === 'ar' ? 'الإنجازات' : 'Achievements'} />
+                <Tab icon={<FlagCircle />} label={i18n.language === 'ar' ? 'التحديات' : 'Challenges'} />
+                <Tab icon={<Psychology />} label={i18n.language === 'ar' ? 'المهارات' : 'Skills'} />
+                <Tab icon={<Timeline />} label={i18n.language === 'ar' ? 'النشاط' : 'Activity'} />
+                <Tab icon={<Leaderboard />} label={i18n.language === 'ar' ? 'المتصدرين' : 'Leaderboard'} />
               </Tabs>
             </Box>
           </motion.div>
@@ -1371,7 +1462,7 @@ const GamifiedProgress = () => {
                                 color: badge.unlocked ? 'text.primary' : 'text.secondary' 
                               }}
                             >
-                              {badge.name}
+                              {i18n.language === 'ar' ? (badge.nameAr || badge.name) : badge.name}
                             </Typography>
                             
                             <Typography 
@@ -1385,14 +1476,16 @@ const GamifiedProgress = () => {
                                 WebkitBoxOrient: 'vertical'
                               }}
                             >
-                              {badge.description}
+                              {i18n.language === 'ar' ? (badge.descriptionAr || badge.description) : badge.description}
                             </Typography>
                           </CardContent>
                           
                           <CardActions sx={{ justifyContent: 'center', p: 2, pb: 3 }}>
                             <Chip
                               icon={badge.unlocked ? <CheckCircle fontSize="small" /> : <Lock fontSize="small" />}
-                              label={badge.unlocked ? 'Unlocked' : 'Locked'}
+                              label={badge.unlocked 
+                                ? (i18n.language === 'ar' ? 'تم فتحه' : 'Unlocked')
+                                : (i18n.language === 'ar' ? 'مقفل' : 'Locked')}
                               size="medium"
                               color={badge.unlocked ? 'success' : 'default'}
                               variant={badge.unlocked ? 'filled' : 'outlined'}
@@ -1441,10 +1534,14 @@ const GamifiedProgress = () => {
                         sx={{ width: 120, height: 120, opacity: 0.7, mb: 2 }}
                       />
                       <Typography variant="h5" color="text.primary" gutterBottom fontWeight={500}>
-                        No badges yet
+                        {i18n.language === 'ar' 
+                          ? 'لا توجد شارات حتى الآن. أكمل المهام والتحديات لكسب الشارات وإظهار إنجازاتك.'
+                          : 'No badges yet. Complete various tasks and challenges to earn badges and showcase your achievements.'}
                       </Typography>
                       <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
-                        Complete various tasks and challenges to earn badges and showcase your achievements.
+                        {i18n.language === 'ar' 
+                          ? 'أكمل المهام والتحديات لكسب الشارات وإظهار إنجازاتك.'
+                          : 'Complete various tasks and challenges to earn badges and showcase your achievements.'}
                       </Typography>
                       <Button 
                         variant="contained" 
@@ -1453,7 +1550,7 @@ const GamifiedProgress = () => {
                         onClick={() => setActiveTab(2)}
                         sx={{ boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)' }}
                       >
-                        View Challenges
+                        {i18n.language === 'ar' ? 'إظهار التحديات' : 'View Challenges'}
                       </Button>
                     </Paper>
                   </Grid>
@@ -1479,10 +1576,12 @@ const GamifiedProgress = () => {
                           >
                             {achievement.achieved ? <CheckCircle /> : <MoreHoriz />}
                           </Avatar>
-                          <Typography variant="h6">{achievement.name}</Typography>
+                          <Typography variant="h6">
+                            {i18n.language === 'ar' ? (achievement.nameAr || achievement.name) : achievement.name}
+                          </Typography>
                         </Box>
                         <Typography variant="body2" paragraph>
-                          {achievement.description}
+                          {i18n.language === 'ar' ? (achievement.descriptionAr || achievement.description) : achievement.description}
                         </Typography>
                         <Box display="flex" justifyContent="space-between" alignItems="center">
                           <Chip
@@ -1494,10 +1593,10 @@ const GamifiedProgress = () => {
                           />
                           <Typography variant="caption" color="text.secondary">
                             {achievement.achieved
-                              ? `Achieved on ${new Date(
-                                  achievement.dateAchieved
-                                ).toLocaleDateString()}`
-                              : 'Not achieved yet'}
+                              ? i18n.language === 'ar'
+                                ? `تم تحقيقه في ${new Date(achievement.dateAchieved).toLocaleDateString()}`
+                                : `Achieved on ${new Date(achievement.dateAchieved).toLocaleDateString()}`
+                              : i18n.language === 'ar' ? 'لم يتحقق بعد' : 'Not achieved yet'}
                           </Typography>
                         </Box>
                       </CardContent>
@@ -1507,7 +1606,9 @@ const GamifiedProgress = () => {
               ) : (
                 <Grid item xs={12}>
                   <Alert severity="info">
-                    No achievements available yet. Keep using the platform to earn achievements!
+                    {i18n.language === 'ar' 
+                      ? 'لا توجد إنجازات متاحة حتى الآن. استمر في استخدام المنصة لكسب الإنجازات!'
+                      : 'No achievements available yet. Keep using the platform to earn achievements!'}
                   </Alert>
                 </Grid>
               )}
@@ -1535,10 +1636,12 @@ const GamifiedProgress = () => {
                       <CardContent>
                         <Box display="flex" justifyContent="space-between" alignItems="flex-start">
                           <Typography variant="h6" gutterBottom>
-                            {challenge.name}
+                            {i18n.language === 'ar' ? (challenge.nameAr || challenge.name) : challenge.name}
                           </Typography>
                           <Chip
-                            label={challenge.difficulty}
+                            label={i18n.language === 'ar' 
+                              ? (challenge.difficultyAr || challenge.difficulty) 
+                              : challenge.difficulty}
                             size="small"
                             color={
                               challenge.difficulty === 'easy'
@@ -1550,11 +1653,11 @@ const GamifiedProgress = () => {
                           />
                         </Box>
                         <Typography variant="body2" sx={{ mb: 2 }}>
-                          {challenge.description}
+                          {i18n.language === 'ar' ? (challenge.descriptionAr || challenge.description) : challenge.description}
                         </Typography>
                         <Box sx={{ mb: 1 }}>
                           <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                            Progress: {challenge.progress}%
+                            {i18n.language === 'ar' ? `التقدم: ${challenge.progress}%` : `Progress: ${challenge.progress}%`}
                           </Typography>
                           <LinearProgress
                             variant="determinate"
@@ -1578,7 +1681,9 @@ const GamifiedProgress = () => {
                             variant="outlined"
                           />
                           <Typography variant="caption" color="text.secondary">
-                            Deadline: {new Date(challenge.deadline).toLocaleDateString()}
+                            {i18n.language === 'ar' 
+                              ? `الموعد النهائي: ${new Date(challenge.deadline).toLocaleDateString()}`
+                              : `Deadline: ${new Date(challenge.deadline).toLocaleDateString()}`}
                           </Typography>
                         </Box>
                       </CardContent>
@@ -1590,11 +1695,11 @@ const GamifiedProgress = () => {
                             color="success"
                             disabled
                           >
-                            Completed
+                            {i18n.language === 'ar' ? 'مكتمل' : 'Completed'}
                           </Button>
                         ) : challenge.accepted ? (
                           <Button variant="contained" onClick={() => setChallengeDialogOpen(true)}>
-                            Continue Challenge
+                            {i18n.language === 'ar' ? 'متابعة التحدي' : 'Continue Challenge'}
                           </Button>
                         ) : (
                           <Button 
@@ -1606,7 +1711,7 @@ const GamifiedProgress = () => {
                               handleAcceptChallenge(challenge.id);
                             }}
                           >
-                            Accept Challenge
+                            {i18n.language === 'ar' ? 'قبول التحدي' : 'Accept Challenge'}
                           </Button>
                         )}
                       </CardActions>
@@ -1616,7 +1721,9 @@ const GamifiedProgress = () => {
               ) : (
                 <Grid item xs={12}>
                   <Alert severity="info">
-                    No challenges available right now. Check back soon!
+                    {i18n.language === 'ar'
+                      ? 'لا توجد تحديات متاحة الآن. تحقق مرة أخرى قريبًا!'
+                      : 'No challenges available right now. Check back soon!'}
                   </Alert>
                 </Grid>
               )}
@@ -1669,7 +1776,7 @@ const GamifiedProgress = () => {
                       }}
                     >
                       <BarChart sx={{ mr: 1, color: 'primary.main' }} />
-                      Skills Radar Analysis
+                      {i18n.language === 'ar' ? 'تحليل رادار المهارات' : 'Skills Radar Analysis'}
                     </Typography>
                     
                     <Box sx={{ height: 400, zIndex: 1, position: 'relative' }}>
@@ -1693,10 +1800,12 @@ const GamifiedProgress = () => {
                         >
                           <Psychology sx={{ fontSize: 60, color: 'text.secondary', opacity: 0.4, mb: 2 }} />
                           <Typography color="text.secondary" variant="h6" sx={{ mb: 1 }}>
-                            No skill data available yet
+                            {i18n.language === 'ar' ? 'لا توجد بيانات مهارات متاحة بعد' : 'No skill data available yet'}
                           </Typography>
                           <Typography color="text.secondary" variant="body2" textAlign="center">
-                            Complete skill assessments to visualize your strengths and areas for improvement
+                            {i18n.language === 'ar'
+                              ? 'أكمل تقييمات المهارات لتصور نقاط قوتك ومجالات التحسين'
+                              : 'Complete skill assessments to visualize your strengths and areas for improvement'}
                           </Typography>
                         </Box>
                       )}
@@ -1741,7 +1850,7 @@ const GamifiedProgress = () => {
                       }}
                     >
                       <Psychology sx={{ mr: 1, color: 'secondary.main' }} />
-                      Top Skills
+                      {i18n.language === 'ar' ? 'أهم المهارات' : 'Top Skills'}
                     </Typography>
                     
                     <List sx={{ zIndex: 1, position: 'relative' }}>
@@ -1950,7 +2059,7 @@ const GamifiedProgress = () => {
                     }}
                   >
                     <Timeline sx={{ mr: 1, color: 'primary.main' }} />
-                    Activity Timeline
+                    {i18n.language === 'ar' ? 'النشاط' : 'Activity'}
                   </Typography>
                   
                   <List sx={{ position: 'relative', zIndex: 1 }}>
@@ -2114,10 +2223,12 @@ const GamifiedProgress = () => {
                           }}
                         />
                         <Typography color="text.secondary" variant="h6" sx={{ mb: 1 }}>
-                          No activity recorded yet
+                          {i18n.language === 'ar' ? 'لا توجد نشاط مسجل بعد' : 'No activity recorded yet'}
                         </Typography>
                         <Typography color="text.secondary" variant="body2" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
-                          Stay active on the platform by applying to jobs, completing skill assessments, and participating in interviews to see your progress.
+                          {i18n.language === 'ar'
+                            ? 'يمكنك البقاء نشطًا على المنصة بتطبيق على وظائف، إكمال تقييمات المهارات، ومشاركة في مقابلات لرؤية مدى تقدمك.'
+                            : 'Stay active on the platform by applying to jobs, completing skill assessments, and participating in interviews to see your progress.'}
                         </Typography>
                         <Button 
                           variant="contained" 
@@ -2125,7 +2236,7 @@ const GamifiedProgress = () => {
                           startIcon={<School />}
                           sx={{ boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)' }}
                         >
-                          Start Learning
+                          {i18n.language === 'ar' ? 'بدء التعلم' : 'Start Learning'}
                         </Button>
                       </Box>
                     )}
@@ -2141,7 +2252,7 @@ const GamifiedProgress = () => {
                           px: 3
                         }}
                       >
-                        View Full History
+                        {i18n.language === 'ar' ? 'إظهار تاريخ النشاط بالكامل' : 'View Full History'}
                       </Button>
                     </Box>
                   )}
@@ -2174,7 +2285,7 @@ const GamifiedProgress = () => {
                   {/* Header with Daily/Monthly toggle moved to right */}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                     <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#000000' }}>
-                      Leaderboard Champions
+                      {i18n.language === 'ar' ? 'متصدري الميداليات' : 'Leaderboard Champions'}
                     </Typography>
                     
                     <Paper
@@ -2201,7 +2312,7 @@ const GamifiedProgress = () => {
                           }
                         }}
                       >
-                        Daily
+                        {i18n.language === 'ar' ? 'يومي' : 'Daily'}
                       </Button>
                       <Button
                         sx={{
@@ -2215,7 +2326,7 @@ const GamifiedProgress = () => {
                           }
                         }}
                       >
-                        Monthly
+                        {i18n.language === 'ar' ? 'شهري' : 'Monthly'}
                       </Button>
                     </Paper>
                   </Box>
@@ -2301,12 +2412,16 @@ const GamifiedProgress = () => {
                             boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
                           }}
                         >
-                          {leaderboard[1]?.name.charAt(0)}
+                          {i18n.language === 'ar' 
+                            ? (leaderboard[1]?.nameAr || leaderboard[1]?.name).charAt(0)
+                            : leaderboard[1]?.name.charAt(0)}
                         </Avatar>
                       </Box>
                       
                       <Typography variant="body1" sx={{ color: '#000000', fontWeight: 'bold', mb: 0.5 }}>
-                        @{leaderboard[1]?.name.split(' ')[0].toLowerCase()}
+                        @{i18n.language === 'ar' 
+                            ? (leaderboard[1]?.nameAr || leaderboard[1]?.name).split(' ')[0].toLowerCase()
+                            : leaderboard[1]?.name.split(' ')[0].toLowerCase()}
                       </Typography>
                       
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -2380,12 +2495,16 @@ const GamifiedProgress = () => {
                             boxShadow: '0 4px 20px rgba(255,215,0,0.3)'
                           }}
                         >
-                          {leaderboard[0]?.name.charAt(0)}
+                          {i18n.language === 'ar' 
+                            ? (leaderboard[0]?.nameAr || leaderboard[0]?.name).charAt(0)
+                            : leaderboard[0]?.name.charAt(0)}
                         </Avatar>
                       </Box>
                       
                       <Typography variant="body1" sx={{ color: '#000000', fontWeight: 'bold', mb: 0.5 }}>
-                        @{leaderboard[0]?.name.split(' ')[0].toLowerCase()}
+                        @{i18n.language === 'ar' 
+                            ? (leaderboard[0]?.nameAr || leaderboard[0]?.name).split(' ')[0].toLowerCase()
+                            : leaderboard[0]?.name.split(' ')[0].toLowerCase()}
                       </Typography>
                       
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -2458,13 +2577,17 @@ const GamifiedProgress = () => {
                             boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
                           }}
                         >
-                          {leaderboard[2]?.name.charAt(0)}
+                          {i18n.language === 'ar' 
+                            ? (leaderboard[2]?.nameAr || leaderboard[2]?.name).charAt(0)
+                            : leaderboard[2]?.name.charAt(0)}
                         </Avatar>
                       </Box>
                       
                       <Typography variant="body1" sx={{ color: '#000000', fontWeight: 'bold', mb: 0.5 }}>
-                        @{leaderboard[2]?.name.split(' ')[0].toLowerCase()}
-                        {leaderboard[2]?.isCurrentUser && ' (You)'}
+                        @{i18n.language === 'ar' 
+                            ? (leaderboard[2]?.nameAr || leaderboard[2]?.name).split(' ')[0].toLowerCase()
+                            : leaderboard[2]?.name.split(' ')[0].toLowerCase()}
+                        {leaderboard[2]?.isCurrentUser && (i18n.language === 'ar' ? ' (أنت)' : ' (You)')}
                       </Typography>
                       
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -2508,19 +2631,29 @@ const GamifiedProgress = () => {
                   <Box sx={{ mt: 4 }}>
                     <Grid container sx={{ mb: 2, px: 2 }} spacing={2}>
                       <Grid item xs={1.5}>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#000000' }}>PLACE</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#000000' }}>
+                          {i18n.language === 'ar' ? 'المركز' : 'PLACE'}
+                        </Typography>
                       </Grid>
                       <Grid item xs={4}>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#000000' }}>USER</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#000000' }}>
+                          {i18n.language === 'ar' ? 'المستخدم' : 'USER'}
+                        </Typography>
                       </Grid>
                       <Grid item xs={2.5}>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#000000' }}>TOTAL POINTS</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#000000' }}>
+                          {i18n.language === 'ar' ? 'مجموع النقاط' : 'TOTAL POINTS'}
+                        </Typography>
                       </Grid>
                       <Grid item xs={2}>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#000000' }}>LAST ACTIVITY</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#000000' }}>
+                          {i18n.language === 'ar' ? 'آخر نشاط' : 'LAST ACTIVITY'}
+                        </Typography>
                       </Grid>
                       <Grid item xs={2}>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#000000', textAlign: 'right' }}>REWARD</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#000000', textAlign: 'right' }}>
+                          {i18n.language === 'ar' ? 'المكافأة' : 'REWARD'}
+                        </Typography>
                       </Grid>
                     </Grid>
 
@@ -2551,18 +2684,29 @@ const GamifiedProgress = () => {
                               <Avatar
                                 src={user.avatar}
                                 sx={{
-                                  width: 32,
-                                  height: 32,
-                                  mr: 1,
-                                  bgcolor: user.isCurrentUser ? '#4caf50' : '#1976d2'
+                                  width: 30,
+                                  height: 30,
+                                  mr: 1.5,
+                                  bgcolor: user.isCurrentUser ? '#4caf50' : 'primary.main'
                                 }}
                               >
-                                {user.name.charAt(0)}
+                                {i18n.language === 'ar' 
+                                  ? (user.nameAr || user.name).charAt(0)
+                                  : user.name.charAt(0)}
                               </Avatar>
-                              <Typography variant="body1" sx={{ color: '#000000', fontWeight: 'bold' }}>
-                                {user.name}
-                                {user.isCurrentUser && ' (You)'}
-                              </Typography>
+                              <Box>
+                                <Typography variant="body1" sx={{ color: '#000000', fontWeight: 'bold' }}>
+                                  {i18n.language === 'ar' 
+                                    ? (user.nameAr || user.name)
+                                    : user.name}
+                                  {user.isCurrentUser && (i18n.language === 'ar' ? ' (أنت)' : ' (You)')}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                                  {i18n.language === 'ar' 
+                                    ? `${user.roleAr || user.role} - المستوى ${user.level}`
+                                    : `${user.role} - Level ${user.level}`}
+                                </Typography>
+                              </Box>
                             </Box>
                           </Grid>
                           <Grid item xs={2.5}>
@@ -2665,7 +2809,7 @@ const GamifiedProgress = () => {
                   margin: '0 auto',
                   bgcolor: '#fff',
                   color: selectedBadge.unlocked ? selectedBadge.color : 'grey.500',
-                  mb: 1,
+                  mb: 2,
                   border: '4px solid',
                   borderColor: 'rgba(255,255,255,0.5)'
                 }}
@@ -2673,37 +2817,64 @@ const GamifiedProgress = () => {
                 {getBadgeIcon(selectedBadge.category)}
               </Avatar>
               
-              <Typography variant="h6" sx={{ mt: 1 }}>
-                {selectedBadge.name}
+              <Typography variant="h5" sx={{ mb: 1, fontWeight: 'bold' }}>
+                {i18n.language === 'ar' ? (selectedBadge.nameAr || selectedBadge.name) : selectedBadge.name}
               </Typography>
               
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                {selectedBadge.unlocked ? 'Unlocked' : 'Locked'}
+              <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                {selectedBadge.unlocked 
+                  ? (i18n.language === 'ar' ? 'تم فتحه' : 'Unlocked') 
+                  : (i18n.language === 'ar' ? 'مقفل' : 'Locked')}
               </Typography>
             </Box>
             
             <DialogContent>
-              <Typography paragraph>
-                {selectedBadge.description}
+              <Typography paragraph sx={{ 
+                textAlign: i18n.language === 'ar' ? 'right' : 'left',
+                fontSize: '1rem',
+                mt: 1
+              }}>
+                {i18n.language === 'ar' ? (selectedBadge.descriptionAr || selectedBadge.description) : selectedBadge.description}
               </Typography>
               
               {selectedBadge.criteria && (
                 <>
-                  <Typography variant="subtitle2" gutterBottom>
-                    How to earn:
+                  <Typography 
+                    variant="subtitle1" 
+                    gutterBottom 
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      mt: 2,
+                      textAlign: i18n.language === 'ar' ? 'right' : 'left',
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                      pb: 1
+                    }}
+                  >
+                    {i18n.language === 'ar' ? 'كيفية الكسب:' : 'How to earn:'}
                   </Typography>
                   
                   <List dense>
                     {selectedBadge.criteria.map((criterion, index) => (
-                      <ListItem key={index}>
-                        <ListItemIcon>
+                      <ListItem key={index} sx={{ px: 0 }}>
+                        <ListItemIcon sx={{ minWidth: 36 }}>
                           {selectedBadge.unlocked ? (
                             <CheckCircle color="success" fontSize="small" />
                           ) : (
                             <ArrowForward fontSize="small" />
                           )}
                         </ListItemIcon>
-                        <ListItemText primary={criterion} />
+                        <ListItemText 
+                          primary={i18n.language === 'ar' && selectedBadge.criteriaAr 
+                            ? selectedBadge.criteriaAr[index]
+                            : criterion}
+                          primaryTypographyProps={{
+                            sx: { 
+                              textAlign: i18n.language === 'ar' ? 'right' : 'left',
+                              direction: i18n.language === 'ar' ? 'rtl' : 'ltr'
+                            }
+                          }}
+                        />
                       </ListItem>
                     ))}
                   </List>
@@ -2711,8 +2882,20 @@ const GamifiedProgress = () => {
               )}
               
               {selectedBadge.unlocked && selectedBadge.dateAchieved && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                  Achieved on: {new Date(selectedBadge.dateAchieved).toLocaleDateString()}
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary" 
+                  sx={{ 
+                    mt: 3,
+                    textAlign: i18n.language === 'ar' ? 'right' : 'left',
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    pt: 2
+                  }}
+                >
+                  {i18n.language === 'ar' 
+                    ? `تم تحقيقه في: ${new Date(selectedBadge.dateAchieved).toLocaleDateString()}`
+                    : `Achieved on: ${new Date(selectedBadge.dateAchieved).toLocaleDateString()}`}
                 </Typography>
               )}
             </DialogContent>
@@ -2726,10 +2909,12 @@ const GamifiedProgress = () => {
                     alert('Sharing badge...');
                   }}
                 >
-                  Share
+                  {i18n.language === 'ar' ? 'مشاركة' : 'Share'}
                 </Button>
               )}
-                <Button onClick={() => setBadgeDialogOpen(false)}>Close</Button>
+                <Button onClick={() => setBadgeDialogOpen(false)}>
+                  {i18n.language === 'ar' ? 'إغلاق' : 'Close'}
+                </Button>
             </DialogActions>
               
               {/* Add animated particles to unlocked badges */}
@@ -2783,9 +2968,11 @@ const GamifiedProgress = () => {
         {selectedChallenge && (
           <>
             <DialogTitle sx={{ pb: 1 }}>
-              {selectedChallenge.name}
+              {i18n.language === 'ar' ? (selectedChallenge.nameAr || selectedChallenge.name) : selectedChallenge.name}
               <Chip
-                label={selectedChallenge.difficulty}
+                label={i18n.language === 'ar' 
+                  ? (selectedChallenge.difficultyAr || selectedChallenge.difficulty)
+                  : selectedChallenge.difficulty}
                 size="small"
                 color={
                   selectedChallenge.difficulty === 'easy'
@@ -2798,12 +2985,16 @@ const GamifiedProgress = () => {
               />
             </DialogTitle>
             <DialogContent>
-              <Typography paragraph>{selectedChallenge.description}</Typography>
+              <Typography paragraph>
+                {i18n.language === 'ar' 
+                  ? (selectedChallenge.descriptionAr || selectedChallenge.description) 
+                  : selectedChallenge.description}
+              </Typography>
 
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  Progress: {selectedChallenge.progress}%
-              </Typography>
+                  {i18n.language === 'ar' ? `التقدم: ${selectedChallenge.progress}%` : `Progress: ${selectedChallenge.progress}%`}
+                </Typography>
                 <LinearProgress 
                   variant="determinate" 
                   value={selectedChallenge.progress}
@@ -2815,7 +3006,7 @@ const GamifiedProgress = () => {
                 <Grid item xs={6}>
                   <Paper variant="outlined" sx={{ p: 1.5, textAlign: 'center' }}>
                     <Typography variant="overline" display="block" color="text.secondary">
-                      Reward
+                      {i18n.language === 'ar' ? 'المكافأة' : 'Reward'}
                     </Typography>
                     <Typography variant="h6" color="primary">
                       {selectedChallenge.xpReward} XP
@@ -2825,7 +3016,7 @@ const GamifiedProgress = () => {
                 <Grid item xs={6}>
                   <Paper variant="outlined" sx={{ p: 1.5, textAlign: 'center' }}>
                     <Typography variant="overline" display="block" color="text.secondary">
-                      Deadline
+                      {i18n.language === 'ar' ? 'الموعد النهائي' : 'Deadline'}
                     </Typography>
                     <Typography variant="h6">
                       {new Date(selectedChallenge.deadline).toLocaleDateString()}
@@ -2837,7 +3028,7 @@ const GamifiedProgress = () => {
               {selectedChallenge.steps && (
                 <>
                 <Typography variant="subtitle2" gutterBottom>
-                  Steps to complete:
+                  {i18n.language === 'ar' ? 'خطوات الإكمال:' : 'Steps to complete:'}
                 </Typography>
                   <List dense>
                     {selectedChallenge.steps.map((step, index) => (
@@ -2850,8 +3041,8 @@ const GamifiedProgress = () => {
                           )}
                     </ListItemIcon>
                         <ListItemText 
-                          primary={step.description} 
-                          secondary={step.hint} 
+                          primary={i18n.language === 'ar' && step.descriptionAr ? step.descriptionAr : step.description} 
+                          secondary={i18n.language === 'ar' && step.hintAr ? step.hintAr : step.hint} 
                         />
                   </ListItem>
                 ))}
@@ -2867,11 +3058,11 @@ const GamifiedProgress = () => {
                   color="success"
                   disabled
                 >
-                  Completed
+                  {i18n.language === 'ar' ? 'مكتمل' : 'Completed'}
                 </Button>
               ) : selectedChallenge.accepted ? (
                 <Button variant="contained" onClick={() => setChallengeDialogOpen(false)}>
-                  Continue Challenge
+                  {i18n.language === 'ar' ? 'متابعة التحدي' : 'Continue Challenge'}
                 </Button>
               ) : (
                 <Button 
@@ -2880,10 +3071,12 @@ const GamifiedProgress = () => {
                   startIcon={<PlayArrow />}
                   onClick={() => handleAcceptChallenge(selectedChallenge.id)}
                 >
-                  Accept Challenge
+                  {i18n.language === 'ar' ? 'قبول التحدي' : 'Accept Challenge'}
                 </Button>
               )}
-              <Button onClick={() => setChallengeDialogOpen(false)}>Close</Button>
+              <Button onClick={() => setChallengeDialogOpen(false)}>
+                {i18n.language === 'ar' ? 'إغلاق' : 'Close'}
+              </Button>
             </DialogActions>
           </>
         )}

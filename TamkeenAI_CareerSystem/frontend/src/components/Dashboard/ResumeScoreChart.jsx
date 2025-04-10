@@ -8,8 +8,10 @@ import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
+  const { t } = useTranslation();
   // Add navigate hook
   const navigate = useNavigate();
   
@@ -77,11 +79,11 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
     if (active && payload && payload.length) {
       return (
         <Box sx={{ bgcolor: 'background.paper', p: 2, border: '1px solid #ccc', borderRadius: 1 }}>
-          <Typography variant="body2">{`Version: ${label}`}</Typography>
-          <Typography variant="body2">{`Date: ${payload[0].payload.date}`}</Typography>
-          <Typography variant="body2" color="primary">{`Score: ${payload[0].value}`}</Typography>
+          <Typography variant="body2">{`${t('common.version', 'Version')}: ${label}`}</Typography>
+          <Typography variant="body2">{`${t('common.date', 'Date')}: ${payload[0].payload.date}`}</Typography>
+          <Typography variant="body2" color="primary">{`${t('resumeAtsScore.score', 'Score')}: ${payload[0].value}`}</Typography>
           {payload[0].payload.jobTitle && (
-            <Typography variant="body2">{`Job: ${payload[0].payload.jobTitle}`}</Typography>
+            <Typography variant="body2">{`${t('common.job', 'Job')}: ${payload[0].payload.jobTitle}`}</Typography>
           )}
         </Box>
       );
@@ -109,10 +111,10 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
       <Card sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <CardContent>
           <Typography variant="h6" align="center">
-            No resume score data available
+            {t('resumeAtsScore.noData', 'No resume score data available')}
           </Typography>
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
-            Upload your resume to get an ATS score and recommendations
+            {t('resumeAtsScore.uploadHint', 'Upload your resume to get an ATS score and recommendations')}
           </Typography>
         </CardContent>
       </Card>
@@ -126,10 +128,10 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
     <Card sx={{ height: '100%' }}>
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">Resume ATS Score</Typography>
+          <Typography variant="h6">{t('resumeAtsScore.title', 'Resume ATS Score')}</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Chip 
-              label={`Latest: ${latestAnalysis ? latestAnalysis.score : latest_score}/100`} 
+              label={`${t('resumeAtsScore.latest', 'Latest')}: ${latestAnalysis ? latestAnalysis.score : latest_score}/100`} 
               color={
                 latestAnalysis 
                   ? (latestAnalysis.score > 80 ? "success" : latestAnalysis.score > 60 ? "primary" : latestAnalysis.score > 40 ? "warning" : "error")
@@ -139,7 +141,7 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
             />
             <Chip 
               icon={getTrendIcon()} 
-              label={`${average_improvement > 0 ? '+' : ''}${average_improvement && average_improvement.toFixed ? average_improvement.toFixed(1) : '0.0'} avg`} 
+              label={`${average_improvement > 0 ? '+' : ''}${average_improvement && average_improvement.toFixed ? average_improvement.toFixed(1) : '0.0'} ${t('resumeAtsScore.avg', 'avg')}`} 
               color={getTrendColor()} 
               variant="outlined" 
             />
@@ -160,7 +162,9 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
             }}
           >
             <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-              {latestAnalysis.assessment}
+              {latestAnalysis.assessment.startsWith('Low match') 
+                ? t('resumeAtsScore.lowMatch', 'Low match. Your resume needs significant adjustments for this role.')
+                : latestAnalysis.assessment}
             </Typography>
           </Box>
         )}
@@ -191,7 +195,7 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
                 0
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                ATS Score
+                {t('resumeAtsScore.title', 'ATS Score')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 100
@@ -217,7 +221,7 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
             
             {/* Custom Keyword Cloud */}
             <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>
-              Resume Keyword Match
+              {t('resumeAtsScore.keywordMatches', 'Resume Keyword Match')}
             </Typography>
             <Box sx={{ 
               p: 2, 
@@ -251,23 +255,23 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
                   />
                 ))
               ) : (
-                <Typography color="text.secondary">No keyword matches available</Typography>
+                <Typography color="text.secondary">{t('common.noData', 'No keyword matches available')}</Typography>
               )}
             </Box>
             
             {/* Missing Keywords List */}
             <Typography variant="h6" sx={{ mb: 1 }}>
-              Missing Keywords
+              {t('resumeAtsScore.missingKeywords', 'Missing Keywords')}
             </Typography>
             {missingKeywords.length > 0 ? (
               <List dense sx={{ mb: 3, maxHeight: 200, overflow: 'auto', border: '1px solid #eee', borderRadius: 1 }}>
                 {missingKeywords.map((keyword, index) => (
                   <ListItem key={index}>
-                    <Tooltip title={`Suggestion: Add to ${keyword.suggestedSection || 'relevant section'}`}>
+                    <Tooltip title={`${t('common.suggestion', 'Suggestion')}: ${t('resumeAtsScore.addTo', 'Add to')} ${keyword.suggestedSection || t('common.relevantSection', 'relevant section')}`}>
                       <Box>
                         <ListItemText 
                           primary={keyword.text} 
-                          secondary={`Importance: ${keyword.importance || 'High'}`}
+                          secondary={`${t('common.importance', 'Importance')}: ${keyword.importance || t('common.high', 'High')}`}
                           sx={{ '& .MuiListItemText-primary': { color: 'warning.main' } }}
                         />
                       </Box>
@@ -278,7 +282,7 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
             ) : (
               <Box sx={{ textAlign: 'center', py: 2, mb: 3, border: '1px solid #eee', borderRadius: 1 }}>
                 <Typography color="text.secondary">
-                  No missing keywords detected
+                  {t('resumeAtsScore.noMissingKeywords', 'No missing keywords detected')}
                 </Typography>
               </Box>
             )}
@@ -290,49 +294,50 @@ const ResumeScoreChart = ({ resumeData, onGenerateImprovement }) => {
                 color="primary"
                 startIcon={<AutoFixHighIcon />}
                 sx={{ borderRadius: 2 }}
+                onClick={handleNavigateToResumePage}
               >
-                AI Resume Fix
+                {t('resumeAtsScore.improvement', 'AI Resume Fix')}
               </Button>
             </Box>
             
             {/* Improvements Dialog */}
             <Dialog open={improvementOpen} onClose={() => setImprovementOpen(false)} maxWidth="md" fullWidth>
-              <DialogTitle>AI Resume Improvements</DialogTitle>
-              <DialogContent dividers>
-                {generatedImprovements && Object.entries(generatedImprovements).map(([section, improvements]) => (
-                  <Box key={section} sx={{ mb: 2 }}>
-                    <Typography variant="subtitle1" color="primary">{section}</Typography>
-                    <List dense>
-                      {improvements.map((item, idx) => (
-                        <ListItem key={idx}>
-                          <ListItemText primary={item} />
-                        </ListItem>
-                      ))}
-                    </List>
+              <DialogTitle>{t('resumeAtsScore.suggestedImprovements', 'Suggested Improvements')}</DialogTitle>
+              <DialogContent>
+                {isGenerating ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+                    <CircularProgress />
                   </Box>
-                ))}
+                ) : generatedImprovements ? (
+                  <Box>
+                    {generatedImprovements.sections.map((section, index) => (
+                      <Box key={index} sx={{ mb: 3 }}>
+                        <Typography variant="h6" gutterBottom>
+                          {section.title}
+                        </Typography>
+                        <Typography variant="body1" paragraph>
+                          {section.content}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography>
+                    {t('resumeAtsScore.needsWork', 'Your resume needs improvement for this role. Click Generate to see AI suggestions.')}
+                  </Typography>
+                )}
               </DialogContent>
               <DialogActions>
-                <Button onClick={() => setImprovementOpen(false)}>Close</Button>
-                <Button variant="contained" color="primary">Apply Changes</Button>
+                <Button onClick={() => setImprovementOpen(false)} color="primary">
+                  {t('common.close', 'Close')}
+                </Button>
               </DialogActions>
             </Dialog>
-            
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-              <Typography variant="body2">
-                Resume Versions: {total_versions}
-              </Typography>
-              {scores.length > 1 && (
-                <Typography variant="body2">
-                  Improvement: {scores[scores.length - 1].score - scores[0].score} points
-                </Typography>
-              )}
-            </Box>
           </>
         ) : (
-          <Box sx={{ textAlign: 'center', py: 5 }}>
-            <Typography color="text.secondary">
-              No resume scores available yet. Upload your resume to get started.
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+            <Typography variant="body1" color="text.secondary">
+              {t('resumeAtsScore.noHistory', 'No score history available yet')}
             </Typography>
           </Box>
         )}

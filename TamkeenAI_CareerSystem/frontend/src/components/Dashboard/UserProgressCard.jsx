@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -23,6 +24,7 @@ import RecommendIcon from '@mui/icons-material/Recommend';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 
 const UserProgressCard = ({ data }) => {
+  const { t } = useTranslation();
   const [showMore, setShowMore] = useState(false);
   const [showAchievement, setShowAchievement] = useState(false);
   const [recentAchievement, setRecentAchievement] = useState(null);
@@ -65,7 +67,9 @@ const UserProgressCard = ({ data }) => {
       p: 2
     }}>
       <Box sx={{ textAlign: 'center', mb: 2 }}>
-        <Typography variant="h5" fontWeight="medium" gutterBottom>Your Progress</Typography>
+        <Typography variant="h5" fontWeight="medium" gutterBottom>
+          {t('userProgress.yourProgress', 'Your Progress')}
+        </Typography>
         
         {/* Profile and Level */}
         <Box sx={{ 
@@ -86,9 +90,11 @@ const UserProgressCard = ({ data }) => {
             {userRank[0] || 'Z'}
           </Avatar>
           
-          <Typography variant="h6">Level {progressData.level} {progressData.rank}</Typography>
+          <Typography variant="h6">
+            {t('userProgress.level', 'Level')} {progressData.level} {progressData.rank}
+          </Typography>
           <Typography variant="body2" color="text.secondary">
-            {progressData.nextLevelXp} XP to next level
+            {progressData.nextLevelXp} {t('userProgress.xpToNextLevel', 'XP to next level')}
           </Typography>
         </Box>
         
@@ -122,7 +128,7 @@ const UserProgressCard = ({ data }) => {
               {progressData.xp}
             </Typography>
             <Typography variant="caption" component="div" color="text.secondary">
-              XP Points
+              {t('userProgress.xpPoints', 'XP Points')}
             </Typography>
           </Box>
         </Box>
@@ -133,12 +139,12 @@ const UserProgressCard = ({ data }) => {
       {/* Skill Progress */}
       <Box sx={{ mb: 1.5 }}>
         <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-          Skills Progress
+          {t('userProgress.skillsProgress', 'Skills Progress')}
         </Typography>
         
         <Box sx={{ mb: 1 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="body2">Technical</Typography>
+            <Typography variant="body2">{t('userProgress.technical', 'Technical')}</Typography>
             <Typography variant="body2">{progressData.skills.technical}%</Typography>
           </Box>
           <LinearProgress 
@@ -150,7 +156,7 @@ const UserProgressCard = ({ data }) => {
         
         <Box sx={{ mb: 1 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="body2">Communication</Typography>
+            <Typography variant="body2">{t('userProgress.communication', 'Communication')}</Typography>
             <Typography variant="body2">{progressData.skills.communication}%</Typography>
           </Box>
           <LinearProgress 
@@ -162,7 +168,7 @@ const UserProgressCard = ({ data }) => {
         
         <Box sx={{ mb: 1 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="body2">Leadership</Typography>
+            <Typography variant="body2">{t('userProgress.leadership', 'Leadership')}</Typography>
             <Typography variant="body2">{progressData.skills.leadership}%</Typography>
           </Box>
           <LinearProgress 
@@ -176,7 +182,7 @@ const UserProgressCard = ({ data }) => {
       {/* Goals */}
       <Box sx={{ mb: 1.5 }}>
         <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-          Current Goals
+          {t('userProgress.currentGoals', 'Current Goals')}
         </Typography>
         
         <List dense disablePadding>
@@ -204,7 +210,7 @@ const UserProgressCard = ({ data }) => {
       {/* Recent Achievements */}
       <Box sx={{ mb: 1.5 }}>
         <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-          Recent Achievements
+          {t('userProgress.recentAchievements', 'Recent Achievements')}
         </Typography>
         
         <List dense disablePadding>
@@ -228,7 +234,7 @@ const UserProgressCard = ({ data }) => {
       {showMore && (
         <Box sx={{ mb: 1.5 }}>
           <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-            Upcoming Milestones
+            {t('userProgress.upcomingMilestones', 'Upcoming Milestones')}
           </Typography>
           
           <List dense disablePadding>

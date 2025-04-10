@@ -231,57 +231,74 @@ const mockGamification = {
     {
       id: 'badge-1',
       name: 'Profile Master',
+      nameAr: 'محترف الملف الشخصي',
       description: 'Completed your profile with all details',
+      descriptionAr: 'أكملت ملفك الشخصي بجميع التفاصيل',
       category: 'profile',
       color: '#4CAF50',
       unlocked: true,
       dateAchieved: '2023-02-15T10:30:00Z',
-      criteria: ['Complete personal info', 'Add profile picture', 'Add a resume']
+      criteria: ['Complete personal info', 'Add profile picture', 'Add a resume'],
+      criteriaAr: ['إكمال المعلومات الشخصية', 'إضافة صورة الملف الشخصي', 'إضافة السيرة الذاتية']
     },
     {
       id: 'badge-2',
       name: 'Job Seeker',
+      nameAr: 'باحث عن عمل',
       description: 'Applied to 10 jobs',
+      descriptionAr: 'تقدمت لـ 10 وظائف',
       category: 'jobs',
       color: '#2196F3',
       unlocked: true,
       dateAchieved: '2023-03-10T14:15:00Z',
-      criteria: ['Apply to 10 jobs']
+      criteria: ['Apply to 10 jobs'],
+      criteriaAr: ['التقدم لـ 10 وظائف']
     },
     {
       id: 'badge-3',
       name: 'Skill Builder',
+      nameAr: 'بناء المهارات',
       description: 'Added 15 skills to your profile',
+      descriptionAr: 'أضفت 15 مهارة إلى ملفك الشخصي',
       category: 'skills',
       color: '#9C27B0',
       unlocked: true,
       dateAchieved: '2023-03-05T09:45:00Z',
-      criteria: ['Add 15 skills to your profile']
+      criteria: ['Add 15 skills to your profile'],
+      criteriaAr: ['إضافة 15 مهارة إلى ملفك الشخصي']
     },
     {
       id: 'badge-4',
       name: 'Interview Ace',
+      nameAr: 'متميز في المقابلات',
       description: 'Complete 5 mock interviews',
+      descriptionAr: 'أكمل 5 مقابلات تجريبية',
       category: 'interview',
       color: '#F44336',
       unlocked: false,
-      criteria: ['Complete 5 mock interviews with a score of 80% or higher']
+      criteria: ['Complete 5 mock interviews with a score of 80% or higher'],
+      criteriaAr: ['إكمال 5 مقابلات تجريبية بنتيجة 80٪ أو أعلى']
     },
     {
       id: 'badge-5',
       name: 'Networking Pro',
+      nameAr: 'محترف التواصل',
       description: 'Connected with 10 professionals',
+      descriptionAr: 'تواصلت مع 10 محترفين',
       category: 'networking',
       color: '#FF9800',
       unlocked: false,
-      criteria: ['Connect with 10 professionals in your industry']
+      criteria: ['Connect with 10 professionals in your industry'],
+      criteriaAr: ['التواصل مع 10 محترفين في مجال عملك']
     }
   ],
   achievements: [
     {
       id: 'achieve-1',
       name: 'First Job Application',
+      nameAr: 'أول تقديم للوظيفة',
       description: 'Applied to your first job',
+      descriptionAr: 'تقدمت لأول وظيفة لك',
       category: 'jobs',
       points: 50,
       achieved: true,
@@ -290,7 +307,9 @@ const mockGamification = {
     {
       id: 'achieve-2',
       name: 'Resume Uploaded',
+      nameAr: 'تم رفع السيرة الذاتية',
       description: 'Uploaded your first resume',
+      descriptionAr: 'رفعت سيرتك الذاتية الأولى',
       category: 'profile',
       points: 30,
       achieved: true,
@@ -299,7 +318,9 @@ const mockGamification = {
     {
       id: 'achieve-3',
       name: 'Skill Assessment Completed',
+      nameAr: 'اكتمال تقييم المهارات',
       description: 'Completed your first skill assessment',
+      descriptionAr: 'أكملت أول تقييم للمهارات الخاصة بك',
       category: 'skills',
       points: 75,
       achieved: true,
@@ -308,7 +329,9 @@ const mockGamification = {
     {
       id: 'achieve-4',
       name: 'Interview Feedback',
+      nameAr: 'تقييم المقابلة',
       description: 'Received feedback from 3 mock interviews',
+      descriptionAr: 'تلقيت تقييمات من 3 مقابلات تجريبية',
       category: 'interview',
       points: 60,
       achieved: true,
@@ -317,7 +340,9 @@ const mockGamification = {
     {
       id: 'achieve-5',
       name: 'Learning Streak',
+      nameAr: 'تتابع التعلم',
       description: 'Learned for 7 consecutive days',
+      descriptionAr: 'تعلمت لمدة 7 أيام متتالية',
       category: 'learning',
       points: 100,
       achieved: false
@@ -327,36 +352,48 @@ const mockGamification = {
     {
       id: 'challenge-1',
       name: 'Resume Optimizer',
+      nameAr: 'محسن السيرة الذاتية',
       description: 'Improve your resume score by 15%',
+      descriptionAr: 'حسّن نتيجة سيرتك الذاتية بنسبة 15٪',
       category: 'resume',
       difficulty: 'medium',
+      difficultyAr: 'متوسط',
       xpReward: 150,
       deadline: '2023-04-15T23:59:59Z',
       status: 'in-progress',
+      statusAr: 'قيد التقدم',
       progress: 60,
       accepted: true
     },
     {
       id: 'challenge-2',
       name: 'Interview Preparation',
+      nameAr: 'التحضير للمقابلة',
       description: 'Complete 3 mock interviews this week',
+      descriptionAr: 'أكمل 3 مقابلات تجريبية هذا الأسبوع',
       category: 'interview',
       difficulty: 'hard',
+      difficultyAr: 'صعب',
       xpReward: 200,
       deadline: '2023-04-10T23:59:59Z',
       status: 'not-started',
+      statusAr: 'لم يبدأ',
       progress: 0,
       accepted: false
     },
     {
       id: 'challenge-3',
       name: 'Skill Development',
+      nameAr: 'تطوير المهارات',
       description: 'Complete 2 skill courses',
+      descriptionAr: 'أكمل دورتين تدريبيتين للمهارات',
       category: 'learning',
       difficulty: 'easy',
+      difficultyAr: 'سهل',
       xpReward: 100,
       deadline: '2023-04-20T23:59:59Z',
       status: 'completed',
+      statusAr: 'مكتمل',
       progress: 100,
       accepted: true
     }

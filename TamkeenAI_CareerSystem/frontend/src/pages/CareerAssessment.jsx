@@ -26,6 +26,7 @@ import AssessmentResults from '../components/AssessmentResults';
 import CareerPrediction from '../components/CareerPrediction';
 import CareerRecommendations from '../components/CareerRecommendations';
 import { Stepper, Step, StepLabel, StepContent } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 // For any icon that might not exist, import alternatives
 import FlightIcon from '@mui/icons-material/FlightTakeoff';
@@ -39,13 +40,15 @@ export default function CareerAssessment() {
       <Box sx={{ p: 3 }}>
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h5" color="error" gutterBottom>
-            Something went wrong
+            {i18n.language === 'ar' ? 'حدث خطأ ما' : 'Something went wrong'}
           </Typography>
           <Typography variant="body1" paragraph>
-            We're sorry, but an error occurred while rendering this component.
+            {i18n.language === 'ar' ? 'نأسف، ولكن حدث خطأ أثناء عرض هذا المكون.' : 'We\'re sorry, but an error occurred while rendering this component.'}
           </Typography>
           <Typography variant="body2" color="text.secondary" paragraph>
-            Please try refreshing the page or contact support if the issue persists.
+            {i18n.language === 'ar' 
+              ? 'يرجى تحديث الصفحة أو الاتصال بالدعم إذا استمرت المشكلة.'
+              : 'Please try refreshing the page or contact support if the issue persists.'}
           </Typography>
         </Paper>
       </Box>
@@ -54,6 +57,7 @@ export default function CareerAssessment() {
 }
 
 const CareerAssessmentPage = () => {
+  const { t, i18n } = useTranslation();
   const [tabValue, setTabValue] = useState(0);
   const [assessmentsList, setAssessmentsList] = useState([]);
   const [availableSkillGroups, setAvailableSkillGroups] = useState([]);
@@ -370,7 +374,15 @@ const CareerAssessmentPage = () => {
               <Avatar sx={{ mr: 1, bgcolor: 'primary.main' }}>
                 {getSkillCategoryIcon(category)}
               </Avatar>
-              <Typography variant="h6">{category} Skills</Typography>
+              <Typography variant="h6">
+                {i18n.language === 'ar' ? 
+                  (category === 'Technical' ? 'المهارات التقنية' :
+                   category === 'Leadership' ? 'مهارات القيادة' :
+                   category === 'Communication' ? 'مهارات التواصل' :
+                   category === 'Problem-solving' ? 'حل المشكلات' :
+                   category === 'Creativity' ? 'الإبداع' : category) 
+                   : `${category} Skills`}
+              </Typography>
             </Box>
             
             <Grid container spacing={2}>
@@ -408,12 +420,12 @@ const CareerAssessmentPage = () => {
                         
                         <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                           <Chip 
-                            label={`${assessment.questions} questions`} 
+                            label={`${assessment.questions} ${i18n.language === 'ar' ? 'سؤال' : 'questions'}`} 
                             size="small"
                             sx={{ mr: 1 }}
                           />
                           <Chip 
-                            label={`${assessment.estimatedTime} min`} 
+                            label={`${assessment.estimatedTime} ${i18n.language === 'ar' ? 'دقيقة' : 'min'}`} 
                             icon={<Schedule fontSize="small" />}
                             size="small"
                           />
@@ -422,7 +434,7 @@ const CareerAssessmentPage = () => {
                         {isCompleted && latestResult && (
                           <Box sx={{ mt: 2 }}>
                             <Typography variant="body2" gutterBottom>
-                              Your Score: {latestResult.score}/{latestResult.maxScore}
+                              {i18n.language === 'ar' ? 'نتيجتك: ' : 'Your Score: '}{latestResult.score}/{latestResult.maxScore}
                             </Typography>
                             <LinearProgress 
                               variant="determinate" 
@@ -430,7 +442,7 @@ const CareerAssessmentPage = () => {
                               sx={{ height: 6, borderRadius: 1 }}
                             />
                             <Typography variant="caption" color="text.secondary">
-                              Last completed: {new Date(latestResult.completedAt).toLocaleDateString()}
+                              {i18n.language === 'ar' ? 'آخر إكمال: ' : 'Last completed: '}{new Date(latestResult.completedAt).toLocaleDateString()}
                             </Typography>
                           </Box>
                         )}
@@ -442,7 +454,9 @@ const CareerAssessmentPage = () => {
                           color={isCompleted ? "primary" : "primary"}
                           variant={isCompleted ? "outlined" : "contained"}
                         >
-                          {isCompleted ? "Retake Assessment" : "Start Assessment"}
+                          {isCompleted ? 
+                            (i18n.language === 'ar' ? 'إعادة الاختبار' : 'Retake Assessment') : 
+                            (i18n.language === 'ar' ? 'بدء الاختبار' : 'Start Assessment')}
                         </Button>
                       </CardActions>
                     </Card>
@@ -462,17 +476,17 @@ const CareerAssessmentPage = () => {
       return (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h6" gutterBottom>
-            No Assessment Selected
+            {i18n.language === 'ar' ? 'لم يتم اختيار تقييم' : 'No Assessment Selected'}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Please select an assessment from the list to get started.
+            {i18n.language === 'ar' ? 'يرجى اختيار تقييم من القائمة للبدء.' : 'Please select an assessment from the list to get started.'}
           </Typography>
           <Button 
             variant="contained" 
             sx={{ mt: 2 }}
             onClick={() => setTabValue(1)}
           >
-            Browse Assessments
+            {i18n.language === 'ar' ? 'تصفح التقييمات' : 'Browse Assessments'}
           </Button>
         </Paper>
       );
@@ -514,7 +528,7 @@ const CareerAssessmentPage = () => {
             color="secondary"
             onClick={handleCancelAssessment}
           >
-            Cancel Assessment
+            {i18n.language === 'ar' ? 'إلغاء التقييم' : 'Cancel Assessment'}
           </Button>
         </Box>
         
@@ -533,17 +547,17 @@ const CareerAssessmentPage = () => {
       return (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h6" gutterBottom>
-            No Assessment Data
+            {i18n.language === 'ar' ? 'لا توجد بيانات تقييم' : 'No Assessment Data'}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Complete at least one assessment to view your skill insights.
+            {i18n.language === 'ar' ? 'أكمل تقييماً واحداً على الأقل لعرض تحليلات مهاراتك.' : 'Complete at least one assessment to view your skill insights.'}
           </Typography>
           <Button 
             variant="contained" 
             sx={{ mt: 2 }}
             onClick={() => setTabValue(1)}
           >
-            Start an Assessment
+            {i18n.language === 'ar' ? 'بدء تقييم' : 'Start an Assessment'}
           </Button>
         </Paper>
       );
@@ -552,7 +566,7 @@ const CareerAssessmentPage = () => {
     return (
       <Paper sx={{ p: 3 }}>
         <Typography variant="h5" gutterBottom>
-          Your Skill Profile
+          {i18n.language === 'ar' ? 'ملف مهاراتك' : 'Your Skill Profile'}
         </Typography>
         
         <Grid container spacing={3}>
@@ -565,7 +579,15 @@ const CareerAssessmentPage = () => {
                     <Avatar sx={{ mr: 1, bgcolor: 'primary.main' }}>
                       {getSkillCategoryIcon(category)}
                     </Avatar>
-                    <Typography variant="h6">{category}</Typography>
+                    <Typography variant="h6">
+                    {i18n.language === 'ar' ? 
+                      (category === 'Technical' ? 'المهارات التقنية' :
+                      category === 'Leadership' ? 'مهارات القيادة' :
+                      category === 'Communication' ? 'مهارات التواصل' :
+                      category === 'Problem-solving' ? 'حل المشكلات' :
+                      category === 'Creativity' ? 'الإبداع' : category) 
+                      : category}
+                    </Typography>
                   </Box>
                   
                   <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
@@ -596,13 +618,14 @@ const CareerAssessmentPage = () => {
                     
                     <Box>
                       <Typography variant="body2">
-                        Assessments taken: {skillScores[category].count}
+                        {i18n.language === 'ar' ? `التقييمات المكتملة: ${skillScores[category].count}` : `Assessments taken: ${skillScores[category].count}`}
                       </Typography>
                       <Typography variant="body2">
-                        Skill level: {
-                          skillScores[category].average >= 80 ? 'Expert' :
-                          skillScores[category].average >= 60 ? 'Advanced' :
-                          skillScores[category].average >= 40 ? 'Intermediate' : 'Beginner'
+                        {i18n.language === 'ar' ? 'مستوى المهارة: ' : 'Skill level: '} {
+                          skillScores[category].average >= 80 ? (i18n.language === 'ar' ? 'خبير' : 'Expert') :
+                          skillScores[category].average >= 60 ? (i18n.language === 'ar' ? 'متقدم' : 'Advanced') :
+                          skillScores[category].average >= 40 ? (i18n.language === 'ar' ? 'متوسط' : 'Intermediate') : 
+                          (i18n.language === 'ar' ? 'مبتدئ' : 'Beginner')
                         }
                       </Typography>
                     </Box>
@@ -622,7 +645,7 @@ const CareerAssessmentPage = () => {
                       }, 100);
                     }}
                   >
-                    View Assessments
+                    {i18n.language === 'ar' ? 'عرض التقييمات' : 'View Assessments'}
                   </Button>
                 </CardActions>
               </Card>
@@ -632,7 +655,7 @@ const CareerAssessmentPage = () => {
         
         {/* Detailed assessment history */}
         <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>
-          Assessment History
+          {i18n.language === 'ar' ? 'سجل التقييمات' : 'Assessment History'}
         </Typography>
         
         {Object.keys(skillScores).length > 0 ? (
@@ -643,7 +666,15 @@ const CareerAssessmentPage = () => {
                   <Avatar sx={{ mr: 1, bgcolor: 'primary.main', width: 24, height: 24 }}>
                     {getSkillCategoryIcon(category)}
                   </Avatar>
-                  <Typography variant="subtitle1">{category}</Typography>
+                  <Typography variant="subtitle1">
+                    {i18n.language === 'ar' ? 
+                      (category === 'Technical' ? 'المهارات التقنية' :
+                      category === 'Leadership' ? 'مهارات القيادة' :
+                      category === 'Communication' ? 'مهارات التواصل' :
+                      category === 'Problem-solving' ? 'حل المشكلات' :
+                      category === 'Creativity' ? 'الإبداع' : category) 
+                      : category}
+                  </Typography>
                 </Box>
               </AccordionSummary>
               <AccordionDetails>
@@ -656,15 +687,17 @@ const CareerAssessmentPage = () => {
                       <ListItemText
                         primary={
                           assessmentsList.find(a => a.id === assessment.id)?.title || 
-                          'Assessment'
+                          (i18n.language === 'ar' ? 'تقييم' : 'Assessment')
                         }
                         secondary={
                           <>
                             <Typography variant="body2" component="span">
-                              Score: {assessment.score}/{assessment.maxScore} ({Math.round((assessment.score/assessment.maxScore) * 100)}%)
+                              {i18n.language === 'ar' ? `النتيجة: ${assessment.score}/${assessment.maxScore} (${Math.round((assessment.score/assessment.maxScore) * 100)}%)` :
+                              `Score: ${assessment.score}/${assessment.maxScore} (${Math.round((assessment.score/assessment.maxScore) * 100)}%)`}
                             </Typography>
                             <Typography variant="caption" component="div" color="text.secondary">
-                              Completed on {new Date(assessment.completedAt).toLocaleDateString()}
+                              {i18n.language === 'ar' ? `اكتمل في ${new Date(assessment.completedAt).toLocaleDateString()}` :
+                              `Completed on ${new Date(assessment.completedAt).toLocaleDateString()}`}
                             </Typography>
                           </>
                         }
@@ -677,7 +710,7 @@ const CareerAssessmentPage = () => {
           ))
         ) : (
           <Typography color="text.secondary">
-            No assessment history available
+            {i18n.language === 'ar' ? 'لا يوجد سجل تقييمات متاح' : 'No assessment history available'}
           </Typography>
         )}
         
@@ -685,7 +718,7 @@ const CareerAssessmentPage = () => {
         {Object.keys(skillScores).length > 0 && (
           <Box sx={{ mt: 4 }}>
             <Typography variant="h6" gutterBottom>
-              Recommended Learning Path
+              {i18n.language === 'ar' ? 'مسار التعلم الموصى به' : 'Recommended Learning Path'}
             </Typography>
             <LearningPathGenerator
               timeframe="medium"
@@ -828,17 +861,19 @@ const CareerAssessmentPage = () => {
       return (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h6" gutterBottom>
-            No Certificates Earned
+            {i18n.language === 'ar' ? 'لم يتم الحصول على شهادات' : 'No Certificates Earned'}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Complete assessments with a score of 70% or higher to earn certificates.
+            {i18n.language === 'ar' 
+              ? 'أكمل التقييمات بدرجة 70% أو أعلى للحصول على الشهادات.'
+              : 'Complete assessments with a score of 70% or higher to earn certificates.'}
           </Typography>
           <Button 
             variant="contained" 
             sx={{ mt: 2 }}
             onClick={() => setTabValue(1)}
           >
-            Take Assessments
+            {i18n.language === 'ar' ? 'إجراء التقييمات' : 'Take Assessments'}
           </Button>
         </Paper>
       );
@@ -847,17 +882,19 @@ const CareerAssessmentPage = () => {
     return (
       <Paper sx={{ p: 3 }}>
         <Typography variant="h5" gutterBottom>
-          Your Certificates
+          {i18n.language === 'ar' ? 'شهاداتك' : 'Your Certificates'}
         </Typography>
         
         <Typography variant="body1" color="text.secondary" paragraph>
-          These certificates validate your skills based on your assessment performance.
+          {i18n.language === 'ar' 
+            ? 'تتحقق هذه الشهادات من مهاراتك بناءً على أدائك في التقييم.'
+            : 'These certificates validate your skills based on your assessment performance.'}
         </Typography>
         
         <Grid container spacing={3}>
           {certificateAssessments.map(cert => {
             const assessment = assessmentsList.find(a => a.id === cert.id);
-            const title = assessment?.title || 'Skill Assessment';
+            const title = assessment?.title || (i18n.language === 'ar' ? 'تقييم المهارات' : 'Skill Assessment');
             const score = Math.round((cert.score / cert.maxScore) * 100);
             
             return (
@@ -898,7 +935,13 @@ const CareerAssessmentPage = () => {
                     </Typography>
                     
                     <Typography variant="body2" color="text.secondary" gutterBottom>
-                      {cert.skillCategory} Skills
+                      {i18n.language === 'ar' 
+                        ? (cert.skillCategory === 'Technical' ? 'المهارات التقنية' :
+                           cert.skillCategory === 'Leadership' ? 'مهارات القيادة' :
+                           cert.skillCategory === 'Communication' ? 'مهارات التواصل' :
+                           cert.skillCategory === 'Problem-solving' ? 'مهارات حل المشكلات' :
+                           cert.skillCategory === 'Creativity' ? 'مهارات الإبداع' : `${cert.skillCategory} المهارات`)
+                        : `${cert.skillCategory} Skills`}
                     </Typography>
                     
                     <Box sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
@@ -913,7 +956,7 @@ const CareerAssessmentPage = () => {
                     </Box>
                     
                     <Typography variant="caption" color="text.secondary" display="block">
-                      Awarded on {new Date(cert.completedAt).toLocaleDateString()}
+                      {i18n.language === 'ar' ? 'منحت في: ' : 'Awarded on: '}{new Date(cert.completedAt).toLocaleDateString()}
                     </Typography>
                   </CardContent>
                   <CardActions>
@@ -928,7 +971,7 @@ const CareerAssessmentPage = () => {
                         setCertificateDialogOpen(true);
                       }}
                     >
-                      View Certificate
+                      {i18n.language === 'ar' ? 'عرض الشهادة' : 'View Certificate'}
                     </Button>
                   </CardActions>
                 </Card>
@@ -946,17 +989,17 @@ const CareerAssessmentPage = () => {
       return (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h6" gutterBottom>
-            Personality Assessment Not Completed
+            {i18n.language === 'ar' ? 'لم يتم إكمال تقييم الشخصية' : 'Personality Assessment Not Completed'}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Complete the personality assessment to learn about your career preferences.
+            {i18n.language === 'ar' ? 'أكمل تقييم الشخصية للتعرف على تفضيلاتك المهنية.' : 'Complete the personality assessment to learn about your career preferences.'}
           </Typography>
           <Button 
             variant="contained" 
             sx={{ mt: 2 }}
             onClick={() => setTabValue(1)}
           >
-            Take Assessment
+            {i18n.language === 'ar' ? 'إجراء التقييم' : 'Take Assessment'}
           </Button>
         </Paper>
       );
@@ -967,7 +1010,7 @@ const CareerAssessmentPage = () => {
         {/* Personality Type Section */}
         <Paper sx={{ p: 3, mb: 3 }}>
           <Typography variant="h5" gutterBottom>
-            Your Personality Type
+            {i18n.language === 'ar' ? 'نمط شخصيتك' : 'Your Personality Type'}
           </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'flex-start', mt: 2 }}>
@@ -985,22 +1028,31 @@ const CareerAssessmentPage = () => {
             
             <Box>
               <Typography variant="h6" gutterBottom>
-                {personalityType.type}
+                {i18n.language === 'ar' ? 
+                  (personalityType.type === "Investigative Thinker" ? "المفكر التحليلي" : personalityType.type) 
+                  : personalityType.type}
               </Typography>
               
               <Typography variant="body1" paragraph>
-                {personalityType.description}
+                {i18n.language === 'ar' ? 
+                  "أنت شخص تحليلي ومنطقي ولديك فضول فكري. تتفوق في حل المشكلات المعقدة وتستمتع باستكشاف الأفكار بعمق." 
+                  : personalityType.description}
               </Typography>
               
               <Typography variant="subtitle2" gutterBottom>
-                Suitable Career Paths:
+                {i18n.language === 'ar' ? 'المسارات المهنية المناسبة:' : 'Suitable Career Paths:'}
               </Typography>
               
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                 {personalityType.suitableCareers.map(career => (
                   <Chip 
                     key={career}
-                    label={career}
+                    label={i18n.language === 'ar' ? 
+                      (career === "Data Scientist" ? "عالم بيانات" :
+                       career === "AI Researcher" ? "باحث ذكاء اصطناعي" :
+                       career === "Systems Analyst" ? "محلل أنظمة" :
+                       career === "Strategic Planner" ? "مخطط استراتيجي" : career)
+                      : career}
                     color="primary"
                     size="small"
                     sx={{ mr: 1, mb: 1 }}
@@ -1014,11 +1066,13 @@ const CareerAssessmentPage = () => {
         {/* Interests Section */}
         <Paper sx={{ p: 3 }}>
           <Typography variant="h5" gutterBottom>
-            Your Interests
+            {i18n.language === 'ar' ? 'الاهتمامات' : 'Interests'}
           </Typography>
           
           <Typography variant="body1" color="text.secondary" paragraph>
-            Your interests indicate what types of activities you're drawn to and can help identify fulfilling career paths.
+            {i18n.language === 'ar' 
+              ? 'الاهتمامات تشير إلى ما يجذبك ويمكن أن يساعد في تحديد المسارات المهنية الممتعة.' 
+              : `Your interests indicate what types of activities you're drawn to and can help identify fulfilling career paths.`}
           </Typography>
           
           <Grid container spacing={3}>
@@ -1026,7 +1080,7 @@ const CareerAssessmentPage = () => {
               {/* Interests Chart */}
               <Card sx={{ p: 2 }}>
                 <Typography variant="h6" gutterBottom>
-                  Interest Areas
+                  {i18n.language === 'ar' ? 'مناطق الاهتمام' : 'Interest Areas'}
                 </Typography>
                 
                 {interests.map(interest => (
@@ -1053,7 +1107,7 @@ const CareerAssessmentPage = () => {
               {/* Activities List */}
               <Card sx={{ p: 2, height: '100%' }}>
                 <Typography variant="h6" gutterBottom>
-                  Activities You Enjoy
+                  {i18n.language === 'ar' ? 'الأنشطة التي تستمتع بها' : 'Activities You Enjoy'}
                 </Typography>
                 
                 <List dense>
@@ -1077,12 +1131,11 @@ const CareerAssessmentPage = () => {
           
           <Box sx={{ mt: 3, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
             <Typography variant="subtitle1" gutterBottom>
-              What This Means For Your Career
+              {i18n.language === 'ar' ? 'ماذا يعني ذلك لمهنتك' : 'What This Means For Your Career'}
             </Typography>
             
             <Typography variant="body2">
-              Your highest interests in Technology and Analysis suggest roles that combine technical expertise with problem-solving. 
-              Consider positions that allow you to apply technical skills while analyzing data or systems to derive insights and solutions.
+              {i18n.language === 'ar' ? 'أهم الاهتمامات في التكنولوجيا والتحليل تشير إلى وظائف تجمع بين الخبرة الفنية وحل المشكلات.' : 'Your highest interests in Technology and Analysis suggest roles that combine technical expertise with problem-solving. Consider positions that allow you to apply technical skills while analyzing data or systems to derive insights and solutions.'}
             </Typography>
           </Box>
         </Paper>
@@ -1096,17 +1149,17 @@ const CareerAssessmentPage = () => {
       return (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h6" gutterBottom>
-            Strengths Assessment Not Completed
+            {i18n.language === 'ar' ? 'لم يتم إكمال تقييم نقاط القوة' : 'Strengths Assessment Not Completed'}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Complete the strengths assessment to identify your key capabilities.
+            {i18n.language === 'ar' ? 'أكمل تقييم نقاط القوة لتحديد قدراتك الرئيسية.' : 'Complete the strengths assessment to identify your key capabilities.'}
           </Typography>
           <Button 
             variant="contained" 
             sx={{ mt: 2 }}
             onClick={() => setTabValue(1)}
           >
-            Take Assessment
+            {i18n.language === 'ar' ? 'إجراء التقييم' : 'Take Assessment'}
           </Button>
         </Paper>
       );
@@ -1116,11 +1169,13 @@ const CareerAssessmentPage = () => {
       <Box>
         <Paper sx={{ p: 3, mb: 3 }}>
           <Typography variant="h5" gutterBottom>
-            Your Strengths & Skills
+            {i18n.language === 'ar' ? 'نقاط القوة والمهارات' : 'Your Strengths & Skills'}
           </Typography>
           
           <Typography variant="body1" color="text.secondary" paragraph>
-            Your natural strengths and developed skills form the foundation of your professional capabilities.
+            {i18n.language === 'ar' 
+              ? 'نقاط قوتك الطبيعية والمهارات المكتسبة تشكل أساس قدراتك المهنية.'
+              : 'Your natural strengths and developed skills form the foundation of your professional capabilities.'}
           </Typography>
           
           <Grid container spacing={3}>
@@ -1129,7 +1184,13 @@ const CareerAssessmentPage = () => {
                 <Card variant="outlined" sx={{ p: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                     <Typography variant="h6">
-                      {strength.name}
+                      {i18n.language === 'ar' ? 
+                        (strength.name === "Problem Solving" ? "حل المشكلات" :
+                         strength.name === "Analytical Thinking" ? "التفكير التحليلي" :
+                         strength.name === "Technical Aptitude" ? "الكفاءة التقنية" :
+                         strength.name === "Communication" ? "التواصل" :
+                         strength.name === "Adaptability" ? "التكيف" : strength.name)
+                        : strength.name}
                     </Typography>
                     <Rating 
                       value={strength.level} 
@@ -1140,7 +1201,13 @@ const CareerAssessmentPage = () => {
                   </Box>
                   
                   <Typography variant="body2" color="text.secondary">
-                    {strength.description}
+                    {i18n.language === 'ar' ? 
+                      (strength.name === "Problem Solving" ? "القدرة على تحليل المواقف وإيجاد حلول فعالة" :
+                       strength.name === "Analytical Thinking" ? "تفكيك المشكلات المعقدة إلى أجزاء يمكن التحكم بها" :
+                       strength.name === "Technical Aptitude" ? "تعلم وتطبيق التقنيات الجديدة بسرعة" :
+                       strength.name === "Communication" ? "توصيل الأفكار المعقدة بوضوح للجماهير المتنوعة" :
+                       strength.name === "Adaptability" ? "التكيف مع المتطلبات والبيئات المتغيرة" : strength.description)
+                      : strength.description}
                   </Typography>
                 </Card>
               </Grid>
@@ -1149,7 +1216,7 @@ const CareerAssessmentPage = () => {
           
           <Box sx={{ mt: 4 }}>
             <Typography variant="h6" gutterBottom>
-              Technical Skills
+              {i18n.language === 'ar' ? 'مهارات تقنية' : 'Technical Skills'}
             </Typography>
             
             <Grid container spacing={2}>
@@ -1169,7 +1236,9 @@ const CareerAssessmentPage = () => {
                       }}
                     >
                       <Typography variant="body1" gutterBottom>
-                        {assessmentsList.find(a => a.id === skill.id)?.title || 'Skill'}
+                        {i18n.language === 'ar' ? 
+                          (assessmentsList.find(a => a.id === skill.id)?.title || 'مهارة')
+                          : assessmentsList.find(a => a.id === skill.id)?.title || 'Skill'}
                       </Typography>
                       
                       <CircularProgress
@@ -1181,7 +1250,7 @@ const CareerAssessmentPage = () => {
                       />
                       
                       <Typography variant="caption" color="text.secondary" display="block">
-                        Proficiency: {Math.round((skill.score / skill.maxScore) * 100)}%
+                        {i18n.language === 'ar' ? 'مستوى المهارة: ' : 'Skill level: '} {Math.round((skill.score / skill.maxScore) * 100)}%
                       </Typography>
                     </Box>
                   </Grid>
@@ -1192,12 +1261,11 @@ const CareerAssessmentPage = () => {
           
           <Box sx={{ mt: 3, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
             <Typography variant="subtitle1" gutterBottom>
-              Leverage Your Strengths
+              {i18n.language === 'ar' ? 'التميز بنقاط القوة' : 'Leverage Your Strengths'}
             </Typography>
             
             <Typography variant="body2">
-              Your exceptional problem-solving and analytical thinking skills position you perfectly for roles that require deep analysis and technical expertise.
-              Focus on career paths that emphasize these strengths while providing opportunities to develop your communication skills further.
+              {i18n.language === 'ar' ? 'مهاراتك المميزة في حل المشكلات والتفكير التحليلي تضعك في موقع مثالي للوظائف التي تتطلب تحليلًا عميقًا وخبرة تقنية.' : 'Your exceptional problem-solving and analytical thinking skills position you perfectly for roles that require deep analysis and technical expertise. Focus on career paths that emphasize these strengths while providing opportunities to develop your communication skills further.'}
             </Typography>
           </Box>
         </Paper>
@@ -1211,17 +1279,17 @@ const CareerAssessmentPage = () => {
       return (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h6" gutterBottom>
-            Values Assessment Not Completed
+            {i18n.language === 'ar' ? 'لم يتم إكمال تقييم القيم' : 'Values Assessment Not Completed'}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Complete the values assessment to understand what motivates you professionally.
+            {i18n.language === 'ar' ? 'أكمل تقييم القيم لفهم ما يحركك مهنيًا.' : 'Complete the values assessment to understand what motivates you professionally.'}
           </Typography>
           <Button 
             variant="contained" 
             sx={{ mt: 2 }}
             onClick={() => setTabValue(1)}
           >
-            Take Assessment
+            {i18n.language === 'ar' ? 'إجراء التقييم' : 'Take Assessment'}
           </Button>
         </Paper>
       );
@@ -1231,18 +1299,18 @@ const CareerAssessmentPage = () => {
       <Box>
         <Paper sx={{ p: 3, mb: 3 }}>
           <Typography variant="h5" gutterBottom>
-            Your Values & Goals
+            {i18n.language === 'ar' ? 'القيم والأهداف' : 'Your Values & Goals'}
           </Typography>
           
           <Typography variant="body1" color="text.secondary" paragraph>
-            Understanding your core values helps identify careers that will be fulfilling and sustainable long-term.
+            {i18n.language === 'ar' ? 'فهم مفاهيمك الأساسية يساعد على تحديد مسارات المهنية التي ستكون ملائمة ومستدامة لفترات طويلة المدى.' : 'Understanding your core values helps identify careers that will be fulfilling and sustainable long-term.'}
           </Typography>
           
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <Card sx={{ p: 2, height: '100%' }}>
                 <Typography variant="h6" gutterBottom>
-                  Work Values
+                  {i18n.language === 'ar' ? 'قيم العمل' : 'Work Values'}
                 </Typography>
                 
                 <List>
@@ -1252,7 +1320,7 @@ const CareerAssessmentPage = () => {
                       secondaryAction={
                         <Chip 
                           icon={value.aligned ? <CheckCircle /> : <Info />}
-                          label={value.aligned ? "Aligned" : "Opportunity"}
+                          label={i18n.language === 'ar' ? (value.aligned ? "متحقق" : "فرصة") : (value.aligned ? "Aligned" : "Opportunity")}
                           color={value.aligned ? "success" : "default"}
                           size="small"
                         />
@@ -1276,12 +1344,12 @@ const CareerAssessmentPage = () => {
             <Grid item xs={12} md={6}>
               <Card sx={{ p: 2, height: '100%' }}>
                 <Typography variant="h6" gutterBottom>
-                  Work Environment Preferences
+                  {i18n.language === 'ar' ? 'تفضيلات البيئة العملية' : 'Work Environment Preferences'}
                 </Typography>
                 
                 <Box sx={{ p: 2 }}>
                   <Typography variant="subtitle2" gutterBottom>
-                    Preferred Work Setting
+                    {i18n.language === 'ar' ? 'الإعداد العملي المفضل' : 'Preferred Work Setting'}
                   </Typography>
                   
                   <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
@@ -1297,7 +1365,7 @@ const CareerAssessmentPage = () => {
                   </Box>
                   
                   <Typography variant="subtitle2" gutterBottom>
-                    Leadership Style
+                    {i18n.language === 'ar' ? 'أسلوب القيادة' : 'Leadership Style'}
                   </Typography>
                   
                   <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
@@ -1313,7 +1381,7 @@ const CareerAssessmentPage = () => {
                   </Box>
                   
                   <Typography variant="subtitle2" gutterBottom>
-                    Career Goals
+                    {i18n.language === 'ar' ? 'أهداف المهنية' : 'Career Goals'}
                   </Typography>
                   
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -1334,12 +1402,11 @@ const CareerAssessmentPage = () => {
           
           <Box sx={{ mt: 3, p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
             <Typography variant="subtitle1" gutterBottom>
-              Values-Based Career Decisions
+              {i18n.language === 'ar' ? 'القرارات المهنية القائمة على القيم' : 'Values-Based Career Decisions'}
             </Typography>
             
             <Typography variant="body2">
-              Your values emphasize knowledge seeking and innovation, suggesting roles that provide continuous learning opportunities and creative problem-solving.
-              The lack of alignment in autonomy indicates you might benefit from positions with greater independence or decision-making authority.
+              {i18n.language === 'ar' ? 'مفاهيمك تؤكد البحث عن المعرفة والإبداع، مما يشير إلى وظائف توفر فرص إكمالية لتعلم وحل المشكلات الإبداعية.' : 'Your values emphasize knowledge seeking and innovation, suggesting roles that provide continuous learning opportunities and creative problem-solving. The lack of alignment in autonomy indicates you might benefit from positions with greater independence or decision-making authority.'}
             </Typography>
           </Box>
         </Paper>
@@ -1353,17 +1420,17 @@ const CareerAssessmentPage = () => {
       return (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h6" gutterBottom>
-            Career Path Analysis Not Completed
+            {i18n.language === 'ar' ? 'تحليل المهارات المفقودة' : 'Gap Analysis & Path'}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Complete the career assessments to see your personalized development path.
+            {i18n.language === 'ar' ? 'أكمل التقييمات لرؤية مسار التطوير الشخصي المخصص لك.' : 'Complete the career assessments to see your personalized development path.'}
           </Typography>
           <Button 
             variant="contained" 
             sx={{ mt: 2 }}
             onClick={() => setTabValue(1)}
           >
-            Take Assessments
+            {i18n.language === 'ar' ? 'إجراء التقييمات' : 'Take Assessments'}
           </Button>
         </Paper>
       );
@@ -1374,18 +1441,20 @@ const CareerAssessmentPage = () => {
         {/* Gap Analysis Section */}
         <Paper sx={{ p: 3, mb: 3 }}>
           <Typography variant="h5" gutterBottom>
-            Skill Gap Analysis
+            {i18n.language === 'ar' ? 'تحليل المهارات المفقودة' : 'Gap Analysis'}
           </Typography>
           
           <Typography variant="body1" sx={{ mb: 3 }}>
-            Based on your assessments, here's what you need to develop to become a successful <strong>{gapAnalysis.targetRole}</strong>.
+            {i18n.language === 'ar' 
+              ? `بناءً على التقييمات، هذا ما تحتاجه لتطويره لتصبح موفرًا ناجحًا في ${gapAnalysis.targetRole}.` 
+              : `Based on your assessments, here's what you need to develop to become a successful ${gapAnalysis.targetRole}.`}
           </Typography>
           
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <Card sx={{ p: 2, height: '100%' }}>
                 <Typography variant="h6" gutterBottom>
-                  Your Current Skills
+                  {i18n.language === 'ar' ? 'مهاراتك الحالية' : 'Your Current Skills'}
                 </Typography>
                 
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -1404,7 +1473,7 @@ const CareerAssessmentPage = () => {
             <Grid item xs={12} md={6}>
               <Card sx={{ p: 2, height: '100%' }}>
                 <Typography variant="h6" gutterBottom>
-                  Skills to Develop
+                  {i18n.language === 'ar' ? 'مهارات تحتاج لتطويرها' : 'Skills to Develop'}
                 </Typography>
                 
                 <List dense>
@@ -1415,7 +1484,7 @@ const CareerAssessmentPage = () => {
                         secondary={
                           <>
                             <Typography variant="caption" component="span" color="text.secondary">
-                              Priority: 
+                              {i18n.language === 'ar' ? 'أهمية: ' : 'Priority: '}
                             </Typography>
                             <Chip 
                               label={skill.priority}
@@ -1435,7 +1504,7 @@ const CareerAssessmentPage = () => {
           
           <Box sx={{ mt: 3 }}>
             <Typography variant="h6" gutterBottom>
-              Recommended Learning Resources
+              {i18n.language === 'ar' ? 'موارد التعلم الموصى بها' : 'Recommended Learning Resources'}
             </Typography>
             
             <Card variant="outlined">
@@ -1448,7 +1517,7 @@ const CareerAssessmentPage = () => {
                       </ListItemIcon>
                       <ListItemText 
                         primary={resource}
-                        secondary={`For developing ${skill.skill}`}
+                        secondary={i18n.language === 'ar' ? `لتطوير ${skill.skill}` : `For developing ${skill.skill}`}
                       />
                       <Button size="small" variant="outlined">
                         Explore
@@ -1460,7 +1529,7 @@ const CareerAssessmentPage = () => {
             </Card>
             
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              Estimated time to close skill gaps: <strong>{gapAnalysis.timeline}</strong>
+              {i18n.language === 'ar' ? 'تقدير الوقت لإغلاق الفجوات: ' : 'Estimated time to close skill gaps: '}<strong>{gapAnalysis.timeline}</strong>
             </Typography>
           </Box>
         </Paper>
@@ -1468,11 +1537,13 @@ const CareerAssessmentPage = () => {
         {/* Career Timeline */}
         <Paper sx={{ p: 3 }}>
           <Typography variant="h5" gutterBottom>
-            Career Development Path
+            {i18n.language === 'ar' ? 'مسار التطوير المهني' : 'Career Development Path'}
           </Typography>
           
           <Typography variant="body1" paragraph>
-            Based on your skills, interests, and goals, here's a potential career progression:
+            {i18n.language === 'ar' 
+              ? 'بناءً على مهاراتك واهتماماتك وأهدافك، هذا مسار تطوير مهني محتمل:' 
+              : `Based on your skills, interests, and goals, here's a potential career progression:`}
           </Typography>
           
           <Stepper orientation="vertical" sx={{ mt: 3 }}>
@@ -1484,7 +1555,7 @@ const CareerAssessmentPage = () => {
                 </StepLabel>
                 <StepContent>
                   <Typography variant="body2" paragraph>
-                    Key skills for this role:
+                    {i18n.language === 'ar' ? 'مهارات الدور المهني: ' : 'Key skills for this role:'}
                   </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
                     {step.skills.map(skill => (
@@ -1504,7 +1575,7 @@ const CareerAssessmentPage = () => {
                       onClick={() => setTabValue(3)}
                       sx={{ mt: 1 }}
                     >
-                      View Skills Assessment
+                      {i18n.language === 'ar' ? 'عرض تقييم المهارات' : 'View Skills Assessment'}
                     </Button>
                   )}
                 </StepContent>
@@ -1514,12 +1585,15 @@ const CareerAssessmentPage = () => {
           
           <Box sx={{ mt: 3, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
             <Typography variant="subtitle1" gutterBottom>
-              UAE Vision 2030 Alignment
+              {i18n.language === 'ar' ? 'مطافئ الإمارات العربية المتحدة 2030' : 'UAE Vision 2030 Alignment'}
             </Typography>
             
             <Typography variant="body2">
-              Your career path in {gapAnalysis.targetRole} aligns well with UAE's vision for building a knowledge-based economy and positioning as a global leader in artificial intelligence and digital transformation.
+              {i18n.language === 'ar' 
+                ? `مسارك المهني في ${gapAnalysis.targetRole} يتوافق جيدًا مع رؤية الإمارات العربية المتحدة لبناء اقتصاد عقلي ومعرفي وتحويل معرفي.` 
+                : `Your career path in ${gapAnalysis.targetRole} aligns well with UAE's vision for building a knowledge-based economy and positioning as a global leader in artificial intelligence and digital transformation.`}
             </Typography>
+            
             
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 2 }}>
               {['Digital Economy', 'Innovation Hub', 'Knowledge Transfer'].map(area => (
@@ -1634,20 +1708,19 @@ const CareerAssessmentPage = () => {
     return (
       <Box>
         <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
-          AI-Powered Career Prediction
+          {i18n.language === 'ar' ? 'توقع المسار المهني بالذكاء الاصطناعي' : 'AI-Powered Career Prediction'}
         </Typography>
         
         <Typography variant="body1" paragraph>
-          Our advanced career assessment combines behavioral signals and cognitive traits with 
-          LLM-powered reasoning to provide highly personalized career recommendations.
+          {i18n.language === 'ar' ? 'يجمع تقييم المسار المهني المتقدم بين الإشارات السلوكية والسمات المعرفية مع التفكير المدعوم بتقنيات الذكاء الاصطناعي لتقديم توصيات مهنية مخصصة للغاية.' : 'Our advanced career assessment combines behavioral signals and cognitive traits with LLM-powered reasoning to provide highly personalized career recommendations.'}
         </Typography>
         
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 4 }}>
-          <Chip icon={<Psychology />} label="Personality Traits" color="primary" />
-          <Chip icon={<Favorite />} label="Interests & Preferences" color="primary" />
-          <Chip icon={<Star />} label="Work Values" color="primary" />
-          <Chip icon={<Assessment />} label="Skills Analysis" color="primary" />
-          <Chip icon={<BarChart />} label="AI-Powered Matching" color="primary" />
+          <Chip icon={<Psychology />} label={i18n.language === 'ar' ? 'سمات الشخصية' : 'Personality Traits'} color="primary" />
+          <Chip icon={<Favorite />} label={i18n.language === 'ar' ? 'الاهتمامات والتفضيلات' : 'Interests & Preferences'} color="primary" />
+          <Chip icon={<Star />} label={i18n.language === 'ar' ? 'قيم العمل' : 'Work Values'} color="primary" />
+          <Chip icon={<Assessment />} label={i18n.language === 'ar' ? 'تحليل المهارات' : 'Skills Analysis'} color="primary" />
+          <Chip icon={<BarChart />} label={i18n.language === 'ar' ? 'المطابقة بالذكاء الاصطناعي' : 'AI-Powered Matching'} color="primary" />
         </Box>
         
         {showCareerPrediction ? (
@@ -1657,12 +1730,11 @@ const CareerAssessmentPage = () => {
         ) : (
           <Paper sx={{ p: 4, textAlign: 'center' }}>
             <Typography variant="h6" gutterBottom>
-              Discover Your Ideal Career Path
+              {i18n.language === 'ar' ? 'اكتشف مسارك المهني المثالي' : 'Discover Your Ideal Career Path'}
             </Typography>
             
             <Typography variant="body1" paragraph sx={{ maxWidth: 600, mx: 'auto', mb: 4 }}>
-              Take our comprehensive assessment to receive personalized career recommendations based on 
-              your unique combination of personality traits, interests, values, and skills.
+              {i18n.language === 'ar' ? 'خذ تقييمنا الشامل للحصول على توصيات مهنية مخصصة بناءً على مزيجك الفريد من سمات الشخصية والاهتمامات والقيم والمهارات.' : 'Take our comprehensive assessment to receive personalized career recommendations based on your unique combination of personality traits, interests, values, and skills.'}
             </Typography>
             
             <Button 
@@ -1671,7 +1743,7 @@ const CareerAssessmentPage = () => {
               onClick={() => setShowCareerPrediction(true)}
               startIcon={<Assessment />}
             >
-              Start Career Assessment
+              {i18n.language === 'ar' ? 'بدء تقييم المسار المهني' : 'Start Career Assessment'}
             </Button>
           </Paper>
         )}
@@ -1688,7 +1760,7 @@ const CareerAssessmentPage = () => {
         case 1:
           return renderAssessmentCards();
         case 2:
-          return <CareerPrediction onComplete={handleCareerPredictionComplete} />;
+          return renderCareerPrediction();
         case 3:
           return renderPersonalityAndInterests();
         case 4:
@@ -1727,7 +1799,7 @@ const CareerAssessmentPage = () => {
             color="primary"
             onClick={() => setTabValue(1)}
           >
-            Go to Available Assessments
+            {i18n.language === 'ar' ? 'إجراء التقييمات' : 'Take Assessments'}
           </Button>
         </Paper>
       );
@@ -1735,13 +1807,13 @@ const CareerAssessmentPage = () => {
   };
   
   if (loading && !assessmentActive) {
-    return <LoadingSpinner message="Loading assessment data..." />;
+    return <LoadingSpinner message={i18n.language === 'ar' ? 'جاري تحميل بيانات التقييم...' : 'Loading assessment data...'} />;
   }
   
   return (
     <Box sx={{ py: 3 }}>
       <Typography variant="h4" gutterBottom>
-        Career Assessment
+        {i18n.language === 'ar' ? 'تقييم المهنة' : 'Career Assessment'}
       </Typography>
       
       {error && (
@@ -1758,20 +1830,20 @@ const CareerAssessmentPage = () => {
           scrollButtons="auto"
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab icon={<Assignment />} label="Active Assessment" disabled={!assessmentActive} />
-          <Tab icon={<Work />} label="Available Assessments" />
-          <Tab icon={<FlightIcon />} label="Career Prediction" />
-          <Tab icon={<Psychology />} label="Personality & Interests" />
-          <Tab icon={<Star />} label="Strengths & Skills" />
-          <Tab icon={<Favorite />} label="Values & Goals" />
-          <Tab icon={<Work />} label="Career Recommendations" />
-          <Tab icon={<Timeline />} label="Gap Analysis & Path" />
-          <Tab icon={<WorkspacePremium />} label="Certificates" />
+          <Tab icon={<Assignment />} label={i18n.language === 'ar' ? 'التقييم النشط' : 'Active Assessment'} disabled={!assessmentActive} />
+          <Tab icon={<Work />} label={i18n.language === 'ar' ? 'التقييمات المتاحة' : 'Available Assessments'} />
+          <Tab icon={<FlightIcon />} label={i18n.language === 'ar' ? 'توقع المسار المهني' : 'Career Prediction'} />
+          <Tab icon={<Psychology />} label={i18n.language === 'ar' ? 'الشخصية والاهتمامات' : 'Personality & Interests'} />
+          <Tab icon={<Star />} label={i18n.language === 'ar' ? 'نقاط القوة والمهارات' : 'Strengths & Skills'} />
+          <Tab icon={<Favorite />} label={i18n.language === 'ar' ? 'القيم والأهداف' : 'Values & Goals'} />
+          <Tab icon={<Work />} label={i18n.language === 'ar' ? 'توصيات المهنة' : 'Career Recommendations'} />
+          <Tab icon={<Timeline />} label={i18n.language === 'ar' ? 'تحليل الفجوة والمسار' : 'Gap Analysis & Path'} />
+          <Tab icon={<WorkspacePremium />} label={i18n.language === 'ar' ? 'الشهادات' : 'Certificates'} />
         </Tabs>
       </Paper>
       
       {resultsLoading ? (
-        <LoadingSpinner message="Processing assessment results..." />
+        <LoadingSpinner message={i18n.language === 'ar' ? 'جاري معالجة نتائج التقييم...' : 'Processing assessment results...'} />
       ) : (
         renderContent()
       )}
@@ -1784,17 +1856,17 @@ const CareerAssessmentPage = () => {
         fullWidth
       >
         <DialogTitle>
-          Certificate of Achievement
+          {i18n.language === 'ar' ? 'شهادة الإنجاز' : 'Certificate of Achievement'}
         </DialogTitle>
         <DialogContent>
           {selectedCertificate && (
             <Box sx={{ p: 3, border: '10px solid #f5f5f5', textAlign: 'center' }}>
               <Typography variant="h4" gutterBottom>
-                Certificate of Achievement
+                {i18n.language === 'ar' ? 'شهادة الإنجاز' : 'Certificate of Achievement'}
               </Typography>
               
               <Typography variant="h6" gutterBottom>
-                This certifies that
+                {i18n.language === 'ar' ? 'هذه الشهادة تثبت أن' : 'This certifies that'}
               </Typography>
               
               <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', my: 3 }}>
@@ -1802,7 +1874,7 @@ const CareerAssessmentPage = () => {
               </Typography>
               
               <Typography variant="h6" gutterBottom>
-                has successfully completed
+                {i18n.language === 'ar' ? 'قد أكمل بنجاح' : 'has successfully completed'}
               </Typography>
               
               <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', my: 3 }}>
@@ -1810,16 +1882,16 @@ const CareerAssessmentPage = () => {
               </Typography>
               
               <Typography variant="body1" gutterBottom>
-                with a score of {selectedCertificate.score}%
+                {i18n.language === 'ar' ? 'بنتيجة' : 'with a score of'} {selectedCertificate.score}%
               </Typography>
               
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Date: {new Date(selectedCertificate.completedAt).toLocaleDateString()}
+                  {i18n.language === 'ar' ? 'التاريخ: ' : 'Date: '}{new Date(selectedCertificate.completedAt).toLocaleDateString()}
                 </Typography>
                 
                 <Typography variant="body2" color="text.secondary">
-                  Certificate ID: {selectedCertificate.id.slice(0, 8)}
+                  {i18n.language === 'ar' ? 'رقم الشهادة: ' : 'Certificate ID: '}{selectedCertificate.id.slice(0, 8)}
                 </Typography>
               </Box>
             </Box>
@@ -1827,7 +1899,7 @@ const CareerAssessmentPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCertificateDialogOpen(false)}>
-            Close
+            {i18n.language === 'ar' ? 'إغلاق' : 'Close'}
           </Button>
           <Button 
             variant="contained"
@@ -1836,7 +1908,7 @@ const CareerAssessmentPage = () => {
               window.print();
             }}
           >
-            Print Certificate
+            {i18n.language === 'ar' ? 'طباعة الشهادة' : 'Print Certificate'}
           </Button>
         </DialogActions>
       </Dialog>

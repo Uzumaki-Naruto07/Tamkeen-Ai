@@ -31,92 +31,129 @@ import PersonIcon from '@mui/icons-material/Person';
 import StarIcon from '@mui/icons-material/Star';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // Mock data for interview coaches
 const mockCoaches = [
   {
     id: 1,
     name: "Sarah Johnson",
+    nameAr: "سارة جونسون",
     title: "Senior Tech Recruiter",
+    titleAr: "مسؤول توظيف تقني أول",
     company: "Google",
+    companyAr: "جوجل",
     specialties: ["Software Engineering", "Technical Interviews", "Behavioral Questions"],
+    specialtiesAr: ["هندسة البرمجيات", "المقابلات التقنية", "أسئلة السلوك"],
     experience: 8,
     rating: 4.9,
     reviews: 124,
     hourlyRate: 85,
     availability: "Next available: Tomorrow",
+    availabilityAr: "متاح غداً",
     image: "https://randomuser.me/api/portraits/women/44.jpg",
-    description: "Former Google recruiter with 8+ years of experience hiring software engineers. I can help you prepare for technical and behavioral interviews at top tech companies."
+    description: "Former Google recruiter with 8+ years of experience hiring software engineers. I can help you prepare for technical and behavioral interviews at top tech companies.",
+    descriptionAr: "مسؤولة توظيف سابقة في جوجل مع أكثر من 8 سنوات من الخبرة في توظيف مهندسي البرمجيات. يمكنني مساعدتك في التحضير للمقابلات التقنية والسلوكية في شركات التكنولوجيا الكبرى."
   },
   {
     id: 2,
     name: "Michael Chen",
+    nameAr: "مايكل تشن",
     title: "Career Coach & Former HR Director",
+    titleAr: "مدرب مهني ومدير موارد بشرية سابق",
     company: "Microsoft",
+    companyAr: "مايكروسوفت",
     specialties: ["Leadership Roles", "Executive Interviews", "Salary Negotiation"],
+    specialtiesAr: ["أدوار قيادية", "مقابلات تنفيذية", "التفاوض على الراتب"],
     experience: 12,
     rating: 4.8,
     reviews: 98,
     hourlyRate: 95,
     availability: "Next available: Today",
+    availabilityAr: "متاح اليوم",
     image: "https://randomuser.me/api/portraits/men/32.jpg",
-    description: "HR Director with experience at Microsoft and Amazon. I specialize in helping mid to senior-level professionals prepare for leadership interviews and negotiate offers."
+    description: "HR Director with experience at Microsoft and Amazon. I specialize in helping mid to senior-level professionals prepare for leadership interviews and negotiate offers.",
+    descriptionAr: "مدير موارد بشرية مع خبرة في مايكروسوفت وأمازون. أتخصص في مساعدة المهنيين من المستوى المتوسط إلى المستوى الأعلى في التحضير لمقابلات القيادة والتفاوض على العروض."
   },
   {
     id: 3,
     name: "Priya Patel",
+    nameAr: "بريا باتيل",
     title: "Data Science Interview Specialist",
+    titleAr: "متخصصة في مقابلات علوم البيانات",
     company: "Netflix",
+    companyAr: "نتفليكس",
     specialties: ["Data Science", "Machine Learning", "Technical Assessments"],
+    specialtiesAr: ["علوم البيانات", "التعلم الآلي", "التقييمات التقنية"],
     experience: 6,
     rating: 4.7,
     reviews: 76,
     hourlyRate: 75,
     availability: "Next available: In 2 days",
+    availabilityAr: "متاح خلال يومين",
     image: "https://randomuser.me/api/portraits/women/66.jpg",
-    description: "Data Scientist at Netflix who has interviewed 100+ candidates. I can help you prepare for data science interviews, including technical questions and case studies."
+    description: "Data Scientist at Netflix who has interviewed 100+ candidates. I can help you prepare for data science interviews, including technical questions and case studies.",
+    descriptionAr: "عالمة بيانات في نتفليكس قامت بمقابلة أكثر من 100 مرشح. يمكنني مساعدتك في التحضير لمقابلات علوم البيانات، بما في ذلك الأسئلة التقنية ودراسات الحالة."
   },
   {
     id: 4,
     name: "James Wilson",
+    nameAr: "جيمس ويلسون",
     title: "Product Management Coach",
+    titleAr: "مدرب إدارة المنتجات",
     company: "Facebook",
+    companyAr: "فيسبوك",
     specialties: ["Product Management", "Case Interviews", "Product Design"],
+    specialtiesAr: ["إدارة المنتجات", "مقابلات الحالات", "تصميم المنتجات"],
     experience: 9,
     rating: 4.9,
     reviews: 112,
     hourlyRate: 90,
     availability: "Next available: Tomorrow",
+    availabilityAr: "متاح غداً",
     image: "https://randomuser.me/api/portraits/men/67.jpg",
-    description: "Product Manager at Facebook with experience interviewing PM candidates. I can help you prepare for product sense, analytical, and execution interviews."
+    description: "Product Manager at Facebook with experience interviewing PM candidates. I can help you prepare for product sense, analytical, and execution interviews.",
+    descriptionAr: "مدير منتجات في فيسبوك مع خبرة في مقابلة مرشحي إدارة المنتجات. يمكنني مساعدتك في التحضير لمقابلات حس المنتج والتحليل والتنفيذ."
   },
   {
     id: 5,
     name: "Elena Rodriguez",
+    nameAr: "إيلينا رودريغيز",
     title: "UX/UI Interview Specialist",
+    titleAr: "متخصصة في مقابلات تجربة المستخدم/واجهة المستخدم",
     company: "Airbnb",
+    companyAr: "إير بي إن بي",
     specialties: ["UX Design", "Portfolio Reviews", "Design Challenges"],
+    specialtiesAr: ["تصميم تجربة المستخدم", "مراجعات المحفظة", "تحديات التصميم"],
     experience: 7,
     rating: 4.8,
     reviews: 89,
     hourlyRate: 80,
     availability: "Next available: Today",
+    availabilityAr: "متاح اليوم",
     image: "https://randomuser.me/api/portraits/women/33.jpg",
-    description: "UX Designer at Airbnb who has interviewed 50+ designers. I can help you prepare your portfolio, practice design challenges, and ace your UX/UI interviews."
+    description: "UX Designer at Airbnb who has interviewed 50+ designers. I can help you prepare your portfolio, practice design challenges, and ace your UX/UI interviews.",
+    descriptionAr: "مصممة تجربة مستخدم في إير بي إن بي قامت بمقابلة أكثر من 50 مصمم. يمكنني مساعدتك في تحضير محفظتك، والتدرب على تحديات التصميم، والتفوق في مقابلات تجربة المستخدم/واجهة المستخدم."
   },
   {
     id: 6,
     name: "David Kim",
+    nameAr: "ديفيد كيم",
     title: "Marketing Interview Coach",
+    titleAr: "مدرب مقابلات التسويق",
     company: "Spotify",
+    companyAr: "سبوتيفاي",
     specialties: ["Marketing Strategy", "Brand Management", "Growth Marketing"],
+    specialtiesAr: ["استراتيجية التسويق", "إدارة العلامة التجارية", "تسويق النمو"],
     experience: 10,
     rating: 4.7,
     reviews: 67,
     hourlyRate: 75,
     availability: "Next available: In 3 days",
+    availabilityAr: "متاح خلال 3 أيام",
     image: "https://randomuser.me/api/portraits/men/22.jpg",
-    description: "Marketing Director at Spotify with experience hiring marketing professionals. I can help you prepare for marketing interviews, case studies, and presentations."
+    description: "Marketing Director at Spotify with experience hiring marketing professionals. I can help you prepare for marketing interviews, case studies, and presentations.",
+    descriptionAr: "مدير تسويق في سبوتيفاي مع خبرة في توظيف متخصصي التسويق. يمكنني مساعدتك في التحضير لمقابلات التسويق ودراسات الحالة والعروض التقديمية."
   }
 ];
 
@@ -125,29 +162,41 @@ const mockPackages = [
   {
     id: 1,
     title: "Technical Interview Prep",
+    titleAr: "إعداد المقابلة التقنية",
     description: "Comprehensive preparation for software engineering interviews, including data structures, algorithms, and system design.",
+    descriptionAr: "إعداد شامل لمقابلات هندسة البرمجيات، بما في ذلك هياكل البيانات والخوارزميات وتصميم النظام.",
     price: 199,
     sessions: 3,
     duration: "1 month",
-    features: ["Mock interviews with feedback", "Personalized improvement plan", "Resume review", "Coding challenge practice"]
+    durationAr: "شهر واحد",
+    features: ["Mock interviews with feedback", "Personalized improvement plan", "Resume review", "Coding challenge practice"],
+    featuresAr: ["مقابلات تجريبية مع ملاحظات", "خطة تحسين مخصصة", "مراجعة السيرة الذاتية", "ممارسة تحديات البرمجة"]
   },
   {
     id: 2,
     title: "Behavioral Interview Mastery",
+    titleAr: "إتقان المقابلة السلوكية",
     description: "Learn how to effectively communicate your experience and skills using the STAR method and other proven techniques.",
+    descriptionAr: "تعلم كيفية التواصل بفعالية عن خبرتك ومهاراتك باستخدام طريقة STAR وتقنيات أخرى مثبتة.",
     price: 149,
     sessions: 2,
     duration: "2 weeks",
-    features: ["Situation-based practice", "Video recording analysis", "Custom response frameworks", "Follow-up question preparation"]
+    durationAr: "أسبوعان",
+    features: ["Situation-based practice", "Video recording analysis", "Custom response frameworks", "Follow-up question preparation"],
+    featuresAr: ["ممارسة قائمة على المواقف", "تحليل التسجيلات المرئية", "أطر استجابة مخصصة", "إعداد أسئلة المتابعة"]
   },
   {
     id: 3,
     title: "Executive Interview Package",
+    titleAr: "حزمة المقابلة التنفيذية",
     description: "Premium coaching for senior leadership and executive roles, focusing on strategic thinking and leadership vision.",
+    descriptionAr: "تدريب متميز للأدوار القيادية العليا والتنفيذية، مع التركيز على التفكير الاستراتيجي والرؤية القيادية.",
     price: 349,
     sessions: 4,
     duration: "6 weeks",
-    features: ["Leadership scenario practice", "Executive presence coaching", "Strategic thinking exercises", "Salary negotiation strategy"]
+    durationAr: "6 أسابيع",
+    features: ["Leadership scenario practice", "Executive presence coaching", "Strategic thinking exercises", "Salary negotiation strategy"],
+    featuresAr: ["ممارسة سيناريوهات القيادة", "تدريب الحضور التنفيذي", "تمارين التفكير الاستراتيجي", "استراتيجية التفاوض على الراتب"]
   }
 ];
 
@@ -159,6 +208,15 @@ const AllInterviewCoach = () => {
   const [packages, setPackages] = useState([]);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  
+  // Simple check for whether we're in Arabic mode
+  const isArabic = i18n.language === 'ar';
+  
+  // For debugging
+  useEffect(() => {
+    console.log('Current i18n language:', i18n.language);
+  }, [i18n.language]);
 
   useEffect(() => {
     // Simulate API call to fetch coaches and packages
@@ -173,7 +231,7 @@ const AllInterviewCoach = () => {
         setError('');
       } catch (err) {
         console.error('Error fetching interview coaches:', err);
-        setError('Failed to load interview coaches. Please try again later.');
+        setError(isArabic ? 'فشل في تحميل مدربي المقابلات. الرجاء المحاولة مرة أخرى لاحقاً.' : 'Failed to load interview coaches. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -228,11 +286,11 @@ const AllInterviewCoach = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
       <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 1 }}>
-        Interview Coaching
+        {isArabic ? "تدريب المقابلات" : "Interview Coaching"}
       </Typography>
       
       <Typography variant="subtitle1" color="textSecondary" align="center" sx={{ mb: 4 }}>
-        Get personalized coaching to ace your next interview
+        {isArabic ? "احصل على تدريب مخصص لاجتياز مقابلتك القادمة" : "Get personalized coaching to ace your next interview"}
       </Typography>
       
       {error && (
@@ -245,7 +303,7 @@ const AllInterviewCoach = () => {
         <Box sx={{ p: 2 }}>
           <TextField
             fullWidth
-            placeholder="Search by name, specialty, company..."
+            placeholder={isArabic ? "البحث عن طريق الاسم، التخصص، الشركة..." : "Search by name, specialty, company..."}
             value={searchTerm}
             onChange={handleSearch}
             InputProps={{
@@ -275,11 +333,31 @@ const AllInterviewCoach = () => {
           textColor="primary"
           centered
         >
-          <Tab label="Interview Coaches" icon={<PersonIcon />} iconPosition="start" />
-          <Tab label="Coaching Packages" icon={<AssignmentIcon />} iconPosition="start" />
-          <Tab label="AI Practice" icon={<MessageIcon />} iconPosition="start" />
-          <Tab label="Mock Interviews" icon={<VideocamIcon />} iconPosition="start" />
-          <Tab label="Booking Confirmation" icon={<EventAvailableIcon />} iconPosition="start" />
+          <Tab 
+            label={isArabic ? "مدربو المقابلات الخبراء" : "Interview Coaches"}
+            icon={<PersonIcon />} 
+            iconPosition="start" 
+          />
+          <Tab 
+            label={isArabic ? "حزم التدريب" : "Coaching Packages"}
+            icon={<AssignmentIcon />} 
+            iconPosition="start" 
+          />
+          <Tab 
+            label={isArabic ? "تدريب بالذكاء الاصطناعي" : "AI Interview Practice"}
+            icon={<MessageIcon />} 
+            iconPosition="start" 
+          />
+          <Tab 
+            label={isArabic ? "مقابلات وهمية" : "Mock Interviews"}
+            icon={<VideocamIcon />} 
+            iconPosition="start" 
+          />
+          <Tab 
+            label={isArabic ? "تأكيد الحجز" : "Booking Confirmation"} 
+            icon={<EventAvailableIcon />} 
+            iconPosition="start" 
+          />
         </Tabs>
       </Paper>
       
@@ -292,7 +370,7 @@ const AllInterviewCoach = () => {
           {tabValue === 0 && (
             <>
               <Typography variant="h5" sx={{ mb: 3 }}>
-                Expert Interview Coaches
+                {isArabic ? "مدربو المقابلات الخبراء" : "Expert Interview Coaches"}
               </Typography>
               
               <Grid container spacing={3}>
@@ -304,7 +382,7 @@ const AllInterviewCoach = () => {
                           component="img"
                           height="200"
                           image={coach.image}
-                          alt={coach.name}
+                          alt={isArabic ? coach.nameAr : coach.name}
                         />
                         <Box
                           sx={{
@@ -317,10 +395,10 @@ const AllInterviewCoach = () => {
                             padding: '10px'
                           }}
                         >
-                          <Typography variant="h6">{coach.name}</Typography>
-                          <Typography variant="body2">{coach.title}</Typography>
+                          <Typography variant="h6">{isArabic ? coach.nameAr : coach.name}</Typography>
+                          <Typography variant="body2">{isArabic ? coach.titleAr : coach.title}</Typography>
                           <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                            {coach.company}
+                            {isArabic ? coach.companyAr : coach.company}
                           </Typography>
                         </Box>
                       </Box>
@@ -335,28 +413,28 @@ const AllInterviewCoach = () => {
                             emptyIcon={<StarIcon style={{ opacity: 0.55 }} fontSize="inherit" />}
                           />
                           <Typography variant="body2" sx={{ ml: 1 }}>
-                            {coach.rating} ({coach.reviews} reviews)
+                            {coach.rating} ({coach.reviews} {isArabic ? "مراجعة" : "reviews"})
                           </Typography>
                         </Box>
                         
                         <Typography variant="body2" color="text.secondary" paragraph>
-                          {coach.description}
+                          {isArabic ? coach.descriptionAr : coach.description}
                         </Typography>
                         
                         <Typography variant="body2" sx={{ mb: 1 }}>
-                          <strong>Experience:</strong> {coach.experience} years
+                          <strong>{isArabic ? "الخبرة:" : "Experience:"}</strong> {coach.experience} {isArabic ? "سنوات" : "years"}
                         </Typography>
                         
                         <Typography variant="body2" sx={{ mb: 1 }}>
-                          <strong>Rate:</strong> AED {coach.hourlyRate * 3.67}/hour
+                          <strong>{isArabic ? "المعدل:" : "Rate:"}</strong> AED {coach.hourlyRate * 3.67}/{isArabic ? "ساعة" : "hour"}
                         </Typography>
                         
                         <Typography variant="body2" color="primary" sx={{ mb: 2 }}>
-                          {coach.availability}
+                          {isArabic ? coach.availabilityAr : coach.availability}
                         </Typography>
                         
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
-                          {coach.specialties.map((specialty, index) => (
+                          {(isArabic ? coach.specialtiesAr : coach.specialties).map((specialty, index) => (
                             <Chip
                               key={index}
                               label={specialty}
@@ -374,14 +452,14 @@ const AllInterviewCoach = () => {
                           size="small" 
                           onClick={() => handleViewProfile(coach.id)}
                         >
-                          View Profile
+                          {isArabic ? "عرض الملف الشخصي" : "View Profile"}
                         </Button>
                         <Button 
                           variant="contained" 
                           size="small"
                           onClick={() => handleBookSession(coach.id)}
                         >
-                          Book Session
+                          {isArabic ? "حجز جلسة" : "Book Session"}
                         </Button>
                       </CardActions>
                     </Card>
@@ -394,7 +472,7 @@ const AllInterviewCoach = () => {
           {tabValue === 1 && (
             <>
               <Typography variant="h5" sx={{ mb: 3 }}>
-                Interview Coaching Packages
+                {isArabic ? "حزم تدريب المقابلات" : "Interview Coaching Packages"}
               </Typography>
               
               <Grid container spacing={3}>
@@ -403,7 +481,7 @@ const AllInterviewCoach = () => {
                     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                       <CardContent sx={{ flexGrow: 1 }}>
                         <Typography variant="h5" component="div" gutterBottom>
-                          {pkg.title}
+                          {isArabic ? pkg.titleAr : pkg.title}
                         </Typography>
                         
                         <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 2 }}>
@@ -411,26 +489,26 @@ const AllInterviewCoach = () => {
                             AED {pkg.price * 3.67}
                           </Typography>
                           <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                            for {pkg.sessions} sessions
+                            {isArabic ? `لـ ${pkg.sessions} جلسات` : `for ${pkg.sessions} sessions`}
                           </Typography>
                         </Box>
                         
                         <Typography variant="body2" paragraph>
-                          {pkg.description}
+                          {isArabic ? pkg.descriptionAr : pkg.description}
                         </Typography>
                         
                         <Typography variant="body2" sx={{ mb: 1 }}>
-                          <strong>Duration:</strong> {pkg.duration}
+                          <strong>{isArabic ? "المدة:" : "Duration:"}</strong> {isArabic ? pkg.durationAr : pkg.duration}
                         </Typography>
                         
                         <Divider sx={{ my: 2 }} />
                         
                         <Typography variant="subtitle2" gutterBottom>
-                          What's included:
+                          {isArabic ? "ما يشمله:" : "What's included:"}
                         </Typography>
                         
                         <ul style={{ paddingLeft: '20px' }}>
-                          {pkg.features.map((feature, index) => (
+                          {(isArabic ? pkg.featuresAr : pkg.features).map((feature, index) => (
                             <li key={index}>
                               <Typography variant="body2">
                                 {feature}
@@ -446,7 +524,7 @@ const AllInterviewCoach = () => {
                           fullWidth
                           onClick={() => handlePurchasePackage(pkg.id)}
                         >
-                          Purchase Package
+                          {isArabic ? "شراء الحزمة" : "Purchase Package"}
                         </Button>
                       </CardActions>
                     </Card>
@@ -459,10 +537,12 @@ const AllInterviewCoach = () => {
           {tabValue === 2 && (
             <Box sx={{ textAlign: 'center', py: 8 }}>
               <Typography variant="h5" gutterBottom>
-                AI Interview Practice
+                {isArabic ? "تدريب بالذكاء الاصطناعي" : "AI Interview Practice"}
               </Typography>
               <Typography variant="body1" paragraph>
-                Practice with our AI-powered interview simulator that provides real-time feedback.
+                {isArabic 
+                  ? "تدرب مع محاكينا للمقابلات المدعوم بالذكاء الاصطناعي الذي يقدم ملاحظات في الوقت الحقيقي."
+                  : "Practice with our AI-powered interview simulator that provides real-time feedback."}
               </Typography>
               <Button 
                 variant="contained" 
@@ -470,7 +550,7 @@ const AllInterviewCoach = () => {
                 onClick={() => navigate('/ai-coach/interview')}
                 startIcon={<MessageIcon />}
               >
-                Start AI Practice
+                {isArabic ? "بدء التدريب بالذكاء الاصطناعي" : "Start AI Practice"}
               </Button>
             </Box>
           )}
@@ -478,10 +558,12 @@ const AllInterviewCoach = () => {
           {tabValue === 3 && (
             <Box sx={{ textAlign: 'center', py: 8 }}>
               <Typography variant="h5" gutterBottom>
-                Mock Interviews
+                {isArabic ? "المقابلات الوهمية" : "Mock Interviews"}
               </Typography>
               <Typography variant="body1" paragraph>
-                Practice with our structured mock interviews led by professional interviewers.
+                {isArabic
+                  ? "تدرب مع مقابلاتنا الوهمية المنظمة التي يقودها محاورون محترفون."
+                  : "Practice with our structured mock interviews led by professional interviewers."}
               </Typography>
               <Button 
                 variant="contained" 
@@ -489,7 +571,7 @@ const AllInterviewCoach = () => {
                 startIcon={<VideocamIcon />}
                 onClick={() => navigate('/ai-coach/mock-interview')}
               >
-                Schedule Mock Interview
+                {isArabic ? "جدولة مقابلة وهمية" : "Schedule Mock Interview"}
               </Button>
             </Box>
           )}
@@ -497,10 +579,12 @@ const AllInterviewCoach = () => {
           {tabValue === 4 && (
             <Box sx={{ textAlign: 'center', py: 8 }}>
               <Typography variant="h5" gutterBottom>
-                Booking Confirmation
+                {isArabic ? "تأكيد الحجز" : "Booking Confirmation"}
               </Typography>
               <Typography variant="body1" paragraph>
-                View and manage your upcoming interview coaching sessions.
+                {isArabic
+                  ? "عرض وإدارة جلسات تدريب المقابلات القادمة."
+                  : "View and manage your upcoming interview coaching sessions."}
               </Typography>
               <Button 
                 variant="contained" 
@@ -508,7 +592,7 @@ const AllInterviewCoach = () => {
                 onClick={() => navigate('/my-bookings')}
                 startIcon={<EventAvailableIcon />}
               >
-                My Bookings
+                {isArabic ? "حجوزاتي" : "My Bookings"}
               </Button>
             </Box>
           )}

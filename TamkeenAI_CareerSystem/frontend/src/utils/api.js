@@ -361,18 +361,60 @@ const apiEndpoints = {
             recommendedCareers: [
               { 
                 title: 'Data Scientist', 
+                titleAr: 'عالم بيانات',
                 match: 95, 
-                description: 'Your analytical abilities and interest in patterns suggest data science would be an excellent fit.' 
+                description: 'Your analytical abilities and interest in patterns suggest data science would be an excellent fit.',
+                descriptionAr: 'تشير قدراتك التحليلية واهتمامك بالأنماط إلى أن علم البيانات سيكون مناسبًا بشكل ممتاز.',
+                skills: [
+                  { name: 'Data Analysis', nameAr: 'تحليل البيانات' },
+                  { name: 'Python', nameAr: 'بايثون' },
+                  { name: 'Machine Learning', nameAr: 'تعلم الآلة' },
+                  { name: 'Statistics', nameAr: 'الإحصاء' }
+                ],
+                growthTrack: 'High growth field',
+                growthTrackAr: 'مجال نمو مرتفع',
+                education: 'Bachelor\'s in Computer Science or related field',
+                educationAr: 'بكالوريوس في علوم الحاسوب أو مجال ذي صلة',
+                demand: 'Very High',
+                demandAr: 'مرتفع جدًا'
               },
               { 
                 title: 'AI Engineer', 
+                titleAr: 'مهندس ذكاء اصطناعي',
                 match: 92, 
-                description: 'Your technical aptitude and problem-solving align well with AI engineering.' 
+                description: 'Your technical aptitude and problem-solving align well with AI engineering.',
+                descriptionAr: 'تتوافق قدراتك التقنية ومهارات حل المشكلات بشكل جيد مع هندسة الذكاء الاصطناعي.',
+                skills: [
+                  { name: 'Deep Learning', nameAr: 'التعلم العميق' },
+                  { name: 'TensorFlow', nameAr: 'تنسرفلو' },
+                  { name: 'Python', nameAr: 'بايثون' },
+                  { name: 'Neural Networks', nameAr: 'الشبكات العصبية' }
+                ],
+                growthTrack: 'Emerging field',
+                growthTrackAr: 'مجال ناشئ',
+                education: 'Master\'s degree preferred',
+                educationAr: 'يفضل درجة الماجستير',
+                demand: 'High',
+                demandAr: 'مرتفع'
               },
               { 
                 title: 'UX Researcher', 
+                titleAr: 'باحث تجربة المستخدم',
                 match: 88, 
-                description: 'Your combination of analytical skills and social understanding would make you excellent at researching user needs.' 
+                description: 'Your combination of analytical skills and social understanding would make you excellent at researching user needs.',
+                descriptionAr: 'سيجعلك مزيج مهاراتك التحليلية والفهم الاجتماعي ممتازًا في البحث عن احتياجات المستخدم.',
+                skills: [
+                  { name: 'User Testing', nameAr: 'اختبار المستخدم' },
+                  { name: 'Interviews', nameAr: 'المقابلات' },
+                  { name: 'Data Analysis', nameAr: 'تحليل البيانات' },
+                  { name: 'Prototyping', nameAr: 'النمذجة' }
+                ],
+                growthTrack: 'Steady growth',
+                growthTrackAr: 'نمو ثابت',
+                education: 'Bachelor\'s in Psychology, HCI, or related field',
+                educationAr: 'بكالوريوس في علم النفس، تفاعل الإنسان والحاسوب، أو مجال ذي صلة',
+                demand: 'Medium',
+                demandAr: 'متوسط'
               }
             ],
             personalityType: "Analytical Problem-Solver",

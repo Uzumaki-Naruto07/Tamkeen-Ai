@@ -9,7 +9,7 @@ import {
   Tabs, Tab, Rating, Tooltip, Badge, Avatar,
   Accordion, AccordionSummary, AccordionDetails,
   LinearProgress, Skeleton, Checkbox, FormControlLabel,
-  Snackbar
+  Snackbar, Drawer, FormGroup, Switch, MenuList
 } from '@mui/material';
 import {
   School, LibraryBooks, Search, FilterList, BookmarkBorder,
@@ -32,8 +32,11 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { format } from 'date-fns';
 import SkillChip from '../components/common/SkillChip';
 import { useDebounce } from '../hooks/useDebounce';
+import { useTranslation } from 'react-i18next';
+import { Autocomplete } from '@mui/material';
 
 const LearningResources = () => {
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [resources, setResources] = useState([]);
@@ -41,13 +44,36 @@ const LearningResources = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({
+  
+  // Define resource types for filter drawer
+  const resourceTypes = [
+    'course', 
+    'video', 
+    'article', 
+    'book', 
+    'tutorial', 
+    'podcast'
+  ];
+  
+  // Define difficulty levels for filter drawer
+  const difficultyLevels = [
+    'beginner', 
+    'intermediate', 
+    'advanced'
+  ];
+  
+  const defaultFilters = {
     resourceType: [],
     skillLevel: [],
-    duration: [],
+    duration: '',
     free: null,
-    skills: []
-  });
+    skills: [],
+    providers: [],
+    types: [],
+    levels: []
+  };
+  
+  const [filters, setFilters] = useState(defaultFilters);
   const [sortBy, setSortBy] = useState('relevance');
   const [activeTab, setActiveTab] = useState(0);
   const [savedResources, setSavedResources] = useState([]);
@@ -69,6 +95,22 @@ const LearningResources = () => {
     field: 'relevance',
     direction: 'desc'
   });
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  
+  // Define available skills and providers for filters
+  const availableSkills = skillsList;
+  const availableProviders = [
+    'Coursera',
+    'Udemy',
+    'edX',
+    'Khan Academy',
+    'LinkedIn Learning',
+    'Codecademy',
+    'Frontend Masters',
+    'DataCamp',
+    'Pluralsight',
+    'O\'Reilly'
+  ];
   
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   
@@ -166,10 +208,11 @@ const LearningResources = () => {
         // Get bookmarked resources
         try {
           const bookmarkedResources = await apiEndpoints.learning.getBookmarkedResources(profile?.id || 2);
-          if (bookmarkedResources && bookmarkedResources.data) {
+          if (bookmarkedResources && bookmarkedResources.data && Array.isArray(bookmarkedResources.data)) {
             setSavedResources(bookmarkedResources.data);
           } else {
-            // Handle empty response
+            // Handle empty or non-array response
+            console.warn('API returned non-array data for bookmarked resources');
             setSavedResources([]);
           }
         } catch (bookmarkError) {
@@ -491,7 +534,9 @@ const LearningResources = () => {
   // Handle resource bookmark toggle
   const handleBookmarkToggle = async (resourceId) => {
     try {
-      const isSaved = savedResources.some(r => r.id === resourceId);
+      // Ensure savedResources is an array before using .some()
+      const currentSavedResources = Array.isArray(savedResources) ? savedResources : [];
+      const isSaved = currentSavedResources.some(r => r.id === resourceId);
       
       try {
         // Try API call but continue even if it fails
@@ -507,16 +552,16 @@ const LearningResources = () => {
       
       // Find the resource from any available source
       const foundResource = resources.find(r => r.id === resourceId) || 
-                         savedResources.find(r => r.id === resourceId) ||
+                         currentSavedResources.find(r => r.id === resourceId) ||
                          completedResources.find(r => r.id === resourceId);
       
       if (isSaved) {
         // Remove from saved
-        setSavedResources(savedResources.filter(r => r.id !== resourceId));
+        setSavedResources(currentSavedResources.filter(r => r.id !== resourceId));
         setSnackbarMessage('Resource removed from your saved list');
       } else if (foundResource) {
         // Add to saved
-        setSavedResources([...savedResources, foundResource]);
+        setSavedResources([...currentSavedResources, foundResource]);
         setSnackbarMessage('Resource saved to your list');
       }
       
@@ -565,9 +610,15 @@ const LearningResources = () => {
           // Add to completed
           setCompletedResources(prev => [...prev, completedResource]);
           
+          // Ensure savedResources is an array
+          const currentSavedResources = Array.isArray(savedResources) ? savedResources : [];
+          
           // If it's marked as completed, automatically save it too
-          if (!savedResources.some(r => r.id === resourceId)) {
-            setSavedResources(prev => [...prev, foundResource]);
+          if (!currentSavedResources.some(r => r.id === resourceId)) {
+            setSavedResources(prev => {
+              const prevArray = Array.isArray(prev) ? prev : [];
+              return [...prevArray, foundResource];
+            });
           }
           
           setSnackbarMessage('Resource marked as completed');
@@ -669,6 +720,9 @@ const LearningResources = () => {
   const renderResourceDialog = () => {
     if (!selectedResource) return null;
     
+    // Ensure savedResources is an array
+    const currentSavedResources = Array.isArray(savedResources) ? savedResources : [];
+    
     return (
       <Dialog 
         open={resourceDialogOpen} 
@@ -707,18 +761,18 @@ const LearningResources = () => {
                   target="_blank"
                   fullWidth
                 >
-                  Start Learning
+                  {i18n.language === 'ar' ? 'ابدأ التعلم' : 'Start Learning'}
                 </Button>
               </Box>
               
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
                 <Button 
                   variant="outlined"
-                  startIcon={savedResources.some(r => r.id === selectedResource.id) ? <Bookmark /> : <BookmarkBorder />}
+                  startIcon={currentSavedResources.some(r => r.id === selectedResource.id) ? <Bookmark /> : <BookmarkBorder />}
                   onClick={() => handleBookmarkToggle(selectedResource.id)}
                   size="small"
                 >
-                  {savedResources.some(r => r.id === selectedResource.id) ? 'Saved' : 'Save'}
+                  {currentSavedResources.some(r => r.id === selectedResource.id) ? (i18n.language === 'ar' ? 'محفوظ' : 'Saved') : (i18n.language === 'ar' ? 'حفظ' : 'Save')}
                 </Button>
                 
                 <Button 
@@ -727,38 +781,48 @@ const LearningResources = () => {
                   onClick={() => {
                     // Copy link to clipboard
                     navigator.clipboard.writeText(`${window.location.origin}/learning?resourceId=${selectedResource.id}`);
-                    setSnackbarMessage('Link copied to clipboard');
+                    setSnackbarMessage(i18n.language === 'ar' ? 'تم نسخ الرابط إلى الحافظة' : 'Link copied to clipboard');
                     setSnackbarOpen(true);
                   }}
                   size="small"
                 >
-                  Share
+                  {i18n.language === 'ar' ? 'مشاركة' : 'Share'}
                 </Button>
               </Box>
             </Grid>
             
             {/* Resource Details */}
             <Grid item xs={12} md={8}>
-              <Typography variant="h6" gutterBottom>About this resource</Typography>
+              <Typography variant="h6" gutterBottom>
+                {i18n.language === 'ar' ? 'عن هذا المورد' : 'About this resource'}
+              </Typography>
               <Typography variant="body1" paragraph>{selectedResource.description}</Typography>
               
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid item xs={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Provider</Typography>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    {i18n.language === 'ar' ? 'المزود' : 'Provider'}
+                  </Typography>
                   <Typography variant="body1">{selectedResource.provider}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Type</Typography>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    {i18n.language === 'ar' ? 'النوع' : 'Type'}
+                  </Typography>
                   <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>
                     {selectedResource.type}
                   </Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Duration</Typography>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    {i18n.language === 'ar' ? 'المدة' : 'Duration'}
+                  </Typography>
                   <Typography variant="body1">{selectedResource.duration}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Level</Typography>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    {i18n.language === 'ar' ? 'المستوى' : 'Level'}
+                  </Typography>
                   <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>
                     {selectedResource.level || 'Intermediate'}
                   </Typography>
@@ -766,7 +830,9 @@ const LearningResources = () => {
               </Grid>
               
               <Box sx={{ mt: 3 }}>
-                <Typography variant="subtitle2" color="text.secondary">Skills Covered</Typography>
+                <Typography variant="subtitle2" color="text.secondary">
+                  {i18n.language === 'ar' ? 'المهارات المغطاة' : 'Skills Covered'}
+                </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
                   {selectedResource.skills && selectedResource.skills.map(skill => (
                     <Chip 
@@ -787,19 +853,27 @@ const LearningResources = () => {
               
               {completedResources.some(r => r.id === selectedResource.id) && (
                 <Box sx={{ mt: 3 }}>
-                  <Typography variant="subtitle2" color="text.secondary">Your Progress</Typography>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    {i18n.language === 'ar' ? 'تقدمك' : 'Your Progress'}
+                  </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                     <CheckCircle color="success" sx={{ mr: 1 }} />
                     <Typography variant="body2">
-                      Completed on {new Date(
-                        completedResources.find(r => r.id === selectedResource.id)?.completedDate
-                      ).toLocaleDateString()}
+                      {i18n.language === 'ar' 
+                        ? `تم الإكمال في ${new Date(
+                          completedResources.find(r => r.id === selectedResource.id)?.completedDate
+                        ).toLocaleDateString()}`
+                        : `Completed on ${new Date(
+                          completedResources.find(r => r.id === selectedResource.id)?.completedDate
+                        ).toLocaleDateString()}`}
                     </Typography>
                   </Box>
                   
                   {completedResources.find(r => r.id === selectedResource.id)?.userRating > 0 && (
                     <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                      <Typography variant="body2" sx={{ mr: 1 }}>Your rating:</Typography>
+                      <Typography variant="body2" sx={{ mr: 1 }}>
+                        {i18n.language === 'ar' ? 'تقييمك:' : 'Your rating:'}
+                      </Typography>
                       <Rating 
                         value={completedResources.find(r => r.id === selectedResource.id)?.userRating || 0} 
                         readOnly 
@@ -817,7 +891,7 @@ const LearningResources = () => {
             onClick={() => setResourceDialogOpen(false)}
             color="primary"
           >
-            Close
+            {i18n.language === 'ar' ? 'إغلاق' : 'Close'}
           </Button>
           {!completedResources.some(r => r.id === selectedResource.id) && (
             <Button 
@@ -829,7 +903,7 @@ const LearningResources = () => {
               variant="contained"
               startIcon={<CheckCircle />}
             >
-              Mark as Completed
+              {i18n.language === 'ar' ? 'وضع علامة كمكتمل' : 'Mark as Completed'}
             </Button>
           )}
         </DialogActions>
@@ -846,7 +920,7 @@ const LearningResources = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Leave a Review</DialogTitle>
+        <DialogTitle>{i18n.language === 'ar' ? 'ترك تقييم' : 'Leave a Review'}</DialogTitle>
         <DialogContent>
           <Rating
             name="rating"
@@ -856,7 +930,7 @@ const LearningResources = () => {
             }}
           />
           <TextField
-            label="Comment"
+            label={i18n.language === 'ar' ? 'تعليق' : 'Comment'}
             multiline
             rows={4}
             value={userReview.comment}
@@ -865,12 +939,14 @@ const LearningResources = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setReviewDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setReviewDialogOpen(false)}>
+            {i18n.language === 'ar' ? 'إلغاء' : 'Cancel'}
+          </Button>
           <Button 
             onClick={handleSubmitReview}
             variant="contained"
           >
-            Submit Review
+            {i18n.language === 'ar' ? 'إرسال التقييم' : 'Submit Review'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -893,23 +969,35 @@ const LearningResources = () => {
   
   // Render resource list
   const renderResourceList = () => {
+    // Ensure savedResources is an array
+    const currentSavedResources = Array.isArray(savedResources) ? savedResources : [];
+    
     return (
       <Box>
-        {/* Search input */}
-        <TextField
-          fullWidth
-          placeholder="Search for learning resources..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ mb: 3 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search />
-              </InputAdornment>
-            )
-          }}
-        />
+        {/* Search and filter row */}
+        <Box sx={{ display: 'flex', mb: 3, gap: 2 }}>
+          <TextField
+            fullWidth
+            placeholder={i18n.language === 'ar' ? 'ابحث عن موارد التعلم...' : 'Search for learning resources...'}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              )
+            }}
+          />
+          
+          <Button
+            variant="outlined"
+            startIcon={<FilterList />}
+            onClick={() => setFilterDrawerOpen(true)}
+          >
+            {i18n.language === 'ar' ? 'تصفية' : 'Filter'}
+          </Button>
+        </Box>
         
         {/* Resource cards */}
         <Grid container spacing={3}>
@@ -967,14 +1055,14 @@ const LearningResources = () => {
                       color="primary"
                       onClick={() => handleViewDetails(resource)}
                     >
-                      View Details
+                      {i18n.language === 'ar' ? 'عرض التفاصيل' : 'View Details'}
                     </Button>
                     <IconButton 
                       size="small"
                       onClick={() => handleBookmarkToggle(resource.id)}
-                      color={savedResources.some(r => r.id === resource.id) ? 'primary' : 'default'}
+                      color={currentSavedResources.some(r => r.id === resource.id) ? 'primary' : 'default'}
                     >
-                      {savedResources.some(r => r.id === resource.id) ? <Bookmark /> : <BookmarkBorder />}
+                      {currentSavedResources.some(r => r.id === resource.id) ? <Bookmark /> : <BookmarkBorder />}
                     </IconButton>
                   </CardActions>
                 </Card>
@@ -983,7 +1071,7 @@ const LearningResources = () => {
           ) : (
             <Grid item xs={12}>
               <Typography variant="body1" textAlign="center">
-                No resources found. Try adjusting your search criteria.
+                {i18n.language === 'ar' ? 'لم يتم العثور على موارد. حاول تعديل معايير البحث.' : 'No resources found. Try adjusting your search criteria.'}
               </Typography>
             </Grid>
           )}
@@ -1006,11 +1094,14 @@ const LearningResources = () => {
   
   // Render saved resources
   const renderSavedResources = () => {
+    // Ensure savedResources is an array
+    const currentSavedResources = Array.isArray(savedResources) ? savedResources : [];
+    
     return (
       <Box>
-        {savedResources.length > 0 ? (
+        {currentSavedResources.length > 0 ? (
           <Grid container spacing={3}>
-            {savedResources.map(resource => (
+            {currentSavedResources.map(resource => (
               <Grid item xs={12} sm={6} md={4} key={resource.id}>
                 <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <Box
@@ -1041,7 +1132,7 @@ const LearningResources = () => {
                   </CardContent>
                   <CardActions>
                     <Button size="small" color="primary" href={resource.url} target="_blank">
-                      View Resource
+                      {i18n.language === 'ar' ? 'عرض المورد' : 'View Resource'}
                     </Button>
                     <IconButton 
                       size="small"
@@ -1065,16 +1156,16 @@ const LearningResources = () => {
         ) : (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography variant="h6" color="text.secondary" gutterBottom>
-              No saved resources
+              {i18n.language === 'ar' ? 'لا توجد موارد محفوظة' : 'No saved resources'}
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              Bookmark resources to save them for later
+              {i18n.language === 'ar' ? 'قم بوضع إشارة مرجعية على الموارد لحفظها لوقت لاحق' : 'Bookmark resources to save them for later'}
             </Typography>
             <Button 
               variant="contained" 
               onClick={() => setActiveTab(0)}
             >
-              Browse Resources
+              {i18n.language === 'ar' ? 'تصفح الموارد' : 'Browse Resources'}
             </Button>
           </Box>
         )}
@@ -1104,7 +1195,7 @@ const LearningResources = () => {
                   <Box sx={{ position: 'absolute', top: 10, right: 10 }}>
                     <Chip
                       icon={<CheckCircle />}
-                      label="Completed"
+                      label={i18n.language === 'ar' ? 'مكتمل' : 'Completed'}
                       color="success"
                       size="small"
                     />
@@ -1118,13 +1209,13 @@ const LearningResources = () => {
                     </Typography>
                     {resource.completedDate && (
                       <Typography variant="body2" color="text.secondary" gutterBottom>
-                        Completed on: {new Date(resource.completedDate).toLocaleDateString()}
+                        {i18n.language === 'ar' ? `تم الإكمال في: ${new Date(resource.completedDate).toLocaleDateString()}` : `Completed on: ${new Date(resource.completedDate).toLocaleDateString()}`}
                       </Typography>
                     )}
                     {resource.userRating && (
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                         <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
-                          Your rating:
+                          {i18n.language === 'ar' ? 'تقييمك:' : 'Your rating:'}
                         </Typography>
                         <Rating value={resource.userRating} readOnly size="small" />
                       </Box>
@@ -1137,7 +1228,7 @@ const LearningResources = () => {
                   </CardContent>
                   <CardActions>
                     <Button size="small" color="primary" href={resource.url} target="_blank">
-                      View Resource
+                      {i18n.language === 'ar' ? 'عرض المورد' : 'View Resource'}
                     </Button>
                     <Button 
                       size="small" 
@@ -1147,7 +1238,7 @@ const LearningResources = () => {
                         setReviewDialogOpen(true);
                       }}
                     >
-                      {resource.userRating ? 'Edit Review' : 'Add Review'}
+                      {resource.userRating ? (i18n.language === 'ar' ? 'تعديل التقييم' : 'Edit Review') : (i18n.language === 'ar' ? 'إضافة تقييم' : 'Add Review')}
                     </Button>
                   </CardActions>
                 </Card>
@@ -1157,16 +1248,16 @@ const LearningResources = () => {
         ) : (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography variant="h6" color="text.secondary" gutterBottom>
-              No completed resources
+              {i18n.language === 'ar' ? 'لا توجد موارد مكتملة' : 'No completed resources'}
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              Mark resources as completed to track your progress
+              {i18n.language === 'ar' ? 'قم بتحديد الموارد كمكتملة لتتبع تقدمك' : 'Mark resources as completed to track your progress'}
             </Typography>
             <Button 
               variant="contained" 
               onClick={() => setActiveTab(0)}
             >
-              Browse Resources
+              {i18n.language === 'ar' ? 'تصفح الموارد' : 'Browse Resources'}
             </Button>
           </Box>
         )}
@@ -1253,10 +1344,223 @@ const LearningResources = () => {
     );
   };
   
+  // Render tab panels
+  const TabPanel = (props) => {
+    const { children, value, index, ...other } = props;
+    return (
+      <div
+        role="tabpanel"
+        hidden={value !== index}
+        id={`resources-tabpanel-${index}`}
+        aria-labelledby={`resources-tab-${index}`}
+        {...other}
+      >
+        {value === index && (
+          <Box sx={{ py: 3 }}>
+            {children}
+          </Box>
+        )}
+      </div>
+    );
+  };
+  
+  // Filter drawer
+  const renderFilterDrawer = () => {
+    // Helper function to translate resource types and difficulty levels
+    const getArabicLabel = (label) => {
+      if (label === 'course') return 'دورة';
+      if (label === 'video') return 'فيديو';
+      if (label === 'article') return 'مقال';
+      if (label === 'book') return 'كتاب';
+      if (label === 'tutorial') return 'درس تعليمي';
+      if (label === 'podcast') return 'بودكاست';
+      
+      if (label === 'beginner') return 'مبتدئ';
+      if (label === 'intermediate') return 'متوسط';
+      if (label === 'advanced') return 'متقدم';
+      
+      return label;
+    };
+  
+    return (
+      <Drawer
+        anchor="right"
+        open={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
+        sx={{ zIndex: 1300 }}
+      >
+        <Box sx={{ width: 280, p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6">
+              {i18n.language === 'ar' ? 'تصفية الموارد' : 'Filter Resources'}
+            </Typography>
+            <IconButton onClick={() => setFilterDrawerOpen(false)}>
+              <Close />
+            </IconButton>
+          </Box>
+          
+          <Divider sx={{ mb: 3 }} />
+          
+          {/* Resource type filter */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              {i18n.language === 'ar' ? 'نوع المورد' : 'Resource Type'}
+            </Typography>
+            <FormGroup>
+              {resourceTypes.map(type => (
+                <FormControlLabel
+                  key={type}
+                  control={
+                    <Checkbox
+                      checked={filters.resourceType.includes(type)}
+                      onChange={(e) => {
+                        const newTypes = e.target.checked
+                          ? [...filters.resourceType, type]
+                          : filters.resourceType.filter(t => t !== type);
+                        setFilters(prev => ({ ...prev, resourceType: newTypes }));
+                      }}
+                    />
+                  }
+                  label={i18n.language === 'ar' ? getArabicLabel(type) : type}
+                />
+              ))}
+            </FormGroup>
+          </Box>
+          
+          {/* Skills filter */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              {i18n.language === 'ar' ? 'المهارات' : 'Skills'}
+            </Typography>
+            <Autocomplete
+              multiple
+              id="skills-filter"
+              options={availableSkills}
+              value={filters.skills}
+              onChange={(event, newValue) => {
+                setFilters(prev => ({ ...prev, skills: newValue }));
+              }}
+              renderInput={(params) => (
+                <TextField 
+                  {...params} 
+                  variant="outlined" 
+                  placeholder={i18n.language === 'ar' ? 'اختر المهارات' : 'Select skills'} 
+                />
+              )}
+              size="small"
+            />
+          </Box>
+          
+          {/* Difficulty level filter */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              {i18n.language === 'ar' ? 'مستوى الصعوبة' : 'Difficulty Level'}
+            </Typography>
+            <FormGroup>
+              {difficultyLevels.map(level => (
+                <FormControlLabel
+                  key={level}
+                  control={
+                    <Checkbox
+                      checked={filters.skillLevel.includes(level)}
+                      onChange={(e) => {
+                        const newLevels = e.target.checked
+                          ? [...filters.skillLevel, level]
+                          : filters.skillLevel.filter(l => l !== level);
+                        setFilters(prev => ({ ...prev, skillLevel: newLevels }));
+                      }}
+                    />
+                  }
+                  label={i18n.language === 'ar' ? getArabicLabel(level) : level}
+                />
+              ))}
+            </FormGroup>
+          </Box>
+          
+          {/* Duration filter */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              {i18n.language === 'ar' ? 'المدة' : 'Duration'}
+            </Typography>
+            <FormControl fullWidth size="small">
+              <Select
+                value={filters.duration}
+                onChange={(e) => setFilters(prev => ({ ...prev, duration: e.target.value }))}
+                displayEmpty
+              >
+                <MenuItem value="">
+                  <em>{i18n.language === 'ar' ? 'أي مدة' : 'Any duration'}</em>
+                </MenuItem>
+                <MenuItem value="short">{i18n.language === 'ar' ? 'قصير (< 3 ساعات)' : 'Short (< 3 hours)'}</MenuItem>
+                <MenuItem value="medium">{i18n.language === 'ar' ? 'متوسط (3-10 ساعات)' : 'Medium (3-10 hours)'}</MenuItem>
+                <MenuItem value="long">{i18n.language === 'ar' ? 'طويل (> 10 ساعات)' : 'Long (> 10 hours)'}</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+          
+          {/* Provider filter */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              {i18n.language === 'ar' ? 'المزود' : 'Provider'}
+            </Typography>
+            <Autocomplete
+              multiple
+              id="provider-filter"
+              options={availableProviders}
+              value={filters.providers}
+              onChange={(event, newValue) => {
+                setFilters(prev => ({ ...prev, providers: newValue }));
+              }}
+              renderInput={(params) => (
+                <TextField 
+                  {...params} 
+                  variant="outlined" 
+                  placeholder={i18n.language === 'ar' ? 'اختر المزودين' : 'Select providers'} 
+                />
+              )}
+              size="small"
+            />
+          </Box>
+          
+          {/* Free resources only filter */}
+          <Box sx={{ mb: 3 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={filters.free === true}
+                  onChange={(e) => setFilters(prev => ({ ...prev, free: e.target.checked ? true : null }))}
+                />
+              }
+              label={i18n.language === 'ar' ? 'الموارد المجانية فقط' : 'Free resources only'}
+            />
+          </Box>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+            <Button 
+              variant="outlined" 
+              onClick={() => setFilters(defaultFilters)}
+            >
+              {i18n.language === 'ar' ? 'إعادة تعيين' : 'Reset'}
+            </Button>
+            <Button 
+              variant="contained" 
+              onClick={() => {
+                searchResources();
+                setFilterDrawerOpen(false);
+              }}
+            >
+              {i18n.language === 'ar' ? 'تطبيق' : 'Apply'}
+            </Button>
+          </Box>
+        </Box>
+      </Drawer>
+    );
+  };
+  
   return (
     <Box sx={{ py: 3, px: 2 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        Learning Resources
+        {i18n.language === 'ar' ? 'موارد التعلم' : 'Learning Resources'}
       </Typography>
       
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -1266,17 +1570,17 @@ const LearningResources = () => {
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
           <Tab 
-            label="All Resources" 
+            label={i18n.language === 'ar' ? 'جميع الموارد' : 'All Resources'} 
             icon={<LibraryBooks />} 
             iconPosition="start"
           />
           <Tab 
-            label="Saved" 
+            label={i18n.language === 'ar' ? 'المحفوظة' : 'Saved'} 
             icon={<Bookmark />} 
             iconPosition="start"
           />
           <Tab 
-            label="Completed" 
+            label={i18n.language === 'ar' ? 'المكتملة' : 'Completed'} 
             icon={<AssignmentTurnedIn />} 
             iconPosition="start"
           />
@@ -1284,7 +1588,7 @@ const LearningResources = () => {
         
         <Box sx={{ py: 2 }}>
           {loading ? (
-            <LoadingSpinner message="Loading resources..." />
+            <LoadingSpinner message={i18n.language === 'ar' ? 'جاري تحميل الموارد...' : 'Loading resources...'} />
           ) : error ? (
             <Alert severity="error" sx={{ my: 2 }}>
               {error}
@@ -1316,28 +1620,30 @@ const LearningResources = () => {
           <ListItemIcon>
             <Visibility fontSize="small" />
           </ListItemIcon>
-          <ListItemText>View Details</ListItemText>
+          <ListItemText>{i18n.language === 'ar' ? 'عرض التفاصيل' : 'View Details'}</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleShareResource}>
           <ListItemIcon>
             <Share fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Share Resource</ListItemText>
+          <ListItemText>{i18n.language === 'ar' ? 'مشاركة المورد' : 'Share Resource'}</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleAddToLearningPlan}>
           <ListItemIcon>
             <Add fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Add to Learning Plan</ListItemText>
+          <ListItemText>{i18n.language === 'ar' ? 'إضافة إلى خطة التعلم' : 'Add to Learning Plan'}</ListItemText>
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleReportResource}>
           <ListItemIcon>
             <Report fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Report Resource</ListItemText>
+          <ListItemText>{i18n.language === 'ar' ? 'الإبلاغ عن المورد' : 'Report Resource'}</ListItemText>
         </MenuItem>
       </Menu>
+      
+      {renderFilterDrawer()}
     </Box>
   );
 };

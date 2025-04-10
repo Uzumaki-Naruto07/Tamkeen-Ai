@@ -33,6 +33,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { format, formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import SkillChip from '../components/common/SkillChip';
+import { useTranslation } from 'react-i18next';
 
 const AEDIcon = (props) => (
   <SvgIcon {...props}>
@@ -82,6 +83,7 @@ const JobDetails = () => {
   const { profile } = useUser();
   const { resumes } = useResume();
   const { savedJobs, toggleSaveJob, isSavedJob } = useJob();
+  const { t, i18n } = useTranslation();
   
   // Force LTR direction for JobDetails page
   useEffect(() => {
@@ -124,42 +126,71 @@ const JobDetails = () => {
                 1: {
                   id: 1,
                   title: "Senior Software Engineer",
+                  titleAr: "مهندس برمجيات أول",
                   company: "Tech Solutions UAE",
+                  companyAr: "تيك سوليوشنز الإمارات",
                   location: "Dubai, UAE",
+                  locationAr: "دبي، الإمارات العربية المتحدة",
                   jobType: "Full-time",
+                  jobTypeAr: "دوام كامل",
                   salaryRange: "25,000 - 35,000 AED/month",
+                  salaryRangeAr: "25,000 - 35,000 درهم/شهر",
                   postedDate: "2 days ago",
+                  postedDateAr: "منذ يومين",
                   companyLogo: "https://logo.clearbit.com/microsoft.com",
                   matchScore: 85,
                   requiredSkills: ["React", "Node.js", "TypeScript", "AWS"],
                   description: "Looking for an experienced software engineer to join our growing team. We're seeking someone with strong skills in React, Node.js, TypeScript, and AWS who can help us build scalable, high-performance applications.",
+                  descriptionAr: "نبحث عن مهندس برمجيات ذو خبرة للانضمام إلى فريقنا المتنامي. نسعى لشخص يتمتع بمهارات قوية في React و Node.js و TypeScript و AWS يمكنه المساعدة في بناء تطبيقات قابلة للتوسع وعالية الأداء.",
                   applicationStatus: "open",
                   benefits: ["Health Insurance", "Annual Flights", "Housing Allowance", "Flexible Working Hours"],
+                  benefitsAr: ["تأمين صحي", "رحلات سنوية", "بدل سكن", "ساعات عمل مرنة"],
                   requirements: [
                     "5+ years of experience in software development",
                     "Strong proficiency in React, Node.js and TypeScript",
                     "Experience with AWS cloud services",
                     "Excellent problem-solving skills"
                   ],
+                  requirementsAr: [
+                    "5+ سنوات من الخبرة في تطوير البرمجيات",
+                    "كفاءة قوية في React و Node.js و TypeScript",
+                    "خبرة في خدمات AWS السحابية",
+                    "مهارات ممتازة في حل المشكلات"
+                  ],
                   responsibilities: [
                     "Develop and maintain web applications",
                     "Write clean, maintainable and efficient code",
                     "Collaborate with cross-functional teams",
                     "Participate in code reviews and technical discussions"
-                  ]
+                  ],
+                  responsibilitiesAr: [
+                    "تطوير وصيانة تطبيقات الويب",
+                    "كتابة كود نظيف وقابل للصيانة وفعال",
+                    "التعاون مع فرق متعددة التخصصات",
+                    "المشاركة في مراجعات الكود والمناقشات التقنية"
+                  ],
+                  salaryDetails: "This position offers a competitive salary package that reflects the candidate's experience and qualifications. The compensation is inclusive of basic salary and may include additional allowances based on company policy.",
+                  salaryDetailsAr: "تقدم هذه الوظيفة حزمة راتب تنافسية تعكس خبرة المرشح ومؤهلاته. يشمل التعويض الراتب الأساسي وقد يتضمن بدلات إضافية بناءً على سياسة الشركة."
                 },
                 2: {
                   id: 2,
                   title: "Marketing Manager",
+                  titleAr: "مدير تسويق",
                   company: "Global Marketing LLC",
+                  companyAr: "جلوبال ماركتنج",
                   location: "Abu Dhabi, UAE",
+                  locationAr: "أبوظبي، الإمارات العربية المتحدة",
                   jobType: "Full-time",
+                  jobTypeAr: "دوام كامل",
                   salaryRange: "20,000 - 30,000 AED/month",
+                  salaryRangeAr: "20,000 - 30,000 درهم/شهر",
                   postedDate: "1 week ago",
+                  postedDateAr: "منذ أسبوع",
                   companyLogo: "https://logo.clearbit.com/globalmarketing.ae",
                   matchScore: 75,
                   requiredSkills: ["Digital Marketing", "Social Media", "Content Strategy"],
                   description: "Join our dynamic marketing team in Abu Dhabi. We're looking for an experienced Marketing Manager to lead our digital initiatives and brand strategy.",
+                  descriptionAr: "انضم إلى فريق التسويق الديناميكي لدينا في أبوظبي. نبحث عن مدير تسويق ذو خبرة لتقديم استراتيجيات التسويق الرقمي واستراتيجية العلامة التجارية.",
                   applicationStatus: "open",
                   benefits: [
                     "Health Insurance",
@@ -179,20 +210,34 @@ const JobDetails = () => {
                     "Manage marketing budget and ROI",
                     "Create and optimize digital campaigns",
                     "Analyze market trends and competitor activities"
+                  ],
+                  responsibilitiesAr: [
+                    "تطوير وتنفيذ استراتيجيات التسويق",
+                    "قيادة وتوجيه فريق التسويق",
+                    "إدارة ميزانية التسويق والعائد على الاستثمار",
+                    "إنشاء وتحسين الحملات الرقمية",
+                    "تحليل اتجاهات السوق وأنشطة المنافسين"
                   ]
                 },
                 3: {
                   id: 3,
                   title: "Financial Analyst",
+                  titleAr: "محلل مالي",
                   company: "Emirates Investment Bank",
+                  companyAr: "بنك الإمارات للاستثمار",
                   location: "Dubai, UAE",
+                  locationAr: "دبي، الإمارات العربية المتحدة",
                   jobType: "Full-time",
+                  jobTypeAr: "دوام كامل",
                   salaryRange: "18,000 - 25,000 AED/month",
+                  salaryRangeAr: "18,000 - 25,000 درهم/شهر",
                   postedDate: "3 days ago",
+                  postedDateAr: "منذ 3 أيام",
                   companyLogo: "https://logo.clearbit.com/emiratesbank.ae",
                   matchScore: 90,
                   requiredSkills: ["Financial Modeling", "Excel", "PowerBI"],
                   description: "Seeking a skilled financial analyst for our investment team. Join one of UAE's leading investment banks.",
+                  descriptionAr: "نبحث عن محلل مالي ماهر لفريق الاستثمار لدينا. انضم إلى أحد البنوك الاستثمارية الرائدة في الإمارات العربية المتحدة.",
                   applicationStatus: "open",
                   benefits: [
                     "Competitive Salary",
@@ -200,49 +245,94 @@ const JobDetails = () => {
                     "Health Insurance",
                     "Professional Development"
                   ],
+                  benefitsAr: [
+                    "راتب تنافسي",
+                    "مكافأة أداء",
+                    "تأمين صحي",
+                    "تطوير مهني"
+                  ],
                   requirements: [
                     "Bachelor's degree in Finance or related field",
                     "3+ years of financial analysis experience",
                     "Advanced Excel and PowerBI skills",
                     "CFA certification preferred"
                   ],
+                  requirementsAr: [
+                    "بكالوريوس في المالية أو مجال ذي صلة",
+                    "3+ سنوات من الخبرة في التحليل المالي",
+                    "مهارات متقدمة في Excel و PowerBI",
+                    "يفضل الحاصلين على شهادة CFA"
+                  ],
                   responsibilities: [
                     "Perform financial modeling and analysis",
                     "Prepare investment reports",
                     "Conduct market research",
                     "Support investment decisions"
+                  ],
+                  responsibilitiesAr: [
+                    "إجراء النمذجة والتحليل المالي",
+                    "إعداد تقارير الاستثمار",
+                    "إجراء أبحاث السوق",
+                    "دعم قرارات الاستثمار"
                   ]
                 },
                 4: {
                   id: 4,
                   title: "HR Manager",
+                  titleAr: "مدير الموارد البشرية",
                   company: "Al Futtaim Group",
+                  companyAr: "مجموعة الفطيم",
                   location: "Dubai, UAE",
+                  locationAr: "دبي، الإمارات العربية المتحدة",
                   jobType: "Full-time",
-                  salaryRange: "22,000 - 28,000 AED/month",
-                  postedDate: "1 day ago",
+                  jobTypeAr: "دوام كامل",
+                  salaryRange: "20,000 - 30,000 AED/month",
+                  salaryRangeAr: "20,000 - 30,000 درهم/شهر",
+                  postedDate: "1 week ago",
+                  postedDateAr: "منذ أسبوع واحد",
                   companyLogo: "https://logo.clearbit.com/alfuttaim.com",
-                  matchScore: 80,
-                  requiredSkills: ["HR Management", "Recruitment", "Employee Relations"],
-                  description: "Leading HR initiatives for a major retail group. We're looking for an experienced HR Manager to oversee all aspects of human resources for our organization.",
+                  matchScore: 85,
+                  requiredSkills: ["Recruitment", "Employee Relations", "HR Policies"],
+                  description: "Looking for an experienced HR Manager to lead our HR department. Manage employee relations and enhance company culture.",
+                  descriptionAr: "نبحث عن مدير موارد بشرية ذو خبرة لقيادة قسم الموارد البشرية لدينا. إدارة علاقات الموظفين وتعزيز ثقافة الشركة.",
                   applicationStatus: "open",
                   benefits: [
-                    "Health Insurance",
-                    "Annual Flights",
-                    "Staff Discounts",
-                    "Pension Plan"
+                    "Competitive Salary",
+                    "Annual Bonus",
+                    "Family Health Insurance",
+                    "Education Allowance"
+                  ],
+                  benefitsAr: [
+                    "راتب تنافسي",
+                    "مكافأة سنوية",
+                    "تأمين صحي عائلي",
+                    "بدل تعليم"
                   ],
                   requirements: [
-                    "7+ years of HR experience",
                     "Bachelor's degree in HR or related field",
-                    "CIPD qualification preferred",
-                    "Knowledge of UAE labor laws"
+                    "5+ years of HR management experience",
+                    "Knowledge of UAE labor laws",
+                    "Strong leadership skills"
+                  ],
+                  requirementsAr: [
+                    "بكالوريوس في الموارد البشرية أو مجال ذي صلة",
+                    "5+ سنوات من الخبرة في إدارة الموارد البشرية",
+                    "معرفة بقوانين العمل الإماراتية",
+                    "مهارات قيادية قوية"
                   ],
                   responsibilities: [
                     "Develop and implement HR strategies",
                     "Manage recruitment and talent acquisition",
-                    "Oversee employee relations and engagement",
+                    "Handle employee relations and conflict resolution",
+                    "Oversee compensation and benefits programs",
                     "Ensure compliance with labor laws"
+                  ],
+                  responsibilitiesAr: [
+                    "تطوير وتنفيذ استراتيجيات الموارد البشرية",
+                    "إدارة التوظيف واستقطاب المواهب",
+                    "التعامل مع علاقات الموظفين وحل النزاعات",
+                    "الإشراف على برامج التعويضات والمزايا",
+                    "ضمان الامتثال لقوانين العمل"
                   ]
                 },
                 5: {
@@ -269,6 +359,12 @@ const JobDetails = () => {
                     "PMP certification",
                     "Experience in real estate development",
                     "Strong leadership and communication skills"
+                  ],
+                  requirementsAr: [
+                    "10+ سنوات في إدارة المشاريع",
+                    "شهادة PMP",
+                    "خبرة في تطوير العقارات",
+                    "مهارات قوية في القيادة والتواصل"
                   ],
                   responsibilities: [
                     "Lead project planning and execution",
@@ -302,6 +398,12 @@ const JobDetails = () => {
                     "Strong programming skills in Python",
                     "Experience with big data technologies"
                   ],
+                  requirementsAr: [
+                    "ماجستير/دكتوراه في علوم الكمبيوتر أو علوم البيانات أو مجال ذي صلة",
+                    "خبرة في التعلم الآلي والتعلم العميق",
+                    "مهارات برمجة قوية في بايثون",
+                    "خبرة في تقنيات البيانات الضخمة"
+                  ],
                   responsibilities: [
                     "Develop machine learning models",
                     "Analyze complex datasets",
@@ -333,6 +435,12 @@ const JobDetails = () => {
                     "Proven track record in exceeding sales targets",
                     "Experience managing high-performing teams",
                     "International sales experience preferred"
+                  ],
+                  requirementsAr: [
+                    "10+ سنوات في مبيعات الضيافة الفاخرة",
+                    "سجل حافل في تجاوز أهداف المبيعات",
+                    "خبرة في إدارة فرق عالية الأداء",
+                    "يفضل خبرة المبيعات الدولية"
                   ],
                   responsibilities: [
                     "Develop and implement sales strategies",
@@ -366,6 +474,12 @@ const JobDetails = () => {
                     "Proficiency in AutoCAD and other design software",
                     "Knowledge of local building codes and regulations"
                   ],
+                  requirementsAr: [
+                    "بكالوريوس في الهندسة المدنية",
+                    "5+ سنوات من الخبرة في مشاريع البنية التحتية",
+                    "إتقان AutoCAD وبرامج التصميم الأخرى",
+                    "معرفة بقوانين وأنظمة البناء المحلية"
+                  ],
                   responsibilities: [
                     "Design and develop infrastructure plans",
                     "Oversee construction activities",
@@ -397,6 +511,12 @@ const JobDetails = () => {
                     "Proven track record in SEO/SEM campaigns",
                     "Experience with analytics tools",
                     "Knowledge of e-commerce marketing"
+                  ],
+                  requirementsAr: [
+                    "3+ سنوات من الخبرة في التسويق الرقمي",
+                    "سجل حافل في حملات تحسين محركات البحث والتسويق عبر محركات البحث",
+                    "خبرة في أدوات التحليلات",
+                    "معرفة بتسويق التجارة الإلكترونية"
                   ],
                   responsibilities: [
                     "Manage digital marketing campaigns",
@@ -430,6 +550,12 @@ const JobDetails = () => {
                     "Experience in port operations preferred",
                     "Strong leadership and problem-solving skills"
                   ],
+                  requirementsAr: [
+                    "7+ سنوات من الخبرة في إدارة العمليات",
+                    "بكالوريوس في الأعمال، الخدمات اللوجستية أو مجال ذي صلة",
+                    "يفضل الخبرة في عمليات الموانئ",
+                    "مهارات قوية في القيادة وحل المشكلات"
+                  ],
                   responsibilities: [
                     "Oversee daily port operations",
                     "Optimize logistics processes",
@@ -461,6 +587,12 @@ const JobDetails = () => {
                     "Strong skills in React or Vue.js",
                     "Experience with responsive design",
                     "Understanding of UX principles"
+                  ],
+                  requirementsAr: [
+                    "3+ سنوات من الخبرة في تطوير الواجهة الأمامية",
+                    "مهارات قوية في React أو Vue.js",
+                    "خبرة في التصميم المتجاوب",
+                    "فهم لمبادئ تجربة المستخدم"
                   ],
                   responsibilities: [
                     "Develop user interfaces for web and mobile applications",
@@ -494,6 +626,12 @@ const JobDetails = () => {
                     "Strong networking and negotiation skills",
                     "Bachelor's degree in Business or related field"
                   ],
+                  requirementsAr: [
+                    "7+ سنوات من الخبرة في تطوير الأعمال",
+                    "خبرة في البيع بالتجزئة أو السلع الاستهلاكية",
+                    "مهارات قوية في التواصل والتفاوض",
+                    "بكالوريوس في الأعمال أو مجال ذي صلة"
+                  ],
                   responsibilities: [
                     "Identify and pursue business opportunities",
                     "Develop and maintain client relationships",
@@ -525,6 +663,12 @@ const JobDetails = () => {
                     "3+ years of content creation experience",
                     "Knowledge of SEO and digital content",
                     "Bachelor's degree in Journalism, Communications or related field"
+                  ],
+                  requirementsAr: [
+                    "متحدث أصلي باللغة العربية مع مهارات كتابة ممتازة",
+                    "3+ سنوات من الخبرة في إنشاء المحتوى",
+                    "معرفة بتحسين محركات البحث والمحتوى الرقمي",
+                    "بكالوريوس في الصحافة، الاتصالات أو مجال ذي صلة"
                   ],
                   responsibilities: [
                     "Create high-quality Arabic content",
@@ -558,6 +702,12 @@ const JobDetails = () => {
                     "Proficiency in AutoCAD and other engineering software",
                     "Knowledge of industry standards and regulations"
                   ],
+                  requirementsAr: [
+                    "بكالوريوس في الهندسة الميكانيكية",
+                    "5+ سنوات من الخبرة في النفط والغاز",
+                    "إتقان AutoCAD وبرامج الهندسة الأخرى",
+                    "معرفة بمعايير وأنظمة الصناعة"
+                  ],
                   responsibilities: [
                     "Design and develop mechanical systems",
                     "Oversee equipment installation and maintenance",
@@ -589,6 +739,12 @@ const JobDetails = () => {
                     "7+ years of experience in banking or corporate law",
                     "Experience in contract review and negotiation",
                     "Knowledge of UAE financial regulations"
+                  ],
+                  requirementsAr: [
+                    "شهادة في القانون مع تأهيل إماراتي",
+                    "7+ سنوات من الخبرة في القانون المصرفي أو قانون الشركات",
+                    "خبرة في مراجعة العقود والتفاوض",
+                    "معرفة باللوائح المالية الإماراتية"
                   ],
                   responsibilities: [
                     "Provide legal advice to business units",
@@ -623,42 +779,15 @@ const JobDetails = () => {
                     "Experience with user research and usability testing",
                     "Knowledge of design systems and UI component libraries"
                   ],
+                  requirementsAr: [
+                    "3+ سنوات من الخبرة في تصميم واجهة وتجربة المستخدم",
+                    "محفظة قوية تُظهر التصميم المتمحور حول المستخدم",
+                    "إتقان أدوات التصميم مثل Figma ومجموعة Adobe الإبداعية",
+                    "خبرة في أبحاث المستخدم واختبار قابلية الاستخدام",
+                    "معرفة بأنظمة التصميم ومكتبات مكونات واجهة المستخدم"
+                  ],
                   responsibilities: [
                     "Design user interfaces for web and mobile applications",
-                    "Create wireframes, prototypes and high-fidelity designs",
-                    "Conduct user research and usability testing",
-                    "Collaborate with product and development teams",
-                    "Maintain and evolve the design system"
-                  ]
-                },
-                17: {
-                  id: 17,
-                  title: "Supply Chain Manager",
-                  company: "Amazon UAE",
-                  location: "Dubai, UAE",
-                  jobType: "Full-time",
-                  salaryRange: "30,000 - 40,000 AED/month",
-                  postedDate: "12 hours ago",
-                  companyLogo: "https://logo.clearbit.com/amazon.ae",
-                  matchScore: 85,
-                  requiredSkills: ["Supply Chain Management", "Logistics", "Inventory Management", "Procurement"],
-                  description: "Lead Amazon's supply chain operations in the UAE. Oversee logistics, inventory management, and distribution networks to ensure efficient and timely delivery of products to customers across the region.",
-                  applicationStatus: "open",
-                  benefits: [
-                    "Competitive Salary",
-                    "Performance Bonuses",
-                    "Health Insurance",
-                    "Stock Options",
-                    "Career Growth Opportunities"
-                  ],
-                  requirements: [
-                    "Bachelor's degree in Supply Chain, Business, or related field",
-                    "5+ years of experience in supply chain management",
-                    "Experience with inventory management and logistics",
-                    "Strong analytical and problem-solving skills",
-                    "Leadership experience managing teams"
-                  ],
-                  responsibilities: [
                     "Oversee end-to-end supply chain operations",
                     "Optimize inventory levels and distribution processes",
                     "Manage relationships with logistics partners",
@@ -692,6 +821,13 @@ const JobDetails = () => {
                     "Knowledge of UAE healthcare regulations",
                     "Strong leadership and operational management skills",
                     "Experience with healthcare information systems"
+                  ],
+                  requirementsAr: [
+                    "درجة الماجستير في إدارة الرعاية الصحية أو مجال ذي صلة",
+                    "5+ سنوات من الخبرة في إدارة الرعاية الصحية",
+                    "معرفة باللوائح الصحية الإماراتية",
+                    "مهارات قوية في القيادة وإدارة العمليات",
+                    "خبرة في أنظمة معلومات الرعاية الصحية"
                   ],
                   responsibilities: [
                     "Oversee daily administrative operations",
@@ -728,6 +864,13 @@ const JobDetails = () => {
                     "Experience with security tools and SIEM platforms",
                     "Knowledge of threat intelligence and incident response"
                   ],
+                  requirementsAr: [
+                    "بكالوريوس في الأمن السيبراني، تكنولوجيا المعلومات، أو مجال ذي صلة",
+                    "3+ سنوات من الخبرة في الأمن السيبراني",
+                    "شهادات أمنية (CISSP، CEH، CISM، أو ما يعادلها)",
+                    "خبرة في أدوات الأمان ومنصات SIEM",
+                    "معرفة باستخبارات التهديدات والاستجابة للحوادث"
+                  ],
                   responsibilities: [
                     "Monitor security systems and networks",
                     "Analyze and respond to security alerts",
@@ -762,6 +905,13 @@ const JobDetails = () => {
                     "Strong leadership and team management skills",
                     "Financial and revenue management expertise",
                     "Experience with hotel management systems"
+                  ],
+                  requirementsAr: [
+                    "بكالوريوس في إدارة الضيافة أو مجال ذي صلة",
+                    "7+ سنوات من الخبرة في إدارة الفنادق الفاخرة",
+                    "مهارات قوية في القيادة وإدارة الفريق",
+                    "خبرة في الإدارة المالية وإدارة الإيرادات",
+                    "خبرة في أنظمة إدارة الفنادق"
                   ],
                   responsibilities: [
                     "Oversee all hotel operations and departments",
@@ -2065,7 +2215,7 @@ const JobDetails = () => {
           Jobs
         </Link>
         <Typography color="text.primary">
-          {job.title}
+          {i18n.language === 'ar' && job.titleAr ? job.titleAr : job.title}
         </Typography>
       </Breadcrumbs>
       
@@ -2076,29 +2226,31 @@ const JobDetails = () => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <Box>
                 <Typography variant="h4" component="h1" gutterBottom>
-                  {job.title}
+                  {i18n.language === 'ar' && job.titleAr ? job.titleAr : job.title}
                 </Typography>
                 
                 <Typography variant="h6" component="h2" color="primary" gutterBottom>
-                  {job.company?.name}
+                  {i18n.language === 'ar' && job.companyAr ? job.companyAr : job.company?.name}
                 </Typography>
                 
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <LocationOn color="action" sx={{ mr: 0.5 }} />
                     <Typography variant="body2">
-                      {job.location}
-                      {job.remote && ' • Remote'}
+                      {i18n.language === 'ar' && job.locationAr ? job.locationAr : job.location}
+                      {job.remote && (i18n.language === 'ar' ? ' • عن بعد' : ' • Remote')}
                     </Typography>
                   </Box>
                   
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                      {job.salaryRange || (job.salary && (
-                        typeof job.salary === 'object' 
-                          ? `${job.salary.min.toLocaleString()} - ${job.salary.max.toLocaleString()} AED`
-                          : job.salary
-                      ))}
+                      {i18n.language === 'ar' && job.salaryRangeAr 
+                        ? job.salaryRangeAr 
+                        : (job.salaryRange || (job.salary && (
+                            typeof job.salary === 'object' 
+                              ? `${job.salary.min.toLocaleString()} - ${job.salary.max.toLocaleString()} AED`
+                              : job.salary
+                          )))}
                       {job.salaryPeriod && ` ${job.salaryPeriod}`}
                     </Typography>
                   </Box>
@@ -2106,14 +2258,16 @@ const JobDetails = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <Work color="action" sx={{ mr: 0.5 }} />
                     <Typography variant="body2" color="text.secondary">
-                      {job.employmentType || job.jobType || 'Not specified'}
+                      {i18n.language === 'ar' && job.jobTypeAr 
+                        ? job.jobTypeAr 
+                        : (job.employmentType || job.jobType || 'Not specified')}
                     </Typography>
                   </Box>
                   
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Timer color="action" sx={{ mr: 0.5 }} />
                     <Typography variant="body2">
-                      {job.postedDate}
+                      {i18n.language === 'ar' && job.postedDateAr ? job.postedDateAr : job.postedDate}
                     </Typography>
                   </Box>
                 </Box>
@@ -2121,7 +2275,7 @@ const JobDetails = () => {
                 {/* Job Skills */}
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                    Skills
+                    {i18n.language === 'ar' ? 'المهارات' : 'Skills'}
                   </Typography>
                   
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -2172,11 +2326,11 @@ const JobDetails = () => {
                 fullWidth
                 sx={{ mb: 2 }}
               >
-                Apply Now
+                {i18n.language === 'ar' ? 'تقدم الآن' : 'Apply Now'}
               </Button>
               
               <Typography variant="body2" color="text.secondary">
-                Easy apply with your TamkeenAI Resume
+                {i18n.language === 'ar' ? 'التقديم السهل باستخدام سيرتك الذاتية في تمكين الذكاء الاصطناعي' : 'Easy apply with your TamkeenAI Resume'}
               </Typography>
             </Box>
             
@@ -2185,7 +2339,7 @@ const JobDetails = () => {
                 startIcon={<ArrowBack />}
                 onClick={() => navigate('/jobs')}
               >
-                Back to Job Search
+                {i18n.language === 'ar' ? 'العودة إلى البحث عن وظيفة' : 'Back to Job Search'}
               </Button>
             </Box>
             
@@ -2196,15 +2350,15 @@ const JobDetails = () => {
               onChange={(e, newValue) => setActiveTab(newValue)}
               sx={{ mb: 3 }}
             >
-              <Tab label="Job Description" />
-              <Tab label="Company" />
-              <Tab label="Fit Analysis" />
+              <Tab label={i18n.language === 'ar' ? 'وصف الوظيفة' : 'Job Description'} />
+              <Tab label={i18n.language === 'ar' ? 'الشركة' : 'Company'} />
+              <Tab label={i18n.language === 'ar' ? 'تحليل التناسب' : 'Fit Analysis'} />
             </Tabs>
             
             {activeTab === 0 && (
               <Box>
                 <Typography variant="h6" gutterBottom>
-                  Job Description
+                  {i18n.language === 'ar' ? 'وصف الوظيفة' : 'Job Description'}
                 </Typography>
                 
                 <Box sx={{ position: 'relative' }}>
@@ -2215,9 +2369,11 @@ const JobDetails = () => {
                       mb: 2 
                     }}
                   >
-                    <ReactMarkdown>
-                      {job.description || 'No description available'}
-                    </ReactMarkdown>
+                      <ReactMarkdown>
+                      {i18n.language === 'ar' && job.descriptionAr 
+                        ? job.descriptionAr 
+                        : (job.description || 'No description available')}
+                      </ReactMarkdown>
                   </Box>
                   
                   {!showFullDescription && job.description?.length > 500 && (
@@ -2240,7 +2396,7 @@ const JobDetails = () => {
                         onClick={() => setShowFullDescription(true)}
                         endIcon={<KeyboardArrowDown />}
                       >
-                        Show More
+                        {i18n.language === 'ar' ? 'عرض المزيد' : 'Show More'}
                       </Button>
                     </Box>
                   )}
@@ -2251,7 +2407,7 @@ const JobDetails = () => {
                         onClick={() => setShowFullDescription(false)}
                         endIcon={<KeyboardArrowUp />}
                       >
-                        Show Less
+                        {i18n.language === 'ar' ? 'عرض أقل' : 'Show Less'}
                       </Button>
                     </Box>
                   )}
@@ -2260,7 +2416,7 @@ const JobDetails = () => {
                 {job.responsibilities && (
                   <Box sx={{ mt: 3 }}>
                     <Typography variant="h6" gutterBottom>
-                      Responsibilities
+                      {i18n.language === 'ar' ? 'المسؤوليات' : 'Responsibilities'}
                     </Typography>
                     
                     <List>
@@ -2269,7 +2425,11 @@ const JobDetails = () => {
                           <ListItemIcon sx={{ minWidth: 36 }}>
                             <CheckCircle color="primary" fontSize="small" />
                           </ListItemIcon>
-                          <ListItemText primary={item} />
+                          <ListItemText primary={
+                            i18n.language === 'ar' && job.responsibilitiesAr && job.responsibilitiesAr[index] 
+                              ? job.responsibilitiesAr[index] 
+                              : item
+                          } />
                         </ListItem>
                       ))}
                     </List>
@@ -2279,7 +2439,7 @@ const JobDetails = () => {
                 {job.requirements && (
                   <Box sx={{ mt: 3 }}>
                     <Typography variant="h6" gutterBottom>
-                      Requirements
+                      {i18n.language === 'ar' ? 'المتطلبات' : 'Requirements'}
                     </Typography>
                     
                     <List>
@@ -2288,7 +2448,15 @@ const JobDetails = () => {
                           <ListItemIcon sx={{ minWidth: 36 }}>
                             <CheckCircle color="primary" fontSize="small" />
                           </ListItemIcon>
-                          <ListItemText primary={item} />
+                          <ListItemText 
+                            primary={
+                              i18n.language === 'ar' && job.requirementsAr && job.requirementsAr[index] 
+                                ? job.requirementsAr[index] 
+                                : i18n.language === 'ar' && i18n.t(`skills.${item}`, { defaultValue: item }) !== item
+                                  ? i18n.t(`skills.${item}`)
+                                  : item
+                            } 
+                          />
                         </ListItem>
                       ))}
                     </List>
@@ -2298,7 +2466,7 @@ const JobDetails = () => {
                 {job.benefits && (
                   <Box sx={{ mt: 3 }}>
                     <Typography variant="h6" gutterBottom>
-                      Benefits
+                      {i18n.language === 'ar' ? 'المزايا' : 'Benefits'}
                     </Typography>
                     
                     <List>
@@ -2307,7 +2475,7 @@ const JobDetails = () => {
                           <ListItemIcon sx={{ minWidth: 36 }}>
                             <CheckCircle color="primary" fontSize="small" />
                           </ListItemIcon>
-                          <ListItemText primary={item} />
+                          <ListItemText primary={i18n.language === 'ar' && job.benefitsAr && job.benefitsAr[index] ? job.benefitsAr[index] : item} />
                         </ListItem>
                       ))}
                     </List>
@@ -2317,26 +2485,28 @@ const JobDetails = () => {
                 {job.salaryRange && (
                   <Box sx={{ mt: 3 }}>
                     <Typography variant="h6" gutterBottom>
-                      Salary & Compensation
+                      {i18n.language === 'ar' ? 'الراتب والتعويضات' : 'Salary & Compensation'}
                     </Typography>
                     
                     <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                         <AEDIcon color="primary" sx={{ fontSize: 28, mr: 1 }} />
                         <Typography variant="h5" color="primary.main" fontWeight="bold">
-                          {job.salaryRange}
+                          {i18n.language === 'ar' && job.salaryRangeAr ? job.salaryRangeAr : job.salaryRange}
                         </Typography>
                       </Box>
                       
                       <Typography variant="body2" paragraph>
-                        This position offers a competitive salary package that reflects the candidate's experience and qualifications. The compensation is inclusive of basic salary and may include additional allowances based on company policy.
+                        {i18n.language === 'ar' && job.salaryDetailsAr 
+                          ? job.salaryDetailsAr 
+                          : (job.salaryDetails || "This position offers a competitive salary package that reflects the candidate's experience and qualifications. The compensation is inclusive of basic salary and may include additional allowances based on company policy.")}
                       </Typography>
                       
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                         {job.benefits && job.benefits.map((benefit, index) => (
                           <Chip 
                             key={index}
-                            label={benefit}
+                            label={i18n.language === 'ar' && job.benefitsAr && job.benefitsAr[index] ? job.benefitsAr[index] : benefit}
                             size="small"
                             icon={<CheckCircle fontSize="small" />}
                             color="primary"
@@ -2407,10 +2577,10 @@ const JobDetails = () => {
                       About {companyDetails.name}
                     </Typography>
                     
-                    <Typography variant="body1" paragraph>
+                        <Typography variant="body1" paragraph>
                       {companyDetails.description}
-                    </Typography>
-                    
+                        </Typography>
+                        
                     {companyDetails.headquarters && (
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                         <LocationOn color="primary" sx={{ mr: 1 }} />
@@ -2557,7 +2727,7 @@ const JobDetails = () => {
                       ) : (
                         <Typography variant="body2" color="text.secondary">
                           No other job listings available
-                        </Typography>
+                            </Typography>
                       )}
                       
                       {companyDetails.jobs?.length > 3 && (
@@ -2575,16 +2745,22 @@ const JobDetails = () => {
                   <Box sx={{ p: 2, textAlign: 'center' }}>
                     <Business sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
                     <Typography variant="h6" gutterBottom>
-                      Company Information Unavailable
+                      {i18n.language === 'ar' ? 'معلومات الشركة غير متوفرة' : 'Company Information Unavailable'}
                     </Typography>
                     <Typography variant="body1" paragraph>
-                      We don't have detailed information about {job.company} at this time.
+                      {i18n.language === 'ar' 
+                        ? `ليس لدينا معلومات مفصلة عن ${job.companyAr || job.company} في الوقت الحالي.`
+                        : `We don't have detailed information about ${job.company} at this time.`}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" paragraph>
-                      This position is for {job.title} located in {job.location} with a salary range of {job.salaryRange}.
+                      {i18n.language === 'ar'
+                        ? `هذه الوظيفة هي ${job.titleAr || job.title} في ${job.locationAr || job.location} براتب ${job.salaryRangeAr || job.salaryRange}.`
+                        : `This position is for ${job.title} located in ${job.location} with a salary range of ${job.salaryRange}.`}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      You can still apply for this job and learn more about the company during the interview process.
+                      {i18n.language === 'ar'
+                        ? 'لا يزال بإمكانك التقدم لهذه الوظيفة ومعرفة المزيد عن الشركة أثناء عملية المقابلة.'
+                        : 'You can still apply for this job and learn more about the company during the interview process.'}
                     </Typography>
                   </Box>
                 )}
@@ -2594,13 +2770,13 @@ const JobDetails = () => {
             {activeTab === 2 && (
               <Box>
                 <Typography variant="h6" gutterBottom>
-                  Skills Match Analysis
+                  {i18n.language === 'ar' ? 'تحليل تطابق المهارات' : 'Skills Match Analysis'}
                 </Typography>
                 
                 <Box sx={{ mb: 3 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <Typography variant="body1" sx={{ mr: 2 }}>
-                      Overall Match
+                      {i18n.language === 'ar' ? 'التطابق الكلي' : 'Overall Match'}
                     </Typography>
                     
                     <LinearProgress
@@ -2620,19 +2796,29 @@ const JobDetails = () => {
                   </Box>
                   
                   <Typography variant="body2" color="text.secondary">
-                    {skillsMatch.score > 80 
-                      ? 'Excellent match! You have most of the required skills.'
-                      : skillsMatch.score > 60
-                      ? 'Good match. Consider developing a few more skills to be an ideal candidate.'
-                      : skillsMatch.score > 40
-                      ? 'Moderate match. You may need to develop several key skills for this role.'
-                      : 'Limited match. This job requires skills that differ from your current profile.'}
+                    {i18n.language === 'ar' 
+                      ? (skillsMatch.score > 80 
+                        ? 'تطابق ممتاز! لديك معظم المهارات المطلوبة.'
+                        : skillsMatch.score > 60
+                        ? 'تطابق جيد. يمكنك تطوير بعض المهارات الإضافية لتكون مرشحًا مثاليًا.'
+                        : skillsMatch.score > 40
+                        ? 'تطابق متوسط. قد تحتاج إلى تطوير عدة مهارات أساسية لهذا الدور.'
+                        : 'تطابق محدود. تتطلب هذه الوظيفة مهارات تختلف عن ملفك الحالي.')
+                      : (skillsMatch.score > 80 
+                        ? 'Excellent match! You have most of the required skills.'
+                        : skillsMatch.score > 60
+                        ? 'Good match. Consider developing a few more skills to be an ideal candidate.'
+                        : skillsMatch.score > 40
+                        ? 'Moderate match. You may need to develop several key skills for this role.'
+                        : 'Limited match. This job requires skills that differ from your current profile.')}
                   </Typography>
                 </Box>
                 
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="subtitle1" gutterBottom>
-                    Matching Skills ({skillsMatch?.matching?.length || 0})
+                    {i18n.language === 'ar' 
+                      ? `المهارات المتطابقة (${skillsMatch?.matching?.length || 0})` 
+                      : `Matching Skills (${skillsMatch?.matching?.length || 0})`}
                   </Typography>
                   
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -2649,7 +2835,9 @@ const JobDetails = () => {
                       ))
                     ) : (
                       <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'left' }}>
-                        No matching skills found. Update your profile to reflect your abilities.
+                        {i18n.language === 'ar'
+                          ? 'لم يتم العثور على مهارات متطابقة. قم بتحديث ملفك الشخصي ليعكس قدراتك.'
+                          : 'No matching skills found. Update your profile to reflect your abilities.'}
                       </Typography>
                     )}
                   </Box>
@@ -2657,7 +2845,9 @@ const JobDetails = () => {
                 
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="subtitle1" gutterBottom>
-                    Missing Skills ({skillsMatch?.missing?.length || 0})
+                    {i18n.language === 'ar' 
+                      ? `المهارات المفقودة (${skillsMatch?.missing?.length || 0})` 
+                      : `Missing Skills (${skillsMatch?.missing?.length || 0})`}
                   </Typography>
                   
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -2674,7 +2864,9 @@ const JobDetails = () => {
                       ))
                     ) : (
                       <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'left' }}>
-                        Congratulations! You have all the required skills for this job.
+                        {i18n.language === 'ar'
+                          ? 'تهانينا! لديك جميع المهارات المطلوبة لهذه الوظيفة.'
+                          : 'Congratulations! You have all the required skills for this job.'}
                       </Typography>
                     )}
                   </Box>
@@ -2682,7 +2874,7 @@ const JobDetails = () => {
                 
                 <Box sx={{ mt: 4 }}>
                   <Typography variant="h6" gutterBottom>
-                    Recommendations
+                    {i18n.language === 'ar' ? 'التوصيات' : 'Recommendations'}
                   </Typography>
                   
                   <List>
@@ -2693,8 +2885,10 @@ const JobDetails = () => {
                             <MenuBook color="primary" />
                           </ListItemIcon>
                           <ListItemText 
-                            primary="Develop Missing Skills" 
-                            secondary={`Focus on learning ${skillsMatch.missing.slice(0, 3).join(', ')}${skillsMatch.missing?.length > 3 ? ' and others' : ''}`}
+                            primary={i18n.language === 'ar' ? 'تطوير المهارات المفقودة' : 'Develop Missing Skills'} 
+                            secondary={i18n.language === 'ar' 
+                              ? `ركز على تعلم ${skillsMatch.missing.slice(0, 3).join('، ')}${skillsMatch.missing?.length > 3 ? ' وغيرها' : ''}`
+                              : `Focus on learning ${skillsMatch.missing.slice(0, 3).join(', ')}${skillsMatch.missing?.length > 3 ? ' and others' : ''}`}
                             sx={{ textAlign: 'left' }}
                           />
                         </ListItem>
@@ -2704,8 +2898,10 @@ const JobDetails = () => {
                             <School color="primary" />
                           </ListItemIcon>
                           <ListItemText 
-                            primary="Explore Courses" 
-                            secondary="Find learning resources for these skills on our platform"
+                            primary={i18n.language === 'ar' ? 'استكشاف الدورات' : 'Explore Courses'} 
+                            secondary={i18n.language === 'ar' 
+                              ? 'ابحث عن موارد تعليمية لهذه المهارات على منصتنا'
+                              : 'Find learning resources for these skills on our platform'}
                             sx={{ textAlign: 'left' }}
                           />
                         </ListItem>
@@ -2717,8 +2913,10 @@ const JobDetails = () => {
                         <Assignment color="primary" />
                       </ListItemIcon>
                       <ListItemText 
-                        primary="Update Your Resume" 
-                        secondary="Highlight your matching skills and relevant experience"
+                        primary={i18n.language === 'ar' ? 'تحديث سيرتك الذاتية' : 'Update Your Resume'} 
+                        secondary={i18n.language === 'ar' 
+                          ? 'أبرز مهاراتك المتطابقة وخبراتك ذات الصلة'
+                          : 'Highlight your matching skills and relevant experience'}
                         sx={{ textAlign: 'left' }}
                       />
                     </ListItem>
@@ -2728,8 +2926,10 @@ const JobDetails = () => {
                         <Psychology color="primary" />
                       </ListItemIcon>
                       <ListItemText 
-                        primary="Prepare for Interview" 
-                        secondary="Practice answering questions about your experience with these skills"
+                        primary={i18n.language === 'ar' ? 'الاستعداد للمقابلة' : 'Prepare for Interview'} 
+                        secondary={i18n.language === 'ar' 
+                          ? 'تدرب على الإجابة عن الأسئلة المتعلقة بخبرتك في هذه المهارات'
+                          : 'Practice answering questions about your experience with these skills'}
                         sx={{ textAlign: 'left' }}
                       />
                     </ListItem>
@@ -2746,7 +2946,7 @@ const JobDetails = () => {
           <Paper sx={{ p: 2, mb: 3 }}>
             <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
               <Work sx={{ mr: 1 }} color="primary" fontSize="small" />
-              Similar Jobs
+              {i18n.language === 'ar' ? 'وظائف مشابهة' : 'Similar Jobs'}
             </Typography>
             
             {similarJobs?.length > 0 ? (
@@ -2778,7 +2978,9 @@ const JobDetails = () => {
                       <ListItemText
                         primary={
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="body1" fontWeight="medium">{job.title}</Typography>
+                            <Typography variant="body1" fontWeight="medium">
+                              {i18n.language === 'ar' && job.titleAr ? job.titleAr : job.title}
+                            </Typography>
                             {job.matchScore && (
                               <Chip 
                                 label={`${job.matchScore}%`} 
@@ -2792,14 +2994,14 @@ const JobDetails = () => {
                         secondary={
                           <>
                             <Typography variant="body2" component="span" color="text.primary">
-                              {job.company?.name}
+                              {i18n.language === 'ar' && job.companyAr ? job.companyAr : job.company?.name}
                             </Typography>
                             <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5, flexWrap: 'wrap', gap: 1 }}>
                               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                 <LocationOn sx={{ fontSize: 14, mr: 0.5, color: 'text.secondary' }} />
                                 <Typography variant="body2" color="text.secondary">
-                                  {job.location}
-                                  {job.remote && ' • Remote'}
+                                  {i18n.language === 'ar' && job.locationAr ? job.locationAr : job.location}
+                                  {job.remote && (i18n.language === 'ar' ? ' • عن بعد' : ' • Remote')}
                                 </Typography>
                               </Box>
                               
@@ -2807,7 +3009,7 @@ const JobDetails = () => {
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                   <AEDIcon sx={{ fontSize: 14, mr: 0.5, color: 'text.secondary' }} />
                                   <Typography variant="body2" color="text.secondary">
-                                    {job.salaryRange}
+                                    {i18n.language === 'ar' && job.salaryRangeAr ? job.salaryRangeAr : job.salaryRange}
                                   </Typography>
                                 </Box>
                               )}
@@ -2824,7 +3026,7 @@ const JobDetails = () => {
             ) : (
               <Box sx={{ textAlign: 'center', py: 3 }}>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  No similar jobs found
+                  {i18n.language === 'ar' ? 'لم يتم العثور على وظائف مشابهة' : 'No similar jobs found'}
                 </Typography>
                 <Button
                   component={RouterLink}
@@ -2833,7 +3035,7 @@ const JobDetails = () => {
                   variant="outlined"
                   size="small"
                 >
-                  Browse All Jobs
+                  {i18n.language === 'ar' ? 'تصفح جميع الوظائف' : 'Browse All Jobs'}
                 </Button>
               </Box>
             )}
@@ -2847,7 +3049,7 @@ const JobDetails = () => {
                 endIcon={<NavigateNext />}
                 variant="outlined"
               >
-                View All Similar Jobs ({similarJobs.length})
+                {i18n.language === 'ar' ? `عرض جميع الوظائف المشابهة (${similarJobs.length})` : `View All Similar Jobs (${similarJobs.length})`}
               </Button>
             )}
           </Paper>
@@ -2855,7 +3057,7 @@ const JobDetails = () => {
           {/* Application Tips */}
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
-              Application Tips
+              {i18n.language === 'ar' ? 'نصائح التقديم' : 'Application Tips'}
             </Typography>
             
             <List disablePadding>
@@ -2864,8 +3066,10 @@ const JobDetails = () => {
                   <Assignment color="primary" />
                 </ListItemIcon>
                 <ListItemText 
-                  primary="Customize Your Resume" 
-                  secondary="Tailor your resume to highlight relevant skills and experience"
+                  primary={i18n.language === 'ar' ? 'خصص سيرتك الذاتية' : 'Customize Your Resume'} 
+                  secondary={i18n.language === 'ar' 
+                    ? 'قم بتخصيص سيرتك الذاتية لإبراز المهارات والخبرات ذات الصلة'
+                    : 'Tailor your resume to highlight relevant skills and experience'}
                   sx={{ textAlign: 'left' }}
                 />
               </ListItem>
@@ -2875,8 +3079,10 @@ const JobDetails = () => {
                   <Description color="primary" />
                 </ListItemIcon>
                 <ListItemText 
-                  primary="Write a Compelling Cover Letter" 
-                  secondary="Explain why you're a good fit for this specific role"
+                  primary={i18n.language === 'ar' ? 'اكتب خطاب تقديم مقنع' : 'Write a Compelling Cover Letter'} 
+                  secondary={i18n.language === 'ar'
+                    ? 'اشرح لماذا أنت مناسب لهذه الوظيفة المحددة'
+                    : 'Explain why you\'re a good fit for this specific role'}
                   sx={{ textAlign: 'left' }}
                 />
               </ListItem>
@@ -2886,8 +3092,10 @@ const JobDetails = () => {
                   <Psychology color="primary" />
                 </ListItemIcon>
                 <ListItemText 
-                  primary="Practice Interview Questions" 
-                  secondary="Research common questions for this role and industry"
+                  primary={i18n.language === 'ar' ? 'تدرب على أسئلة المقابلة' : 'Practice Interview Questions'} 
+                  secondary={i18n.language === 'ar'
+                    ? 'ابحث عن الأسئلة الشائعة لهذا الدور والصناعة'
+                    : 'Research common questions for this role and industry'}
                   sx={{ textAlign: 'left' }}
                 />
               </ListItem>
@@ -2897,8 +3105,10 @@ const JobDetails = () => {
                   <Business color="primary" />
                 </ListItemIcon>
                 <ListItemText 
-                  primary="Research the Company" 
-                  secondary="Learn about their mission, values, and recent projects"
+                  primary={i18n.language === 'ar' ? 'ابحث عن الشركة' : 'Research the Company'} 
+                  secondary={i18n.language === 'ar'
+                    ? 'تعرف على رسالتها وقيمها ومشاريعها الحديثة'
+                    : 'Learn about their mission, values, and recent projects'}
                   sx={{ textAlign: 'left' }}
                 />
               </ListItem>
@@ -2911,7 +3121,7 @@ const JobDetails = () => {
               component={RouterLink}
               to="/resources/application-tips"
             >
-              More Application Tips
+              {i18n.language === 'ar' ? 'المزيد من نصائح التقديم' : 'More Application Tips'}
             </Button>
           </Paper>
         </Grid>
@@ -2925,7 +3135,9 @@ const JobDetails = () => {
         fullWidth
       >
         <DialogTitle>
-          Apply for {job.title} at {job.company?.name}
+          {i18n.language === 'ar' 
+            ? `تقدم لوظيفة ${job.titleAr || job.title} في ${job.companyAr || job.company?.name}`
+            : `Apply for ${job.title} at ${job.company?.name}`}
         </DialogTitle>
         
         {applicationStatus === 'submitting' && (
@@ -2948,21 +3160,25 @@ const JobDetails = () => {
               <CheckCircle color="success" sx={{ fontSize: 60, mb: 2, display: 'block' }} />
               
               <Typography variant="h6" gutterBottom>
-                Application Submitted Successfully!
+                {i18n.language === 'ar' ? 'تم تقديم الطلب بنجاح!' : 'Application Submitted Successfully!'}
               </Typography>
               
               <Typography variant="body1" paragraph>
-                Your application for {job.title} at {job.company?.name} has been received.
+                {i18n.language === 'ar'
+                  ? `تم استلام طلبك لوظيفة ${job.titleAr || job.title} في ${job.companyAr || job.company?.name}.`
+                  : `Your application for ${job.title} at ${job.company?.name} has been received.`}
               </Typography>
               
               <Typography variant="body2" color="text.secondary">
-                You can check the status of your application in your dashboard.
+                {i18n.language === 'ar'
+                  ? 'يمكنك التحقق من حالة طلبك في لوحة التحكم الخاصة بك.'
+                  : 'You can check the status of your application in your dashboard.'}
               </Typography>
             </Box>
           ) : (
             <Box component="form">
               <FormControl fullWidth margin="normal">
-                <InputLabel>Select Resume</InputLabel>
+                <InputLabel>{i18n.language === 'ar' ? 'اختر سيرة ذاتية' : 'Select Resume'}</InputLabel>
                 <Select
                   name="resumeId"
                   value={applicationForm.resumeId}
@@ -2976,27 +3192,27 @@ const JobDetails = () => {
                       </MenuItem>
                     ))
                   ) : (
-                    <MenuItem disabled>No resumes available</MenuItem>
+                    <MenuItem disabled>{i18n.language === 'ar' ? 'لا توجد سير ذاتية متاحة' : 'No resumes available'}</MenuItem>
                   )}
                 </Select>
                 
                 {(!resumes || resumes.length === 0) && (
                   <FormHelperText error>
-                    Please create a resume first
+                    {i18n.language === 'ar' ? 'الرجاء إنشاء سيرة ذاتية أولاً' : 'Please create a resume first'}
                     <Button 
                       component={RouterLink} 
                       to="/resume/new"
                       size="small"
                       sx={{ ml: 1 }}
                     >
-                      Create Resume
+                      {i18n.language === 'ar' ? 'إنشاء سيرة ذاتية' : 'Create Resume'}
                     </Button>
                   </FormHelperText>
                 )}
               </FormControl>
               
               <TextField
-                label="Cover Letter"
+                label={i18n.language === 'ar' ? 'خطاب التقديم' : 'Cover Letter'}
                 name="coverLetter"
                 value={applicationForm.coverLetter}
                 onChange={handleApplicationChange}
@@ -3005,11 +3221,11 @@ const JobDetails = () => {
                 fullWidth
                 margin="normal"
                 disabled={applicationStatus === 'submitting'}
-                placeholder="Explain why you're a good fit for this position..."
+                placeholder={i18n.language === 'ar' ? 'اشرح لماذا أنت مناسب لهذه الوظيفة...' : 'Explain why you\'re a good fit for this position...'}
               />
               
               <TextField
-                label="Phone Number"
+                label={i18n.language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
                 name="phone"
                 value={applicationForm.phone}
                 onChange={handleApplicationChange}
@@ -3019,18 +3235,20 @@ const JobDetails = () => {
               />
               
               <TextField
-                label="Availability"
+                label={i18n.language === 'ar' ? 'التوفر' : 'Availability'}
                 name="availability"
                 value={applicationForm.availability}
                 onChange={handleApplicationChange}
                 fullWidth
                 margin="normal"
                 disabled={applicationStatus === 'submitting'}
-                placeholder="When can you start? Are you available for interviews?"
+                placeholder={i18n.language === 'ar' 
+                  ? 'متى يمكنك البدء؟ هل أنت متاح للمقابلات؟'
+                  : 'When can you start? Are you available for interviews?'}
               />
               
               <TextField
-                label="How did you hear about this position?"
+                label={i18n.language === 'ar' ? 'كيف سمعت عن هذه الوظيفة؟' : 'How did you hear about this position?'}
                 name="referral"
                 value={applicationForm.referral}
                 onChange={handleApplicationChange}
@@ -3042,7 +3260,7 @@ const JobDetails = () => {
               {job?.applicationQuestions?.length > 0 && (
                 <>
                   <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
-                    Additional Questions
+                    {i18n.language === 'ar' ? 'أسئلة إضافية' : 'Additional Questions'}
                   </Typography>
                   
                   {job.applicationQuestions.map((question, index) => (
@@ -3070,14 +3288,14 @@ const JobDetails = () => {
           {applicationStatus === 'success' ? (
             <>
               <Button onClick={() => setApplicationDialogOpen(false)}>
-                Close
+                {i18n.language === 'ar' ? 'إغلاق' : 'Close'}
               </Button>
               
               <Button 
                 variant="contained" 
                 onClick={() => navigate('/applications')}
               >
-                View All Applications
+                {i18n.language === 'ar' ? 'عرض جميع الطلبات' : 'View All Applications'}
               </Button>
             </>
           ) : (
@@ -3086,7 +3304,7 @@ const JobDetails = () => {
                 onClick={() => applicationStatus !== 'submitting' && setApplicationDialogOpen(false)}
                 disabled={applicationStatus === 'submitting'}
               >
-                Cancel
+                {i18n.language === 'ar' ? 'إلغاء' : 'Cancel'}
               </Button>
               
               <Button 
@@ -3095,7 +3313,9 @@ const JobDetails = () => {
                 disabled={applicationStatus === 'submitting' || !applicationForm.resumeId || !resumes || resumes.length === 0}
                 startIcon={applicationStatus === 'submitting' ? <CircularProgress size={20} /> : <Send />}
               >
-                {applicationStatus === 'submitting' ? 'Submitting...' : 'Submit Application'}
+                {applicationStatus === 'submitting' 
+                 ? (i18n.language === 'ar' ? 'جارٍ التقديم...' : 'Submitting...') 
+                 : (i18n.language === 'ar' ? 'تقديم الطلب' : 'Submit Application')}
               </Button>
             </>
           )}
@@ -3110,16 +3330,18 @@ const JobDetails = () => {
         fullWidth
       >
         <DialogTitle>
-          Share this Job
+          {i18n.language === 'ar' ? 'مشاركة هذه الوظيفة' : 'Share this Job'}
         </DialogTitle>
         
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 3 }}>
-            Send this job opportunity to someone who might be interested
+            {i18n.language === 'ar' 
+              ? 'أرسل فرصة العمل هذه إلى شخص قد يكون مهتمًا'
+              : 'Send this job opportunity to someone who might be interested'}
           </Typography>
           
           <TextField
-            label="Recipient Email"
+            label={i18n.language === 'ar' ? 'البريد الإلكتروني للمستلم' : 'Recipient Email'}
             value={shareEmail}
             onChange={(e) => setShareEmail(e.target.value)}
             fullWidth
@@ -3128,20 +3350,20 @@ const JobDetails = () => {
           />
           
           <TextField
-            label="Message (Optional)"
+            label={i18n.language === 'ar' ? 'رسالة (اختياري)' : 'Message (Optional)'}
             value={shareMessage}
             onChange={(e) => setShareMessage(e.target.value)}
             multiline
             rows={4}
             fullWidth
             margin="normal"
-            placeholder="Add a personal message..."
+            placeholder={i18n.language === 'ar' ? 'أضف رسالة شخصية...' : 'Add a personal message...'}
           />
         </DialogContent>
         
         <DialogActions sx={{ justifyContent: 'flex-start' }}>
           <Button onClick={() => setShareDialogOpen(false)}>
-            Cancel
+            {i18n.language === 'ar' ? 'إلغاء' : 'Cancel'}
           </Button>
           
           <Button 
@@ -3150,7 +3372,7 @@ const JobDetails = () => {
             disabled={!shareEmail}
             startIcon={<Send />}
           >
-            Share
+            {i18n.language === 'ar' ? 'مشاركة' : 'Share'}
           </Button>
         </DialogActions>
       </Dialog>

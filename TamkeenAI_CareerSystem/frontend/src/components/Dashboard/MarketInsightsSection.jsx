@@ -35,8 +35,10 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import WarningIcon from '@mui/icons-material/Warning';
 import InfoIcon from '@mui/icons-material/Info';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import { useTranslation } from 'react-i18next';
 
 const MarketInsightsSection = ({ marketInsights, insights }) => {
+  const { t } = useTranslation();
   const [currentTab, setCurrentTab] = useState('salary');
   
   const handleTabChange = (event, newValue) => {
@@ -617,7 +619,7 @@ const MarketInsightsSection = ({ marketInsights, insights }) => {
     <Card sx={{ height: '100%', overflow: 'hidden' }}>
       <CardContent sx={{ height: 'calc(100% - 40px)', overflow: 'auto', p: 2 }}>
         <Typography variant="h6" gutterBottom>
-          Market Insights
+          {t('marketInsights.title', 'Market Insights')}
         </Typography>
         
         {/* Companies Hiring Now ticker - shown above tabs */}

@@ -33,6 +33,7 @@ import { useContext } from 'react';
 import { useTheme as useCustomTheme } from '../../contexts/ThemeContext';
 import LanguageIcon from '@mui/icons-material/Language';
 import CalendarToday from '@mui/icons-material/CalendarToday';
+import LanguageSwitcher from '../LanguageSwitcher';
 
 // Icons
 import MenuIcon from '@mui/icons-material/Menu';
@@ -207,7 +208,6 @@ const navigationItems = [
   { path: '/ai-coach', label: 'AI Coach', labelKey: 'navigation.aiCoach', icon: <SmartToyIcon /> },
   { path: '/resumePage', label: 'Resume Builder', labelKey: 'navigation.resumeBuilder', icon: <DescriptionIcon /> },
   { path: '/skills-assessment', label: 'Skill Builder', labelKey: 'navigation.skillBuilder', icon: <SchoolIcon /> },
-  { path: '/achievements', label: 'Achievements', labelKey: 'navigation.achievements', icon: <EmojiEventsIcon /> },
 ];
 
 const NavigationBar = ({ open, onToggleDrawer }) => {
@@ -225,8 +225,6 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
   const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
   const [notificationsMenuAnchor, setNotificationsMenuAnchor] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [languageMenuAnchor, setLanguageMenuAnchor] = useState(null);
-  const [language, setLanguage] = useState('en'); // Always default to English
   
   // Set the current tab based on location
   useEffect(() => {
@@ -369,30 +367,6 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
     setNotificationsMenuAnchor(null);
   };
   
-  // Handle language menu
-  const handleLanguageMenuOpen = (event) => {
-    setLanguageMenuAnchor(event.currentTarget);
-  };
-  
-  const handleLanguageMenuClose = () => {
-    setLanguageMenuAnchor(null);
-  };
-  
-  // Change language
-  const changeLanguage = (lang) => {
-    setLanguage(lang);
-    handleLanguageMenuClose();
-    
-    // Update language in localStorage
-    localStorage.setItem('language', lang);
-    
-    // Update i18n
-    i18n.changeLanguage(lang);
-    
-    // Update document direction
-    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-  };
-  
   // Handle logout
   const handleLogout = () => {
     handleProfileMenuClose();
@@ -517,15 +491,8 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
             </IconButton>
           </Tooltip>
           
-          {/* Language toggle */}
-          <Tooltip title="Change language">
-            <IconButton
-              color="inherit"
-              onClick={handleLanguageMenuOpen}
-            >
-              <LanguageIcon />
-            </IconButton>
-          </Tooltip>
+          {/* Language Switcher */}
+          <LanguageSwitcher />
           
           {/* Notifications */}
           <Tooltip title={t('common.notifications')}>
@@ -666,28 +633,6 @@ const NavigationBar = ({ open, onToggleDrawer }) => {
               {t('notifications.viewAll')}
             </Button>
           </Box>
-        </Menu>
-        
-        {/* Language menu */}
-        <Menu
-          anchorEl={languageMenuAnchor}
-          open={Boolean(languageMenuAnchor)}
-          onClose={handleLanguageMenuClose}
-          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        >
-          <MenuItem 
-            onClick={() => changeLanguage('en')}
-            selected={language === 'en'}
-          >
-            English
-          </MenuItem>
-          <MenuItem 
-            onClick={() => changeLanguage('ar')}
-            selected={language === 'ar'}
-          >
-            العربية
-          </MenuItem>
         </Menu>
         
         {/* Mobile drawer */}

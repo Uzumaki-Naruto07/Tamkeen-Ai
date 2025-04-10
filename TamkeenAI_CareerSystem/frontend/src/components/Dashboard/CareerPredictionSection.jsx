@@ -21,7 +21,8 @@ import {
   DialogActions,
   Slider,
   CircularProgress,
-  Alert
+  Alert,
+  CardHeader
 } from '@mui/material';
 import WorkIcon from '@mui/icons-material/Work';
 import PsychologyIcon from '@mui/icons-material/Psychology';
@@ -31,9 +32,12 @@ import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import DashboardAPI from '../../api/DashboardAPI';
+import { useTranslation } from 'react-i18next';
 
 const CareerPredictionSection = ({ userProfile, skillsData }) => {
+  const { t } = useTranslation();
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [simulationMode, setSimulationMode] = useState(false);
@@ -254,7 +258,7 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
           <ScienceIcon fontSize="small" sx={{ mr: 1 }} />
-          Skill Impact Simulator
+          {t('careerPrediction.skillImpactSimulator', 'Skill Impact Simulator')}
         </Typography>
         
         <Grid container spacing={2} alignItems="center">
@@ -263,14 +267,14 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
               value={selectedSkill}
               onChange={(event, newValue) => setSelectedSkill(newValue)}
               options={userProfile?.skills?.map(s => s.name) || []}
-              renderInput={(params) => <TextField {...params} label="Select Skill to Modify" size="small" />}
+              renderInput={(params) => <TextField {...params} label={t('careerPrediction.selectSkillToModify', 'Select Skill to Modify')} size="small" />}
               fullWidth
             />
           </Grid>
           <Grid item xs={9} md={6}>
             <Box sx={{ px: 2 }}>
               <Typography id="skill-level-slider" gutterBottom>
-                Skill Level: {skillLevel}/5
+                {t('careerPrediction.skillLevel', 'Skill Level')}: {skillLevel}/5
               </Typography>
               <Slider
                 value={skillLevel}
@@ -292,7 +296,7 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
               disabled={!selectedSkill || loading}
               startIcon={loading ? <CircularProgress size={20} /> : <CompareArrowsIcon />}
             >
-              Simulate
+              {t('careerPrediction.simulate', 'Simulate')}
             </Button>
           </Grid>
         </Grid>
@@ -303,14 +307,14 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
             startIcon={<AddCircleIcon />} 
             onClick={handleOpenAddSkillDialog}
           >
-            Add New Skill
+            {t('careerPrediction.addNewSkill', 'Add New Skill')}
           </Button>
           <Button 
             size="small" 
             color="inherit" 
             onClick={resetSimulation}
           >
-            Reset
+            {t('careerPrediction.reset', 'Reset')}
           </Button>
         </Box>
       </Paper>
@@ -322,12 +326,12 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
     <Box sx={{ mt: 3 }}>
       <Alert severity="info" sx={{ mb: 2 }}>
         <Typography variant="body2">
-          Showing career path simulation after {simulationResults.changed_skill.level > 3 ? 'improving' : 'changing'} your skill in <strong>{simulationResults.changed_skill.name}</strong> to level <strong>{simulationResults.changed_skill.level}/5</strong>.
+          {t('careerPrediction.showingCareerPathSimulation', 'Showing career path simulation after')} {simulationResults.changed_skill.level > 3 ? t('careerPrediction.improving', 'improving') : t('careerPrediction.changing', 'changing')} {t('careerPrediction.yourSkill', 'your skill')} {t('careerPrediction.in', 'in')} <strong>{simulationResults.changed_skill.name}</strong> {t('careerPrediction.toLevel', 'to level')} <strong>{simulationResults.changed_skill.level}/5</strong>.
         </Typography>
       </Alert>
       
       <Typography variant="subtitle1" gutterBottom>
-        Impact on Career Factors:
+        {t('careerPrediction.impactOnCareerFactors', 'Impact on Career Factors')}:
           </Typography>
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {simulationResults.impact_factors.map((factor, index) => (
@@ -348,7 +352,7 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
       </Grid>
       
       <Typography variant="subtitle1" gutterBottom>
-        New Career Predictions:
+        {t('careerPrediction.newCareerPredictions', 'New Career Predictions')}:
       </Typography>
       {simulationResults.new_predictions.map((prediction, index) => (
         <React.Fragment key={prediction.role + '-sim-' + index}>
@@ -359,20 +363,34 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
   );
   
   return (
-    <Card>
+    <Card variant="outlined" sx={{ height: '100%' }}>
+      <CardHeader 
+        title={
+          <Typography variant="h6">
+            {t('careerPrediction.title', 'Career Path Prediction')}
+          </Typography>
+        }
+        action={
+          <Tooltip title={t('common.refresh', 'Refresh')}>
+            <IconButton
+              onClick={fetchPredictions}
+              size="small"
+              disabled={loading}
+            >
+              {loading ? <CircularProgress size={18} /> : <RefreshIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+        }
+      />
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">Career Path Prediction</Typography>
+          <Typography variant="h6">
+            {t('careerPrediction.currentRole', 'Current:')} {currentRole}
+          </Typography>
           <Box>
             <Chip 
               icon={<WorkIcon />} 
-              label={`Current: ${currentRole}`} 
-              size="small" 
-              sx={{ mr: 1 }} 
-            />
-            <Chip 
-              icon={<TimelineIcon />} 
-              label={`${yearsExperience} Years Experience`} 
+              label={`${t('careerPrediction.experience', 'Experience')}: ${yearsExperience} Years`} 
               color="primary"
               size="small"
             />
@@ -381,9 +399,9 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
         
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
           <Typography variant="body1" sx={{ mr: 1 }}>
-            <span role="img" aria-label="crystal ball">🔮</span> AI-powered career path predictions based on your skills, experience, and industry trends.
+            <span role="img" aria-label="crystal ball">🔮</span> {t('careerPrediction.aiPowered', 'AI-powered career path predictions based on your skills, experience, and industry trends.')}
           </Typography>
-          <Tooltip title="Try our 'What if?' simulator to see how changing your skills affects your career path">
+          <Tooltip title={t('careerPrediction.whatIfSimulator', 'Try our \'What if?\' simulator to see how changing your skills affects your career path')}>
             <IconButton 
               color={simulationMode ? "secondary" : "primary"} 
               onClick={() => setSimulationMode(!simulationMode)}
@@ -407,7 +425,7 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
             ) : (
           <Box>
                 <Typography variant="subtitle1" gutterBottom>
-                  Your Predicted Career Path:
+                  {t('careerPrediction.yourPredictedCareerPath', 'Your Predicted Career Path')}:
                 </Typography>
                 {predictions.map((prediction, index) => (
                   <React.Fragment key={prediction.role + '-' + index}>
@@ -421,22 +439,22 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
         
         {/* Add Skill Dialog */}
         <Dialog open={dialogOpen} onClose={handleCloseDialog}>
-          <DialogTitle>Add New Skill</DialogTitle>
+          <DialogTitle>{t('careerPrediction.addNewSkill', 'Add New Skill')}</DialogTitle>
           <DialogContent>
             <Typography variant="body2" paragraph>
-              Add a new skill to see how it would impact your career predictions.
+              {t('careerPrediction.addNewSkillDescription', 'Add a new skill to see how it would impact your career predictions.')}
             </Typography>
             <Autocomplete
               value={skillToAdd}
               onChange={(event, newValue) => setSkillToAdd(newValue)}
               options={allSkills.filter(skill => !userProfile?.skills?.some(s => s.name === skill))}
               renderInput={(params) => (
-                <TextField {...params} label="Select a Skill" fullWidth margin="normal" />
+                <TextField {...params} label={t('careerPrediction.selectASkill', 'Select a Skill')} fullWidth margin="normal" />
               )}
             />
             <Box sx={{ mt: 2 }}>
               <Typography id="new-skill-level-slider" gutterBottom>
-                Initial Skill Level: {skillLevel}/5
+                {t('careerPrediction.initialSkillLevel', 'Initial Skill Level')}: {skillLevel}/5
               </Typography>
               <Slider
                 value={skillLevel}
@@ -451,14 +469,14 @@ const CareerPredictionSection = ({ userProfile, skillsData }) => {
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
+            <Button onClick={handleCloseDialog}>{t('careerPrediction.cancel', 'Cancel')}</Button>
         <Button 
               onClick={handleAddSkill} 
               variant="contained" 
               color="primary"
               disabled={!skillToAdd}
             >
-              Add & Simulate
+              {t('careerPrediction.addAndSimulate', 'Add & Simulate')}
         </Button>
           </DialogActions>
         </Dialog>

@@ -26,8 +26,10 @@ import TableChartIcon from '@mui/icons-material/TableChart';
 import InfoIcon from '@mui/icons-material/Info';
 import SummarizeIcon from '@mui/icons-material/Summarize';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const DashboardReportExporter = ({ userData }) => {
+  const { t } = useTranslation();
   const [anchorEl, setAnchorEl] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState('');
@@ -122,10 +124,10 @@ const DashboardReportExporter = ({ userData }) => {
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>
-          Dashboard Reports
+          {t('dashboardReport.title', 'Dashboard Report')}
         </Typography>
         <Box>
-          <Tooltip title="Preview AI insights">
+          <Tooltip title={t('dashboardReport.previewInsights', 'Preview AI insights')}>
             <Button 
               variant="outlined" 
               size="small" 
@@ -133,7 +135,7 @@ const DashboardReportExporter = ({ userData }) => {
               sx={{ mr: 1 }}
               onClick={() => setInsightPreviewOpen(true)}
             >
-              Preview Insights
+              {t('dashboardReport.previewInsightsButton', 'Preview Insights')}
             </Button>
           </Tooltip>
           <Button 
@@ -141,13 +143,13 @@ const DashboardReportExporter = ({ userData }) => {
             startIcon={<DownloadIcon />} 
             onClick={handleExportClick}
           >
-            Export Report
+            {t('dashboardReport.exportReport', 'Export Report')}
           </Button>
         </Box>
       </Box>
       
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Export comprehensive career insights with AI-powered analysis to PDF or CSV format
+        {t('dashboardReport.exportDescription', 'Export your career progress report to share with mentors or employers.')}
       </Typography>
       
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
@@ -206,7 +208,7 @@ const DashboardReportExporter = ({ userData }) => {
         <Box sx={{ mt: 2 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center' }}>
             <SummarizeIcon fontSize="small" sx={{ mr: 1 }} />
-            Available Report Sections
+            {t('dashboardReport.availableSections', 'Available Report Sections')}
           </Typography>
           
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -262,10 +264,10 @@ const DashboardReportExporter = ({ userData }) => {
       
       {/* Export Configuration Dialog */}
       <Dialog open={dialogOpen} onClose={handleDialogClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Configure Report Export</DialogTitle>
+        <DialogTitle>{t('dashboardReport.configureReport', 'Configure Report Export')}</DialogTitle>
         <DialogContent dividers>
           <Typography variant="subtitle1" paragraph>
-            Select sections to include in your {exportFormat === 'pdf' ? 'PDF report' : 'CSV export'}:
+            {t('dashboardReport.selectSections', 'Select sections to include in your report:')}
           </Typography>
           
           <FormGroup>

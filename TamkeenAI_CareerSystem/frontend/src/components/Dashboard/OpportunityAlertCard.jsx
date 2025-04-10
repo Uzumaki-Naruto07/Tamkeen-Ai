@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   CardContent,
@@ -13,7 +14,8 @@ import {
   Tooltip,
   Stack,
   Link,
-  SvgIcon
+  SvgIcon,
+  CircularProgress
 } from '@mui/material';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
@@ -125,6 +127,7 @@ const AEDIcon = (props) => (
 );
 
 const OpportunityAlertCard = ({ opportunity, opportunities, onSave, onApply, onDismiss }) => {
+  const { t } = useTranslation();
   // Use the provided opportunity, or the first one from opportunities array,
   // or fall back to mock data if nothing is provided
   const allOpportunities = opportunities || mockOpportunities;
@@ -135,7 +138,9 @@ const OpportunityAlertCard = ({ opportunity, opportunities, onSave, onApply, onD
   if (!currentOpportunity) {
     return (
       <Card variant="outlined" sx={{ mb: 2, p: 2 }}>
-        <Typography variant="body1">No opportunity data available</Typography>
+        <Typography variant="body1">
+          {t('opportunityAlerts.noOpportunities', 'No opportunity data available')}
+        </Typography>
       </Card>
     );
   }

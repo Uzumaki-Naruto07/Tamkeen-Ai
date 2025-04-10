@@ -48,7 +48,9 @@ const CertificationsAchievements = () => {
         // Fetch certifications
         try {
           const certsResponse = await apiEndpoints.user.getCertifications(user.id);
-          setCertifications(certsResponse?.data || []);
+          // Ensure certifications is always an array, even if mock data returns an object
+          const certificationsData = certsResponse?.data || [];
+          setCertifications(Array.isArray(certificationsData) ? certificationsData : []);
         } catch (err) {
           console.log('Certifications API not available, using empty list');
           setCertifications([]);
@@ -57,7 +59,8 @@ const CertificationsAchievements = () => {
         // Fetch achievements
         try {
           const achieveResponse = await apiEndpoints.user.getAchievements(user.id);
-          setAchievements(achieveResponse?.data || []);
+          const achievementsData = achieveResponse?.data || [];
+          setAchievements(Array.isArray(achievementsData) ? achievementsData : []);
         } catch (err) {
           console.log('Achievements API not available, using empty list');
           setAchievements([]);
@@ -187,7 +190,7 @@ const CertificationsAchievements = () => {
 
   const renderCertifications = () => (
     <Grid container spacing={3}>
-      {certifications.map((cert, index) => (
+      {Array.isArray(certifications) && certifications.map((cert, index) => (
         <Grid item xs={12} md={6} lg={4} key={cert.id || index}>
           <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <CardContent sx={{ flexGrow: 1 }}>
@@ -274,7 +277,7 @@ const CertificationsAchievements = () => {
 
   const renderAchievements = () => (
     <Grid container spacing={3}>
-      {achievements.map((achievement, index) => (
+      {Array.isArray(achievements) && achievements.map((achievement, index) => (
         <Grid item xs={12} md={6} lg={4} key={achievement.id || index}>
           <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <CardContent sx={{ flexGrow: 1 }}>
@@ -342,7 +345,7 @@ const CertificationsAchievements = () => {
 
   const renderBadges = () => (
     <Grid container spacing={3}>
-      {badges.map((badge, index) => (
+      {Array.isArray(badges) && badges.map((badge, index) => (
         <Grid item xs={6} sm={4} md={3} lg={2} key={badge.id || index}>
           <Card sx={{ 
             height: '100%', 

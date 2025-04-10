@@ -32,6 +32,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { v4 as uuidv4 } from 'uuid';
+import { useTranslation } from 'react-i18next';
 
 const PackageConfirmation = () => {
   const navigate = useNavigate();
@@ -41,6 +42,8 @@ const PackageConfirmation = () => {
   const [loading, setLoading] = useState(true);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language === 'ar';
 
   useEffect(() => {
     if (location.state?.packageDetails) {
@@ -79,9 +82,9 @@ const PackageConfirmation = () => {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Package Receipt</title>
+          <title>${isArabic ? 'إيصال الباقة' : 'Package Receipt'}</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
+            body { font-family: Arial, sans-serif; margin: 20px; ${isArabic ? 'direction: rtl; text-align: right;' : ''} }
             .header { text-align: center; margin-bottom: 30px; }
             .logo { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
             .title { font-size: 20px; margin-bottom: 20px; }
@@ -96,43 +99,43 @@ const PackageConfirmation = () => {
         <body>
           <div class="header">
             <div class="logo">Tamkeen AI</div>
-            <div class="title">Package Purchase Receipt</div>
+            <div class="title">${isArabic ? 'إيصال شراء الباقة' : 'Package Purchase Receipt'}</div>
           </div>
           
           <div class="details">
             <div class="detail-row">
-              <div class="label">Order ID:</div>
+              <div class="label">${isArabic ? 'رقم الطلب:' : 'Order ID:'}</div>
               <div class="value">${orderId}</div>
             </div>
             <div class="detail-row">
-              <div class="label">Date:</div>
-              <div class="value">${new Date().toLocaleDateString()}</div>
+              <div class="label">${isArabic ? 'التاريخ:' : 'Date:'}</div>
+              <div class="value">${new Date().toLocaleDateString(isArabic ? 'ar-AE' : 'en-US')}</div>
             </div>
             <div class="detail-row">
-              <div class="label">Package:</div>
-              <div class="value">${packageDetails.title}</div>
+              <div class="label">${isArabic ? 'الباقة:' : 'Package:'}</div>
+              <div class="value">${isArabic && packageDetails.titleAr ? packageDetails.titleAr : packageDetails.title}</div>
             </div>
             <div class="detail-row">
-              <div class="label">Description:</div>
-              <div class="value">${packageDetails.description}</div>
+              <div class="label">${isArabic ? 'الوصف:' : 'Description:'}</div>
+              <div class="value">${isArabic && packageDetails.descriptionAr ? packageDetails.descriptionAr : packageDetails.description}</div>
             </div>
             <div class="detail-row">
-              <div class="label">Sessions:</div>
+              <div class="label">${isArabic ? 'الجلسات:' : 'Sessions:'}</div>
               <div class="value">${packageDetails.sessions}</div>
             </div>
             <div class="detail-row">
-              <div class="label">Duration:</div>
-              <div class="value">${packageDetails.duration}</div>
+              <div class="label">${isArabic ? 'المدة:' : 'Duration:'}</div>
+              <div class="value">${isArabic && packageDetails.durationAr ? packageDetails.durationAr : packageDetails.duration}</div>
             </div>
             
             <div class="total">
-              Total Amount: AED ${packageDetails.price.toFixed(0)}
+              ${isArabic ? 'المبلغ الإجمالي:' : 'Total Amount:'} AED ${packageDetails.price.toFixed(0)}
             </div>
           </div>
           
           <div class="footer">
-            <p>Thank you for using Tamkeen AI Career Services.</p>
-            <p>For any questions, please contact support@tamkeen-ai.com</p>
+            <p>${isArabic ? 'شكراً لاستخدامكم خدمات تمكين للمهن.' : 'Thank you for using Tamkeen AI Career Services.'}</p>
+            <p>${isArabic ? 'للاستفسارات، يرجى التواصل على support@tamkeen-ai.com' : 'For any questions, please contact support@tamkeen-ai.com'}</p>
           </div>
         </body>
       </html>
@@ -145,7 +148,25 @@ const PackageConfirmation = () => {
   const downloadReceipt = () => {
     // Create receipt content
     const title = `Package_${packageDetails.title.replace(/\s+/g, '_')}`;
-    const content = `
+    const content = isArabic ? `
+تمكين الذكاء الاصطناعي - إيصال شراء الباقة
+====================================
+رقم الطلب: ${orderId}
+التاريخ: ${new Date().toLocaleDateString('ar-AE')}
+
+الباقة: ${packageDetails.titleAr || packageDetails.title}
+الوصف: ${packageDetails.descriptionAr || packageDetails.description}
+الجلسات: ${packageDetails.sessions}
+المدة: ${packageDetails.durationAr || packageDetails.duration}
+
+الميزات:
+${packageDetails.featuresAr ? packageDetails.featuresAr.map(feature => `- ${feature}`).join('\n') : packageDetails.features.map(feature => `- ${feature}`).join('\n')}
+
+المبلغ الإجمالي: ${packageDetails.price.toFixed(0)} درهم
+
+شكراً لاستخدامكم خدمات تمكين للمهن.
+للاستفسارات، يرجى التواصل على support@tamkeen-ai.com
+    ` : `
 TAMKEEN AI - PACKAGE PURCHASE RECEIPT
 ====================================
 Order ID: ${orderId}
@@ -175,7 +196,7 @@ For any questions, please contact support@tamkeen-ai.com
     document.body.removeChild(element);
     
     // Show success message
-    setSnackbarMessage('Receipt downloaded successfully');
+    setSnackbarMessage(t('Receipt downloaded successfully'));
     setSnackbarOpen(true);
   };
 
@@ -200,15 +221,16 @@ For any questions, please contact support@tamkeen-ai.com
         </motion.div>
         
         <Typography variant="h4" component="h1" gutterBottom>
-          Purchase Confirmed!
+          {t('Purchase Confirmed!')}
         </Typography>
         
         <Typography variant="subtitle1" color="text.secondary" paragraph>
-          Thank you for purchasing the {packageDetails.title} package. Your order has been successfully processed.
+          {t('Thank you for purchasing the {{title}} package. Your order has been successfully processed.', 
+            { title: isArabic && packageDetails.titleAr ? packageDetails.titleAr : packageDetails.title })}
         </Typography>
         
         <Chip 
-          label={`Order ID: ${orderId}`}
+          label={`${t('Order ID')}: ${orderId}`}
           variant="outlined"
           sx={{ mb: 3 }}
         />
@@ -219,15 +241,15 @@ For any questions, please contact support@tamkeen-ai.com
           <Card>
             <CardContent>
               <Typography variant="h5" gutterBottom>
-                Package Details
+                {t('Package Details')}
               </Typography>
               
               <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 3 }}>
                 <Typography variant="h4" component="span" color="primary">
-                  {packageDetails.title}
+                  {isArabic && packageDetails.titleAr ? packageDetails.titleAr : packageDetails.title}
                 </Typography>
                 <Chip 
-                  label="Active" 
+                  label={t('Active')} 
                   color="success" 
                   size="small" 
                   sx={{ ml: 2 }}
@@ -235,7 +257,7 @@ For any questions, please contact support@tamkeen-ai.com
               </Box>
               
               <Typography variant="body1" paragraph>
-                {packageDetails.description}
+                {isArabic && packageDetails.descriptionAr ? packageDetails.descriptionAr : packageDetails.description}
               </Typography>
               
               <Divider sx={{ my: 2 }} />
@@ -245,7 +267,7 @@ For any questions, please contact support@tamkeen-ai.com
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Assignment sx={{ mr: 1, color: 'primary.main' }} />
                     <Typography variant="body1">
-                      <strong>{packageDetails.sessions}</strong> Sessions
+                      <strong>{packageDetails.sessions}</strong> {t('Sessions')}
                     </Typography>
                   </Box>
                 </Grid>
@@ -254,7 +276,7 @@ For any questions, please contact support@tamkeen-ai.com
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Schedule sx={{ mr: 1, color: 'primary.main' }} />
                     <Typography variant="body1">
-                      <strong>{packageDetails.duration}</strong> Duration
+                      <strong>{isArabic && packageDetails.durationAr ? packageDetails.durationAr : packageDetails.duration}</strong> {t('Duration')}
                     </Typography>
                   </Box>
                 </Grid>
@@ -263,7 +285,7 @@ For any questions, please contact support@tamkeen-ai.com
               <Divider sx={{ my: 2 }} />
               
               <Typography variant="h6" gutterBottom>
-                What's included:
+                {t("What's included:")}
               </Typography>
               
               <List>
@@ -272,7 +294,9 @@ For any questions, please contact support@tamkeen-ai.com
                     <ListItemIcon>
                       <Check color="primary" />
                     </ListItemIcon>
-                    <ListItemText primary={feature} />
+                    <ListItemText primary={isArabic && packageDetails.featuresAr && packageDetails.featuresAr[index] 
+                      ? packageDetails.featuresAr[index] 
+                      : feature} />
                   </ListItem>
                 ))}
               </List>
@@ -284,28 +308,28 @@ For any questions, please contact support@tamkeen-ai.com
           <Card>
             <CardContent>
               <Typography variant="h5" gutterBottom>
-                Order Summary
+                {t('Order Summary')}
               </Typography>
               
               <List>
                 <ListItem>
                   <ListItemText 
-                    primary="Package" 
-                    secondary={packageDetails.title} 
+                    primary={t('Package')} 
+                    secondary={isArabic && packageDetails.titleAr ? packageDetails.titleAr : packageDetails.title} 
                   />
                 </ListItem>
                 
                 <ListItem>
                   <ListItemText 
-                    primary="Purchase Date" 
-                    secondary={new Date().toLocaleDateString()} 
+                    primary={t('Purchase Date')} 
+                    secondary={new Date().toLocaleDateString(isArabic ? 'ar-AE' : undefined)} 
                   />
                 </ListItem>
                 
                 <ListItem>
                   <ListItemText 
-                    primary="Status" 
-                    secondary={<Chip label="Active" color="success" size="small" />} 
+                    primary={t('Status')} 
+                    secondary={<Chip label={t('Active')} color="success" size="small" />} 
                   />
                 </ListItem>
                 
@@ -313,8 +337,10 @@ For any questions, please contact support@tamkeen-ai.com
                 
                 <ListItem>
                   <ListItemText 
-                    primary={<Typography variant="subtitle1">Total Amount</Typography>} 
-                    secondary={<Typography variant="h6" color="primary">AED {packageDetails.price.toFixed(0)}</Typography>} 
+                    primary={<Typography variant="subtitle1">{t('Total Amount')}</Typography>} 
+                    secondary={<Typography variant="h6" color="primary">
+                      {isArabic ? `${packageDetails.price.toFixed(0)} ${t('AED')}` : `${t('AED')} ${packageDetails.price.toFixed(0)}`}
+                    </Typography>} 
                   />
                 </ListItem>
               </List>
@@ -328,7 +354,7 @@ For any questions, please contact support@tamkeen-ai.com
                   fullWidth
                   onClick={printReceipt}
                 >
-                  Print Receipt
+                  {t('Print Receipt')}
                 </Button>
                 
                 <Button 
@@ -337,7 +363,7 @@ For any questions, please contact support@tamkeen-ai.com
                   fullWidth
                   onClick={downloadReceipt}
                 >
-                  Download Receipt
+                  {t('Download Receipt')}
                 </Button>
                 
                 <Button 
@@ -346,7 +372,7 @@ For any questions, please contact support@tamkeen-ai.com
                   fullWidth
                   onClick={() => navigate('/ai-coach')}
                 >
-                  Book a Session
+                  {t('Book a Session')}
                 </Button>
                 
                 <Button 
@@ -355,7 +381,7 @@ For any questions, please contact support@tamkeen-ai.com
                   fullWidth
                   onClick={() => navigate('/learning-path')}
                 >
-                  View Learning Paths
+                  {t('View Learning Paths')}
                 </Button>
               </Box>
             </CardContent>
@@ -370,7 +396,7 @@ For any questions, please contact support@tamkeen-ai.com
           onClick={() => navigate('/ai-coach')}
           startIcon={<ArrowBack />}
         >
-          Back to Coaches
+          {t('Back to Coaches')}
         </Button>
       </Box>
       

@@ -7,7 +7,7 @@
     <title>Tamkeen AI Career System</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
       /* Loading styles */
       .loading-container {
@@ -19,6 +19,11 @@
         background-color: #f5f7fa;
         flex-direction: column;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      
+      /* RTL support for the loading screen */
+      html[dir="rtl"] .loading-container {
+        font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       }
       
       .dark .loading-container {
@@ -68,6 +73,12 @@
         display: none;
       }
       
+      /* RTL support for warnings */
+      html[dir="rtl"] .browser-warning {
+        border-left: 0;
+        border-right: 4px solid #ef4444;
+      }
+      
       .dark .browser-warning {
         background-color: #7f1d1d;
         color: #fca5a5;
@@ -92,6 +103,11 @@
         overflow-x: hidden;
       }
       
+      /* RTL support for body */
+      html[dir="rtl"] body {
+        font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      
       /* Make sure root div fills the screen */
       #root {
         min-height: 100vh;
@@ -105,6 +121,16 @@
       
       if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
         document.documentElement.classList.add('dark');
+      }
+      
+      // Set language direction
+      const savedLanguage = localStorage.getItem('language');
+      if (savedLanguage === 'ar') {
+        document.documentElement.setAttribute('dir', 'rtl');
+        document.documentElement.setAttribute('lang', 'ar');
+      } else {
+        document.documentElement.setAttribute('dir', 'ltr');
+        document.documentElement.setAttribute('lang', 'en');
       }
       
       // Check browser compatibility

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Paper, 
   Typography, 
@@ -25,7 +25,8 @@ import {
   Alert,
   FormControl,
   InputLabel,
-  Select
+  Select,
+  CircularProgress
 } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
 import WorkIcon from '@mui/icons-material/Work';
@@ -42,6 +43,7 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { format, formatDistanceToNow, parseISO, isThisWeek, getDay } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 // Activity icon mapping
 const activityIcons = {
@@ -65,12 +67,15 @@ const activityColors = {
   'default': 'grey.500'
 };
 
-const ActivityLogSection = ({ activityLog = [] }) => {
+const ActivityLogSection = ({ activityLog = [], recentActivities, data }) => {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuActivity, setMenuActivity] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [timeRange, setTimeRange] = useState('all');
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   // Handle filter menu
   const handleFilterClick = (event) => {
@@ -206,7 +211,7 @@ const ActivityLogSection = ({ activityLog = [] }) => {
     <Paper sx={{ p: 3, height: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6" component="h2">
-          Activity Log
+          {t('activityLog.title', 'Recent Activities')}
         </Typography>
       </Box>
       
@@ -216,19 +221,18 @@ const ActivityLogSection = ({ activityLog = [] }) => {
           <CardContent>
             <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
               <TrendingUpIcon fontSize="small" sx={{ mr: 0.5 }} />
-              Activity Summary
+              {t('activityLog.activitySummary', 'Activity Summary')}
             </Typography>
             
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="body2">
-                  You were most active on <strong>{activitySummary.mostActiveDay}s</strong>, with{' '}
-                  <strong>{activitySummary.mostActiveCount}</strong> activities.
+                  {t('activityLog.mostActiveOn', 'You were most active on')} <strong>{activitySummary.mostActiveDay}s</strong>, {t('activityLog.with', 'with')} <strong>{activitySummary.mostActiveCount}</strong> {t('activityLog.activities', 'activities')}.
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  Your most common activity was <strong>{activitySummary.mostCommonActivity}</strong>
+                  {t('activityLog.mostCommonActivity', 'Your most common activity was')} <strong>{activitySummary.mostCommonActivity}</strong>
                   {activitySummary.mostCommonActivity === 'Job Application' && 
-                   `, applying to ${activitySummary.mostCommonCount} jobs`}.
+                   t('activityLog.applyingTo', ', applying to')} {activitySummary.mostCommonCount} {t('activityLog.jobs', 'jobs')}.
                 </Typography>
               </Box>
               
@@ -237,7 +241,7 @@ const ActivityLogSection = ({ activityLog = [] }) => {
               
               <Box sx={{ flex: 1 }}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>{activitySummary.recentCount}</strong> activities this week
+                  <strong>{activitySummary.recentCount}</strong> {t('activityLog.activitiesThisWeek', 'activities this week')}
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                   {activitySummary.typeBreakdown.map(type => (
@@ -263,7 +267,7 @@ const ActivityLogSection = ({ activityLog = [] }) => {
             <TextField
               fullWidth
               size="small"
-              placeholder="Search activities..."
+              placeholder={t('activityLog.searchActivities', 'Search activities...')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
@@ -288,36 +292,36 @@ const ActivityLogSection = ({ activityLog = [] }) => {
           </Grid>
           <Grid item xs={6} sm={3}>
             <FormControl fullWidth size="small">
-              <InputLabel id="activity-type-label">Activity Type</InputLabel>
+              <InputLabel id="activity-type-label">{t('activityLog.activityType', 'Activity Type')}</InputLabel>
               <Select
                 labelId="activity-type-label"
                 value={filter}
-                label="Activity Type"
+                label={t('activityLog.activityType', 'Activity Type')}
                 onChange={(e) => setFilter(e.target.value)}
               >
-                <MenuItem value="all">All Activities</MenuItem>
-                <MenuItem value="resume_update">Resume Updates</MenuItem>
-                <MenuItem value="job_application">Job Applications</MenuItem>
-                <MenuItem value="mock_interview">Mock Interviews</MenuItem>
-                <MenuItem value="assessment">Assessments</MenuItem>
-                <MenuItem value="networking">Networking</MenuItem>
-                <MenuItem value="course_completion">Learning</MenuItem>
+                <MenuItem value="all">{t('activityLog.allActivities', 'All Activities')}</MenuItem>
+                <MenuItem value="resume_update">{t('activityLog.resumeUpdates', 'Resume Updates')}</MenuItem>
+                <MenuItem value="job_application">{t('activityLog.jobApplications', 'Job Applications')}</MenuItem>
+                <MenuItem value="mock_interview">{t('activityLog.mockInterviews', 'Mock Interviews')}</MenuItem>
+                <MenuItem value="assessment">{t('activityLog.assessments', 'Assessments')}</MenuItem>
+                <MenuItem value="networking">{t('activityLog.networking', 'Networking')}</MenuItem>
+                <MenuItem value="course_completion">{t('activityLog.learning', 'Learning')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
           <Grid item xs={6} sm={3}>
             <FormControl fullWidth size="small">
-              <InputLabel id="time-range-label">Time Range</InputLabel>
+              <InputLabel id="time-range-label">{t('activityLog.timeRange', 'Time Range')}</InputLabel>
               <Select
                 labelId="time-range-label"
                 value={timeRange}
-                label="Time Range"
+                label={t('activityLog.timeRange', 'Time Range')}
                 onChange={(e) => setTimeRange(e.target.value)}
               >
-                <MenuItem value="all">All Time</MenuItem>
-                <MenuItem value="today">Today</MenuItem>
-                <MenuItem value="week">This Week</MenuItem>
-                <MenuItem value="month">This Month</MenuItem>
+                <MenuItem value="all">{t('activityLog.allTime', 'All Time')}</MenuItem>
+                <MenuItem value="today">{t('activityLog.today', 'Today')}</MenuItem>
+                <MenuItem value="week">{t('activityLog.thisWeek', 'This Week')}</MenuItem>
+                <MenuItem value="month">{t('activityLog.thisMonth', 'This Month')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -327,7 +331,7 @@ const ActivityLogSection = ({ activityLog = [] }) => {
       {filteredActivities.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <Typography color="text.secondary">
-            No activities found matching your filters
+            {t('activityLog.noActivitiesFound', 'No activities found matching your filters')}
           </Typography>
           <Button 
             variant="text" 
@@ -339,14 +343,14 @@ const ActivityLogSection = ({ activityLog = [] }) => {
             }}
             sx={{ mt: 1 }}
           >
-            Clear all filters
+            {t('activityLog.clearAllFilters', 'Clear all filters')}
           </Button>
         </Box>
       ) : (
         <>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Showing {filteredActivities.length} activities
+              {t('activityLog.showingActivities', 'Showing')} {filteredActivities.length} {t('activityLog.activities', 'activities')}
             </Typography>
             
             {(filter !== 'all' || searchTerm || timeRange !== 'all') && (
@@ -359,7 +363,7 @@ const ActivityLogSection = ({ activityLog = [] }) => {
                   setTimeRange('all');
                 }}
               >
-                Clear filters
+                {t('activityLog.clearFilters', 'Clear filters')}
               </Button>
             )}
           </Box>
@@ -490,7 +494,7 @@ const ActivityLogSection = ({ activityLog = [] }) => {
             size="small"
             onClick={() => {/* Navigate to full activity history */}}
           >
-            View Full History
+            {t('activityLog.viewFullHistory', 'View Full History')}
           </Button>
         </Box>
       )}
@@ -502,13 +506,13 @@ const ActivityLogSection = ({ activityLog = [] }) => {
         onClose={handleActivityMenuClose}
       >
         <MenuItem onClick={handleActivityMenuClose}>
-          View Details
+          {t('activityLog.viewDetails', 'View Details')}
         </MenuItem>
         <MenuItem onClick={handleActivityMenuClose}>
           <ListItemIcon>
             <DeleteIcon fontSize="small" />
           </ListItemIcon>
-          Remove from Log
+          {t('activityLog.removeFromLog', 'Remove from Log')}
         </MenuItem>
       </Menu>
     </Paper>

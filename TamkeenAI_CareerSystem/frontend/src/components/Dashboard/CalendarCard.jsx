@@ -20,6 +20,7 @@ import {
   MenuItem
 } from '@mui/material';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday, addMonths, subMonths, isSameWeek } from 'date-fns';
+import { arSA, enUS } from 'date-fns/locale';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import AddIcon from '@mui/icons-material/Add';
@@ -28,6 +29,7 @@ import WorkIcon from '@mui/icons-material/Work';
 import SchoolIcon from '@mui/icons-material/School';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import { useTranslation } from 'react-i18next';
 
 const CalendarCard = ({ data }) => {
   const theme = useTheme();
@@ -38,6 +40,10 @@ const CalendarCard = ({ data }) => {
   const [bookingTitle, setBookingTitle] = useState('');
   const [eventType, setEventType] = useState('meeting');
   const [localEvents, setLocalEvents] = useState([]);
+  const { t, i18n } = useTranslation();
+  
+  // Determine locale based on current language
+  const locale = i18n.language === 'ar' ? arSA : enUS;
   
   // Event types and their corresponding icons and colors
   const eventTypes = {
@@ -136,7 +142,7 @@ const CalendarCard = ({ data }) => {
       daysOfWeek.push(
         <Box key={i} sx={{ width: '14.2%', p: 0.5, textAlign: 'center' }}>
           <Typography variant="caption" sx={{ fontSize: '0.6rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.7)' }}>
-            {format(addDays(startOfWeek(new Date()), i), dayFormat)}
+            {format(addDays(startOfWeek(new Date()), i), dayFormat, { locale })}
           </Typography>
         </Box>
       );
@@ -146,7 +152,7 @@ const CalendarCard = ({ data }) => {
     // Create calendar cells for each day
     while (day <= endDate) {
       for (let i = 0; i < 7; i++) {
-        formattedDate = format(day, dateFormat);
+        formattedDate = format(day, dateFormat, { locale });
         const cloneDay = day;
         const dayEvents = getEventsForDate(day);
         const isCurrentMonth = isSameMonth(day, monthStart);
@@ -236,7 +242,7 @@ const CalendarCard = ({ data }) => {
             textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.15)' : 'none'
           }}
         >
-          No events scheduled
+          {t('calendarComponent.noEvents')}
         </Typography>
       );
     }
@@ -314,7 +320,7 @@ const CalendarCard = ({ data }) => {
             textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.15)' : 'none'
           }}
         >
-          Upcoming:
+          {t('calendarComponent.upcoming')}:
         </Typography>
         {upcomingEvents.slice(0, 1).map((event, index) => (
           <Box 
@@ -362,7 +368,7 @@ const CalendarCard = ({ data }) => {
                   fontWeight: 500
                 }}
               >
-                {format(new Date(event.date), 'E, MMM d')}
+                {format(new Date(event.date), 'E, MMM d', { locale })}
               </Typography>
             </Box>
           </Box>
@@ -391,7 +397,8 @@ const CalendarCard = ({ data }) => {
       height: '100%', 
       p: 1,
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      direction: i18n.language === 'ar' ? 'rtl' : 'ltr'
     }}>
       {/* Calendar Header */}
       <Box sx={{ 
@@ -414,7 +421,7 @@ const CalendarCard = ({ data }) => {
           textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.15)' : 'none',
           letterSpacing: '0.5px'
         }}>
-          {format(currentDate, 'MMMM yyyy')}
+          {format(currentDate, 'MMMM yyyy', { locale })}
         </Typography>
         
         <IconButton 
@@ -441,10 +448,10 @@ const CalendarCard = ({ data }) => {
           color: isDarkMode ? '#fff' : '#333',
           textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.15)' : 'none' 
         }}>
-          {format(selectedDate, 'MMM d, yyyy')}
+          {format(selectedDate, 'MMM d, yyyy', { locale })}
         </Typography>
         
-        <Tooltip title="Add Event">
+        <Tooltip title={t('calendarComponent.addEvent')}>
           <IconButton 
             size="small" 
             onClick={openBookingDialog}
@@ -469,48 +476,48 @@ const CalendarCard = ({ data }) => {
       
       {/* Booking Dialog */}
       <Dialog open={bookingDialog} onClose={closeBookingDialog} maxWidth="xs" fullWidth>
-        <DialogTitle>Add New Event</DialogTitle>
+        <DialogTitle>{t('calendarComponent.addNewEvent')}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
             <Typography variant="subtitle2" gutterBottom>
-              {format(selectedDate, 'PPPP')}
+              {format(selectedDate, 'PPPP', { locale })}
             </Typography>
             <TextField
               fullWidth
-              label="Event Title"
+              label={t('calendarComponent.eventTitle')}
               margin="dense"
               value={bookingTitle}
               onChange={(e) => setBookingTitle(e.target.value)}
             />
             <FormControl fullWidth margin="dense">
-              <InputLabel>Event Type</InputLabel>
+              <InputLabel>{t('calendarComponent.eventType')}</InputLabel>
               <Select
                 value={eventType}
-                label="Event Type"
+                label={t('calendarComponent.eventType')}
                 onChange={(e) => setEventType(e.target.value)}
               >
                 <MenuItem value="meeting">
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <MeetingRoomIcon fontSize="small" sx={{ mr: 1, color: eventTypes.meeting.color }} />
-                    Meeting
+                    {t('calendarComponent.meeting')}
                   </Box>
                 </MenuItem>
                 <MenuItem value="task">
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <AssignmentIcon fontSize="small" sx={{ mr: 1, color: eventTypes.task.color }} />
-                    Task
+                    {t('calendarComponent.task')}
                   </Box>
                 </MenuItem>
                 <MenuItem value="interview">
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <WorkIcon fontSize="small" sx={{ mr: 1, color: eventTypes.interview.color }} />
-                    Interview
+                    {t('calendarComponent.interview')}
                   </Box>
                 </MenuItem>
                 <MenuItem value="course">
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <SchoolIcon fontSize="small" sx={{ mr: 1, color: eventTypes.course.color }} />
-                    Course
+                    {t('calendarComponent.course')}
                   </Box>
                 </MenuItem>
               </Select>
@@ -518,14 +525,14 @@ const CalendarCard = ({ data }) => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeBookingDialog}>Cancel</Button>
+          <Button onClick={closeBookingDialog}>{t('calendarComponent.cancel')}</Button>
           <Button 
             onClick={handleBooking} 
             variant="contained" 
             color="primary"
             disabled={!bookingTitle.trim()}
           >
-            Add Event
+            {t('calendarComponent.add')}
           </Button>
         </DialogActions>
       </Dialog>

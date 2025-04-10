@@ -48,6 +48,7 @@ import { styled } from '@mui/material/styles';
 import { motion, AnimatePresence } from 'framer-motion';
 import chatService from '../../api/chatgpt';
 import { useUser } from '../../context/AppContext';
+import { useTranslation } from 'react-i18next';
 
 // Custom styled expand button
 const ExpandButton = styled(IconButton)(({ theme }) => ({
@@ -110,6 +111,7 @@ const getRecommendationIcon = (type) => {
 };
 
 const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -290,7 +292,7 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
                 {recommendation.title}
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                {recommendation.type} • {recommendation.provider}
+                {t('aiRecommendation.type', 'Type')}: {recommendation.type} • {recommendation.provider}
               </Typography>
             </Box>
           </Box>
@@ -371,7 +373,7 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <PsychologyIcon fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} />
               <Typography variant="body2" color="text.secondary">
-                AI Explanation
+                {t('aiRecommendation.aiExplanation', 'AI Explanation')}
               </Typography>
               <Tooltip title={error ? "AI service disconnected" : "AI service connected"}>
                 <Box component="span" sx={{ ml: 1, display: 'inline-flex', alignItems: 'center' }}>
@@ -417,7 +419,7 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
           <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
               <Typography variant="subtitle2">
-                Chat with AI Assistant
+                {t('aiRecommendation.chatWithAI', 'Chat with AI Assistant')}
               </Typography>
               
               <FormControlLabel
@@ -434,12 +436,12 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
                     {useLocalAI ? (
                       <>
                         <ComputerIcon fontSize="small" sx={{ mr: 0.5 }} />
-                        <Typography variant="caption">Local DeepSeek</Typography>
+                        <Typography variant="caption">{t('aiRecommendation.localDeepSeek', 'Local DeepSeek')}</Typography>
                       </>
                     ) : (
                       <>
                         <CloudDoneIcon fontSize="small" sx={{ mr: 0.5 }} />
-                        <Typography variant="caption">Cloud AI</Typography>
+                        <Typography variant="caption">{t('aiRecommendation.cloudAI', 'Cloud AI')}</Typography>
                       </>
                     )}
                   </Box>
@@ -559,7 +561,7 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
           variant={chatVisible ? "outlined" : "text"}
           color="primary"
         >
-          {chatVisible ? "Hide Chat" : "Chat with AI"}
+          {chatVisible ? t('aiRecommendation.hideChat', 'Hide Chat') : t('aiRecommendation.chatWithAI', 'Chat with AI')}
         </Button>
         
         <Box>
@@ -578,7 +580,7 @@ const AIRecommendationCard = ({ initialRecommendation, onRefresh }) => {
             onClick={() => window.open(recommendation.url, '_blank')}
             sx={{ ml: 1 }}
           >
-            View Details
+            {t('common.viewDetails', 'View Details')}
           </Button>
         </Box>
       </CardActions>

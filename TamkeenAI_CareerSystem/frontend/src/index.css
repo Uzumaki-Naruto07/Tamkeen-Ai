@@ -34,6 +34,58 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* RTL Support */
+html[dir="rtl"] body {
+  font-family: 'Cairo', sans-serif;
+}
+
+html[dir="rtl"] * {
+  letter-spacing: 0;
+}
+
+html[dir="rtl"] .MuiButton-startIcon {
+  margin-left: 8px;
+  margin-right: 0;
+}
+
+html[dir="rtl"] .MuiButton-endIcon {
+  margin-right: 8px;
+  margin-left: 0;
+}
+
+html[dir="rtl"] .MuiListItemIcon-root {
+  margin-right: 0;
+  margin-left: 16px;
+}
+
+html[dir="rtl"] .MuiCardHeader-avatar {
+  margin-right: 0;
+  margin-left: 16px;
+}
+
+html[dir="rtl"] .MuiCardHeader-action {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+html[dir="rtl"] .MuiChip-icon {
+  margin-left: 5px;
+  margin-right: -6px;
+}
+
+html[dir="rtl"] .MuiChip-deleteIcon {
+  margin-right: 5px;
+  margin-left: -6px;
+}
+
+html[dir="rtl"] .MuiAccordionSummary-expandIconWrapper {
+  transform: rotate(90deg);
+}
+
+html[dir="rtl"] .MuiAccordionSummary-expandIconWrapper.Mui-expanded {
+  transform: rotate(-90deg);
+}
+
 #root {
   height: 100%;
   min-height: 100vh;

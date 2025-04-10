@@ -38,30 +38,41 @@ import {
   EventAvailable
 } from '@mui/icons-material';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // Import mock coaches data from AllInterviewCoach
 const mockCoaches = [
   {
     id: 1,
     name: "Sarah Johnson",
+    nameAr: "سارة جونسون",
     title: "Senior Tech Recruiter",
+    titleAr: "مسؤول توظيف تقني أول",
     company: "Google",
+    companyAr: "جوجل",
     specialties: ["Software Engineering", "Technical Interviews", "Behavioral Questions"],
+    specialtiesAr: ["هندسة البرمجيات", "المقابلات التقنية", "أسئلة السلوك"],
     experience: 8,
     rating: 4.9,
     reviews: 124,
     hourlyRate: 85,
     availability: "Next available: Tomorrow",
+    availabilityAr: "متاح غداً",
     image: "https://randomuser.me/api/portraits/women/44.jpg",
     description: "Former Google recruiter with 8+ years of experience hiring software engineers. I can help you prepare for technical and behavioral interviews at top tech companies.",
+    descriptionAr: "مسؤولة توظيف سابقة في جوجل مع أكثر من 8 سنوات من الخبرة في توظيف مهندسي البرمجيات. يمكنني مساعدتك في التحضير للمقابلات التقنية والسلوكية في شركات التكنولوجيا الكبرى.",
     bio: "As a former technical recruiter at Google, I've interviewed hundreds of software engineers and know exactly what hiring managers are looking for. I specialize in helping candidates prepare for technical interviews at FAANG companies and other tech giants. I can provide personalized feedback on your answers, help you strengthen your problem-solving approach, and teach you strategies to showcase your skills effectively.",
+    bioAr: "بصفتي مسؤولة توظيف تقنية سابقة في جوجل، أجريت مقابلات مع مئات من مهندسي البرمجيات وأعرف بالضبط ما يبحث عنه مديرو التوظيف. أتخصص في مساعدة المرشحين للاستعداد للمقابلات التقنية في شركات FAANG وغيرها من شركات التقنية الكبرى. يمكنني تقديم ملاحظات مخصصة حول إجاباتك، ومساعدتك في تعزيز نهج حل المشكلات لديك، وتعليمك استراتيجيات لإظهار مهاراتك بشكل فعال.",
     languages: ["English", "Spanish"],
+    languagesAr: ["الإنجليزية", "الإسبانية"],
     education: "Bachelor's in Computer Science, Stanford University",
+    educationAr: "بكالوريوس في علوم الكمبيوتر، جامعة ستانفورد",
     certifications: ["Certified Professional Coach (CPC)", "SHRM-CP"],
+    certificationsAr: ["مدرب محترف معتمد (CPC)", "SHRM-CP"],
     testimonials: [
-      { id: 1, name: "Alex Chen", company: "Software Engineer at Amazon", content: "Sarah's coaching was instrumental in my success at Amazon interviews. Her mock interviews and feedback helped me identify and address weaknesses in my responses.", rating: 5 },
-      { id: 2, name: "Maya Patel", company: "Frontend Developer at Facebook", content: "I was struggling with system design interviews before working with Sarah. Her structured approach and industry insights made a huge difference.", rating: 5 },
-      { id: 3, name: "James Wilson", company: "Backend Engineer at Microsoft", content: "Great coach who knows exactly what tech companies are looking for. Worth every penny.", rating: 4 }
+      { id: 1, name: "Alex Chen", nameAr: "أليكس تشن", company: "Software Engineer at Amazon", companyAr: "مهندس برمجيات في أمازون", content: "Sarah's coaching was instrumental in my success at Amazon interviews. Her mock interviews and feedback helped me identify and address weaknesses in my responses.", contentAr: "كان تدريب سارة عاملاً أساسياً في نجاحي في مقابلات أمازون. ساعدتني مقابلاتها التجريبية وملاحظاتها على تحديد ومعالجة نقاط الضعف في إجاباتي.", rating: 5 },
+      { id: 2, name: "Maya Patel", nameAr: "مايا باتيل", company: "Frontend Developer at Facebook", companyAr: "مطور واجهة أمامية في فيسبوك", content: "I was struggling with system design interviews before working with Sarah. Her structured approach and industry insights made a huge difference.", contentAr: "كنت أعاني في مقابلات تصميم النظام قبل العمل مع سارة. نهجها المنظم ورؤاها في الصناعة أحدثت فرقاً كبيراً.", rating: 5 },
+      { id: 3, name: "James Wilson", nameAr: "جيمس ويلسون", company: "Backend Engineer at Microsoft", companyAr: "مهندس الواجهة الخلفية في مايكروسوفت", content: "Great coach who knows exactly what tech companies are looking for. Worth every penny.", contentAr: "مدربة رائعة تعرف بالضبط ما تبحث عنه شركات التكنولوجيا. تستحق كل قرش.", rating: 4 }
     ],
     availableTimes: [
       { date: "2024-04-01", slots: ["10:00 AM", "2:00 PM", "4:00 PM"] },
@@ -72,24 +83,34 @@ const mockCoaches = [
   {
     id: 2,
     name: "Michael Chen",
+    nameAr: "مايكل تشن",
     title: "Career Coach & Former HR Director",
+    titleAr: "مدرب مهني ومدير موارد بشرية سابق",
     company: "Microsoft",
+    companyAr: "مايكروسوفت",
     specialties: ["Leadership Roles", "Executive Interviews", "Salary Negotiation"],
+    specialtiesAr: ["أدوار قيادية", "مقابلات تنفيذية", "التفاوض على الراتب"],
     experience: 12,
     rating: 4.8,
     reviews: 98,
     hourlyRate: 95,
     availability: "Next available: Today",
+    availabilityAr: "متاح اليوم",
     image: "https://randomuser.me/api/portraits/men/32.jpg",
     description: "HR Director with experience at Microsoft and Amazon. I specialize in helping mid to senior-level professionals prepare for leadership interviews and negotiate offers.",
+    descriptionAr: "مدير موارد بشرية مع خبرة في مايكروسوفت وأمازون. أتخصص في مساعدة المهنيين من المستوى المتوسط إلى المستوى الأعلى في التحضير لمقابلات القيادة والتفاوض على العروض.",
     bio: "With over 12 years in HR leadership roles at companies like Microsoft and Amazon, I bring deep expertise in executive recruiting and talent development. My coaching approach combines insider knowledge of how hiring decisions are made with practical strategies to help you showcase your leadership abilities and secure competitive offers.",
+    bioAr: "مع أكثر من 12 عامًا في أدوار قيادية في الموارد البشرية في شركات مثل مايكروسوفت وأمازون، أجلب خبرة عميقة في التوظيف التنفيذي وتطوير المواهب. يجمع نهجي في التدريب بين المعرفة الداخلية لكيفية اتخاذ قرارات التوظيف مع استراتيجيات عملية لمساعدتك على إظهار قدراتك القيادية وتأمين عروض تنافسية.",
     languages: ["English", "Mandarin"],
+    languagesAr: ["الإنجليزية", "الماندرين"],
     education: "MBA, University of Washington",
+    educationAr: "ماجستير إدارة الأعمال، جامعة واشنطن",
     certifications: ["SHRM-SCP", "ICF Professional Certified Coach"],
+    certificationsAr: ["SHRM-SCP", "مدرب محترف معتمد من ICF"],
     testimonials: [
-      { id: 1, name: "Linda Morris", company: "VP of Engineering", content: "Michael's coaching helped me prepare for executive interviews after 15 years at the same company. His insights into leadership assessment were invaluable.", rating: 5 },
-      { id: 2, name: "Robert Taylor", company: "Director of Product", content: "Thanks to Michael's negotiation strategies, I secured a compensation package 30% higher than the initial offer.", rating: 5 },
-      { id: 3, name: "Sarah Johnson", company: "CTO", content: "Excellent executive coach who understands the nuances of leadership assessment.", rating: 4 }
+      { id: 1, name: "Linda Morris", nameAr: "ليندا موريس", company: "VP of Engineering", companyAr: "نائب رئيس الهندسة", content: "Michael's coaching helped me prepare for executive interviews after 15 years at the same company. His insights into leadership assessment were invaluable.", contentAr: "ساعدني تدريب مايكل في التحضير للمقابلات التنفيذية بعد 15 عامًا في نفس الشركة. كانت رؤاه في تقييم القيادة لا تقدر بثمن.", rating: 5 },
+      { id: 2, name: "Robert Taylor", nameAr: "روبرت تايلور", company: "Director of Product", companyAr: "مدير المنتج", content: "Thanks to Michael's negotiation strategies, I secured a compensation package 30% higher than the initial offer.", contentAr: "بفضل استراتيجيات التفاوض من مايكل، حصلت على حزمة تعويض أعلى بنسبة 30٪ من العرض الأولي.", rating: 5 },
+      { id: 3, name: "Sarah Johnson", nameAr: "سارة جونسون", company: "CTO", companyAr: "المدير التقني", content: "Excellent executive coach who understands the nuances of leadership assessment.", contentAr: "مدرب تنفيذي ممتاز يفهم تفاصيل تقييم القيادة.", rating: 4 }
     ],
     availableTimes: [
       { date: "2024-03-31", slots: ["11:00 AM", "3:00 PM", "5:00 PM"] },
@@ -224,6 +245,10 @@ const CoachProfile = () => {
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [rescheduleData, setRescheduleData] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const { i18n } = useTranslation();
+  
+  // Check if language is Arabic
+  const isArabic = i18n.language === 'ar';
 
   // Add refs for the sections we want to scroll to
   const availabilitySectionRef = useRef(null);
@@ -316,7 +341,10 @@ const CoachProfile = () => {
     if (selectedTimeSlot) {
       // Check if the time slot is already booked
       if (isTimeSlotBooked(selectedTimeSlot.date, selectedTimeSlot.time)) {
-        alert('This time slot is already booked. Please select another time.');
+        alert(isArabic 
+          ? 'هذا الموعد محجوز بالفعل. الرجاء اختيار وقت آخر.'
+          : 'This time slot is already booked. Please select another time.'
+        );
         return;
       }
       
@@ -342,7 +370,9 @@ const CoachProfile = () => {
             if (n.bookingId === updatedBooking.id) {
               return {
                 ...n,
-                message: `You have a coaching session with ${coach.name} on ${new Date(selectedTimeSlot.date).toLocaleDateString()} at ${selectedTimeSlot.time}`,
+                message: isArabic
+                  ? `لديك جلسة تدريب مع ${coach.nameAr} يوم ${new Date(selectedTimeSlot.date).toLocaleDateString('ar-AE')} في الساعة ${selectedTimeSlot.time}`
+                  : `You have a coaching session with ${coach.name} on ${new Date(selectedTimeSlot.date).toLocaleDateString()} at ${selectedTimeSlot.time}`,
                 sessionDate: selectedTimeSlot.date,
                 sessionTime: selectedTimeSlot.time
               };
@@ -359,7 +389,9 @@ const CoachProfile = () => {
           // Navigate to booking confirmation
           navigate('/my-bookings', { 
             state: { 
-              message: 'Your booking has been successfully rescheduled!' 
+              message: isArabic
+                ? 'تمت إعادة جدولة الحجز بنجاح!'
+                : 'Your booking has been successfully rescheduled!' 
             } 
           });
         }, 1500);
@@ -381,7 +413,10 @@ const CoachProfile = () => {
       }
     } else {
       // Notify user to select a time slot first
-      alert('Please select a time slot before booking');
+      alert(isArabic
+        ? 'الرجاء اختيار موعد قبل الحجز'
+        : 'Please select a time slot before booking'
+      );
       
       // Auto-scroll to availability section
       handleTabChange(null, 2);
@@ -432,7 +467,7 @@ const CoachProfile = () => {
         startIcon={<AccessTime />}
         disabled={isBooked}
       >
-        {time} {isBooked && '(Booked)'}
+        {time} {isBooked && (isArabic ? '(محجوز)' : '(Booked)')}
       </Button>
     );
   };
@@ -466,7 +501,7 @@ const CoachProfile = () => {
           sx={{ mt: 2 }} 
           onClick={() => navigate('/ai-coach')}
         >
-          Back to Coaches
+          {isArabic ? "العودة إلى المدربين" : "Back to Coaches"}
         </Button>
       </Container>
     );
@@ -480,7 +515,7 @@ const CoachProfile = () => {
         sx={{ mb: 3 }} 
         onClick={() => navigate('/ai-coach')}
       >
-        Back to All Coaches
+        {isArabic ? "العودة إلى جميع المدربين" : "Back to All Coaches"}
       </Button>
       
       {/* Coach Header */}
@@ -491,7 +526,7 @@ const CoachProfile = () => {
               component="img"
               height="300"
               image={coach.image}
-              alt={coach.name}
+              alt={isArabic ? coach.nameAr : coach.name}
               sx={{ objectFit: 'cover' }}
             />
           </Card>
@@ -501,11 +536,11 @@ const CoachProfile = () => {
           <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <CardContent sx={{ flexGrow: 1 }}>
               <Typography variant="h4" component="h1" gutterBottom>
-                {coach.name}
+                {isArabic ? coach.nameAr : coach.name}
               </Typography>
               
               <Typography variant="h6" color="text.secondary" gutterBottom>
-                {coach.title} at {coach.company}
+                {isArabic ? coach.titleAr : coach.title} {isArabic ? "في" : "at"} {isArabic ? coach.companyAr : coach.company}
               </Typography>
               
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -516,12 +551,12 @@ const CoachProfile = () => {
                   emptyIcon={<Star style={{ opacity: 0.55 }} fontSize="inherit" />}
                 />
                 <Typography variant="body2" sx={{ ml: 1 }}>
-                  {coach.rating} ({coach.reviews} reviews)
+                  {coach.rating} ({coach.reviews} {isArabic ? "مراجعة" : "reviews"})
                 </Typography>
               </Box>
               
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
-                {coach.specialties.map((specialty, index) => (
+                {(isArabic ? coach.specialtiesAr : coach.specialties).map((specialty, index) => (
                   <Chip
                     key={index}
                     label={specialty}
@@ -533,28 +568,28 @@ const CoachProfile = () => {
               </Box>
               
               <Typography variant="body1" sx={{ mb: 2 }}>
-                {coach.description}
+                {isArabic ? coach.descriptionAr : coach.description}
               </Typography>
               
               <Grid container spacing={2} sx={{ mb: 2 }}>
                 <Grid item xs={6}>
                   <Typography variant="body2">
-                    <strong>Experience:</strong> {coach.experience} years
+                    <strong>{isArabic ? "الخبرة:" : "Experience:"}</strong> {coach.experience} {isArabic ? "سنوات" : "years"}
                   </Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="body2">
-                    <strong>Rate:</strong> AED {(coach.hourlyRate * 3.67).toFixed(0)}/hour
+                    <strong>{isArabic ? "المعدل:" : "Rate:"}</strong> AED {(coach.hourlyRate * 3.67).toFixed(0)}/{isArabic ? "ساعة" : "hour"}
                   </Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="body2">
-                    <strong>Languages:</strong> {coach.languages.join(", ")}
+                    <strong>{isArabic ? "اللغات:" : "Languages:"}</strong> {(isArabic ? coach.languagesAr : coach.languages).join(", ")}
                   </Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="body2" color="primary">
-                    <strong>{coach.availability}</strong>
+                    <strong>{isArabic ? coach.availabilityAr : coach.availability}</strong>
                   </Typography>
                 </Grid>
               </Grid>
@@ -573,7 +608,7 @@ const CoachProfile = () => {
                   py: 1
                 }}
               >
-                View Available Times
+                {isArabic ? "عرض الأوقات المتاحة" : "View Available Times"}
               </Button>
             </CardActions>
           </Card>
@@ -589,33 +624,33 @@ const CoachProfile = () => {
           textColor="primary"
           centered
         >
-          <Tab label="About" />
-          <Tab label="Testimonials" />
-          <Tab label="Availability" />
+          <Tab label={isArabic ? "نبذة" : "About"} />
+          <Tab label={isArabic ? "الشهادات" : "Testimonials"} />
+          <Tab label={isArabic ? "التوفر" : "Availability"} />
         </Tabs>
       </Paper>
       
       {/* Tab Content */}
       {tabValue === 0 && (
         <Card sx={{ p: 3 }}>
-          <Typography variant="h5" gutterBottom>About {coach.name}</Typography>
+          <Typography variant="h5" gutterBottom>{isArabic ? `نبذة عن ${coach.nameAr}` : `About ${coach.name}`}</Typography>
           <Typography variant="body1" paragraph>
-            {coach.bio}
+            {isArabic ? coach.bioAr : coach.bio}
           </Typography>
           
           <Divider sx={{ my: 3 }} />
           
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>Education</Typography>
+              <Typography variant="h6" gutterBottom>{isArabic ? "التعليم" : "Education"}</Typography>
               <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <School sx={{ mr: 1, color: 'primary.main' }} />
-                {coach.education}
+                {isArabic ? coach.educationAr : coach.education}
               </Typography>
               
-              <Typography variant="h6" gutterBottom>Certifications</Typography>
+              <Typography variant="h6" gutterBottom>{isArabic ? "الشهادات" : "Certifications"}</Typography>
               <List>
-                {coach.certifications.map((cert, index) => (
+                {(isArabic ? coach.certificationsAr : coach.certifications).map((cert, index) => (
                   <ListItem key={index} sx={{ py: 0.5 }}>
                     <ListItemIcon sx={{ minWidth: 36 }}>
                       <Verified color="primary" fontSize="small" />
@@ -627,9 +662,9 @@ const CoachProfile = () => {
             </Grid>
             
             <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>Specialties</Typography>
+              <Typography variant="h6" gutterBottom>{isArabic ? "التخصصات" : "Specialties"}</Typography>
               <List>
-                {coach.specialties.map((specialty, index) => (
+                {(isArabic ? coach.specialtiesAr : coach.specialties).map((specialty, index) => (
                   <ListItem key={index} sx={{ py: 0.5 }}>
                     <ListItemIcon sx={{ minWidth: 36 }}>
                       <Check color="primary" fontSize="small" />
@@ -649,9 +684,9 @@ const CoachProfile = () => {
             <Grid item xs={12} md={4} key={testimonial.id}>
               <Card sx={{ height: '100%' }}>
                 <CardContent>
-                  <Typography variant="h6">{testimonial.name}</Typography>
+                  <Typography variant="h6">{isArabic ? testimonial.nameAr : testimonial.name}</Typography>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
-                    {testimonial.company}
+                    {isArabic ? testimonial.companyAr : testimonial.company}
                   </Typography>
                   
                   <Rating
@@ -662,7 +697,7 @@ const CoachProfile = () => {
                   />
                   
                   <Typography variant="body1">
-                    "{testimonial.content}"
+                    "{isArabic ? testimonial.contentAr : testimonial.content}"
                   </Typography>
                 </CardContent>
               </Card>
@@ -673,10 +708,12 @@ const CoachProfile = () => {
       
       {tabValue === 2 && (
         <Card sx={{ p: 3 }} id="availability-section" ref={availabilitySectionRef}>
-          <Typography variant="h5" gutterBottom>Available Time Slots</Typography>
+          <Typography variant="h5" gutterBottom>{isArabic ? "الأوقات المتاحة" : "Available Time Slots"}</Typography>
           <Typography variant="body2" paragraph>
-            Select a date and time to book your session with {coach.name}.
-            {userBookings.length > 0 && " Time slots you've already booked are marked as unavailable."}
+            {isArabic 
+              ? `حدد تاريخاً ووقتاً لحجز جلستك مع ${coach.nameAr}.${userBookings.length > 0 ? " الأوقات التي حجزتها بالفعل تظهر كغير متاحة." : ""}`
+              : `Select a date and time to book your session with ${coach.name}.${userBookings.length > 0 ? " Time slots you've already booked are marked as unavailable." : ""}`
+            }
           </Typography>
           
           <Grid container spacing={3}>
@@ -685,7 +722,10 @@ const CoachProfile = () => {
                 <Card variant="outlined" sx={{ mb: 2 }}>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>
-                      {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                      {isArabic 
+                        ? new Date(day.date).toLocaleDateString('ar-AE', { weekday: 'long', month: 'long', day: 'numeric' })
+                        : new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                      }
                     </Typography>
                     
                     <Divider sx={{ mb: 2 }} />
@@ -718,12 +758,14 @@ const CoachProfile = () => {
               {bookingLoading ? (
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <CircularProgress size={24} color="inherit" sx={{ mr: 1 }} />
-                  Processing...
+                  {isArabic ? "جاري المعالجة..." : "Processing..."}
                 </Box>
               ) : (
                 selectedTimeSlot ? 
-                  `Book Session for ${selectedTimeSlot.time} on ${new Date(selectedTimeSlot.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}` : 
-                  'Select a Time Slot'
+                  isArabic ?
+                    `حجز جلسة في الساعة ${selectedTimeSlot.time} يوم ${new Date(selectedTimeSlot.date).toLocaleDateString('ar-AE', {month: 'short', day: 'numeric'})}` :
+                    `Book Session for ${selectedTimeSlot.time} on ${new Date(selectedTimeSlot.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}` : 
+                  isArabic ? "اختر موعداً" : "Select a Time Slot"
               )}
             </Button>
           </Box>

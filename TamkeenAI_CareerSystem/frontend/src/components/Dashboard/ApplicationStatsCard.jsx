@@ -1,11 +1,13 @@
 import React from 'react';
 import { Box, Typography, Grid, Paper, useTheme } from '@mui/material';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const ApplicationStatsCard = ({ data }) => {
   console.log("ApplicationStatsCard rendered with data:", data);
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
+  const { t, i18n } = useTranslation();
   
   // Default data if none provided
   const stats = {
@@ -62,26 +64,17 @@ const ApplicationStatsCard = ({ data }) => {
   // Define stat items with premium darker colors
   const statItems = [
     {
-      number: stats.applications,
-      label: "Applications",
-      weeks: stats.applicationWeeks,
-      color: "#1a73e8", // Darker blue
-      bgColor: isDarkMode ? "rgba(26, 115, 232, 0.15)" : "rgba(26, 115, 232, 0.08)",
-      weekColor: "#1a73e8",
-      gradient: "linear-gradient(135deg, #1a73e8, #0d47a1)"
-    },
-    {
-      number: stats.onHold,
-      label: "On Hold",
-      weeks: stats.onHoldWeeks,
-      color: "#e8a90c", // Darker amber
-      bgColor: isDarkMode ? "rgba(232, 169, 12, 0.15)" : "rgba(232, 169, 12, 0.08)",
-      weekColor: "#e8a90c",
-      gradient: "linear-gradient(135deg, #e8a90c, #b78103)"
+      number: stats.totalApplied,
+      label: i18n.language === 'ar' ? "إجمالي التقديمات" : "Total Applied",
+      weeks: stats.totalWeeks,
+      color: "#0d8043", // Darker green
+      bgColor: isDarkMode ? "rgba(13, 128, 67, 0.15)" : "rgba(13, 128, 67, 0.08)",
+      weekColor: "#0d8043",
+      gradient: "linear-gradient(135deg, #0d8043, #00602c)"
     },
     {
       number: stats.rejected,
-      label: "Rejected",
+      label: i18n.language === 'ar' ? "مرفوض" : "Rejected",
       weeks: stats.rejectedWeeks,
       color: "#d93025", // Darker red
       bgColor: isDarkMode ? "rgba(217, 48, 37, 0.15)" : "rgba(217, 48, 37, 0.08)",
@@ -89,13 +82,22 @@ const ApplicationStatsCard = ({ data }) => {
       gradient: "linear-gradient(135deg, #d93025, #a50e0e)"
     },
     {
-      number: stats.totalApplied,
-      label: "Total Applied",
-      weeks: stats.totalWeeks,
-      color: "#0d8043", // Darker green
-      bgColor: isDarkMode ? "rgba(13, 128, 67, 0.15)" : "rgba(13, 128, 67, 0.08)",
-      weekColor: "#0d8043",
-      gradient: "linear-gradient(135deg, #0d8043, #00602c)"
+      number: stats.onHold,
+      label: i18n.language === 'ar' ? "قيد الانتظار" : "On Hold",
+      weeks: stats.onHoldWeeks,
+      color: "#e8a90c", // Darker amber
+      bgColor: isDarkMode ? "rgba(232, 169, 12, 0.15)" : "rgba(232, 169, 12, 0.08)",
+      weekColor: "#e8a90c",
+      gradient: "linear-gradient(135deg, #e8a90c, #b78103)"
+    },
+    {
+      number: stats.applications,
+      label: i18n.language === 'ar' ? "طلبات التوظيف" : "Applications",
+      weeks: stats.applicationWeeks,
+      color: "#1a73e8", // Darker blue
+      bgColor: isDarkMode ? "rgba(26, 115, 232, 0.15)" : "rgba(26, 115, 232, 0.08)",
+      weekColor: "#1a73e8",
+      gradient: "linear-gradient(135deg, #1a73e8, #0d47a1)"
     }
   ];
 
@@ -165,7 +167,7 @@ const ApplicationStatsCard = ({ data }) => {
             fontWeight: 'bold'
           }}
         >
-          ↑ {item.weeks} {item.weeks === 1 ? 'week' : 'weeks'}
+          ↑ {item.weeks} {i18n.language === 'ar' ? 'أسابيع' : (item.weeks === 1 ? 'week' : 'weeks')}
         </Typography>
         
         <Box 

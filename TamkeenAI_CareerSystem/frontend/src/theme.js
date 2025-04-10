@@ -1,4 +1,7 @@
 import { createTheme } from '@mui/material/styles';
+import { prefixer } from 'stylis';
+import rtlPlugin from 'stylis-plugin-rtl';
+import { getDirection } from './i18n';
 
 // Colors for light mode
 const lightPalette = {
@@ -158,6 +161,7 @@ const components = {
 // Create a theme with the specified mode
 const getTheme = (mode = 'light') => {
   const palette = mode === 'dark' ? darkPalette : lightPalette;
+  const isRtl = getDirection() === 'rtl';
   
   return createTheme({
     palette: {
@@ -166,7 +170,7 @@ const getTheme = (mode = 'light') => {
     },
     typography: {
       fontFamily: [
-        'Inter',
+        isRtl ? 'Cairo' : 'Inter',
         '-apple-system',
         'BlinkMacSystemFont',
         '"Segoe UI"',
@@ -202,11 +206,16 @@ const getTheme = (mode = 'light') => {
       borderRadius: 8,
     },
     components,
+    direction: isRtl ? 'rtl' : 'ltr', // Set direction based on language
   });
 };
+
+// RTL style insertion plugin for emotion
+const rtlStylesPlugin = isRtl => 
+  isRtl ? { stylisPlugins: [prefixer, rtlPlugin] } : {};
 
 // For backward compatibility, export a default light theme
 const theme = getTheme('light');
 
-export { getTheme };
+export { getTheme, rtlStylesPlugin };
 export default theme; 

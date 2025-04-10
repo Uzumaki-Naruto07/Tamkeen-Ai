@@ -410,8 +410,8 @@ export const AppContextProvider = ({ children }) => {
             const mockUser = {
               id: mockUserId,
               email: mockUserId === '1' ? 'admin@tamkeen.ai' : 'user@tamkeen.ai',
-              name: mockUserId === '1' ? 'Admin User' : 'Zayed',
-              firstName: mockUserId === '1' ? 'Admin' : 'Zayed',
+              name: mockUserId === '1' ? 'Admin User' : 'Hessa',
+              firstName: mockUserId === '1' ? 'Admin' : 'Hessa',
               lastName: mockUserId === '1' ? 'User' : '',
               roles: mockUserId === '1' ? ['admin', 'user'] : ['user'],
             };
@@ -567,9 +567,9 @@ export const AppContextProvider = ({ children }) => {
           const mockProfile = {
             id: userId,
             userId: userId,
-            firstName: updatedProfile.firstName || 'Zayed',
+            firstName: updatedProfile.firstName || 'Hessa',
             lastName: updatedProfile.lastName || '',
-            fullName: updatedProfile.fullName || 'Zayed',
+            fullName: updatedProfile.fullName || 'Hessa',
             bio: updatedProfile.bio || 'This is a mock profile for development purposes',
             skills: updatedProfile.skills || ['React', 'JavaScript', 'UI/UX'],
             experience: updatedProfile.experience || '5 years',

@@ -31,6 +31,9 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import AddIcon from '@mui/icons-material/Add';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
+import { useTranslation } from 'react-i18next';
+import { format } from 'date-fns';
+import { arSA, enUS } from 'date-fns/locale';
 
 // Sample avatars - in a real app, these would come from your user data
 const avatars = [
@@ -47,6 +50,23 @@ const TodoListCard = ({ data }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   const initialTodos = data?.todos || [];
+  const { t, i18n } = useTranslation();
+  
+  // Determine locale based on current language
+  const locale = i18n.language === 'ar' ? arSA : enUS;
+  const isRtl = i18n.language === 'ar';
+  
+  // Function to get task text based on current language
+  const getTaskText = (index, defaultText) => {
+    if (i18n.language === 'ar' && index < 4) {
+      const key = `todoListComponent.taskTitle${index + 1}`;
+      const translation = t(key);
+      // Only use the translation if it's not the same as the key (indicating translation exists)
+      return translation !== key ? translation : defaultText;
+    }
+    return defaultText;
+  };
+  
   const [todos, setTodos] = useState(initialTodos.length > 0 ? initialTodos : [
     { 
       task: "Deploy the website to the development hosting server", 
@@ -64,7 +84,7 @@ const TodoListCard = ({ data }) => {
       avatar: avatars[1] || null,
       assignee: "Emily R.",
       hasButton: true,
-      buttonLabel: "Feedback"
+      buttonLabel: t('todoListComponent.feedback')
     },
     { 
       task: "Fix all the bugs reported by the team", 
@@ -76,7 +96,7 @@ const TodoListCard = ({ data }) => {
     },
     { 
       task: "Prepare design files for web developer", 
-      dueTime: "Tomorrow", 
+      dueTime: t('calendarComponent.tomorrow'), 
       completed: false, 
       pomodoros: 0,
       avatar: avatars[2] || null,
@@ -126,7 +146,7 @@ const TodoListCard = ({ data }) => {
         completed: false,
         pomodoros: 0,
         avatar: null,
-        assignee: "Me"
+        assignee: t('todoListComponent.me')
       };
       setTodos([...todos, task]);
       setNewTask('');
@@ -232,6 +252,31 @@ const TodoListCard = ({ data }) => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
   
+  // Format time according to current locale
+  const formatTimeWithLocale = (timeString) => {
+    if (!timeString) return '';
+    
+    // If it's already in locale format, return as is
+    if (typeof timeString === 'string' && 
+        (timeString === t('calendarComponent.tomorrow') || 
+         timeString === t('calendarComponent.today'))) {
+      return timeString;
+    }
+    
+    try {
+      // Handle date objects or parsable date strings
+      const date = new Date(timeString);
+      if (!isNaN(date.getTime())) {
+        return format(date, 'p', { locale });
+      }
+      
+      // Return original string if we can't parse it
+      return timeString;
+    } catch (e) {
+      return timeString;
+    }
+  };
+  
   // Timer effect
   useEffect(() => {
     if (timerRunning) {
@@ -265,14 +310,19 @@ const TodoListCard = ({ data }) => {
   }, [timerRunning, timerType, activeTask, todos]);
   
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column',
+      direction: isRtl ? 'rtl' : 'ltr' // Apply RTL/LTR direction
+    }}>
       {/* Task Input */}
-      <Box sx={{ p: 1, pb: 2 }}>
+      <Box sx={{ p: 1 }}>
         <TextField
           fullWidth
           variant="outlined"
           size="small"
-          placeholder="Add a task..."
+          placeholder={t('todoListComponent.addTask')}
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
           onKeyPress={handleKeyPress}
@@ -326,7 +376,7 @@ const TodoListCard = ({ data }) => {
           </Box>
           
           <Typography variant="caption" sx={{ mt: 0.5, mb: 1, opacity: 0.8, fontWeight: 500 }}>
-            {timerType === 'work' ? 'Work Time' : 'Break Time'}
+            {timerType === 'work' ? t('todoListComponent.workTime') : t('todoListComponent.breakTime')}
           </Typography>
           
           <Box sx={{ display: 'flex', gap: 1 }}>
@@ -362,7 +412,7 @@ const TodoListCard = ({ data }) => {
             p: 2
           }}>
             <Typography variant="body2" sx={{ fontWeight: 500, textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.2)' : 'none' }}>
-              No tasks for today. Add a task to get started.
+              {t('todoListComponent.noTasks')}
             </Typography>
           </Box>
         ) : (
@@ -395,7 +445,8 @@ const TodoListCard = ({ data }) => {
                 <Avatar 
                   src={todo.avatar}
                   sx={{ 
-                    mr: 2, 
+                    mr: isRtl ? 0 : 2,
+                    ml: isRtl ? 2 : 0,
                     bgcolor: getAvatarColor(index),
                     width: 38,
                     height: 38,
@@ -415,7 +466,7 @@ const TodoListCard = ({ data }) => {
                       textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.2)' : 'none'
                     }}
                   >
-                    {todo.task}
+                    {getTaskText(index, todo.task)}
                   </Typography>
                   
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -429,7 +480,7 @@ const TodoListCard = ({ data }) => {
                         textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.1)' : 'none'
                       }}
                     >
-                      {todo.dueTime}
+                      {formatTimeWithLocale(todo.dueTime)}
                     </Typography>
                     
                     {todo.assignee && (
@@ -487,7 +538,8 @@ const TodoListCard = ({ data }) => {
                     variant="contained"
                     size="small"
                     sx={{
-                      mr: 1,
+                      mr: isRtl ? 0 : 1,
+                      ml: isRtl ? 1 : 0,
                       bgcolor: isDarkMode ? 'rgba(100, 181, 246, 0.8)' : 'rgba(100, 181, 246, 0.7)',
                       color: isDarkMode ? '#fff' : '#333',
                       fontWeight: 'bold',
@@ -500,7 +552,7 @@ const TodoListCard = ({ data }) => {
                   </Button>
                 )}
                 
-                <Box sx={{ display: 'flex', ml: 1 }}>
+                <Box sx={{ display: 'flex', ml: isRtl ? 0 : 1, mr: isRtl ? 1 : 0 }}>
                   <IconButton
                     size="small"
                     onClick={() => handleToggleComplete(index)}
@@ -542,24 +594,24 @@ const TodoListCard = ({ data }) => {
         onClose={closeTaskMenu}
         anchorOrigin={{
           vertical: 'bottom',
-          horizontal: 'right',
+          horizontal: isRtl ? 'left' : 'right',
         }}
         transformOrigin={{
           vertical: 'top',
-          horizontal: 'right',
+          horizontal: isRtl ? 'left' : 'right',
         }}
       >
         <MenuItem onClick={() => { startPomodoro(selectedTaskIndex); }}>
           <ListItemIcon>
             <TimerIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Start Pomodoro</ListItemText>
+          <ListItemText>{t('todoListComponent.startPomodoro')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => { handleDeleteTask(selectedTaskIndex); }}>
           <ListItemIcon>
             <DeleteOutlineIcon fontSize="small" color="error" />
           </ListItemIcon>
-          <ListItemText>Delete</ListItemText>
+          <ListItemText>{t('todoListComponent.delete')}</ListItemText>
         </MenuItem>
       </Menu>
       
@@ -567,7 +619,7 @@ const TodoListCard = ({ data }) => {
         <>
           <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.1)', my: 1 }} />
           <Typography variant="caption" sx={{ p: 1, color: 'rgba(255, 255, 255, 0.8)', textAlign: 'center', fontWeight: 500, textShadow: isDarkMode ? '0 1px 1px rgba(0,0,0,0.1)' : 'none' }}>
-            Completed: {completed.length} | Uncompleted: {todos.length - completed.length}
+            {t('todoListComponent.completed')}: {completed.length} | {t('todoListComponent.uncompleted')}: {todos.length - completed.length}
           </Typography>
         </>
       )}

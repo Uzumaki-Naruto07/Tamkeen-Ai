@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, startTransition } from 'react';
+import React, { Suspense, lazy, startTransition, useEffect } from 'react';
 
 // Import router flags before React Router
 import './reactRouterFlags.js';
@@ -18,11 +18,16 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 import { I18nextProvider } from 'react-i18next';
-import i18n from './i18n';
+import i18n, { getDirection, changeLanguage } from './i18n';
 import RequireAuth from './components/auth/RequireAuth';
 // Import ToastContainer
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+// Import CacheProvider and rtlStylesPlugin for RTL support
+import { CacheProvider } from '@emotion/react';
+import createCache from '@emotion/cache';
+import { prefixer } from 'stylis';
+import rtlPlugin from 'stylis-plugin-rtl';
 
 // Layout component
 import MainLayout from './components/layout/MainLayout';
@@ -133,6 +138,21 @@ const ProtectedRoute = ({ element }) => {
   }, [element]);
   
   return ui;
+};
+
+// Create rtl cache for Material-UI
+const createRtlCache = () => {
+  return createCache({
+    key: 'muirtl',
+    stylisPlugins: [prefixer, rtlPlugin],
+  });
+};
+
+// Create ltr cache for Material-UI
+const createLtrCache = () => {
+  return createCache({
+    key: 'mui',
+  });
 };
 
 // Create router with routes
@@ -263,44 +283,55 @@ const router = createBrowserRouter(
   }
 );
 
-const App = () => {
+function App() {
+  // Set Arabic as default language when app initializes
+  useEffect(() => {
+    changeLanguage('ar');
+  }, []);
+
+  // Create the cache based on the current direction
+  const isRtl = getDirection() === 'rtl';
+  const cache = isRtl ? createRtlCache() : createLtrCache();
+
   return (
     <React.StrictMode>
       <ErrorBoundary>
         <I18nextProvider i18n={i18n}>
-          <ThemeContextProvider>
-            <CssBaseline />
-            <AppContextProvider>
-              {/* Add Toast container for notifications */}
-              <ToastContainer 
-                position="top-right"
-                autoClose={5000}
-                hideProgressBar={false}
-                newestOnTop
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-              />
-              <RouterProvider 
-                router={router} 
-                fallback={<SuspenseFallback />}
-                future={{
-                  v7_startTransition: true,
-                  v7_relativeSplatPath: true,
-                  v7_fetcherPersist: true,
-                  v7_normalizeFormMethod: true,
-                  v7_partialHydration: true,
-                  v7_skipActionErrorRevalidation: true
-                }}
-              />
-            </AppContextProvider>
-          </ThemeContextProvider>
+          <CacheProvider value={cache}>
+            <ThemeContextProvider>
+              <CssBaseline />
+              <AppContextProvider>
+                {/* Add Toast container for notifications, with RTL support */}
+                <ToastContainer 
+                  position="top-right"
+                  autoClose={5000}
+                  hideProgressBar={false}
+                  newestOnTop
+                  closeOnClick
+                  rtl={isRtl}
+                  pauseOnFocusLoss
+                  draggable
+                  pauseOnHover
+                />
+                <RouterProvider 
+                  router={router} 
+                  fallback={<SuspenseFallback />}
+                  future={{
+                    v7_startTransition: true,
+                    v7_relativeSplatPath: true,
+                    v7_fetcherPersist: true,
+                    v7_normalizeFormMethod: true,
+                    v7_partialHydration: true,
+                    v7_skipActionErrorRevalidation: true
+                  }}
+                />
+              </AppContextProvider>
+            </ThemeContextProvider>
+          </CacheProvider>
         </I18nextProvider>
       </ErrorBoundary>
     </React.StrictMode>
   );
-};
+}
 
 export default App;

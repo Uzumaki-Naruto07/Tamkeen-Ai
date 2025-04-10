@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Box, 
   Typography, 
@@ -15,7 +16,11 @@ import {
   CardContent,
   Grid,
   Chip,
-  Divider
+  Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import InfoIcon from '@mui/icons-material/Info';
 import CloseIcon from '@mui/icons-material/Close';
@@ -26,14 +31,15 @@ import CodeIcon from '@mui/icons-material/Code';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import DownloadIcon from '@mui/icons-material/Download';
-import { motion } from 'framer-motion';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
 
 const EmiratiJourneyMap = () => {
+  const { t } = useTranslation();
   const [activeStep, setActiveStep] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [viewType, setViewType] = useState('timeline');
 
   // Journey steps from Unemployed to AI Engineer
   const journeySteps = [
@@ -124,20 +130,30 @@ const EmiratiJourneyMap = () => {
     // Implementation for handling download icon click
   };
 
+  const handleViewTypeChange = (event) => {
+    setViewType(event.target.value);
+  };
+
   return (
-    <Card sx={{ height: '100%', overflow: 'hidden' }}>
-      <CardContent sx={{ height: 'calc(100% - 40px)', overflow: 'auto', p: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">
-            Emirati Graduate to AI Engineer Journey
+    <Card sx={{ height: '100%', position: 'relative' }}>
+      <CardContent sx={{ height: '100%', p: 2, pb: '56px' }}>
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" component="div">
+            {t('emiratiJourneyMap.title', 'Emirati Career Journey')}
           </Typography>
-          <Box sx={{ display: 'flex' }}>
-            <IconButton size="small" onClick={handleInfoClick}>
-              <InfoOutlined fontSize="small" />
-            </IconButton>
-            <IconButton size="small" onClick={handleDownloadClick}>
-              <DownloadOutlined fontSize="small" />
-            </IconButton>
+          
+          <Box>
+            <FormControl variant="outlined" size="small" sx={{ minWidth: 120, mr: 1 }}>
+              <InputLabel>{t('emiratiJourneyMap.viewType', 'View Type')}</InputLabel>
+              <Select
+                value={viewType}
+                onChange={handleViewTypeChange}
+                label={t('emiratiJourneyMap.viewType', 'View Type')}
+              >
+                <MenuItem value="timeline">{t('emiratiJourneyMap.timeline', 'Timeline')}</MenuItem>
+                <MenuItem value="map">{t('emiratiJourneyMap.map', 'Map')}</MenuItem>
+              </Select>
+            </FormControl>
           </Box>
         </Box>
         
