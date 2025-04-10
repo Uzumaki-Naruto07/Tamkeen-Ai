@@ -56,6 +56,7 @@ export default defineConfig(({ command, mode }) => {
       alias: {
         '@': '/src',
         src: path.resolve(__dirname, './src'),
+        'uuid': '/node_modules/uuid/dist/index.js'
       },
     },
     build: {
@@ -90,7 +91,8 @@ export default defineConfig(({ command, mode }) => {
         '@mui/material',
         '@mui/icons-material',
         '@mui/x-date-pickers',
-        '@mui/x-date-pickers/AdapterDateFns'
+        '@mui/x-date-pickers/AdapterDateFns',
+        'uuid'
       ],
       esbuildOptions: {
         loader: {

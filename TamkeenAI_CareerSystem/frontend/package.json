@@ -62,7 +62,8 @@
     "recharts": "^2.5.0",
     "start": "^5.1.0",
     "stylis": "^4.3.6",
-    "stylis-plugin-rtl": "^2.1.1"
+    "stylis-plugin-rtl": "^2.1.1",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.17",
