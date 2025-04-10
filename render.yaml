@@ -58,13 +58,12 @@ services:
         value: 5004
 
   # Frontend app
-  - type: web
+  - type: static
     name: tamkeen-frontend
     env: static
-    plan: free
     rootDir: TamkeenAI_CareerSystem/frontend
     buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
+    publishDir: ./dist
     envVars:
       - key: VITE_API_URL
         value: https://tamkeen-main-api.onrender.com
