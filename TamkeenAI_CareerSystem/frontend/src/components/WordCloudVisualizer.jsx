@@ -7,30 +7,15 @@ import resumeApi from '../utils/resumeApi';
 
 // Dynamic import for React WordCloud with error handling
 let ReactWordcloud = null;
-try {
-  // Try to import ReactWordcloud - this might fail during build process
-  // Use React.lazy to defer loading until component renders
-  const WordCloudModule = React.lazy(() => 
-    import('react-wordcloud')
-      .catch(error => {
-        console.error('Failed to load react-wordcloud:', error);
-        return { default: () => null };
-      })
-  );
-  
-  // Create a wrapped component that handles potential errors
-  ReactWordcloud = (props) => {
-    return (
-      <React.Suspense fallback={<CircularProgress />}>
-        <WordCloudModule {...props} />
-      </React.Suspense>
-    );
-  };
-} catch (error) {
-  console.error('Error setting up ReactWordcloud:', error);
-  // Provide a fallback component
-  ReactWordcloud = () => null;
-}
+// Use a guard to safely load the component
+const WordCloudLoader = React.lazy(() => 
+  import('react-wordcloud')
+    .then(module => ({ default: module.default || (() => null) }))
+    .catch(error => {
+      console.error('Failed to load react-wordcloud:', error);
+      return { default: () => null };
+    })
+);
 
 const WordCloudVisualizer = ({ resumeId, resumeFile, jobData = {}, analysisData }) => {
   const [loading, setLoading] = useState(false);
@@ -230,35 +215,6 @@ const WordCloudVisualizer = ({ resumeId, resumeFile, jobData = {}, analysisData 
     );
   }
   
-  if (!ReactWordcloud) {
-    return (
-      <Box sx={{ p: 2, textAlign: 'center' }}>
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          Word cloud visualization is not available. Using alternative visualization.
-        </Alert>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
-          {currentWords.slice(0, 30).map((word, idx) => (
-            <Box 
-              key={idx}
-              sx={{
-                padding: '4px 8px',
-                borderRadius: '16px',
-                backgroundColor: word.color || '#4287f5',
-                color: 'white',
-                fontSize: `${Math.max(12, Math.min(24, word.value / 5))}px`,
-                fontWeight: 'bold',
-                display: 'inline-block',
-                margin: '4px',
-              }}
-            >
-              {word.text}
-            </Box>
-          ))}
-        </Box>
-      </Box>
-    );
-  }
-  
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -287,7 +243,43 @@ const WordCloudVisualizer = ({ resumeId, resumeFile, jobData = {}, analysisData 
       </Box>
       
       <Box sx={{ flexGrow: 1, minHeight: 300 }}>
-        <ReactWordcloud words={currentWords} options={options} callbacks={callbacks} />
+        {currentWords.length > 0 ? (
+          <React.Suspense fallback={
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
+              <CircularProgress />
+            </Box>
+          }>
+            <ErrorBoundary fallback={
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
+                {currentWords.slice(0, 30).map((word, idx) => (
+                  <Box 
+                    key={idx}
+                    sx={{
+                      padding: '4px 8px',
+                      borderRadius: '16px',
+                      backgroundColor: word.color || '#4287f5',
+                      color: 'white',
+                      fontSize: `${Math.max(12, Math.min(24, word.value / 5))}px`,
+                      fontWeight: 'bold',
+                      display: 'inline-block',
+                      margin: '4px',
+                    }}
+                  >
+                    {word.text}
+                  </Box>
+                ))}
+              </Box>
+            }>
+              <WordCloudLoader words={currentWords} options={options} callbacks={callbacks} />
+            </ErrorBoundary>
+          </React.Suspense>
+        ) : (
+          <Box sx={{ p: 2, textAlign: 'center' }}>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              No keywords found for {viewMode === 'resume' ? 'your resume' : 'the job description'}.
+            </Alert>
+          </Box>
+        )}
       </Box>
 
       <Typography variant="caption" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
@@ -298,5 +290,28 @@ const WordCloudVisualizer = ({ resumeId, resumeFile, jobData = {}, analysisData 
     </Box>
   );
 };
+
+// Add ErrorBoundary component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Error in component:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
 
 export default WordCloudVisualizer;

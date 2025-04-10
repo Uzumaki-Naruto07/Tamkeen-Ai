@@ -74,6 +74,13 @@ export default defineConfig(({ command, mode }) => {
           'react-wordcloud'
         ]
       },
+      commonjsOptions: {
+        transformMixedEsModules: true,
+        include: [
+          /node_modules\/react-wordcloud/,
+          /node_modules\/d3-cloud/
+        ]
+      }
     },
     css: {
       postcss: {

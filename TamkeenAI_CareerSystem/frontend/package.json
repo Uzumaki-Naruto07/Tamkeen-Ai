@@ -14,6 +14,12 @@
     "express-proxy": "node server.cjs",
     "dev-with-proxy": "concurrently \"npm run dev\" \"npm run express-proxy\""
   },
+  "overrides": {
+    "react-wordcloud": {
+      "react": "^18.2.0",
+      "react-dom": "^18.2.0"
+    }
+  },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
