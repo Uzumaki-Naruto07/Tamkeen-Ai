@@ -18,7 +18,7 @@ import assessmentApi from '../api/assessment';
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
+  baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:5001') + '/api',
   timeout: 5000, // Reduced timeout for faster fallback to mock data
   headers: {
     'Content-Type': 'application/json',
@@ -30,7 +30,7 @@ const api = axios.create({
 
 // Create a separate instance for interview API
 const interviewApi = axios.create({
-  baseURL: import.meta.env.VITE_INTERVIEW_API_URL ? `${import.meta.env.VITE_INTERVIEW_API_URL}/api` : 'http://localhost:5001/api',
+  baseURL: (import.meta.env.VITE_INTERVIEW_API_URL || 'http://localhost:5001') + '/api',
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
@@ -84,22 +84,37 @@ const checkBackendAvailability = async () => {
   
   backendCheckInProgress = true;
   try {
+    // Skip the check if explicitly disabled in env vars
+    if (import.meta.env.VITE_ENABLE_BACKEND_CHECK === 'false') {
+      console.log('Backend check is disabled, assuming backend is available');
+      isBackendAvailable = true;
+      return true;
+    }
+    
     // Determine if we're in production mode
     const isProduction = import.meta.env.PROD;
     
-    // Set up URL for the health check - make sure to use /api/health-check
-    let healthCheckUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/health-check`;
+    // Get base URL without trailing slash
+    const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001').replace(/\/$/, '');
     
-    // In production, use the AllOrigins CORS proxy
-    if (isProduction) {
-      healthCheckUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(healthCheckUrl)}`;
+    // Construct proper healthCheckUrl without duplicate /api/
+    let healthCheckUrl = baseUrl;
+    
+    // Add /api if not already in the URL
+    if (!baseUrl.endsWith('/api')) {
+      healthCheckUrl = `${baseUrl}/api`;
     }
+    
+    // Add the health-check endpoint
+    healthCheckUrl = `${healthCheckUrl}/health-check`;
+    
+    console.log('Checking backend availability at:', healthCheckUrl);
     
     // Try to hit the health check endpoint, with minimal headers to avoid CORS
     const response = await axios({
       method: 'get',
       url: healthCheckUrl,
-      timeout: 2000,
+      timeout: 5000, // Increased timeout
       headers: {
         'Accept': 'application/json'
         // Explicitly NOT including Authorization header to avoid CORS preflight
@@ -109,9 +124,17 @@ const checkBackendAvailability = async () => {
     
     isBackendAvailable = response.status === 200;
     console.log('Backend availability check:', isBackendAvailable ? 'CONNECTED' : 'DISCONNECTED');
+    console.log('Backend response:', response.data);
   } catch (err) {
+    console.error('Backend availability check failed:', err.message);
     isBackendAvailable = false;
     console.log('Backend availability check: DISCONNECTED');
+    
+    // In development, if the real backend check fails, set to true anyways to use mock data
+    if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCK_DATA === 'true') {
+      console.log('In development with mock data enabled, treating backend as available');
+      isBackendAvailable = true;
+    }
   } finally {
     backendCheckInProgress = false;
   }
@@ -125,7 +148,13 @@ checkBackendAvailability();
 api.interceptors.request.use(async (config) => {
   // If URL starts with /api, remove it (baseURL already includes it)
   if (config.url && config.url.startsWith('/api')) {
+    console.log('Removing duplicate /api prefix from URL:', config.url);
     config.url = config.url.substring(4);
+  }
+  
+  // If baseURL already ends with /api and URL doesn't have a leading slash, add it
+  if (config.baseURL && config.baseURL.endsWith('/api') && config.url && !config.url.startsWith('/')) {
+    config.url = '/' + config.url;
   }
   
   // Check if backend is available
@@ -465,7 +494,11 @@ const apiEndpoints = {
     ...profileApi,
     getSavedLearningPaths: async (userId) => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/user/${userId}/learning-paths`);
+        const url = constructEndpointUrl(
+          import.meta.env.VITE_API_URL || 'http://localhost:5001',
+          `/user/${userId}/learning-paths`
+        );
+        const response = await axios.get(url);
         return response;
       } catch (error) {
         console.log('Using mock data for saved learning paths', error);
@@ -480,7 +513,11 @@ const apiEndpoints = {
   documents: {
     getResume: async (resumeId) => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/resume/${resumeId}`);
+        const url = constructEndpointUrl(
+          import.meta.env.VITE_API_URL || 'http://localhost:5001',
+          `/resume/${resumeId}`
+        );
+        const response = await axios.get(url);
         return response;
       } catch (error) {
         console.log('Using mock data for resume', error);
@@ -909,6 +946,26 @@ const getCoachFallbackResponse = (userMessage, mode) => {
   
   // Default response for interview coach mode
   return interviewResponses[Math.floor(Math.random() * interviewResponses.length)];
+};
+
+// Add this helper function to ensure proper URL construction
+const constructEndpointUrl = (baseUrl, endpoint) => {
+  // Remove trailing slash from baseUrl
+  const base = baseUrl.replace(/\/$/, '');
+  
+  // Remove leading /api from endpoint
+  const path = endpoint.startsWith('/api/') ? endpoint.substring(4) : endpoint;
+  
+  // Add leading slash to path if not present
+  const normalizedPath = path.startsWith('/') ? path : '/' + path;
+  
+  // If base already includes /api, don't add it again
+  if (base.endsWith('/api')) {
+    return `${base}${normalizedPath}`;
+  }
+  
+  // Otherwise add /api
+  return `${base}/api${normalizedPath}`;
 };
 
 export default apiEndpoints;

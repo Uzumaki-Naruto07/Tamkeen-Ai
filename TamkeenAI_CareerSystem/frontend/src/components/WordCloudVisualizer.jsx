@@ -1,10 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, CircularProgress, Button, Alert, ToggleButtonGroup, ToggleButton } from '@mui/material';
-import ReactWordcloud from 'react-wordcloud';
 import 'tippy.js/dist/tippy.css';
 import 'tippy.js/animations/scale.css';
 import apiEndpoints from '../utils/api';
 import resumeApi from '../utils/resumeApi';
+
+// Dynamic import for React WordCloud with error handling
+let ReactWordcloud = null;
+try {
+  // Try to import ReactWordcloud
+  ReactWordcloud = React.lazy(() => import('react-wordcloud'));
+} catch (error) {
+  console.error('Error importing ReactWordcloud:', error);
+}
 
 const WordCloudVisualizer = ({ resumeId, resumeFile, jobData = {}, analysisData }) => {
   const [loading, setLoading] = useState(false);
@@ -12,6 +20,7 @@ const WordCloudVisualizer = ({ resumeId, resumeFile, jobData = {}, analysisData 
   const [resumeWords, setResumeWords] = useState([]);
   const [jobWords, setJobWords] = useState([]);
   const [viewMode, setViewMode] = useState('resume'); // 'resume' or 'job'
+  const [wordCloudAvailable, setWordCloudAvailable] = useState(true);
   
   const handleViewModeChange = (event, newMode) => {
     if (newMode !== null) {
@@ -203,6 +212,35 @@ const WordCloudVisualizer = ({ resumeId, resumeFile, jobData = {}, analysisData 
     );
   }
   
+  if (!ReactWordcloud) {
+    return (
+      <Box sx={{ p: 2, textAlign: 'center' }}>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Word cloud visualization is not available. Using alternative visualization.
+        </Alert>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
+          {currentWords.slice(0, 30).map((word, idx) => (
+            <Box 
+              key={idx}
+              sx={{
+                padding: '4px 8px',
+                borderRadius: '16px',
+                backgroundColor: word.color || '#4287f5',
+                color: 'white',
+                fontSize: `${Math.max(12, Math.min(24, word.value / 5))}px`,
+                fontWeight: 'bold',
+                display: 'inline-block',
+                margin: '4px',
+              }}
+            >
+              {word.text}
+            </Box>
+          ))}
+        </Box>
+      </Box>
+    );
+  }
+  
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -220,26 +258,28 @@ const WordCloudVisualizer = ({ resumeId, resumeFile, jobData = {}, analysisData 
           </ToggleButton>
         </ToggleButtonGroup>
               
-              <Button
-                variant="outlined"
+        <Button
+          variant="outlined"
           color="primary" 
           onClick={fetchKeywordData}
           size="small"
         >
           Refresh
-              </Button>
+        </Button>
       </Box>
       
       <Box sx={{ flexGrow: 1, minHeight: 300 }}>
-        <ReactWordcloud words={currentWords} options={options} callbacks={callbacks} />
+        <React.Suspense fallback={<CircularProgress />}>
+          <ReactWordcloud words={currentWords} options={options} callbacks={callbacks} />
+        </React.Suspense>
       </Box>
 
       <Typography variant="caption" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
         {viewMode === 'resume' 
           ? 'Keywords extracted from your resume. Larger words indicate higher frequency or importance.'
           : 'Keywords from the job description. Larger words are more important for the role.'}
-            </Typography>
-          </Box>
+      </Typography>
+    </Box>
   );
 };
 

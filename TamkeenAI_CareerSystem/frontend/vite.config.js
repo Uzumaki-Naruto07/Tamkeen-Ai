@@ -70,6 +70,9 @@ export default defineConfig(({ command, mode }) => {
             mui: ['@mui/material', '@mui/icons-material'],
           },
         },
+        external: [
+          'react-wordcloud'
+        ]
       },
     },
     css: {
@@ -93,7 +96,8 @@ export default defineConfig(({ command, mode }) => {
         '@mui/x-date-pickers',
         '@mui/x-date-pickers/AdapterDateFns',
         'uuid',
-        'jspdf'
+        'jspdf',
+        'react-wordcloud'
       ],
       esbuildOptions: {
         loader: {

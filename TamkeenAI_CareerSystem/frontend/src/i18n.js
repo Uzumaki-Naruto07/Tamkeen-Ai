@@ -778,7 +778,7 @@ i18n
     },
   });
 
-export default i18n;
+export default i18n; 
 
 // Helper function to change language and handle RTL
 export const changeLanguage = (lang) => {
