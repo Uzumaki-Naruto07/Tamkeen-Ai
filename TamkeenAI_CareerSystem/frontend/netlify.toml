@@ -3,25 +3,51 @@
   publish = "dist"
   functions = "netlify/functions"
 
-# API proxy redirects - Modified to ensure proper CORS handling
+# Handle all OPTIONS preflight requests
 [[redirects]]
-  from = "/tamkeen-api/*"
-  to = "https://hessa-tamkeen-ai.onrender.com/:splat"
+  from = "/*"
+  to = "https://tamkeen-main-api.onrender.com/:splat"
   status = 200
   force = true
+  conditions = {method = ["OPTIONS"]}
   headers = {Access-Control-Allow-Origin = "*", Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS", Access-Control-Allow-Headers = "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token", Access-Control-Allow-Credentials = "true", Access-Control-Max-Age = "86400"}
 
-[[redirects]]
-  from = "/api/*"
-  to = "https://hessa-tamkeen-ai.onrender.com/api/:splat"
-  status = 200
-  force = true
-  headers = {Access-Control-Allow-Origin = "*", Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS", Access-Control-Allow-Headers = "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token", Access-Control-Allow-Credentials = "true", Access-Control-Max-Age = "86400"}
-
-# Special handling for auth endpoints to ensure proper credential handling
+# API proxy redirects for authentication
 [[redirects]]
   from = "/api/auth/*"
-  to = "https://hessa-tamkeen-ai.onrender.com/api/auth/:splat"
+  to = "https://tamkeen-main-api.onrender.com/api/auth/:splat"
+  status = 200
+  force = true
+  headers = {Access-Control-Allow-Origin = "*", Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS", Access-Control-Allow-Headers = "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token", Access-Control-Allow-Credentials = "true", Access-Control-Max-Age = "86400"}
+
+# API proxy redirects for general API
+[[redirects]]
+  from = "/api/*"
+  to = "https://tamkeen-main-api.onrender.com/api/:splat"
+  status = 200
+  force = true
+  headers = {Access-Control-Allow-Origin = "*", Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS", Access-Control-Allow-Headers = "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token", Access-Control-Allow-Credentials = "true", Access-Control-Max-Age = "86400"}
+
+# Special proxy for interview API
+[[redirects]]
+  from = "/interview-api/*"
+  to = "https://tamkeen-interview-api.onrender.com/api/:splat"
+  status = 200
+  force = true
+  headers = {Access-Control-Allow-Origin = "*", Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS", Access-Control-Allow-Headers = "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token", Access-Control-Allow-Credentials = "true", Access-Control-Max-Age = "86400"}
+
+# Special proxy for upload server
+[[redirects]]
+  from = "/upload-api/*"
+  to = "https://tamkeen-upload-server.onrender.com/api/:splat"
+  status = 200
+  force = true
+  headers = {Access-Control-Allow-Origin = "*", Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS", Access-Control-Allow-Headers = "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token", Access-Control-Allow-Credentials = "true", Access-Control-Max-Age = "86400"}
+
+# Special proxy for prediction API
+[[redirects]]
+  from = "/predict-api/*"
+  to = "https://tamkeen-predict-api.onrender.com/api/:splat"
   status = 200
   force = true
   headers = {Access-Control-Allow-Origin = "*", Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS", Access-Control-Allow-Headers = "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token", Access-Control-Allow-Credentials = "true", Access-Control-Max-Age = "86400"}
@@ -35,7 +61,7 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# Handling CORS preflight requests for all routes
+# Global headers for the site
 [[headers]]
   for = "/*"
     [headers.values]

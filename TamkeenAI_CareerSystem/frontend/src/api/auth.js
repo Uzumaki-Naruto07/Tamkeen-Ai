@@ -18,18 +18,22 @@ const authService = {
       
       console.log('Login response:', response);
       
-      if (response.data && response.data.token) {
-        // Store the token in localStorage
-        localStorage.setItem('token', response.data.token);
+      // Allow for different API response formats
+      const data = response.data && response.data.data ? response.data.data : response.data;
+      
+      if (data && (data.token || response.data.token)) {
+        // Store the token in localStorage - support different response formats
+        const token = data.token || response.data.token;
+        localStorage.setItem('token', token);
         
         // If user data is included in response, store it as well
-        if (response.data.user) {
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-        }
+        const userData = data.user || response.data.user || {};
+        localStorage.setItem('user', JSON.stringify(userData));
         
         return { 
           success: true, 
-          data: response.data,
+          data: data,
+          user: userData,
           message: 'Login successful'
         };
       } else {
