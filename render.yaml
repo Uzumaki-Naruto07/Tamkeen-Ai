@@ -4,9 +4,8 @@ services:
     name: tamkeen-main-api
     runtime: python
     plan: free
-    dir: TamkeenAI_CareerSystem
-    buildCommand: pip install -r requirements.txt && pip install nltk scikit-learn numpy==1.26.4 && python -c "import nltk; nltk.download('wordnet')"
-    startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT
+    buildCommand: cd TamkeenAI_CareerSystem && pip install -r requirements.txt && pip install nltk scikit-learn numpy==1.26.4 && python -c "import nltk; nltk.download('wordnet')"
+    startCommand: cd TamkeenAI_CareerSystem/backend && gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: MONGO_URI
         value: mongodb+srv://loveanime200o0:R8tdEvgOvId5FEZv@tamkeen.0fmhury.mongodb.net/?retryWrites=true&w=majority&appName=Tamkeen&tlsAllowInvalidCertificates=true
@@ -34,9 +33,8 @@ services:
     name: tamkeen-interview-api
     runtime: python
     plan: free
-    dir: TamkeenAI_CareerSystem
-    buildCommand: pip install -r requirements.txt && pip install nltk scikit-learn numpy==1.26.4 && python -c "import nltk; nltk.download('wordnet')"
-    startCommand: cd backend && gunicorn interview_api:app --bind 0.0.0.0:$PORT
+    buildCommand: cd TamkeenAI_CareerSystem && pip install -r requirements.txt && pip install nltk scikit-learn numpy==1.26.4 && python -c "import nltk; nltk.download('wordnet')"
+    startCommand: cd TamkeenAI_CareerSystem/backend && gunicorn interview_api:app --bind 0.0.0.0:$PORT
     envVars:
       - key: MONGO_URI
         value: mongodb+srv://loveanime200o0:R8tdEvgOvId5FEZv@tamkeen.0fmhury.mongodb.net/?retryWrites=true&w=majority&appName=Tamkeen&tlsAllowInvalidCertificates=true
@@ -64,9 +62,8 @@ services:
     name: tamkeen-upload-server
     runtime: python
     plan: free
-    dir: TamkeenAI_CareerSystem
-    buildCommand: pip install -r requirements.txt && pip install nltk scikit-learn numpy==1.26.4 pdfplumber && python -c "import nltk; nltk.download('wordnet'); nltk.download('punkt'); nltk.download('stopwords'); nltk.download('averaged_perceptron_tagger')"
-    startCommand: cd backend && gunicorn "simple_upload_server:create_app()" --bind 0.0.0.0:$PORT
+    buildCommand: cd TamkeenAI_CareerSystem && pip install -r requirements.txt && pip install nltk scikit-learn numpy==1.26.4 pdfplumber && python -c "import nltk; nltk.download('wordnet'); nltk.download('punkt'); nltk.download('stopwords'); nltk.download('averaged_perceptron_tagger')"
+    startCommand: cd TamkeenAI_CareerSystem/backend && gunicorn "simple_upload_server:create_app()" --bind 0.0.0.0:$PORT
     envVars:
       - key: MONGO_URI
         value: mongodb+srv://loveanime200o0:R8tdEvgOvId5FEZv@tamkeen.0fmhury.mongodb.net/?retryWrites=true&w=majority&appName=Tamkeen&tlsAllowInvalidCertificates=true
