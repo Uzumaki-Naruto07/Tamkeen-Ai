@@ -8,6 +8,7 @@ import os
 import logging
 from typing import Dict, List, Optional, Union, Any
 from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 from dotenv import load_dotenv
 
@@ -18,8 +19,8 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-# MongoDB connection details
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+# MongoDB Atlas connection details
+MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://loveanime200o0:R8tdEvgOvId5FEZv@tamkeen.0fmhury.mongodb.net/?retryWrites=true&w=majority&appName=Tamkeen")
 MONGO_DB = os.getenv("MONGO_DB", "tamkeen")
 USE_MOCK_DB = os.getenv('USE_MOCK_DB', 'false').lower() == 'true'
 
@@ -125,15 +126,15 @@ db = None
 collections = {}
 
 try:
-    # Connect to MongoDB with timeout
-    logger.info(f"Connecting to MongoDB at {MONGO_URI}...")
-    mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+    # Connect to MongoDB Atlas with timeout and server API version
+    logger.info(f"Connecting to MongoDB Atlas...")
+    mongo_client = MongoClient(MONGO_URI, server_api=ServerApi('1'), serverSelectionTimeoutMS=5000)
     # Verify connection
     mongo_client.admin.command('ping')
     db = mongo_client[MONGO_DB]
-    logger.info(f"Successfully connected to MongoDB at {MONGO_URI}")
+    logger.info(f"Successfully connected to MongoDB Atlas")
 except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-    logger.error(f"Failed to connect to MongoDB: {e}")
+    logger.error(f"Failed to connect to MongoDB Atlas: {e}")
     logger.warning("Using mock database instead")
     db = None
 
@@ -174,17 +175,18 @@ if USE_MOCK_DB:
         application_collection, skill_collection, activity_collection
     ) = create_mock_collections()
 else:
-    # Try to connect to MongoDB
+    # Try to connect to MongoDB Atlas
     try:
         # Try to import pymongo
         import pymongo
         from pymongo import MongoClient
+        from pymongo.server_api import ServerApi
         
-        # Create MongoDB client (with a longer timeout for development)
-        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=20000, connectTimeoutMS=20000)
+        # Create MongoDB Atlas client (with a longer timeout for development)
+        client = MongoClient(MONGO_URI, server_api=ServerApi('1'), serverSelectionTimeoutMS=20000, connectTimeoutMS=20000)
         
         # Verify connection
-        client.server_info()  # Will raise an exception if connection fails
+        client.admin.command('ping')  # Will raise an exception if connection fails
         
         db = client[MONGO_DB]
         
@@ -204,11 +206,11 @@ else:
         skill_collection.create_index('name', unique=True)
         activity_collection.create_index([('user_id', pymongo.ASCENDING), ('timestamp', pymongo.DESCENDING)])
         
-        logger.info(f"Connected to MongoDB: {MONGO_DB}")
+        logger.info(f"Connected to MongoDB Atlas: {MONGO_DB}")
         
     except (ImportError, pymongo.errors.ServerSelectionTimeoutError, pymongo.errors.ConnectionFailure) as e:
-        logger.warning(f"MongoDB connection failed: {str(e)}. Using mock database.")
-        print(f"MongoDB connection failed: {str(e)}. Using mock database.")
+        logger.warning(f"MongoDB Atlas connection failed: {str(e)}. Using mock database.")
+        print(f"MongoDB Atlas connection failed: {str(e)}. Using mock database.")
         
         # Create mock collections
         (
@@ -217,8 +219,8 @@ else:
         ) = create_mock_collections()
 
     except Exception as e:
-        logger.error(f"Error connecting to MongoDB: {str(e)}")
-        print(f"Error connecting to MongoDB: {str(e)}. Using mock database.")
+        logger.error(f"Error connecting to MongoDB Atlas: {str(e)}")
+        print(f"Error connecting to MongoDB Atlas: {str(e)}. Using mock database.")
         
         # Create mock collections when connection fails
         (

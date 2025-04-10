@@ -1,31 +1,81 @@
-# Python virtual environments
+# Environments
+.env
+.env.*
+!.env.example
 venv/
-.venv/
-.venv_clean/
-env/
+ENV/
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Distribution / packaging
-dist/
+*.so
+.Python
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
 *.egg-info/
+.installed.cfg
+*.egg
 
-# VS Code
-.vscode/
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+frontend/dist/
+frontend/build/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Mac OS
+.DS_Store
+
+# Upload directory
+backend/uploads/
+
+# Render specific
+.render-buildpacks.json
+
+# Misc
+.pytest_cache/
+.coverage
+htmlcov/
+coverage/
+*.bak
 
 # Large files and binaries
 *.pkl
 *.h5
 *.dylib
-*.so
 *.dll
 *.bin
 
 # OS specific files
-.DS_Store
 Thumbs.db
 
-# Logs
-*.log 
+# Python virtual environments
+.venv/
+.venv_clean/
+env/ 
