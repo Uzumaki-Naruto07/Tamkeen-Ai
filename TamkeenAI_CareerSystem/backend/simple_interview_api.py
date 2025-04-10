@@ -10,6 +10,7 @@ import logging
 import datetime
 import random
 import argparse
+import requests
 from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 
@@ -55,7 +56,11 @@ interview_qa_pairs = [
 app = Flask(__name__)
 
 # Use very permissive CORS settings for development
-CORS(app, resources={r"/*": {"origins": "*", "allow_headers": ["Content-Type", "Accept", "X-Requested-With"]}})
+CORS(app, resources={r"/*": {"origins": "*", "allow_headers": ["Content-Type", "Accept", "X-Requested-With"], "methods": ["GET", "POST", "OPTIONS"]}})
+
+# DeepSeek API configuration
+DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
+DEEPSEEK_API_URL = "https://api.deepseek.com/v1/models/deepseek-coder/generate"
 
 @app.route('/health-check', methods=['GET'])
 def health_check():
@@ -324,6 +329,140 @@ def get_ai_recommendation():
     logger.info(f"AI recommendation response provided")
     
     return jsonify(recommendation), 200
+
+# Add DeepSeek analysis endpoint
+@app.route('/api/interview/analyze-with-deepseek', methods=['POST', 'OPTIONS'])
+def analyze_interview_with_deepseek():
+    # Handle CORS preflight request
+    if request.method == 'OPTIONS':
+        response = make_response()
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+        
+    try:
+        # Log request details for debugging
+        logger.info(f"Received analyze-with-deepseek request from {request.remote_addr}")
+        logger.info(f"Request headers: {request.headers}")
+        logger.info(f"Request json: {request.json}")
+        
+        data = request.json
+        if not data or 'transcript' not in data:
+            return jsonify({'error': 'Missing transcript data'}), 400
+            
+        transcript = data.get('transcript', '')
+        question = data.get('question', '')
+        job_role = data.get('jobRole', 'Software Developer')
+        
+        # Create a prompt for DeepSeek to analyze the interview response
+        prompt = f"""
+        As an AI interview coach, analyze the following interview response for a {job_role} position.
+
+        QUESTION: {question}
+        
+        CANDIDATE'S RESPONSE: {transcript}
+        
+        Provide detailed feedback in the following JSON format:
+        {{
+            "overallScore": <score from 0-100>,
+            "technicalAccuracy": <score from 0-100>,
+            "communicationClarity": <score from 0-100>,
+            "relevance": <score from 0-100>,
+            "strengths": [<list of strengths in the response>],
+            "weaknesses": [<list of areas that need improvement>],
+            "improvementTips": [<specific actionable advice to improve>],
+            "category": <one of: "Excellent", "Good", "Average", "Needs Improvement", "Poor", "No Answer">
+        }}
+        """
+        
+        # Only proceed if we have a DeepSeek API key
+        if not DEEPSEEK_API_KEY:
+            # Fall back to local analysis if no API key
+            logger.warning("DeepSeek API key not found, using local analysis")
+            analysis_result = analyze_response_local(transcript, question, job_role)
+            return jsonify(analysis_result)
+        
+        # Call DeepSeek API
+        headers = {
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": "deepseek-coder",
+            "prompt": prompt,
+            "temperature": 0.3,
+            "max_tokens": 1000
+        }
+        
+        logger.info(f"Sending request to DeepSeek API for interview analysis")
+        response = requests.post(DEEPSEEK_API_URL, headers=headers, json=payload)
+        
+        if response.status_code == 200:
+            try:
+                result = response.json()
+                generated_text = result.get('text', '')
+                
+                # Extract the JSON from the generated text using regex
+                import re
+                json_match = re.search(r'\{[\s\S]*\}', generated_text)
+                if json_match:
+                    analysis_json = json.loads(json_match.group(0))
+                    logger.info("Successfully analyzed interview with DeepSeek")
+                    return jsonify(analysis_json)
+                else:
+                    logger.error("Could not parse JSON from DeepSeek response")
+                    # Fall back to local analysis
+                    analysis_result = analyze_response_local(transcript, question, job_role)
+                    return jsonify(analysis_result)
+            except Exception as e:
+                logger.error(f"Error parsing DeepSeek response: {str(e)}")
+                # Fall back to local analysis
+                analysis_result = analyze_response_local(transcript, question, job_role)
+                return jsonify(analysis_result)
+        else:
+            logger.error(f"DeepSeek API error: {response.status_code}, {response.text}")
+            # Fall back to local analysis
+            analysis_result = analyze_response_local(transcript, question, job_role)
+            return jsonify(analysis_result)
+                
+    except Exception as e:
+        logger.error(f"Error in DeepSeek interview analysis: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Local analysis function as fallback
+def analyze_response_local(transcript, question, job_role):
+    # Basic metrics
+    word_count = len(transcript.split())
+    
+    # Default analysis object
+    analysis = {
+        "overallScore": 50,
+        "technicalAccuracy": 50,
+        "communicationClarity": 50,
+        "relevance": 50,
+        "strengths": ["Response provided"],
+        "weaknesses": ["Analysis performed locally, not with AI"],
+        "improvementTips": ["Set up DeepSeek API for better analysis"],
+        "category": "Average"
+    }
+    
+    # Very basic scoring based on word count
+    if word_count < 5:
+        analysis["overallScore"] = 10
+        analysis["category"] = "Poor"
+        analysis["weaknesses"].append("Response is too short")
+    elif word_count < 20:
+        analysis["overallScore"] = 30
+        analysis["category"] = "Needs Improvement"
+        analysis["weaknesses"].append("Response could be more detailed")
+    elif word_count > 100:
+        analysis["overallScore"] = 70
+        analysis["category"] = "Good"
+        analysis["strengths"].append("Provided a detailed response")
+        
+    return analysis
 
 # Fix OPTIONS requests for CORS preflight
 @app.route('/', defaults={'path': ''}, methods=['OPTIONS'])

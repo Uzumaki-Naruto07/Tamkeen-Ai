@@ -7,7 +7,7 @@ import {
   FormControl, InputLabel, Select, MenuItem,
   Switch, FormControlLabel, LinearProgress,
   Container, TextField, List, ListItem, ListItemText,
-  ListItemIcon, Chip
+  ListItemIcon, Chip, Rating
 } from '@mui/material';
 import {
   Videocam, VideocamOff, Mic, MicOff,
@@ -16,7 +16,7 @@ import {
   Share, StarOutline, Star, Timer,
   Assessment, Psychology, Lightbulb,
   QuestionAnswer, Work, School, CheckCircle,
-  VolumeUp
+  VolumeUp, CheckCircleOutline, ErrorOutline, LightbulbOutlined
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/AppContext';
@@ -74,29 +74,99 @@ const mockInterviewApi = {
     // Get transcription text
     const transcriptionText = formData.get('transcription') || '';
     
-    // Analyze text for features and scores
-    const analysis = analyzeResponseText(transcriptionText);
-    console.log('Text analysis results:', analysis);
-    
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return {
-      data: {
-        clarity: analysis.communication,
-        relevance: analysis.relevance,
-        confidence: analysis.confidence,
-        technical: analysis.technical,
-        communication: analysis.communication,
-        problemSolving: analysis.problemSolving,
-        culturalFit: analysis.culturalFit,
-        overall: analysis.overall,
-        category: analysis.category,
-        tip: analysis.improvementTip,
-        strengths: analysis.strengths,
-        weaknesses: analysis.weaknesses
+    try {
+      // Analyze text for features and scores
+      const analysis = await analyzeResponseText(transcriptionText);
+      console.log('Detailed analysis results:', analysis);
+      
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Ensure all required fields are present with fallbacks
+      return {
+        data: {
+          clarity: analysis.communication || 0,
+          relevance: analysis.relevance || 0, 
+          confidence: analysis.confidence || 0,
+          technical: analysis.technical || 0,
+          communication: analysis.communication || 0,
+          problemSolving: analysis.technical || 0, // Use technical as fallback
+          culturalFit: analysis.relevance || 0, // Use relevance as fallback
+          overall: analysis.overallScore || 0,
+          category: analysis.category || "Average",
+          tip: analysis.improvementTips?.[0] || "Continue practicing your interview skills.",
+          strengths: analysis.strengths || [],
+          weaknesses: analysis.weaknesses || []
+        }
+      };
+    } catch (error) {
+      console.error('Error in mock interview analysis:', error);
+      
+      // Check if we have any text to analyze
+      if (transcriptionText && transcriptionText.trim().length > 0) {
+        // Basic word count analysis as fallback
+        const words = transcriptionText.split(/\s+/).filter(word => word.length > 0);
+        const wordCount = words.length;
+        
+        console.log(`Fallback analysis with word count: ${wordCount}`);
+        
+        // Determine score based on word count
+        let score = 0;
+        let category = "No Answer";
+        
+        if (wordCount >= 60) {
+          score = 85;
+          category = "Excellent";
+        } else if (wordCount >= 30) {
+          score = 70; 
+          category = "Good";
+        } else if (wordCount >= 15) {
+          score = 50;
+          category = "Average";
+        } else if (wordCount >= 5) {
+          score = 30;
+          category = "Needs Improvement";
+        } else {
+          score = 10;
+          category = "Poor";
+        }
+        
+        return {
+          data: {
+            clarity: score,
+            relevance: score,
+            confidence: score,
+            technical: score,
+            communication: score,
+            problemSolving: score,
+            culturalFit: score,
+            overall: score,
+            category: category,
+            tip: "Continue practicing your interview skills.",
+            strengths: wordCount > 10 ? ["Provided a response"] : [],
+            weaknesses: wordCount < 30 ? ["Response could be more detailed"] : []
+          }
+        };
       }
-    };
+      
+      // Last resort: No valid response detected
+      return {
+        data: {
+          clarity: 0,
+          relevance: 0,
+          confidence: 0,
+          technical: 0,
+          communication: 0,
+          problemSolving: 0,
+          culturalFit: 0,
+          overall: 0,
+          category: "No Answer",
+          tip: "Make sure to speak clearly and provide a complete answer.",
+          strengths: [],
+          weaknesses: ["No valid response detected"]
+        }
+      };
+    }
   },
   submitInterview: async (formData) => {
     console.log('Submitting mock interview data');
@@ -112,197 +182,103 @@ const mockInterviewApi = {
 };
 
 // Text analysis utilities
-const analyzeResponseText = (text) => {
-  // Ensure text is a string
-  text = text || '';
-  const textLower = text.toLowerCase();
+const analyzeResponseText = async (text, question, jobRole) => {
+  console.log("Analyzing response with text:", text);
   
-  // If text is "I didn't catch what you said..." message, treat it as a very minimal response
-  const isDefaultMessage = text.includes("I didn't catch what you said");
-  
-  // Basic metrics
-  const wordCount = text.split(/\s+/).filter(word => word.length > 0).length;
-  // Consider a response invalid if it's very short or the default message
-  const isValidResponse = wordCount > 3 && !isDefaultMessage;
-  
-  if (!isValidResponse) {
-    console.log('Empty or invalid response detected, returning zero scores');
-    // Return zero scores to accurately reflect no valid speech detected
+  if (!text || text.trim() === "" || text.includes("I didn't catch what you said") || text.includes("No speech detected")) {
+    console.log("No text to analyze");
     return {
+      overallScore: 0,
       technical: 0,
       communication: 0,
-      problemSolving: 0,
-      culturalFit: 0,
-      overall: 0,
-      confidence: 0,
       relevance: 0,
-      category: 'No Answer',
-      isMinimalResponse: true,
-      wordCount: wordCount,
-      strengths: ["No strengths detected"],
-      weaknesses: [
-        "No valid speech detected", 
-        "Make sure your microphone is working properly"
-      ],
-      improvementTip: "Please ensure your microphone is properly connected and speak clearly. Try using Chrome or Edge browser for better speech recognition."
+      confidence: 0,
+      strengths: [],
+      weaknesses: ["No answer provided"],
+      improvementTips: ["Please provide an answer to the question"],
+      category: "No Answer"
     };
   }
   
-  // Continue with the normal analysis for valid responses
-  const charCount = text.length;
-  const sentenceCount = (text.match(/[.!?]+/g) || []).length;
-  
-  // Keyword categories (similar to Python implementation)
-  const technicalKeywords = [
-    'algorithm', 'data structure', 'code', 'programming', 'software',
-    'development', 'database', 'api', 'function', 'class', 'object',
-    'method', 'variable', 'framework', 'library', 'interface', 'architecture',
-    'test', 'debug', 'deploy', 'cloud', 'server', 'client', 'network'
-  ];
-  
-  const communicationKeywords = [
-    'communicate', 'team', 'collaborate', 'explain', 'present',
-    'discuss', 'share', 'meetings', 'documentation', 'report',
-    'clarity', 'articulate', 'express', 'listen', 'feedback'
-  ];
-  
-  const problemSolvingKeywords = [
-    'solve', 'solution', 'analyze', 'optimize', 'improve', 'debug',
-    'troubleshoot', 'fix', 'enhance', 'approach', 'method', 'strategy',
-    'plan', 'design', 'implement', 'test'
-  ];
-  
-  const culturalFitKeywords = [
-    'team', 'culture', 'values', 'mission', 'collaborate', 'work ethic',
-    'adaptable', 'flexible', 'learn', 'growth', 'positive', 'attitude',
-    'initiative', 'proactive', 'responsible', 'accountable'
-  ];
-  
-  // Negative response indicators
-  const negativePhrasesDetection = [
-    "i don't know", "no idea", "not sure", "never heard", "no experience",
-    "i haven't", "can't answer", "don't understand", "no clue", "not familiar"
-  ];
-  
-  // Detect minimal or negative responses
-  const isMinimalResponse = wordCount <= 5;
-  const hasNegativePhrase = negativePhrasesDetection.some(phrase => textLower.includes(phrase));
-  const minimalResponsePenalty = (isMinimalResponse || hasNegativePhrase) ? 0.3 : 1.0;
-  
-  // Count keyword occurrences
-  const techCount = technicalKeywords.filter(keyword => textLower.includes(keyword)).length;
-  const commCount = communicationKeywords.filter(keyword => textLower.includes(keyword)).length;
-  const probCount = problemSolvingKeywords.filter(keyword => textLower.includes(keyword)).length;
-  const cultCount = culturalFitKeywords.filter(keyword => textLower.includes(keyword)).length;
-  
-  // Calculate scores
-  const baseConfidence = Math.min(100, (wordCount / 50) * 100 + (techCount + commCount) * 5);
-  const confidenceScore = baseConfidence * minimalResponsePenalty;
-  
-  // Adjust keywordCounts for minimal responses
-  const adjustedTechCount = isMinimalResponse ? techCount * 0.2 : techCount;
-  const adjustedCommCount = isMinimalResponse ? commCount * 0.2 : commCount;
-  const adjustedProbCount = isMinimalResponse ? probCount * 0.2 : probCount;
-  const adjustedCultCount = isMinimalResponse ? cultCount * 0.2 : cultCount;
-  
-  // Calculate area scores (0-100 scale)
-  const technicalScore = Math.min(100, 40 + adjustedTechCount * 15 + wordCount * 0.5);
-  const communicationScore = Math.min(100, 50 + adjustedCommCount * 15 + sentenceCount * 2);
-  const problemSolvingScore = Math.min(100, 45 + adjustedProbCount * 15 + wordCount * 0.3);
-  const culturalFitScore = Math.min(100, 50 + adjustedCultCount * 15 + wordCount * 0.2);
-  
-  // Apply penalties for minimal responses
-  const finalTechnicalScore = Math.max(25, technicalScore * minimalResponsePenalty);
-  const finalCommunicationScore = Math.max(25, communicationScore * minimalResponsePenalty);
-  const finalProblemSolvingScore = Math.max(25, problemSolvingScore * minimalResponsePenalty);
-  const finalCulturalFitScore = Math.max(25, culturalFitScore * minimalResponsePenalty);
-  
-  // Calculate overall score
-  const overallScore = Math.round(
-    (finalTechnicalScore + finalCommunicationScore + finalProblemSolvingScore + finalCulturalFitScore) / 4
-  );
-  
-  // Calculate relevance score based on keyword density
-  const relevanceScore = Math.min(10, Math.max(3, Math.round((techCount + probCount) / Math.max(1, wordCount / 20))));
-  
-  // Determine category
-  let category = 'Average';
-  if (overallScore >= 75) {
-    category = 'Strong';
-  } else if (overallScore < 40 || isMinimalResponse) {
-    category = 'Weak';
-  }
-  
-  // Identify strengths (top 2 areas)
-  const areas = [
-    { name: 'Technical knowledge', score: finalTechnicalScore },
-    { name: 'Communication skills', score: finalCommunicationScore },
-    { name: 'Problem-solving approach', score: finalProblemSolvingScore },
-    { name: 'Team and culture fit', score: finalCulturalFitScore }
-  ];
-  
-  // Sort strengths and weaknesses
-  const sortedStrengths = [...areas].sort((a, b) => b.score - a.score);
-  const sortedWeaknesses = [...areas].sort((a, b) => a.score - b.score);
-  
-  // Extract top strengths and improvement areas
-  const strengths = sortedStrengths.slice(0, 2).map(area => {
-    if (area.name === 'Technical knowledge' && area.score > 70) {
-      return "Strong technical knowledge demonstrated";
-    } else if (area.name === 'Communication skills' && area.score > 70) {
-      return "Good articulation and clear communication";
-    } else if (area.name === 'Problem-solving approach' && area.score > 70) {
-      return "Effective problem-solving approach";
-    } else if (area.name === 'Team and culture fit' && area.score > 70) {
-      return "Strong cultural fit and teamwork values";
+  // First try to use DeepSeek API for advanced analysis
+  try {
+    console.log("Attempting to use DeepSeek API for response analysis");
+    // Use the correct server port (simple_upload_server.py on port 5004)
+    const apiUrl = 'http://localhost:5004/api/interview/analyze-with-deepseek';
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        transcript: text,
+        question: question || "Tell me about yourself",
+        jobRole: jobRole || "Software Developer"
+      })
+    });
+    
+    if (response.ok) {
+      const analysisResult = await response.json();
+      console.log("DeepSeek analysis result:", analysisResult);
+      
+      // Ensure the result has all the fields we need
+      return {
+        overallScore: analysisResult.overallScore || 0,
+        technical: analysisResult.technicalAccuracy || analysisResult.technical || 0,
+        communication: analysisResult.communicationClarity || analysisResult.communication || 0, 
+        relevance: analysisResult.relevance || 0,
+        confidence: analysisResult.confidence || 0,
+        strengths: analysisResult.strengths || [],
+        weaknesses: analysisResult.weaknesses || [],
+        improvementTips: analysisResult.improvementTips || [],
+        category: analysisResult.category || "Average"
+      };
     } else {
-      return `Reasonable ${area.name.toLowerCase()}`;
+      console.warn(`Failed to get analysis from DeepSeek API (${response.status}: ${response.statusText}), falling back to local analysis`);
+      throw new Error(`DeepSeek API failed with status: ${response.status}`);
     }
-  });
-  
-  const weaknesses = sortedWeaknesses.slice(0, 2).map(area => {
-    if (area.name === 'Technical knowledge') {
-      return "Could demonstrate more technical knowledge";
-    } else if (area.name === 'Communication skills') {
-      return "Could improve communication clarity";
-    } else if (area.name === 'Problem-solving approach') {
-      return "Should enhance problem-solving approach";
+  } catch (error) {
+    console.error("Error using DeepSeek API:", error);
+    
+    // Fall back to local analysis
+    console.log("Word count:", text.split(/\s+/).length);
+    const words = text.split(/\s+/).filter(word => word.length > 0);
+    const wordCount = words.length;
+    
+    // Determine scores and category based on word count
+    let overallScore = 0;
+    let category = "No Answer";
+    
+    if (wordCount >= 60) {
+      overallScore = 85;
+      category = "Excellent";
+    } else if (wordCount >= 30) {
+      overallScore = 70;
+      category = "Good";
+    } else if (wordCount >= 15) {
+      overallScore = 50;
+      category = "Average";
+    } else if (wordCount >= 5) {
+      overallScore = 30;
+      category = "Needs Improvement";
     } else {
-      return "Consider showing more team and cultural alignment";
+      overallScore = 10;
+      category = "Poor";
     }
-  });
-  
-  // Generate improvement tip
-  let improvementTip = '';
-  const weakestArea = sortedWeaknesses[0];
-  
-  if (isMinimalResponse) {
-    improvementTip = "Provide more detailed answers to showcase your knowledge and experience.";
-  } else if (weakestArea.name === 'Technical knowledge') {
-    improvementTip = "Include more specific technical details and examples from your experience.";
-  } else if (weakestArea.name === 'Communication skills') {
-    improvementTip = "Structure your answer more clearly with a beginning, middle, and conclusion.";
-  } else if (weakestArea.name === 'Problem-solving approach') {
-    improvementTip = "Use the STAR method (Situation, Task, Action, Result) to better illustrate your problem-solving process.";
-  } else {
-    improvementTip = "Emphasize how you've collaborated successfully with teams and aligned with company values.";
+    
+    return {
+      overallScore: overallScore,
+      technical: overallScore,
+      communication: overallScore,
+      relevance: overallScore,
+      confidence: overallScore,
+      strengths: wordCount > 20 ? ["Provided a response"] : [],
+      weaknesses: wordCount < 30 ? ["Response could be more detailed"] : [],
+      improvementTips: ["Practice giving more comprehensive answers"],
+      category: category
+    };
   }
-  
-  return {
-    technical: Math.round(finalTechnicalScore),
-    communication: Math.round(finalCommunicationScore),
-    problemSolving: Math.round(finalProblemSolvingScore),
-    culturalFit: Math.round(finalCulturalFitScore),
-    overall: overallScore,
-    confidence: Math.min(10, Math.round(confidenceScore / 10)),
-    relevance: relevanceScore,
-    category,
-    isMinimalResponse,
-    wordCount,
-    strengths: strengths.filter(s => s),
-    weaknesses: weaknesses.filter(w => w),
-    improvementTip
-  };
 };
 
 // Define interview categories
@@ -379,6 +355,16 @@ const MockInterview = () => {
   const [transcription, setTranscription] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [speechRecognition, setSpeechRecognition] = useState(null);
+  const [selectedLanguage, setSelectedLanguage] = useState(navigator.language || 'en-US');
+  const englishDialects = [
+    { code: 'en-US', name: 'English (US)' },
+    { code: 'en-GB', name: 'English (UK)' },
+    { code: 'en-AU', name: 'English (Australia)' },
+    { code: 'en-CA', name: 'English (Canada)' },
+    { code: 'en-IN', name: 'English (India)' },
+    { code: 'en-NZ', name: 'English (New Zealand)' },
+    { code: 'en-ZA', name: 'English (South Africa)' }
+  ];
   
   // Initialize refs
   const videoRef = useRef(null);
@@ -390,6 +376,7 @@ const MockInterview = () => {
   const timerRef = useRef(null);
   const questionTimerRef = useRef(null);
   const recognitionRef = useRef(null);
+  const audioRecorderRef = useRef(null);
   
   const navigate = useNavigate();
   const { profile } = useUser();
@@ -645,13 +632,19 @@ const MockInterview = () => {
     setInterviewComplete(false);
     setActiveStep(2); // Move to interview step
     
-    // Set initial remaining time
-    setRemainingTime(interviewSettings.duration * 60);
+    // Set initial remaining time - convert minutes to seconds
+    const totalSeconds = interviewSettings.duration * 60;
+    setRemainingTime(totalSeconds);
     
-    // Start overall interview timer
+    // Clear any existing timer
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    
+    // Start overall interview timer with more precise tracking
     timerRef.current = setInterval(() => {
       setRemainingTime(prev => {
-        if (prev <= 1) {
+        if (prev <= 0) {
           // Time's up - end interview
           clearInterval(timerRef.current);
           handleInterviewComplete();
@@ -689,11 +682,27 @@ const MockInterview = () => {
       return;
     }
     
+    // Clean up previous question state
+    setAnswerVideoUrl(null);
+    setTranscription('');
+    setShowFeedback(false);
+    setQuickFeedback(null);
+    setIsReviewingAnswer(false);
+    
+    // Clear any video chunks that might be leftover
+    videoChunksRef.current = [];
+    audioChunksRef.current = [];
+    
     // Set current question index
     setCurrentQuestionIndex(index);
     
     // Reset answer time
     setAnswerTime(0);
+    
+    // Clear any existing question timer
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current);
+    }
     
     // Start question timer
     questionTimerRef.current = setInterval(() => {
@@ -702,7 +711,7 @@ const MockInterview = () => {
     
     // Only start recording if we have permissions
     if (permissionsGranted.camera && permissionsGranted.microphone) {
-    startRecording();
+      startRecording();
     } else {
       console.log('Skipping recording - no camera/mic permissions');
     }
@@ -746,34 +755,42 @@ const MockInterview = () => {
   
   // Initialize speech recognition
   useEffect(() => {
-    // Check if the browser supports the Web Speech API
+    // Only initialize when recording is starting
+    if (!recording) {
+      return;
+    }
+    
+    // Create and initialize speech recognition
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
     if (SpeechRecognition) {
       try {
-        // Create a new speech recognition instance every time
+        // Stop any existing recognition instance first
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.abort();
+            recognitionRef.current = null;
+          } catch (e) {
+            console.error('Error cleaning up previous recognition:', e);
+          }
+        }
+        
+        // Create fresh recognition instance
         const recognition = new SpeechRecognition();
         
-        // Configure for maximum accuracy and continuous listening
+        // Configure recognition
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = 'en-US';
-        recognition.maxAlternatives = 1; // Focus on most likely result
+        recognition.lang = selectedLanguage;
+        console.log('Speech recognition language set to:', recognition.lang);
         
-        // Ensure we don't timeout
-        if ('webkitSpeechRecognitionEvent' in window) {
-          // Some browsers support this
-          recognition.audioTimeout = 10000000; // Long timeout
-        }
+        // Track recognition state
+        setIsTranscribing(true);
         
         // Set up event handlers
         recognition.onstart = () => {
           console.log('Speech recognition started successfully');
           setIsTranscribing(true);
-          // Clear previous transcription when starting new recording
-          if (recording) {
-            setTranscription('');
-          }
         };
         
         recognition.onresult = (event) => {
@@ -783,8 +800,13 @@ const MockInterview = () => {
           
           for (let i = 0; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript;
-            // Only add if confidence is reasonable
-            if (event.results[i][0].confidence > 0.4) {
+            const confidence = event.results[i][0].confidence;
+            
+            // Log detailed info about each result
+            console.log(`Result ${i}: "${transcript}" - Confidence: ${confidence}`);
+            
+            // Accept more results by lowering the confidence threshold
+            if (confidence > 0.1) { // Reduced threshold from 0.3 to 0.1
               finalTranscript += transcript + ' ';
             }
           }
@@ -811,7 +833,11 @@ const MockInterview = () => {
               recognition.abort();
               setTimeout(() => {
                 if (recording) {
-                  recognition.start();
+                  try {
+                    recognition.start();
+                  } catch (e) {
+                    console.error('Failed to restart recognition after error:', e);
+                  }
                 }
               }, 500);
             } catch (e) {
@@ -843,7 +869,8 @@ const MockInterview = () => {
                       const newRecognition = new SpeechRecognition();
                       newRecognition.continuous = true;
                       newRecognition.interimResults = true;
-                      newRecognition.lang = 'en-US';
+                      newRecognition.lang = selectedLanguage;
+                      console.log('Speech recognition language set to:', newRecognition.lang);
                       
                       // Transfer event handlers to new instance
                       newRecognition.onstart = recognition.onstart;
@@ -879,8 +906,13 @@ const MockInterview = () => {
         recognitionRef.current = recognition;
         setSpeechRecognition(recognition);
         
-        // Log for debugging
-        console.log('Speech recognition initialized successfully');
+        // Start the recognition
+        try {
+          recognition.start();
+          console.log('Speech recognition initialized successfully');
+        } catch (startError) {
+          console.error('Error starting initial speech recognition:', startError);
+        }
       } catch (e) {
         console.error('Error initializing speech recognition:', e);
         setError('Failed to initialize speech recognition. Please try a different browser.');
@@ -895,15 +927,19 @@ const MockInterview = () => {
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
+          recognitionRef.current = null;
         } catch (e) {
           console.error('Error cleaning up speech recognition:', e);
         }
       }
     };
-  }, [recording]);
+  }, [recording, selectedLanguage]); // Also re-initialize when language changes
   
   // Start speech recognition with improved error handling
   const startTranscription = () => {
+    // Clear previous transcription when starting a new recording
+    setTranscription('');
+    
     if (!recognitionRef.current) {
       // Try to create a new instance if not available
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -911,42 +947,106 @@ const MockInterview = () => {
         recognitionRef.current = new SpeechRecognition();
         recognitionRef.current.continuous = true;
         recognitionRef.current.interimResults = true;
-        recognitionRef.current.lang = 'en-US';
-      } else {
-        setError('Speech recognition not available in your browser');
-        return;
+        recognitionRef.current.lang = selectedLanguage;
+        console.log('Speech recognition language set to:', recognitionRef.current.lang);
+        
+        // Setup event handlers
+        recognitionRef.current.onresult = (event) => {
+          let interimTranscript = '';
+          let finalTranscript = '';
+          
+          // Process results
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' ';
+              console.log('Final transcript segment:', transcript);
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+          
+          // Update transcription state if we have final results
+          if (finalTranscript) {
+            setTranscription(prev => {
+              const updatedTranscription = (prev || '') + finalTranscript;
+              return updatedTranscription;
+            });
+          }
+        };
+        
+        // Handle end event to restart continuous recognition
+        recognitionRef.current.onend = () => {
+          console.log('Speech recognition ended');
+          setIsTranscribing(false);
+          
+          // Restart if we're still recording
+          if (recording) {
+            try {
+              console.log('Restarting speech recognition');
+              recognitionRef.current.start();
+              setIsTranscribing(true);
+            } catch (err) {
+              console.error('Error restarting speech recognition:', err);
+            }
+          }
+        };
+        
+        // Handle errors
+        recognitionRef.current.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          setIsTranscribing(false);
+          
+          if (event.error === 'not-allowed') {
+            setError('Microphone access denied. Please allow microphone access and try again.');
+          }
+        };
       }
     }
     
-    try {
-      // Clear previous transcription
-      setTranscription('');
-      
-      // Start recognition
-      recognitionRef.current.start();
-      console.log('Started speech recognition');
-    } catch (error) {
-      console.error('Error starting speech recognition:', error);
-      
-      // If already started, abort and restart
-      if (error.name === 'InvalidStateError') {
+    if (recognitionRef.current) {
+      try {
+        // Check if recognition is already running
+        if (recognitionRef.current.state === 'running') {
+          console.log('Speech recognition is already running, not starting again');
+          return;
+        }
+        
+        recognitionRef.current.start();
+        console.log('Started speech recognition');
+        setIsTranscribing(true);
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        
+        // If error is "already started", don't recreate
+        if (error.message && error.message.includes('already started')) {
+          console.log('Recognition already started, continuing with existing instance');
+          return;
+        }
+              
+        // Try to create a new instance if start fails
         try {
-          recognitionRef.current.abort();
-          setTimeout(() => {
-            recognitionRef.current.start();
-          }, 100);
-        } catch (e) {
-          console.error('Failed to restart recognition:', e);
-          // Create a fresh instance
+          console.log('Creating new speech recognition instance');
           const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
           if (SpeechRecognition) {
             const newRecognition = new SpeechRecognition();
             newRecognition.continuous = true;
             newRecognition.interimResults = true;
-            newRecognition.lang = 'en-US';
+            newRecognition.lang = selectedLanguage;
+            
+            // Setup event handlers on new instance
+            newRecognition.onresult = recognitionRef.current.onresult;
+            newRecognition.onend = recognitionRef.current.onend;
+            newRecognition.onerror = recognitionRef.current.onerror;
+            
+            console.log('Speech recognition language set to:', newRecognition.lang);
             newRecognition.start();
             recognitionRef.current = newRecognition;
           }
+        } catch (secondError) {
+          console.error('Failed to create and start new recognition instance:', secondError);
+          setIsTranscribing(false);
+          setError('Speech recognition failed to start. Please try using a different browser.');
         }
       }
     }
@@ -956,6 +1056,14 @@ const MockInterview = () => {
   const stopTranscription = () => {
     if (recognitionRef.current) {
       try {
+        console.log('Stopping speech recognition and finalizing transcription');
+        
+        // Make sure we get any pending final results
+        recognitionRef.current.onend = () => {
+          console.log('Speech recognition ended after stop');
+          setIsTranscribing(false);
+        };
+        
         recognitionRef.current.stop();
         console.log('Stopped speech recognition');
       } catch (error) {
@@ -963,10 +1071,12 @@ const MockInterview = () => {
         // Try to abort if stop fails
         try {
           recognitionRef.current.abort();
+          recognitionRef.current = null;
         } catch (e) {
           console.error('Failed to abort recognition:', e);
         }
       }
+      setIsTranscribing(false);
     }
   };
   
@@ -989,83 +1099,127 @@ const MockInterview = () => {
       return;
     }
     
+    // Reset chunks at the start of each recording
+    videoChunksRef.current = [];
+    audioChunksRef.current = [];
+    
+    // Clear previous transcription
+    setTranscription('');
+    
+    // Start recording UI state
+    setRecording(true);
+    setShowFeedback(false);
+    setQuickFeedback(null);
+    
     try {
-      // Clear previous recording chunks
-      audioChunksRef.current = [];
-      videoChunksRef.current = [];
+      // Check if we have both video and audio tracks
+      const hasVideoTrack = streamRef.current.getVideoTracks().length > 0;
+      const hasAudioTrack = streamRef.current.getAudioTracks().length > 0;
       
-      // Check stream has active tracks
-      const videoTracks = streamRef.current.getVideoTracks();
-      const audioTracks = streamRef.current.getAudioTracks();
-      
-      if (videoTracks.length === 0 || audioTracks.length === 0) {
-        console.warn('Stream is missing video or audio tracks');
-        setError('Camera or microphone is not available. Please check your device permissions.');
-        return;
+      if (hasVideoTrack && hasAudioTrack) {
+        console.log('Stream has video and audio tracks, starting recording');
+      } else {
+        console.warn(`Stream missing tracks: video=${hasVideoTrack}, audio=${hasAudioTrack}`);
       }
       
-      console.log('Stream has video and audio tracks, starting recording');
+      // Try to create a MediaRecorder with various codecs/formats
+      let options = {}; // Default options
       
-      // Create media recorder with proper options and fallbacks
-      let options;
       try {
-        options = { mimeType: 'video/webm;codecs=vp9,opus' };
-        mediaRecorderRef.current = new MediaRecorder(streamRef.current, options);
-      } catch (e) {
-        console.warn('VideoRecorder: vp9/opus is not supported, trying vp8', e);
-        try {
-          options = { mimeType: 'video/webm;codecs=vp8,opus' };
-          mediaRecorderRef.current = new MediaRecorder(streamRef.current, options);
-        } catch (e) {
-          console.warn('VideoRecorder: vp8/opus is not supported, trying default', e);
+        const types = [
+          'video/webm;codecs=vp9,opus',
+          'video/webm;codecs=vp8,opus',
+          'video/webm',
+          'video/mp4',
+          { mimeType: 'video/webm;codecs=vp9,opus' },
+          { mimeType: 'video/webm;codecs=vp8,opus' },
+          { mimeType: 'video/webm' },
+          { mimeType: 'video/mp4' },
+          { mimeType: 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"' },
+          {}  // Empty options as last resort
+        ];
+        
+        let mediaRecorderCreated = false;
+        for (const option of types) {
           try {
-            mediaRecorderRef.current = new MediaRecorder(streamRef.current);
-          } catch (finalError) {
-            console.error('Could not create MediaRecorder', finalError);
-            setError('Your browser does not support recording. Please try a different browser like Chrome or Edge.');
-            return;
+            console.log('Trying MediaRecorder with options:', option);
+            mediaRecorderRef.current = new MediaRecorder(streamRef.current, option);
+            options = option;
+            mediaRecorderCreated = true;
+            console.log('Successfully created MediaRecorder with options:', option);
+            break;
+          } catch (codecError) {
+            console.warn(`MediaRecorder format not supported: ${option.mimeType || 'default'}`, codecError);
           }
         }
+        
+        if (!mediaRecorderCreated) {
+          throw new Error('None of the codec options are supported');
+        }
+      } catch (finalError) {
+        console.error('Could not create MediaRecorder with any options', finalError);
+        setError('Your browser does not support recording. Please try a different browser like Chrome or Edge.');
+        return;
       }
       
       console.log('MediaRecorder created with options:', options);
       
+      // Setup event handlers BEFORE starting recording
+
       // Handle data available event
       mediaRecorderRef.current.ondataavailable = (event) => {
         console.log('Recording data available, size:', event.data.size);
         if (event.data && event.data.size > 0) {
           videoChunksRef.current.push(event.data);
+        } else {
+          console.warn('Received empty or invalid data chunk');
         }
       };
       
-      // Handle recording stop event
+      // Add the onstop handler BEFORE starting recording
       mediaRecorderRef.current.onstop = () => {
-        console.log('Recording stopped, creating video blob');
+        console.log('MediaRecorder onstop triggered, creating video blob');
         
+        // Check if we have video data
         if (videoChunksRef.current.length === 0) {
           console.error('No video chunks recorded');
-          setError('No video was recorded. Please try again with camera and microphone enabled.');
-          return;
+          
+          // Try to use audio-only if available
+          if (audioChunksRef.current && audioChunksRef.current.length > 0) {
+            console.log('Using audio-only recording as fallback');
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            // Create a simple video with just audio
+            const videoUrl = URL.createObjectURL(audioBlob);
+            setAnswerVideoUrl(videoUrl);
+          } else {
+            setError('No video or audio was recorded. Please check your camera and microphone permissions.');
+            return;
+          }
+        } else {
+          // Create video blob with all chunks
+          const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
+          const videoUrl = URL.createObjectURL(videoBlob);
+          setAnswerVideoUrl(videoUrl);
+          console.log('Video URL created:', videoUrl);
         }
         
-        const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
-        const videoUrl = URL.createObjectURL(videoBlob);
-        setAnswerVideoUrl(videoUrl);
-        
-        console.log('Video URL created:', videoUrl);
+        // Store the original transcription before any modifications
+        const originalTranscription = transcription;
+        console.log('Original transcription before processing:', originalTranscription);
         
         // Ensure transcription has a default value if unavailable
-        const finalTranscription = transcription || "I didn't catch what you said. Please speak more clearly next time.";
+        const finalTranscription = originalTranscription || "I didn't catch what you said. Please speak more clearly next time.";
         
         // Analyze the transcription
         console.log('Analyzing transcription:', finalTranscription);
         const analysis = analyzeResponseText(finalTranscription);
         
         // Check if this is a valid response or a no-speech situation
-        const noSpeechDetected = finalTranscription.includes("I didn't catch what you said") || 
-                                  finalTranscription.includes("No speech detected") ||
-                                  finalTranscription.trim().length === 0 ||
-                                  finalTranscription.split(/\s+/).filter(w => w.length > 0).length <= 3;
+        // Modified criteria to be less strict - only treat as no speech if truly empty or default message
+        const noSpeechDetected = 
+          finalTranscription.includes("I didn't catch what you said") || 
+          finalTranscription.includes("No speech detected") ||
+          finalTranscription.trim().length === 0;
         
         // For no speech detected, enforce scores of 0
         const finalAnalysis = noSpeechDetected ? {
@@ -1087,41 +1241,63 @@ const MockInterview = () => {
           improvementTip: "Please ensure your microphone is properly connected and speak clearly."
         } : analysis;
         
-        // Save answer with transcription and analysis
-        const newAnswer = {
-          questionIndex: currentQuestionIndex,
-          question: interviewQuestions[currentQuestionIndex],
-          videoBlob,
-          videoUrl,
-          duration: answerTime,
-          transcription: finalTranscription,
-          analysis: finalAnalysis
-        };
-        
-        // Save to answers array
-        setAnswers(prev => {
-          const updatedAnswers = Array.isArray(prev) ? [...prev] : [];
-          updatedAnswers[currentQuestionIndex] = newAnswer;
-          return updatedAnswers;
-        });
-        
-        // Stop transcription
-        stopTranscription();
-        
-        // If no transcription was captured, set a clear message
-        if (!transcription || transcription.trim() === '' || transcription.split(/\s+/).filter(w => w.length > 0).length <= 3) {
-          console.log('No speech detected or transcription too short, setting explicit message');
-          setTranscription('No speech detected. Please check your microphone and try speaking more clearly.');
+        try {
+          // Save answer with transcription and analysis
+          const newAnswer = {
+            questionIndex: currentQuestionIndex,
+            question: interviewQuestions[currentQuestionIndex],
+            videoBlob: videoChunksRef.current.length > 0 
+              ? new Blob(videoChunksRef.current, { type: 'video/webm' })
+              : new Blob(audioChunksRef.current, { type: 'audio/webm' }),
+            videoUrl: answerVideoUrl,
+            duration: answerTime,
+            transcription: originalTranscription || finalTranscription,
+            analysis: finalAnalysis
+          };
+          
+          // Save to answers array
+          setAnswers(prev => {
+            const updatedAnswers = Array.isArray(prev) ? [...prev] : [];
+            updatedAnswers[currentQuestionIndex] = newAnswer;
+            return updatedAnswers;
+          });
+          
+          // If no transcription was captured, set a clear message
+          if (!originalTranscription || originalTranscription.trim() === '') {
+            console.log('No speech detected or transcription empty, setting explicit message');
+            setTranscription('No speech detected. Please check your microphone and try speaking more clearly.');
+          }
+          
+          // Get quick feedback
+          generateQuickFeedback(newAnswer.videoBlob, originalTranscription || 'No speech detected');
+        } catch (saveError) {
+          console.error('Error saving answer:', saveError);
+          setError('An error occurred while saving your answer. Please try again.');
         }
-        
-        // Get quick feedback
-        generateQuickFeedback(videoBlob, transcription || 'No speech detected');
       };
       
-      // Start recording with a reasonable timeslice
-      mediaRecorderRef.current.start(1000); // Collect data every second
-      console.log('Recording started');
-      setRecording(true);
+      // Now start recording (AFTER setting up all handlers)
+      mediaRecorderRef.current.start(2000); // Collect data every 2 seconds
+      console.log('MediaRecorder started');
+    
+      // Set up separate audio recording as a backup
+      try {
+        const audioStream = new MediaStream(streamRef.current.getAudioTracks());
+        const audioOptions = { mimeType: 'audio/webm' };
+        audioRecorderRef.current = new MediaRecorder(audioStream, audioOptions);
+        
+        audioRecorderRef.current.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+        
+        audioRecorderRef.current.start(2000); // Match the same interval as video recorder
+        console.log('Separate audio recording started');
+      } catch (audioError) {
+        console.warn('Could not create separate audio recorder:', audioError);
+        // Continue with just video recording, don't fail
+      }
       
       // Start speech recognition
       startTranscription();
@@ -1134,12 +1310,25 @@ const MockInterview = () => {
   // Generate quick feedback with transcription
   const generateQuickFeedback = async (videoBlob, text) => {
     try {
-      // Create form data with video blob
+      // Create form data with video blob and/or text
       const formData = new FormData();
-      formData.append('video', videoBlob);
+      if (videoBlob) {
+        formData.append('video', videoBlob);
+      }
       formData.append('questionIndex', currentQuestionIndex);
       formData.append('interviewId', interviewId);
       formData.append('transcription', text || ''); // Include transcribed text
+      
+      // If we don't have video but have text, analyze text only
+      if (!videoBlob && text && text.trim().length > 0) {
+        console.log('No video blob available, analyzing text only:', text.substring(0, 50) + '...');
+        
+        // Create a basic analysis for text-only response
+        const textAnalysis = analyzeResponseText(text);
+        setQuickFeedback(textAnalysis);
+        setShowFeedback(true);
+        return;
+      }
       
       // Send to backend for analysis
       // Use mock API instead of missing real API endpoint
@@ -1150,18 +1339,70 @@ const MockInterview = () => {
       setShowFeedback(true);
     } catch (err) {
       console.error('Error generating feedback:', err);
+      
+      // Fallback to local analysis if API fails
+      if (text && text.trim().length > 0) {
+        const textAnalysis = analyzeResponseText(text);
+        setQuickFeedback(textAnalysis);
+        setShowFeedback(true);
+      }
     }
   };
   
   // Handle next question
   const handleNextQuestion = () => {
+    console.log('Moving to next question, current state:', {
+      currentQuestionIndex,
+      totalQuestions: interviewQuestions.length,
+      answerVideoUrl: !!answerVideoUrl,
+      transcription: transcription?.substring(0, 30) + '...'
+    });
+    
+    // Clean up state and UI
     setShowFeedback(false);
     setQuickFeedback(null);
+    setTranscription('');
+    setAnswerVideoUrl(null);
+    setIsReviewingAnswer(false);
+    
+    // Make sure any ongoing recording is properly stopped
+    if (recording) {
+      stopRecording();
+    }
+    
+    // Clear any residual data
+    videoChunksRef.current = [];
+    audioChunksRef.current = [];
+    
+    // Make sure recording is fully stopped
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (err) {
+        console.error('Error stopping media recorder during next question:', err);
+      }
+      // Reset the reference
+      mediaRecorderRef.current = null;
+    }
+    
+    // Stop any audio recording
+    if (audioRecorderRef.current && audioRecorderRef.current.state !== 'inactive') {
+      try {
+        audioRecorderRef.current.stop();
+      } catch (err) {
+        console.error('Error stopping audio recorder during next question:', err);
+      }
+      // Reset the reference
+      audioRecorderRef.current = null;
+    }
     
     // Move to next question
     const nextIndex = currentQuestionIndex + 1;
     if (nextIndex < interviewQuestions.length) {
-      askQuestion(nextIndex);
+      // Allow a brief delay for cleanup
+      setTimeout(() => {
+        askQuestion(nextIndex);
+      }, 300);
     } else {
       handleInterviewComplete();
     }
@@ -1288,9 +1529,10 @@ const MockInterview = () => {
   
   // Format time (seconds to mm:ss)
   const formatTime = (seconds) => {
+    if (seconds < 0) seconds = 0;
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
   
   // Review recorded answer
@@ -1329,67 +1571,126 @@ const MockInterview = () => {
   
   // Stop recording
   const stopRecording = () => {
-    // Check if we have an active recorder and we're recording
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      console.log('Stopping recording...');
-      
+    console.log('Stopping recording - current state:', { recording, mediaRecorderState: mediaRecorderRef.current?.state });
+    
+    // Stop transcription first to ensure we have the final text
+    stopTranscription();
+    
+    // Capture the current transcription immediately
+    const currentTranscription = transcription || '';
+    console.log('Captured transcription on stop:', currentTranscription);
+    
+    // Stop recording if it's active
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log('Stopping video recording');
       try {
         mediaRecorderRef.current.stop();
-        console.log('MediaRecorder stopped successfully');
-      } catch (error) {
-        console.error('Error stopping MediaRecorder:', error);
         
-        // Fallback approach - create a blob from whatever we have
-        if (videoChunksRef.current.length > 0) {
-          console.log('Using fallback: creating blob from existing chunks');
-          const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
-          const videoUrl = URL.createObjectURL(videoBlob);
-          setAnswerVideoUrl(videoUrl);
-          
-          // Create a mock answer
-          const finalTranscription = transcription || "Recording was interrupted. Please try again.";
-          const analysis = analyzeResponseText(finalTranscription);
-          
+        // Force the processing of transcription if mediaRecorder doesn't trigger onstop event
+        setTimeout(() => {
+          // If answerVideoUrl is still null, the onstop handler hasn't been called
+          if (!answerVideoUrl && videoChunksRef.current.length > 0) {
+            console.log('Processing transcription manually after timeout');
+            // Create video blob with all chunks
+            const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
+            const videoUrl = URL.createObjectURL(videoBlob);
+            setAnswerVideoUrl(videoUrl);
+            
+            // Process transcription
+            const finalTranscription = currentTranscription || "I didn't catch what you said. Please speak more clearly next time.";
+            const analysis = analyzeResponseText(finalTranscription);
+            
+            // Save answer with transcription and analysis
+            const newAnswer = {
+              questionIndex: currentQuestionIndex,
+              question: interviewQuestions[currentQuestionIndex],
+              videoBlob: videoChunksRef.current.length > 0 
+                ? new Blob(videoChunksRef.current, { type: 'video/webm' })
+                : new Blob(audioChunksRef.current || [], { type: 'audio/webm' }),
+              videoUrl: videoUrl,
+              duration: answerTime,
+              transcription: currentTranscription || finalTranscription,
+              analysis: analysis
+            };
+            
+            // Save to answers array
+            setAnswers(prev => {
+              const updatedAnswers = Array.isArray(prev) ? [...prev] : [];
+              updatedAnswers[currentQuestionIndex] = newAnswer;
+              return updatedAnswers;
+            });
+            
+            // Generate quick feedback
+            generateQuickFeedback(newAnswer.videoBlob, currentTranscription || 'No speech detected');
+          }
+        }, 1000); // Wait 1 second to see if normal onstop handler gets called
+        
+      } catch (e) {
+        console.error('Error stopping media recorder:', e);
+        
+        // Force state cleanup even if stopping fails
+        setRecording(false);
+        
+        // Create empty answer with transcription if one was captured
+        if (currentTranscription && currentTranscription.trim().length > 0) {
+          const analysis = analyzeResponseText(currentTranscription);
           // Save to answers array
           setAnswers(prev => {
             const updatedAnswers = Array.isArray(prev) ? [...prev] : [];
             updatedAnswers[currentQuestionIndex] = {
               questionIndex: currentQuestionIndex,
               question: interviewQuestions[currentQuestionIndex],
-              videoBlob,
-              videoUrl,
-              duration: answerTime,
-              transcription: finalTranscription,
+              transcription: currentTranscription,
               analysis: analysis
             };
             return updatedAnswers;
           });
+          
+          // Generate feedback even if recording failed
+          generateQuickFeedback(null, currentTranscription);
         }
       }
-    } else if (recording) {
-      // We think we're recording but don't have an active recorder
-      console.warn('Recording state is true but no active recorder found or not in recording state');
-      
-      // Reset recording state
+    } else {
+      console.warn('MediaRecorder not active or unavailable');
       setRecording(false);
       
-      // Show error
-      setError('Recording was interrupted. Please try again or check your camera permissions.');
-    } else {
-      console.warn('Attempted to stop recording, but no active recorder found or not currently recording');
+      // Still try to process any transcription we have
+      if (currentTranscription && currentTranscription.trim().length > 0) {
+        const analysis = analyzeResponseText(currentTranscription);
+        setAnswers(prev => {
+          const updatedAnswers = Array.isArray(prev) ? [...prev] : [];
+          updatedAnswers[currentQuestionIndex] = {
+            questionIndex: currentQuestionIndex,
+            question: interviewQuestions[currentQuestionIndex],
+            transcription: currentTranscription,
+            analysis: analysis
+          };
+          return updatedAnswers;
+        });
+        
+        // Generate feedback based on transcription only
+        generateQuickFeedback(null, currentTranscription);
+      }
     }
     
-    // Always set recording to false
-    setRecording(false);
-    
-    // Stop speech recognition
-    stopTranscription();
+    // Stop audio recording if available
+    if (audioRecorderRef.current && audioRecorderRef.current.state !== 'inactive') {
+      console.log('Stopping audio recording');
+      try {
+        audioRecorderRef.current.stop();
+      } catch (e) {
+        console.error('Error stopping audio recorder:', e);
+      }
+    }
     
     // Clear question timer
     if (questionTimerRef.current) {
       clearInterval(questionTimerRef.current);
       questionTimerRef.current = null;
     }
+    
+    // Always update the recording state
+    setRecording(false);
   };
   
   // Effect to ensure video ref is properly connected when component mounts or refs change
@@ -1414,6 +1715,120 @@ const MockInterview = () => {
       }
     }
   }, [videoRef.current, streamRef.current, cameraActive]);
+  
+  // Find the feedback display section and update it to use the new analysis structure
+  const renderFeedback = () => {
+    if (!currentQuestionFeedback) return null;
+    
+    return (
+      <Box sx={{ mt: 2, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          Feedback for your answer
+        </Typography>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Typography variant="subtitle1" sx={{ mr: 1 }}>
+            Overall Score:
+          </Typography>
+          <Rating 
+            value={currentQuestionFeedback.overallScore / 20} 
+            precision={0.5} 
+            readOnly 
+          />
+          <Typography variant="body2" sx={{ ml: 1, color: 'text.secondary' }}>
+            ({currentQuestionFeedback.overallScore}/100)
+          </Typography>
+        </Box>
+        
+        {currentQuestionFeedback.technicalAccuracy && (
+          <Box sx={{ mb: 1 }}>
+            <Typography variant="subtitle2">
+              Technical Accuracy: {currentQuestionFeedback.technicalAccuracy}/100
+            </Typography>
+          </Box>
+        )}
+        
+        {currentQuestionFeedback.communicationClarity && (
+          <Box sx={{ mb: 1 }}>
+            <Typography variant="subtitle2">
+              Communication Clarity: {currentQuestionFeedback.communicationClarity}/100
+            </Typography>
+          </Box>
+        )}
+        
+        {currentQuestionFeedback.relevance && (
+          <Box sx={{ mb: 1 }}>
+            <Typography variant="subtitle2">
+              Relevance: {currentQuestionFeedback.relevance}/100
+            </Typography>
+          </Box>
+        )}
+        
+        <Divider sx={{ my: 1.5 }} />
+        
+        <Typography variant="subtitle1" sx={{ mt: 1, mb: 0.5 }}>
+          Strengths:
+        </Typography>
+        <List dense disablePadding>
+          {currentQuestionFeedback.strengths && currentQuestionFeedback.strengths.map((strength, index) => (
+            <ListItem key={index} disablePadding>
+              <ListItemIcon sx={{ minWidth: 30 }}>
+                <CheckCircleOutline fontSize="small" color="success" />
+              </ListItemIcon>
+              <ListItemText primary={strength} />
+            </ListItem>
+          ))}
+        </List>
+        
+        <Typography variant="subtitle1" sx={{ mt: 1.5, mb: 0.5 }}>
+          Areas for Improvement:
+        </Typography>
+        <List dense disablePadding>
+          {currentQuestionFeedback.weaknesses && currentQuestionFeedback.weaknesses.map((weakness, index) => (
+            <ListItem key={index} disablePadding>
+              <ListItemIcon sx={{ minWidth: 30 }}>
+                <ErrorOutline fontSize="small" color="warning" />
+              </ListItemIcon>
+              <ListItemText primary={weakness} />
+            </ListItem>
+          ))}
+        </List>
+        
+        <Typography variant="subtitle1" sx={{ mt: 1.5, mb: 0.5 }}>
+          Improvement Tips:
+        </Typography>
+        <List dense disablePadding>
+          {currentQuestionFeedback.improvementTips ? (
+            Array.isArray(currentQuestionFeedback.improvementTips) ? 
+              currentQuestionFeedback.improvementTips.map((tip, index) => (
+                <ListItem key={index} disablePadding>
+                  <ListItemIcon sx={{ minWidth: 30 }}>
+                    <LightbulbOutlined fontSize="small" color="info" />
+                  </ListItemIcon>
+                  <ListItemText primary={tip} />
+                </ListItem>
+              )) : (
+                <ListItem disablePadding>
+                  <ListItemIcon sx={{ minWidth: 30 }}>
+                    <LightbulbOutlined fontSize="small" color="info" />
+                  </ListItemIcon>
+                  <ListItemText primary={currentQuestionFeedback.improvementTips} />
+                </ListItem>
+              )
+          ) : (
+            currentQuestionFeedback.improvementTip && (
+              <ListItem disablePadding>
+                <ListItemIcon sx={{ minWidth: 30 }}>
+                  <LightbulbOutlined fontSize="small" color="info" />
+                </ListItemIcon>
+                <ListItemText primary={currentQuestionFeedback.improvementTip} />
+              </ListItem>
+            )
+          )}
+        </List>
+      </Box>
+    );
+  };
   
     return (
     <Container maxWidth="lg">
@@ -1766,6 +2181,23 @@ const MockInterview = () => {
                   </Select>
                 </FormControl>
               )}
+              
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Speech Recognition Language</InputLabel>
+                <Select
+                  value={selectedLanguage}
+                  onChange={(e) => setSelectedLanguage(e.target.value)}
+                >
+                  {englishDialects.map(dialect => (
+                    <MenuItem key={dialect.code} value={dialect.code}>
+                      {dialect.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <Typography variant="caption" color="textSecondary">
+                  Select the closest dialect for better speech recognition
+                </Typography>
+              </FormControl>
               
               <Button
                 variant="contained"

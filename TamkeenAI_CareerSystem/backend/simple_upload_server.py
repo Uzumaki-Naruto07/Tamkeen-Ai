@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
@@ -19,6 +19,7 @@ from nltk.tokenize import word_tokenize
 from nltk.tag import pos_tag
 from nltk.stem import WordNetLemmatizer
 from difflib import SequenceMatcher
+import argparse
 
 # Download NLTK resources
 try:
@@ -1211,6 +1212,117 @@ def analyze_with_openai_duplicate_api():
     """Duplicate API path handler for OpenAI analysis"""
     return analyze_with_openai()
 
-if __name__ == '__main__':
-    print("Starting simple upload server on port 5001...")
-    app.run(host='0.0.0.0', port=5001, debug=True) 
+@app.route('/api/interview/analyze-with-deepseek', methods=['POST', 'OPTIONS'])
+def analyze_interview_with_deepseek():
+    """Analyze interview responses with DeepSeek (or mock implementation)"""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = make_response()
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+        
+    # Log request for debugging
+    print("DeepSeek interview analysis endpoint called!")
+    print("Request headers:", request.headers)
+    print("Request JSON:", request.json)
+    
+    try:
+        data = request.json
+        if not data or 'transcript' not in data:
+            return jsonify({'error': 'Missing transcript data'}), 400
+            
+        transcript = data.get('transcript', '')
+        question = data.get('question', 'Tell me about yourself')
+        job_role = data.get('jobRole', 'Software Developer')
+        
+        # Check if transcript is empty or indicates no speech
+        if not transcript or transcript.strip() == "" or "I didn't catch what you said" in transcript or "No speech detected" in transcript:
+            # Return a basic "no answer" analysis
+            return jsonify({
+                "overallScore": 0,
+                "technicalAccuracy": 0,
+                "communicationClarity": 0,
+                "relevance": 0,
+                "strengths": [],
+                "weaknesses": ["No answer provided"],
+                "improvementTips": ["Please provide an answer to the question"],
+                "category": "No Answer"
+            })
+        
+        # Word count based analysis (simple implementation)
+        words = transcript.split()
+        word_count = len(words)
+        
+        # Determine category and base score on word count
+        if word_count >= 60:
+            overall_score = 85
+            category = "Excellent"
+            techacc_score = 85
+            comm_score = 90
+            relevance_score = 85
+            strengths = ["Provided a detailed response", "Good elaboration"]
+            weaknesses = []
+            tips = ["Great response! Consider adding more specific examples next time."]
+        elif word_count >= 30:
+            overall_score = 70
+            category = "Good"
+            techacc_score = 65
+            comm_score = 70
+            relevance_score = 75
+            strengths = ["Provided a good length response"]
+            weaknesses = ["Could use more specific details"]
+            tips = ["Try to include more concrete examples in your response."]
+        elif word_count >= 15:
+            overall_score = 50
+            category = "Average"
+            techacc_score = 45
+            comm_score = 50
+            relevance_score = 55
+            strengths = ["Attempted to answer the question"]
+            weaknesses = ["Response is brief", "Needs more detail"]
+            tips = ["Expand your answer with specific experiences."]
+        elif word_count >= 5:
+            overall_score = 30
+            category = "Needs Improvement"
+            techacc_score = 25
+            comm_score = 30
+            relevance_score = 35
+            strengths = ["Provided a response"]
+            weaknesses = ["Response is too brief", "Lacks substance"]
+            tips = ["Work on providing more comprehensive answers."]
+        else:
+            overall_score = 10
+            category = "Poor"
+            techacc_score = 10
+            comm_score = 10
+            relevance_score = 10
+            strengths = []
+            weaknesses = ["Response is extremely brief"]
+            tips = ["Practice giving more detailed responses to interview questions."]
+        
+        # Return analysis in expected format
+        return jsonify({
+            "overallScore": overall_score,
+            "technicalAccuracy": techacc_score,
+            "communicationClarity": comm_score,
+            "relevance": relevance_score,
+            "confidence": comm_score,  # Use communication as proxy for confidence
+            "strengths": strengths,
+            "weaknesses": weaknesses,
+            "improvementTips": tips,
+            "category": category
+        })
+        
+    except Exception as e:
+        print(f"Error in interview analysis: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Simple upload server')
+    parser.add_argument('--port', type=int, default=5001, help='Port to run server on')
+    args = parser.parse_args()
+    
+    print(f"Starting simple upload server on port {args.port}...")
+    app.run(host='0.0.0.0', port=args.port, debug=True) 
