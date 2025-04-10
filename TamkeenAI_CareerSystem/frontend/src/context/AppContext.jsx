@@ -3,6 +3,7 @@ import { api } from '../api/apiClient';
 import { AUTH_ENDPOINTS, USER_ENDPOINTS, JOB_ENDPOINTS } from '../api/endpoints';
 import i18n from '../i18n';
 import { initializeTheme, setTheme, toggleTheme as toggleThemeUtil } from '../utils/themeToggle';
+import { setupPeriodicHealthChecks } from '../utils/healthCheck';
 
 // Create context
 export const AppContext = createContext();
@@ -213,6 +214,33 @@ export const AppContextProvider = ({ children }) => {
   const [savedJobs, setSavedJobs] = useState([]);
   const [currentResume, setCurrentResume] = useState(null);
   
+  // State for backend health
+  const [backendHealth, setBackendHealth] = useState({
+    main: false,
+    interview: false,
+    allHealthy: false
+  });
+
+  // Setup periodic health checks when app loads
+  useEffect(() => {
+    const cancelHealthChecks = setupPeriodicHealthChecks((status) => {
+      setBackendHealth(status);
+      
+      // Show UI notification if backend status changes
+      if (status.allHealthy && !backendHealth.allHealthy) {
+        // Backend services are now available
+        console.log('All backend services are now available');
+      } else if (!status.allHealthy && backendHealth.allHealthy) {
+        // Backend services are no longer available
+        console.error('Some backend services are unavailable');
+      }
+    }, 30000);
+    
+    return () => {
+      cancelHealthChecks();
+    };
+  }, [backendHealth]);
+
   // Initialize saved jobs from localStorage if available
   useEffect(() => {
     const storedSavedJobs = localStorage.getItem('savedJobs');
@@ -935,6 +963,9 @@ export const AppContextProvider = ({ children }) => {
     // Resume management
     currentResume,
     setCurrentResume,
+    
+    // Health status
+    backendHealth,
   };
   
   return (
@@ -942,4 +973,19 @@ export const AppContextProvider = ({ children }) => {
       {children}
     </AppContext.Provider>
   );
+};
+
+// Add a custom hook for backend health status
+export const useBackendHealth = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useBackendHealth must be used within an AppContextProvider');
+  }
+  
+  return {
+    backendHealth: context.backendHealth,
+    isMainBackendHealthy: context.backendHealth?.main || false,
+    isInterviewBackendHealthy: context.backendHealth?.interview || false,
+    areAllServicesHealthy: context.backendHealth?.allHealthy || false
+  };
 }; 

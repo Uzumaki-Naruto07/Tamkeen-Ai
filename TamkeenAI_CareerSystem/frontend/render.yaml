@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: tamkeen-frontend
+    env: static
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    staticPublishPath: ./dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://tamkeen-main-api.onrender.com # Update with your actual backend URL 
