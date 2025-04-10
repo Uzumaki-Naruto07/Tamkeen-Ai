@@ -29,6 +29,10 @@ services:
         value: /opt/render/project/src/nltk_data
       - key: MONGO_TLS
         value: CERT_NONE
+      - key: CORS_ORIGINS
+        value: http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3001,http://127.0.0.1:3001,https://hessa-tamkeen-ai.netlify.app,https://*.netlify.app
+      - key: CORS_CREDENTIALS
+        value: true
 
   # Interview API (Port 5002)
   - type: web
@@ -60,6 +64,10 @@ services:
         value: /opt/render/project/src/nltk_data
       - key: MONGO_TLS
         value: CERT_NONE
+      - key: CORS_ORIGINS
+        value: http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3001,http://127.0.0.1:3001,https://hessa-tamkeen-ai.netlify.app,https://*.netlify.app
+      - key: CORS_CREDENTIALS
+        value: true
 
   # Predict API Server (Port 5003)
   - type: web
@@ -93,6 +101,10 @@ services:
         value: /opt/render/project/src/nltk_data
       - key: MONGO_TLS
         value: CERT_NONE
+      - key: CORS_ORIGINS
+        value: http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3001,http://127.0.0.1:3001,https://hessa-tamkeen-ai.netlify.app,https://*.netlify.app
+      - key: CORS_CREDENTIALS
+        value: true
 
   # Upload Server (Port 5004)
   - type: web
@@ -124,3 +136,7 @@ services:
         value: /opt/render/project/src/nltk_data
       - key: MONGO_TLS
         value: CERT_NONE
+      - key: CORS_ORIGINS
+        value: http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3001,http://127.0.0.1:3001,https://hessa-tamkeen-ai.netlify.app,https://*.netlify.app
+      - key: CORS_CREDENTIALS
+        value: true
