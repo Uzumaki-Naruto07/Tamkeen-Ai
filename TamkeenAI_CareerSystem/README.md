@@ -246,14 +246,14 @@ curl http://localhost:5001/api/interviews/topics
 To run the ATS resume analysis features, you need to start the simple upload server:
 
 ```bash
-cd TamkeenAI_CareerSystem && lsof -i :5001 -t | xargs kill -9 2>/dev/null || true && cd backend && python simple_upload_server.py
+cd TamkeenAI_CareerSystem && lsof -i :5001 -t | xargs kill -9 2>/dev/null || true && cd backend && python simple_upload_server.py --port 5004
 ```
 
-This command:
-- Changes to the TamkeenAI_CareerSystem directory
-- Kills any process running on port 5001
-- Changes to the backend directory
-- Starts the simple upload server on port 5001
+This server runs the following key endpoints:
+- Resume analysis: http://localhost:5004/api/ats/analyze-resume
+- DeepSeek interview analysis: http://localhost:5004/api/interview/analyze-with-deepseek
+
+**Note**: The Mock Interview module uses port 5004 for speech-to-text analysis. If you see errors like "Failed to fetch" when using the Mock Interview feature, make sure the simple_upload_server.py is running on port 5004.
 
 #### Solution 3: Update Your Frontend Environment
 

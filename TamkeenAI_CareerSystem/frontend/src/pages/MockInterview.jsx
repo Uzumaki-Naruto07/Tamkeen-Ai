@@ -75,16 +75,16 @@ const mockInterviewApi = {
     const transcriptionText = formData.get('transcription') || '';
     
     try {
-      // Analyze text for features and scores
+    // Analyze text for features and scores
       const analysis = await analyzeResponseText(transcriptionText);
       console.log('Detailed analysis results:', analysis);
-      
-      // Simulate processing time
+    
+    // Simulate processing time
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+    
       // Ensure all required fields are present with fallbacks
-      return {
-        data: {
+    return {
+      data: {
           clarity: analysis.communication || 0,
           relevance: analysis.relevance || 0, 
           confidence: analysis.confidence || 0,
@@ -262,12 +262,12 @@ const analyzeResponseText = async (text, question, jobRole) => {
     } else if (wordCount >= 5) {
       overallScore = 30;
       category = "Needs Improvement";
-    } else {
+  } else {
       overallScore = 10;
       category = "Poor";
-    }
-    
-    return {
+  }
+  
+  return {
       overallScore: overallScore,
       technical: overallScore,
       communication: overallScore,
@@ -711,7 +711,7 @@ const MockInterview = () => {
     
     // Only start recording if we have permissions
     if (permissionsGranted.camera && permissionsGranted.microphone) {
-      startRecording();
+    startRecording();
     } else {
       console.log('Skipping recording - no camera/mic permissions');
     }
@@ -834,7 +834,7 @@ const MockInterview = () => {
               setTimeout(() => {
                 if (recording) {
                   try {
-                    recognition.start();
+                  recognition.start();
                   } catch (e) {
                     console.error('Failed to restart recognition after error:', e);
                   }
@@ -909,7 +909,7 @@ const MockInterview = () => {
         // Start the recognition
         try {
           recognition.start();
-          console.log('Speech recognition initialized successfully');
+        console.log('Speech recognition initialized successfully');
         } catch (startError) {
           console.error('Error starting initial speech recognition:', startError);
         }
@@ -961,7 +961,7 @@ const MockInterview = () => {
             if (event.results[i].isFinal) {
               finalTranscript += transcript + ' ';
               console.log('Final transcript segment:', transcript);
-            } else {
+      } else {
               interimTranscript += transcript;
             }
           }
@@ -1012,12 +1012,12 @@ const MockInterview = () => {
           return;
         }
         
-        recognitionRef.current.start();
-        console.log('Started speech recognition');
+      recognitionRef.current.start();
+      console.log('Started speech recognition');
         setIsTranscribing(true);
-      } catch (error) {
-        console.error('Error starting speech recognition:', error);
-        
+    } catch (error) {
+      console.error('Error starting speech recognition:', error);
+      
         // If error is "already started", don't recreate
         if (error.message && error.message.includes('already started')) {
           console.log('Recognition already started, continuing with existing instance');
@@ -1100,7 +1100,7 @@ const MockInterview = () => {
     }
     
     // Reset chunks at the start of each recording
-    videoChunksRef.current = [];
+      videoChunksRef.current = [];
     audioChunksRef.current = [];
     
     // Clear previous transcription
@@ -1117,7 +1117,7 @@ const MockInterview = () => {
       const hasAudioTrack = streamRef.current.getAudioTracks().length > 0;
       
       if (hasVideoTrack && hasAudioTrack) {
-        console.log('Stream has video and audio tracks, starting recording');
+      console.log('Stream has video and audio tracks, starting recording');
       } else {
         console.warn(`Stream missing tracks: video=${hasVideoTrack}, audio=${hasAudioTrack}`);
       }
@@ -1156,16 +1156,16 @@ const MockInterview = () => {
         if (!mediaRecorderCreated) {
           throw new Error('None of the codec options are supported');
         }
-      } catch (finalError) {
+          } catch (finalError) {
         console.error('Could not create MediaRecorder with any options', finalError);
-        setError('Your browser does not support recording. Please try a different browser like Chrome or Edge.');
-        return;
+            setError('Your browser does not support recording. Please try a different browser like Chrome or Edge.');
+            return;
       }
       
       console.log('MediaRecorder created with options:', options);
       
       // Setup event handlers BEFORE starting recording
-
+      
       // Handle data available event
       mediaRecorderRef.current.ondataavailable = (event) => {
         console.log('Recording data available, size:', event.data.size);
@@ -1193,14 +1193,14 @@ const MockInterview = () => {
             setAnswerVideoUrl(videoUrl);
           } else {
             setError('No video or audio was recorded. Please check your camera and microphone permissions.');
-            return;
-          }
+          return;
+        }
         } else {
           // Create video blob with all chunks
-          const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
-          const videoUrl = URL.createObjectURL(videoBlob);
-          setAnswerVideoUrl(videoUrl);
-          console.log('Video URL created:', videoUrl);
+        const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
+        const videoUrl = URL.createObjectURL(videoBlob);
+        setAnswerVideoUrl(videoUrl);
+        console.log('Video URL created:', videoUrl);
         }
         
         // Store the original transcription before any modifications
@@ -1218,7 +1218,7 @@ const MockInterview = () => {
         // Modified criteria to be less strict - only treat as no speech if truly empty or default message
         const noSpeechDetected = 
           finalTranscription.includes("I didn't catch what you said") || 
-          finalTranscription.includes("No speech detected") ||
+                                  finalTranscription.includes("No speech detected") ||
           finalTranscription.trim().length === 0;
         
         // For no speech detected, enforce scores of 0
@@ -1242,33 +1242,33 @@ const MockInterview = () => {
         } : analysis;
         
         try {
-          // Save answer with transcription and analysis
-          const newAnswer = {
-            questionIndex: currentQuestionIndex,
-            question: interviewQuestions[currentQuestionIndex],
+        // Save answer with transcription and analysis
+        const newAnswer = {
+          questionIndex: currentQuestionIndex,
+          question: interviewQuestions[currentQuestionIndex],
             videoBlob: videoChunksRef.current.length > 0 
               ? new Blob(videoChunksRef.current, { type: 'video/webm' })
               : new Blob(audioChunksRef.current, { type: 'audio/webm' }),
             videoUrl: answerVideoUrl,
-            duration: answerTime,
+          duration: answerTime,
             transcription: originalTranscription || finalTranscription,
-            analysis: finalAnalysis
-          };
-          
-          // Save to answers array
-          setAnswers(prev => {
-            const updatedAnswers = Array.isArray(prev) ? [...prev] : [];
-            updatedAnswers[currentQuestionIndex] = newAnswer;
-            return updatedAnswers;
-          });
-          
-          // If no transcription was captured, set a clear message
+          analysis: finalAnalysis
+        };
+        
+        // Save to answers array
+        setAnswers(prev => {
+          const updatedAnswers = Array.isArray(prev) ? [...prev] : [];
+          updatedAnswers[currentQuestionIndex] = newAnswer;
+          return updatedAnswers;
+        });
+        
+        // If no transcription was captured, set a clear message
           if (!originalTranscription || originalTranscription.trim() === '') {
             console.log('No speech detected or transcription empty, setting explicit message');
-            setTranscription('No speech detected. Please check your microphone and try speaking more clearly.');
-          }
-          
-          // Get quick feedback
+          setTranscription('No speech detected. Please check your microphone and try speaking more clearly.');
+        }
+        
+        // Get quick feedback
           generateQuickFeedback(newAnswer.videoBlob, originalTranscription || 'No speech detected');
         } catch (saveError) {
           console.error('Error saving answer:', saveError);
@@ -1313,7 +1313,7 @@ const MockInterview = () => {
       // Create form data with video blob and/or text
       const formData = new FormData();
       if (videoBlob) {
-        formData.append('video', videoBlob);
+      formData.append('video', videoBlob);
       }
       formData.append('questionIndex', currentQuestionIndex);
       formData.append('interviewId', interviewId);
@@ -1401,7 +1401,7 @@ const MockInterview = () => {
     if (nextIndex < interviewQuestions.length) {
       // Allow a brief delay for cleanup
       setTimeout(() => {
-        askQuestion(nextIndex);
+      askQuestion(nextIndex);
       }, 300);
     } else {
       handleInterviewComplete();
@@ -1592,14 +1592,14 @@ const MockInterview = () => {
           if (!answerVideoUrl && videoChunksRef.current.length > 0) {
             console.log('Processing transcription manually after timeout');
             // Create video blob with all chunks
-            const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
-            const videoUrl = URL.createObjectURL(videoBlob);
-            setAnswerVideoUrl(videoUrl);
-            
+          const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
+          const videoUrl = URL.createObjectURL(videoBlob);
+          setAnswerVideoUrl(videoUrl);
+          
             // Process transcription
             const finalTranscription = currentTranscription || "I didn't catch what you said. Please speak more clearly next time.";
-            const analysis = analyzeResponseText(finalTranscription);
-            
+          const analysis = analyzeResponseText(finalTranscription);
+          
             // Save answer with transcription and analysis
             const newAnswer = {
               questionIndex: currentQuestionIndex,

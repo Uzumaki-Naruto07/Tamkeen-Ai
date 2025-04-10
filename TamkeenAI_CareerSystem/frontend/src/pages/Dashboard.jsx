@@ -2834,7 +2834,11 @@ const Dashboard = () => {
                 elevation={0}
               >
                 {/* Add the SkillTransitionChart component and pass the userId */}
-                <SkillTransitionChart userId={user?.id} />
+                <SkillTransitionChart 
+                  skillData={{ userId: user?.id }} 
+                  userId={user?.id} 
+                  targetRole={user?.targetJob || user?.desiredRole || 'Software Engineer'} 
+                />
               </Paper>
             </Grid>
           </Grid>

@@ -1197,14 +1197,96 @@ const SkillsAssessment = () => {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Generate mock results
+      // Generate mock results with more meaningful strengths and weaknesses
+      const correctPercentage = responses ? Object.keys(responses).length / assessmentQuestions.length : 0.7;
+      
+      // Generate meaningful strengths and weaknesses based on performance
+      const generateStrengthsAndWeaknesses = () => {
+        const allTopics = {
+          'tech-skills': {
+            strengths: [
+              'Technical knowledge application',
+              'Problem solving fundamentals',
+              'Code structure understanding'
+            ],
+            weaknesses: [
+              'Advanced optimization techniques',
+              'Complex algorithm implementation',
+              'Edge case handling'
+            ]
+          },
+          'soft-skills': {
+            strengths: [
+              'Communication clarity',
+              'Teamwork concepts',
+              'Basic leadership principles'
+            ],
+            weaknesses: [
+              'Conflict resolution strategies',
+              'Advanced negotiation techniques',
+              'Cross-cultural communication'
+            ]
+          },
+          'data-skills': {
+            strengths: [
+              'Data interpretation basics',
+              'Statistical understanding',
+              'Pattern recognition'
+            ],
+            weaknesses: [
+              'Complex data modeling',
+              'Advanced statistical analysis',
+              'Big data processing techniques'
+            ]
+          },
+          'problem-solving': {
+            strengths: [
+              'Logical thinking',
+              'Step-by-step problem analysis',
+              'Solution validation'
+            ],
+            weaknesses: [
+              'Complex problem decomposition',
+              'Optimization strategies',
+              'Handling ambiguous problems'
+            ]
+          }
+        };
+        
+        // Default to tech skills if category not found
+        const category = selectedCategory?.id || 'tech-skills';
+        const topics = allTopics[category] || allTopics['tech-skills'];
+        
+        // Select strengths and weaknesses based on performance
+        let strengths = [];
+        let weaknesses = [];
+        
+        if (correctPercentage > 0.8) {
+          // High performance - more strengths, fewer weaknesses
+          strengths = topics.strengths;
+          weaknesses = [topics.weaknesses[0]];
+        } else if (correctPercentage > 0.6) {
+          // Medium performance - balance of strengths and weaknesses
+          strengths = [topics.strengths[0], topics.strengths[1]];
+          weaknesses = [topics.weaknesses[0], topics.weaknesses[1]];
+        } else {
+          // Lower performance - fewer strengths, more weaknesses
+          strengths = [topics.strengths[0]];
+          weaknesses = topics.weaknesses;
+        }
+        
+        return { strengths, weaknesses };
+      };
+      
+      const { strengths, weaknesses } = generateStrengthsAndWeaknesses();
+      
       const mockResults = {
-        score: Math.floor(Math.random() * 35) + 65, // Random score between 65-100
+        score: Math.floor(correctPercentage * 100),
         maxScore: 100,
-        correctAnswers: Math.floor(assessmentQuestions.length * 0.8), // 80% correct
+        correctAnswers: Math.floor(assessmentQuestions.length * correctPercentage),
         totalQuestions: assessmentQuestions.length,
-        strengths: ['Problem solving', 'Technical knowledge'],
-        weaknesses: ['Optimization techniques', 'Advanced algorithms'],
+        strengths: strengths,
+        weaknesses: weaknesses,
         recommendations: [
           'Practice more dynamic programming problems',
           'Study complexity analysis in more depth',
@@ -1267,7 +1349,7 @@ const SkillsAssessment = () => {
       const userId = profile?.id || 'guest-user';
       const assessmentHistory = JSON.parse(localStorage.getItem(`assessment_history_${userId}`)) || [];
       
-      // Create assessment result entry
+      // Create assessment result entry with complete data
       const assessmentResult = {
         id: `assessment-${Date.now()}`,
         userId: userId,
@@ -1277,17 +1359,38 @@ const SkillsAssessment = () => {
         score: mockResults.score,
         maxScore: mockResults.maxScore,
         completedAt: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
+        totalCorrect: mockResults.correctAnswers,
+        totalQuestions: mockResults.totalQuestions,
+        strengths: mockResults.strengths || [],
+        weaknesses: mockResults.weaknesses || [],
+        recommendations: mockResults.recommendations || [],
+        categoryName: selectedCategory?.name,
         demand: selectedCategory?.id === 'tech-skills' ? 'High' : 'Medium',
-        relevance: 85
+        relevance: 85,
+        // Save user's answers for reference
+        userResponses: responses
       };
       
-      // Add to history and save
-      assessmentHistory.push(assessmentResult);
-      localStorage.setItem(`assessment_history_${userId}`, JSON.stringify(assessmentHistory));
+      // Add to history and save to user-specific storage - put newest first
+      assessmentHistory.unshift(assessmentResult);
+      
+      // Keep only the most recent 10 assessments to avoid localStorage size issues
+      const trimmedHistory = assessmentHistory.slice(0, 10);
+      
+      // Save to both localStorage keys
+      localStorage.setItem(`assessment_history_${userId}`, JSON.stringify(trimmedHistory));
+      localStorage.setItem('skillAssessmentHistory', JSON.stringify(trimmedHistory));
+      
       console.log('Saved assessment result to localStorage:', assessmentResult);
       
-      // Trigger an event so other components can know assessment data has changed
-      window.dispatchEvent(new CustomEvent('assessmentDataChanged', { detail: assessmentResult }));
+      // Trigger an event so dashboard components can refresh
+      window.dispatchEvent(new CustomEvent('assessmentDataChanged', { 
+        detail: { 
+          result: assessmentResult,
+          type: 'skill-assessment'
+        } 
+      }));
       
       // Move to results step
       setActiveStep(2);
@@ -1595,6 +1698,88 @@ const SkillsAssessment = () => {
             { id: 'b', text: 'Ignore it completely' },
             { id: 'c', text: 'Listen carefully and use it to improve' },
             { id: 'd', text: "Criticize the other person's work in return" }
+          ],
+          difficulty: 'medium',
+          correctAnswer: 'c'
+        }
+      ],
+      'data-analysis': [
+        {
+          id: 'q1',
+          text: 'Which of the following is NOT a common data visualization technique?',
+          type: 'multiple-choice',
+          options: [
+            { id: 'a', text: 'Bar Chart' },
+            { id: 'b', text: 'Pie Chart' },
+            { id: 'c', text: 'Tornado Diagram' },
+            { id: 'd', text: 'Confusion Matrix' }
+          ],
+          difficulty: 'medium',
+          correctAnswer: 'c'
+        },
+        {
+          id: 'q2',
+          text: 'What statistical measure is most appropriate for identifying the central tendency of a skewed distribution?',
+          type: 'multiple-choice',
+          options: [
+            { id: 'a', text: 'Mean' },
+            { id: 'b', text: 'Median' },
+            { id: 'c', text: 'Mode' },
+            { id: 'd', text: 'Standard Deviation' }
+          ],
+          difficulty: 'medium',
+          correctAnswer: 'b'
+        },
+        {
+          id: 'q3',
+          text: 'Which algorithm is commonly used for classification in machine learning?',
+          type: 'multiple-choice',
+          options: [
+            { id: 'a', text: 'K-means' },
+            { id: 'b', text: 'Linear Regression' },
+            { id: 'c', text: 'Random Forest' },
+            { id: 'd', text: 'Principal Component Analysis' }
+          ],
+          difficulty: 'hard',
+          correctAnswer: 'c'
+        }
+      ],
+      'problem-solving': [
+        {
+          id: 'q1',
+          text: 'What is the first step in a structured problem-solving approach?',
+          type: 'multiple-choice',
+          options: [
+            { id: 'a', text: 'Implement solutions' },
+            { id: 'b', text: 'Define the problem' },
+            { id: 'c', text: 'Evaluate alternatives' },
+            { id: 'd', text: 'Generate solutions' }
+          ],
+          difficulty: 'easy',
+          correctAnswer: 'b'
+        },
+        {
+          id: 'q2',
+          text: 'Which problem-solving technique involves breaking a complex problem into smaller, manageable parts?',
+          type: 'multiple-choice',
+          options: [
+            { id: 'a', text: 'Trial and error' },
+            { id: 'b', text: 'Brainstorming' },
+            { id: 'c', text: 'Decomposition' },
+            { id: 'd', text: 'Lateral thinking' }
+          ],
+          difficulty: 'medium',
+          correctAnswer: 'c'
+        },
+        {
+          id: 'q3',
+          text: 'When facing a difficult technical problem with multiple potential solutions, what is the best approach?',
+          type: 'multiple-choice',
+          options: [
+            { id: 'a', text: 'Choose the first solution that comes to mind' },
+            { id: 'b', text: 'Select the most complex solution to show expertise' },
+            { id: 'c', text: 'Evaluate trade-offs between different approaches' },
+            { id: 'd', text: 'Immediately escalate to senior management' }
           ],
           difficulty: 'medium',
           correctAnswer: 'c'

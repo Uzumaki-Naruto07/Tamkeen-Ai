@@ -390,40 +390,142 @@ const SkillAssessment = ({
     }
   };
   
-  const handleCompleteAssessment = () => {
-    const correctAnswers = currentAssessment.questions.filter(
-      q => assessmentResponses[q.id] === q.correctAnswer
-    ).length;
+  const handleCompleteAssessment = async () => {
+    if (!currentAssessment) return;
     
-    const score = Math.round((correctAnswers / currentAssessment.questions.length) * 100);
+    setSubmitting(true);
+    setError(null);
     
-    // Determine skill level based on score
-    let skillLevel = 1;
-    if (score >= 90) skillLevel = 5;
-    else if (score >= 75) skillLevel = 4;
-    else if (score >= 60) skillLevel = 3;
-    else if (score >= 40) skillLevel = 2;
-    
-    const result = {
-      assessmentId: currentAssessment.id,
-      skillName: currentAssessment.skillName,
-      score,
-      skillLevel,
-      completedAt: new Date().toISOString(),
-      correctAnswers,
-      totalQuestions: currentAssessment.questions.length
-    };
-    
-    setAssessmentResults(result);
-    
-    // Update skill level
-    handleUpdateSkillLevel(
-      userSkills.find(s => s.name === currentAssessment.skillName)?.id,
-      skillLevel
-    );
-    
-    if (onCompleteAssessment) {
-      onCompleteAssessment(result);
+    try {
+      // This connects to the backend quiz engine
+      const response = await apiEndpoints.skills.submitAssessment({
+        assessmentId: currentAssessment.id,
+        userId: profile.id,
+        answers: answers,
+        completedAt: new Date().toISOString()
+      });
+      
+      setResults(response.data);
+      setAssessmentComplete(true);
+      setAssessmentInProgress(false);
+      
+      // Create mock question responses with correct answers for display
+      const questionResponses = currentAssessment.questions.map(question => {
+        const userAnswer = answers[question.id];
+        const isCorrect = userAnswer === question.correctAnswer;
+        
+        // Get text representations for user answer and correct answer
+        const userAnswerText = question.options.find(opt => opt.id === userAnswer)?.text || 'No answer provided';
+        const correctAnswerText = question.options.find(opt => opt.id === question.correctAnswer)?.text || 'Unknown';
+        
+        return {
+          questionId: question.id,
+          questionText: question.text,
+          userAnswer: userAnswerText,
+          correctAnswer: correctAnswerText,
+          isCorrect: isCorrect,
+          explanation: question.explanation || `The correct answer is "${correctAnswerText}".`
+        };
+      });
+      
+      // Save assessment data to localStorage for dashboard display
+      const userId = profile?.id || 'guest-user';
+      const assessmentHistory = JSON.parse(localStorage.getItem(`assessment_history_${userId}`)) || [];
+      
+      // Create a structured assessment result with all necessary data
+      const assessmentResult = {
+        id: `assessment-${Date.now()}`,
+        userId: userId,
+        assessmentId: currentAssessment.id,
+        skillName: currentAssessment.skillName || 'General Skills',
+        title: currentAssessment.title,
+        skillCategory: currentAssessment.skillCategory || 'technical',
+        score: response.data.score,
+        maxScore: response.data.maxScore || 100,
+        completedAt: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
+        totalCorrect: response.data.correctAnswers || 0,
+        totalQuestions: currentAssessment.questions.length,
+        strengths: response.data.strengths || ['Technical knowledge', 'Domain expertise'],
+        weaknesses: response.data.weaknesses || ['Advanced concepts'],
+        recommendations: response.data.recommendations || ['Practice more examples'],
+        categoryName: currentAssessment.title,
+        userResponses: answers
+      };
+      
+      // Add to history (newest first)
+      assessmentHistory.unshift(assessmentResult);
+      
+      // Keep only the last 10 assessments to conserve space
+      const trimmedHistory = assessmentHistory.slice(0, 10);
+      
+      // Save to both localStorage locations
+      localStorage.setItem(`assessment_history_${userId}`, JSON.stringify(trimmedHistory));
+      localStorage.setItem('skillAssessmentHistory', JSON.stringify(trimmedHistory));
+      
+      console.log('Saved skill assessment result to localStorage:', assessmentResult);
+      
+      // Trigger event for dashboard components to refresh
+      window.dispatchEvent(new CustomEvent('assessmentDataChanged', { 
+        detail: { 
+          result: assessmentResult,
+          type: 'skill-assessment'
+        } 
+      }));
+
+      // Call onCompleteAssessment with detailed results including question responses
+      if (typeof onCompleteAssessment === 'function') {
+        onCompleteAssessment({
+          assessmentId: currentAssessment.id,
+          score: response.data.score,
+          maxScore: response.data.maxScore,
+          questionResponses: questionResponses,
+          title: currentAssessment.title
+        });
+      }
+      
+      // Get skill insights based on results
+      if (response.data.score !== undefined) {
+        try {
+          const insightsResponse = await apiEndpoints.skills.getSkillInsights({
+            userId: profile.id,
+            assessmentId: currentAssessment.id,
+            score: response.data.score,
+            skillCategory: currentAssessment.skillCategory
+          });
+          
+          setSkillInsights(insightsResponse.data);
+        } catch (err) {
+          console.error('Error fetching skill insights:', err);
+        }
+      }
+      
+      // Update user profile with completed assessment
+      try {
+        await apiEndpoints.user.updateProfile(profile.id, {
+          completedAssessments: [
+            ...(profile.completedAssessments || []),
+            {
+              assessmentId: currentAssessment.id,
+              score: results.score,
+              maxScore: results.maxScore,
+              completedAt: new Date().toISOString()
+            }
+          ]
+        });
+      } catch (err) {
+        console.error('Error updating profile with assessment:', err);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to submit assessment');
+      console.error('Error submitting assessment:', err);
+    } finally {
+      setSubmitting(false);
+      // Clear any timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     }
   };
   
@@ -496,7 +598,7 @@ const SkillAssessment = ({
         timerRef.current = setInterval(() => {
           setTimeLeft(prev => {
             if (prev <= 1) {
-              submitAssessment();
+              handleCompleteAssessment();
               return 0;
             }
             return prev - 1;
@@ -556,102 +658,7 @@ const SkillAssessment = ({
     if (currentQuestionIndex < currentAssessment.questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      submitAssessment();
-    }
-  };
-  
-  // Submit assessment for grading
-  const submitAssessment = async () => {
-    if (!currentAssessment) return;
-    
-    setSubmitting(true);
-    setError(null);
-    
-    try {
-      // This connects to the backend quiz engine
-      const response = await apiEndpoints.skills.submitAssessment({
-        assessmentId: currentAssessment.id,
-        userId: profile.id,
-        answers: answers,
-        completedAt: new Date().toISOString()
-      });
-      
-      setResults(response.data);
-      setAssessmentComplete(true);
-      setAssessmentInProgress(false);
-      
-      // Create mock question responses with correct answers for display
-      const questionResponses = currentAssessment.questions.map(question => {
-        const userAnswer = answers[question.id];
-        const isCorrect = userAnswer === question.correctAnswer;
-        
-        // Get text representations for user answer and correct answer
-        const userAnswerText = question.options.find(opt => opt.id === userAnswer)?.text || 'No answer provided';
-        const correctAnswerText = question.options.find(opt => opt.id === question.correctAnswer)?.text || 'Unknown';
-        
-        return {
-          questionId: question.id,
-          questionText: question.text,
-          userAnswer: userAnswerText,
-          correctAnswer: correctAnswerText,
-          isCorrect: isCorrect,
-          explanation: question.explanation || `The correct answer is "${correctAnswerText}".`
-        };
-      });
-      
-      // Call onCompleteAssessment with detailed results including question responses
-      if (typeof onCompleteAssessment === 'function') {
-        onCompleteAssessment({
-          assessmentId: currentAssessment.id,
-          score: response.data.score,
-          maxScore: response.data.maxScore,
-          questionResponses: questionResponses,
-          title: currentAssessment.title
-        });
-      }
-      
-      // Get skill insights based on results
-      if (response.data.score !== undefined) {
-        try {
-          const insightsResponse = await apiEndpoints.skills.getSkillInsights({
-            userId: profile.id,
-            assessmentId: currentAssessment.id,
-            score: response.data.score,
-            skillCategory: currentAssessment.skillCategory
-          });
-          
-          setSkillInsights(insightsResponse.data);
-        } catch (err) {
-          console.error('Error fetching skill insights:', err);
-        }
-      }
-      
-      // Update user profile with completed assessment
-      try {
-        await apiEndpoints.user.updateProfile(profile.id, {
-          completedAssessments: [
-            ...(profile.completedAssessments || []),
-            {
-              assessmentId: currentAssessment.id,
-              score: results.score,
-              maxScore: results.maxScore,
-              completedAt: new Date().toISOString()
-            }
-          ]
-        });
-      } catch (err) {
-        console.error('Error updating profile with assessment:', err);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit assessment');
-      console.error('Error submitting assessment:', err);
-    } finally {
-      setSubmitting(false);
-      // Clear any timer
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+      handleCompleteAssessment();
     }
   };
   
