@@ -58,7 +58,7 @@ services:
         value: 5004
 
   # Frontend app
-  - type: static
+  - type: static_site
     name: tamkeen-frontend
     env: static
     rootDir: TamkeenAI_CareerSystem/frontend
