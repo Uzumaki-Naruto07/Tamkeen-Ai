@@ -4,7 +4,7 @@ services:
     name: tamkeen-main-api
     runtime: python
     plan: free
-    rootDirectory: TamkeenAI_CareerSystem
+    dir: TamkeenAI_CareerSystem
     buildCommand: pip install -r requirements.txt && pip install nltk scikit-learn numpy==1.26.4 && python -c "import nltk; nltk.download('wordnet')"
     startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
@@ -34,7 +34,7 @@ services:
     name: tamkeen-interview-api
     runtime: python
     plan: free
-    rootDirectory: TamkeenAI_CareerSystem
+    dir: TamkeenAI_CareerSystem
     buildCommand: pip install -r requirements.txt && pip install nltk scikit-learn numpy==1.26.4 && python -c "import nltk; nltk.download('wordnet')"
     startCommand: cd backend && gunicorn interview_api:app --bind 0.0.0.0:$PORT
     envVars:
@@ -64,7 +64,7 @@ services:
     name: tamkeen-upload-server
     runtime: python
     plan: free
-    rootDirectory: TamkeenAI_CareerSystem
+    dir: TamkeenAI_CareerSystem
     buildCommand: pip install -r requirements.txt && pip install nltk scikit-learn numpy==1.26.4 pdfplumber && python -c "import nltk; nltk.download('wordnet'); nltk.download('punkt'); nltk.download('stopwords'); nltk.download('averaged_perceptron_tagger')"
     startCommand: cd backend && gunicorn "simple_upload_server:create_app()" --bind 0.0.0.0:$PORT
     envVars:
