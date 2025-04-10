@@ -94,19 +94,16 @@ const checkBackendAvailability = async () => {
     // Determine if we're in production mode
     const isProduction = import.meta.env.PROD;
     
-    // Get base URL without trailing slash
-    const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001').replace(/\/$/, '');
-    
-    // Construct proper healthCheckUrl without duplicate /api/
-    let healthCheckUrl = baseUrl;
-    
-    // Add /api if not already in the URL
-    if (!baseUrl.endsWith('/api')) {
-      healthCheckUrl = `${baseUrl}/api`;
+    // In production, use the Netlify proxy paths
+    let healthCheckUrl;
+    if (isProduction) {
+      // Use the /api proxy path directly in production
+      healthCheckUrl = '/api/health-check';
+    } else {
+      // Use the complete URL for development
+      const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001').replace(/\/$/, '');
+      healthCheckUrl = baseUrl + '/api/health-check';
     }
-    
-    // Add the health-check endpoint
-    healthCheckUrl = `${healthCheckUrl}/health-check`;
     
     console.log('Checking backend availability at:', healthCheckUrl);
     

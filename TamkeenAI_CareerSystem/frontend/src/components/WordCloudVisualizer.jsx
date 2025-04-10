@@ -8,10 +8,28 @@ import resumeApi from '../utils/resumeApi';
 // Dynamic import for React WordCloud with error handling
 let ReactWordcloud = null;
 try {
-  // Try to import ReactWordcloud
-  ReactWordcloud = React.lazy(() => import('react-wordcloud'));
+  // Try to import ReactWordcloud - this might fail during build process
+  // Use React.lazy to defer loading until component renders
+  const WordCloudModule = React.lazy(() => 
+    import('react-wordcloud')
+      .catch(error => {
+        console.error('Failed to load react-wordcloud:', error);
+        return { default: () => null };
+      })
+  );
+  
+  // Create a wrapped component that handles potential errors
+  ReactWordcloud = (props) => {
+    return (
+      <React.Suspense fallback={<CircularProgress />}>
+        <WordCloudModule {...props} />
+      </React.Suspense>
+    );
+  };
 } catch (error) {
-  console.error('Error importing ReactWordcloud:', error);
+  console.error('Error setting up ReactWordcloud:', error);
+  // Provide a fallback component
+  ReactWordcloud = () => null;
 }
 
 const WordCloudVisualizer = ({ resumeId, resumeFile, jobData = {}, analysisData }) => {
@@ -269,9 +287,7 @@ const WordCloudVisualizer = ({ resumeId, resumeFile, jobData = {}, analysisData 
       </Box>
       
       <Box sx={{ flexGrow: 1, minHeight: 300 }}>
-        <React.Suspense fallback={<CircularProgress />}>
-          <ReactWordcloud words={currentWords} options={options} callbacks={callbacks} />
-        </React.Suspense>
+        <ReactWordcloud words={currentWords} options={options} callbacks={callbacks} />
       </Box>
 
       <Typography variant="caption" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
