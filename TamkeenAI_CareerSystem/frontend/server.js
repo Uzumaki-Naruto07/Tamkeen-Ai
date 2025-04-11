@@ -89,6 +89,42 @@ app.use('/api/interviews', createProxyWithCors('/api/interviews', INTERVIEW_API_
 app.use('/api/predict', createProxyWithCors('/api/predict', PREDICT_API_URL));
 app.use('/api/upload', createProxyWithCors('/api/upload', UPLOAD_SERVER_URL));
 
+// Add a proxy specifically for backend health checks with verbose logging
+app.use('/api/backend-health', (req, res) => {
+  console.log('Proxy health check request received');
+  
+  const healthProxy = createProxyMiddleware({
+    target: MAIN_API_URL,
+    changeOrigin: true,
+    pathRewrite: {
+      '^/api/backend-health': '/api/health-check'
+    },
+    onProxyReq: (proxyReq, req, res) => {
+      console.log('Forwarding health check to backend:', MAIN_API_URL);
+      proxyReq.setHeader('Origin', MAIN_API_URL);
+    },
+    onProxyRes: (proxyRes, req, res) => {
+      console.log('Backend health check response:', proxyRes.statusCode);
+      // Add CORS headers to proxy response
+      proxyRes.headers['Access-Control-Allow-Origin'] = '*';
+      proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+      proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Auth-Token, Accept';
+      proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
+    },
+    onError: (err, req, res) => {
+      console.error('Health check proxy error:', err);
+      res.status(500).json({
+        status: 'error',
+        message: 'Health check proxy error',
+        error: err.message
+      });
+    },
+    logLevel: 'debug'
+  });
+  
+  healthProxy(req, res);
+});
+
 // Main API catches all other /api routes
 app.use('/api', createProxyWithCors('/api', MAIN_API_URL));
 
@@ -144,6 +180,139 @@ app.all('/api/auth/login', (req, res, next) => {
   });
   
   loginProxy(req, res, next);
+});
+
+// Create a CORS-fix JS file that can be included in any HTML page
+app.get('/cors-fix.js', (req, res) => {
+  const script = `
+    // Tamkeen API CORS Fix Script
+    // This script automatically intercepts direct API calls to backend services
+    // and routes them through the proxy to avoid CORS issues
+    (function() {
+      console.log('Initializing Tamkeen API CORS Fix');
+      
+      // List of backend hostnames that should be proxied
+      const BACKEND_HOSTNAMES = [
+        'tamkeen-main-api.onrender.com',
+        'tamkeen-interview-api.onrender.com',
+        'tamkeen-predict-api.onrender.com',
+        'tamkeen-upload-server.onrender.com'
+      ];
+      
+      // Patch the XMLHttpRequest to intercept direct backend API calls
+      const originalOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+        let newUrl = url;
+        
+        try {
+          // Skip transformation for relative URLs
+          if (url.startsWith('http')) {
+            const urlObj = new URL(url);
+            const isBackendUrl = BACKEND_HOSTNAMES.some(hostname => 
+              urlObj.hostname.includes(hostname)
+            );
+            
+            if (isBackendUrl) {
+              const pathWithSearch = urlObj.pathname + urlObj.search;
+              // If the path already starts with /api, use it as is
+              // Otherwise prefix it with /api
+              const apiPath = pathWithSearch.startsWith('/api') 
+                ? pathWithSearch 
+                : '/api' + pathWithSearch;
+              
+              console.log('API CORS Fix: Redirecting ' + url + ' → ' + apiPath);
+              newUrl = apiPath;
+            }
+          }
+        } catch (e) {
+          console.error('Error transforming URL:', e);
+        }
+        
+        return originalOpen.call(this, method, newUrl, async, user, password);
+      };
+      
+      // Patch the fetch API to intercept direct backend API calls
+      const originalFetch = window.fetch;
+      window.fetch = function(resource, init) {
+        // If the resource is a string URL, transform it
+        if (typeof resource === 'string') {
+          try {
+            // Skip transformation for relative URLs
+            if (resource.startsWith('http')) {
+              const urlObj = new URL(resource);
+              const isBackendUrl = BACKEND_HOSTNAMES.some(hostname => 
+                urlObj.hostname.includes(hostname)
+              );
+              
+              if (isBackendUrl) {
+                const pathWithSearch = urlObj.pathname + urlObj.search;
+                // If the path already starts with /api, use it as is
+                // Otherwise prefix it with /api
+                const apiPath = pathWithSearch.startsWith('/api') 
+                  ? pathWithSearch 
+                  : '/api' + pathWithSearch;
+                
+                console.log('API CORS Fix: Redirecting ' + resource + ' → ' + apiPath);
+                resource = apiPath;
+              }
+            }
+          } catch (e) {
+            console.error('Error transforming URL in fetch:', e);
+          }
+        } 
+        // If it's a Request object, we need to create a new one with the transformed URL
+        else if (resource instanceof Request && resource.url.startsWith('http')) {
+          try {
+            const urlObj = new URL(resource.url);
+            const isBackendUrl = BACKEND_HOSTNAMES.some(hostname => 
+              urlObj.hostname.includes(hostname)
+            );
+            
+            if (isBackendUrl) {
+              const pathWithSearch = urlObj.pathname + urlObj.search;
+              const apiPath = pathWithSearch.startsWith('/api') 
+                ? pathWithSearch 
+                : '/api' + pathWithSearch;
+              
+              console.log('API CORS Fix: Redirecting Request ' + resource.url + ' → ' + apiPath);
+              
+              // Create a new request with the transformed URL
+              const newRequest = new Request(apiPath, {
+                method: resource.method,
+                headers: resource.headers,
+                body: resource.body,
+                mode: resource.mode,
+                credentials: resource.credentials,
+                cache: resource.cache,
+                redirect: resource.redirect,
+                referrer: resource.referrer,
+                referrerPolicy: resource.referrerPolicy,
+                integrity: resource.integrity,
+                keepalive: resource.keepalive,
+                signal: resource.signal
+              });
+              
+              resource = newRequest;
+            }
+          } catch (e) {
+            console.error('Error transforming Request:', e);
+          }
+        }
+        
+        return originalFetch.call(window, resource, init);
+      };
+      
+      console.log('Tamkeen API CORS Fix initialized successfully');
+    })();
+  `;
+  
+  res.set('Content-Type', 'application/javascript');
+  res.send(script);
+});
+
+// Add a diagnostic page for API connectivity issues
+app.get('/api-diagnostics', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'cors-fix.html'));
 });
 
 // Serve static files from the dist directory

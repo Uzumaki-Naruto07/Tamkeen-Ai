@@ -18,7 +18,7 @@ import assessmentApi from '../api/assessment';
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:5001') + '/api',
+  baseURL: '/api', // Use relative URL to work with proxy
   timeout: 5000, // Reduced timeout for faster fallback to mock data
   headers: {
     'Content-Type': 'application/json',
@@ -30,7 +30,7 @@ const api = axios.create({
 
 // Create a separate instance for interview API
 const interviewApi = axios.create({
-  baseURL: (import.meta.env.VITE_INTERVIEW_API_URL || 'http://localhost:5001') + '/api',
+  baseURL: '/api/interviews', // Use relative URL to work with proxy
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
@@ -38,6 +38,27 @@ const interviewApi = axios.create({
     'X-Requested-With': 'XMLHttpRequest'
   },
   withCredentials: false // Keep as false to avoid CORS issues with wildcard origin responses
+});
+
+// Create a separate instance for prediction API
+const predictApi = axios.create({
+  baseURL: '/api/predict', // Use relative URL to work with proxy
+  timeout: 5000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
+  }
+});
+
+// Create a separate instance for upload API
+const uploadApi = axios.create({
+  baseURL: '/api/upload', // Use relative URL to work with proxy
+  timeout: 30000, // Longer timeout for uploads
+  headers: {
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
+  }
 });
 
 // Set up global variable to track if backend is available
@@ -106,46 +127,68 @@ const checkBackendAvailability = async () => {
       return true;
     }
     
-    // Determine if we're in production mode
-    const isProduction = import.meta.env.PROD;
-    
-    // In production, use the Netlify proxy paths
-    let healthCheckUrl;
-    if (isProduction) {
-      // Use the /api proxy path directly in production
-      healthCheckUrl = '/api/health-check';
-    } else {
-      // Use the complete URL for development
-      const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001').replace(/\/$/, '');
-      healthCheckUrl = baseUrl + '/api/health-check';
-    }
-    
+    // Always use relative URL for health check - will be properly handled by proxy
+    const healthCheckUrl = '/api/health-check';
     console.log('Checking backend availability at:', healthCheckUrl);
     
-    // Try to hit the health check endpoint, with minimal headers to avoid CORS
+    // First try frontend health check endpoint
     try {
       const response = await axios({
         method: 'get',
         url: healthCheckUrl,
-        timeout: 5000, // Increased timeout
+        timeout: 5000,
         headers: {
           'Accept': 'application/json'
-          // Explicitly NOT including Authorization header to avoid CORS preflight
         },
         withCredentials: false
       });
       
       isBackendAvailable = response.status === 200;
-      console.log('Backend availability check:', isBackendAvailable ? 'CONNECTED' : 'DISCONNECTED');
-      console.log('Backend response:', response.data);
+      console.log('Frontend health check response:', response.status);
+      
+      // If frontend is available, try checking main backend via proxy
+      if (isBackendAvailable) {
+        try {
+          const backendResponse = await axios({
+            method: 'get',
+            url: '/api/backend-health',
+            timeout: 5000,
+            headers: {
+              'Accept': 'application/json'
+            },
+            withCredentials: false
+          });
+          
+          console.log('Backend health check via proxy response:', backendResponse.status);
+        } catch (backendErr) {
+          console.warn('Backend health check via proxy failed but frontend is available:', backendErr.message);
+          // Continue with frontend-only mode
+        }
+      }
+      
     } catch (err) {
       console.error('Backend availability check failed:', err.message);
-      // Force backend to be available in production to allow the app to work
-      isBackendAvailable = import.meta.env.PROD ? true : false;
-      console.log('Backend availability check:', isBackendAvailable ? 'FORCING CONNECTED' : 'DISCONNECTED');
+      isBackendAvailable = false;
+      // Check interview backend separately
+      try {
+        const interviewResponse = await axios({
+          method: 'get',
+          url: '/api/interviews/health-check',
+          timeout: 5000,
+          headers: {
+            'Accept': 'application/json'
+          },
+          withCredentials: false
+        });
+        console.log('Interview backend health check response:', interviewResponse.status);
+      } catch (interviewErr) {
+        console.error('Interview backend health check failed:', interviewErr.message);
+      }
     }
   } finally {
     backendCheckInProgress = false;
+    // Log the final determination
+    console.log('Backend availability check:', isBackendAvailable ? 'CONNECTED' : 'DISCONNECTED');
   }
   return isBackendAvailable;
 };
@@ -574,7 +617,7 @@ const apiEndpoints = {
         throw error;
       }
     },
-    getPreviousConversations: (userId) => interviewApi.get(`/interviews/conversations/${userId}`).catch(error => {
+    getPreviousConversations: (userId) => interviewApi.get(`/conversations/${userId}`).catch(error => {
       console.log('Using mock data due to API failure', error);
       // Mock previous sessions
       return Promise.resolve({
@@ -602,7 +645,7 @@ const apiEndpoints = {
         ]
       });
     }),
-    getInterviewTopics: () => interviewApi.get('/interviews/topics').catch(error => {
+    getInterviewTopics: () => interviewApi.get('/topics').catch(error => {
       console.log('Using mock data due to API failure', error);
       return Promise.resolve({
         data: [
@@ -614,7 +657,7 @@ const apiEndpoints = {
         ]
       });
     }),
-    getSuggestedQuestions: (userId) => interviewApi.get(`/interviews/suggested-questions/${userId}`).catch(error => {
+    getSuggestedQuestions: (userId) => interviewApi.get(`/suggested-questions/${userId}`).catch(error => {
       console.log('Using mock data due to API failure', error);
       return Promise.resolve({
         data: [
@@ -685,7 +728,7 @@ const apiEndpoints = {
     },
     loadConversation: async (convoId) => {
       try {
-        const response = await interviewApi.get(`/interviews/conversation/${convoId}`);
+        const response = await interviewApi.get(`/conversation/${convoId}`);
         return response;
       } catch (error) {
         console.log('Error loading conversation, using fallback', error);
@@ -722,7 +765,7 @@ const apiEndpoints = {
     },
     getCategoryQuestions: async (categoryId) => {
       try {
-        const response = await interviewApi.get(`/interviews/category-questions/${categoryId}`);
+        const response = await interviewApi.get(`/category-questions/${categoryId}`);
         return response;
       } catch (error) {
         console.log('Error getting category questions, using fallback', error);
@@ -738,7 +781,7 @@ const apiEndpoints = {
     },
     createMockInterview: async (setupData) => {
       try {
-        const response = await interviewApi.post('/interviews/mock-interview', setupData);
+        const response = await interviewApi.post('/mock-interview', setupData);
         return response;
       } catch (error) {
         console.log('Error creating mock interview, using fallback', error);
@@ -758,7 +801,7 @@ const apiEndpoints = {
     },
     createMockInterviewSetup: async (mockInterviewId, setupData) => {
       try {
-        const response = await interviewApi.post('/interviews/mock-interview-setup', { 
+        const response = await interviewApi.post('/mock-interview-setup', { 
           mockInterviewId,
           setupData
         });
@@ -774,7 +817,7 @@ const apiEndpoints = {
     },
     getPremiumFeedback: async (data) => {
       try {
-        const response = await interviewApi.post('/interviews/premium-feedback', data);
+        const response = await interviewApi.post('/premium-feedback', data);
         return response;
       } catch (error) {
         console.log('Error getting premium feedback, using fallback', error);
@@ -792,7 +835,7 @@ const apiEndpoints = {
     },
     saveFeedbackToDashboard: async (data) => {
       try {
-        const response = await interviewApi.post('/interviews/save-feedback', data);
+        const response = await interviewApi.post('/save-feedback', data);
         return response;
       } catch (error) {
         console.log('Error saving feedback, using fallback', error);

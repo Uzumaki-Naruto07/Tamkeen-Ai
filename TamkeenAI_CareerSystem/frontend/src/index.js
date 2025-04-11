@@ -3,6 +3,10 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
+// Initialize API proxy utility to fix CORS issues
+import { initApiProxy } from './utils/apiProxy';
+initApiProxy();
+
 // Initialize analytics and monitoring services
 import './services/analytics';
 import { initializeErrorTracking } from './services/errorTracking';
