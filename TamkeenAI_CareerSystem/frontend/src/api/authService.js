@@ -3,7 +3,7 @@ import apiClient from './apiClient';
 export const authService = {
   async login(username, password) {
     try {
-      const response = await apiClient.post('/auth/login', { username, password });
+      const response = await apiClient.post('/api/auth/login', { username, password });
       // Store the token in localStorage
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
@@ -18,7 +18,7 @@ export const authService = {
 
   async register(userData) {
     try {
-      const response = await apiClient.post('/auth/register', userData);
+      const response = await apiClient.post('/api/auth/register', userData);
       return response.data;
     } catch (error) {
       console.error('Register error:', error);
@@ -28,7 +28,7 @@ export const authService = {
 
   async getCurrentUser() {
     try {
-      const response = await apiClient.get('/auth/me');
+      const response = await apiClient.get('/api/auth/me');
       return response.data;
     } catch (error) {
       console.error('Get current user error:', error);
@@ -38,7 +38,7 @@ export const authService = {
 
   async logout() {
     try {
-      await apiClient.post('/auth/logout');
+      await apiClient.post('/api/auth/logout');
       // Clear local storage
       localStorage.removeItem('token');
       localStorage.removeItem('user');

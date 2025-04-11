@@ -65,17 +65,50 @@ DEEPSEEK_API_URL = "https://api.deepseek.com/v1/models/deepseek-coder/generate"
 @app.route('/health-check', methods=['GET'])
 def health_check():
     port = int(os.environ.get('PORT', 5001))
-    return jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
+    response = jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
+    
+    # Add CORS headers directly to this response
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+    
+    return response
 
 @app.route('/api/health-check', methods=['GET'])
 def api_health_check():
     port = int(os.environ.get('PORT', 5001))
-    return jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
+    response = jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
+    
+    # Add CORS headers directly to this response
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+    
+    return response
 
 @app.route('/api/health', methods=['GET'])
 def api_health():
     port = int(os.environ.get('PORT', 5001))
-    return jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
+    response = jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
+    
+    # Add CORS headers directly to this response
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+    
+    return response
+
+@app.route('/health', methods=['GET'])
+def health_simple():
+    port = int(os.environ.get('PORT', 5001))
+    response = jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
+    
+    # Add CORS headers directly to this response
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+    
+    return response
 
 @app.route('/api/interviews/conversation', methods=['POST'])
 def create_or_load_conversation():

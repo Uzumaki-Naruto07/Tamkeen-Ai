@@ -192,33 +192,65 @@ def create_app():
                 "message": f"Failed to get user profile: {str(e)}"
             }), 500
     
-    @app.route('/api/health-check')
+    @app.route('/api/health-check', methods=['GET', 'OPTIONS'])
     def health_check():
         """Health check endpoint"""
+        # Handle OPTIONS request
+        if request.method == 'OPTIONS':
+            response = jsonify({'status': 'success'})
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+            return response
+            
         # Import here to check MongoDB status during health check
         from api.database.connector import db
         mongo_status = "connected" if db is not None else "disconnected (using mock)"
         
-        return jsonify({
+        # Set CORS headers directly
+        response = jsonify({
             "status": "success",
             "message": "API is running",
             "version": "1.0.0",
             "mongodb": mongo_status
         })
-    
-    @app.route('/api/health')
+        
+        # Add CORS headers directly to this response
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+        
+        return response
+
+    @app.route('/api/health', methods=['GET', 'OPTIONS'])
     def api_health():
         """Health check endpoint (alternative path)"""
+        # Handle OPTIONS request
+        if request.method == 'OPTIONS':
+            response = jsonify({'status': 'success'})
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+            return response
+            
         # Import here to check MongoDB status during health check
         from api.database.connector import db
         mongo_status = "connected" if db is not None else "disconnected (using mock)"
         
-        return jsonify({
+        # Set CORS headers directly
+        response = jsonify({
             "status": "success",
             "message": "API is running",
             "version": "1.0.0",
             "mongodb": mongo_status
         })
+        
+        # Add CORS headers directly to this response
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+        
+        return response
     
     @app.route('/api/test-dashboard/<user_id>')
     def test_dashboard(user_id):
@@ -292,7 +324,14 @@ def create_app():
     @app.route('/health')
     def health_check_new():
         """Health check endpoint"""
-        return jsonify({"status": "healthy"})
+        response = jsonify({"status": "healthy"})
+        
+        # Add CORS headers directly to this response
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+        
+        return response
     
     # Add Hugging Face API endpoints
     @app.route('/api/huggingface/status', methods=['GET'])

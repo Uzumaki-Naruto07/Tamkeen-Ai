@@ -38,6 +38,7 @@ const apiClient = axios.create({
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
   withCredentials: true // Enable withCredentials for cross-domain cookie support
 });
@@ -122,6 +123,12 @@ apiClient.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // Fix URL path issues - ensure baseURL doesn't conflict with URLs that include /api
+    if (!isDevelopment && !config.url.startsWith('/api') && !config.url.startsWith('http')) {
+      // If we're in production and the URL doesn't already start with /api, add it
+      config.url = `/api${config.url.startsWith('/') ? '' : '/'}${config.url}`;
     }
 
     // Debug logging

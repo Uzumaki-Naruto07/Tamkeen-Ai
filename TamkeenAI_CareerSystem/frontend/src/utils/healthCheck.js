@@ -8,23 +8,49 @@ const HEALTH_CHECK_TIMEOUT = 10000;
 const MAIN_HEALTH_ENDPOINT = `${API_BASE_URL}/api/health-check`;
 const INTERVIEW_HEALTH_ENDPOINT = `${INTERVIEW_API_BASE_URL}/api/health-check`;
 
+// Alternative health endpoints to try if the primary ones fail
+const ALTERNATIVE_MAIN_HEALTH_ENDPOINT = `${API_BASE_URL}/health`;
+const ALTERNATIVE_INTERVIEW_HEALTH_ENDPOINT = `${INTERVIEW_API_BASE_URL}/health`;
+
 /**
  * Check if the main backend is available
  * @returns {Promise<boolean>} True if available, false otherwise
  */
 export const checkMainBackendHealth = async () => {
   try {
-    const response = await axios.get(MAIN_HEALTH_ENDPOINT, {
-      timeout: HEALTH_CHECK_TIMEOUT,
-      // Add these headers to help with CORS issues
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    });
-    return response.status === 200;
+    // Try the main health endpoint first
+    try {
+      console.log('Checking main backend health at:', MAIN_HEALTH_ENDPOINT);
+      const response = await axios.get(MAIN_HEALTH_ENDPOINT, {
+        timeout: HEALTH_CHECK_TIMEOUT,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        // Disable credentials to avoid CORS preflight
+        withCredentials: false
+      });
+      
+      console.log('Main backend health check response:', response.status);
+      return response.status === 200;
+    } catch (primaryError) {
+      console.warn('Primary health check failed, trying alternative endpoint:', primaryError.message);
+      
+      // If primary endpoint fails, try the alternative
+      const altResponse = await axios.get(ALTERNATIVE_MAIN_HEALTH_ENDPOINT, {
+        timeout: HEALTH_CHECK_TIMEOUT,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        withCredentials: false
+      });
+      
+      console.log('Alternative main backend health check response:', altResponse.status);
+      return altResponse.status === 200;
+    }
   } catch (error) {
-    console.error('Main backend health check failed:', error.message);
+    console.error('All main backend health checks failed:', error.message);
     return false;
   }
 };
@@ -35,17 +61,38 @@ export const checkMainBackendHealth = async () => {
  */
 export const checkInterviewBackendHealth = async () => {
   try {
-    const response = await axios.get(INTERVIEW_HEALTH_ENDPOINT, {
-      timeout: HEALTH_CHECK_TIMEOUT,
-      // Add these headers to help with CORS issues
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    });
-    return response.status === 200;
+    // Try the main interview health endpoint first
+    try {
+      console.log('Checking interview backend health at:', INTERVIEW_HEALTH_ENDPOINT);
+      const response = await axios.get(INTERVIEW_HEALTH_ENDPOINT, {
+        timeout: HEALTH_CHECK_TIMEOUT,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        withCredentials: false
+      });
+      
+      console.log('Interview backend health check response:', response.status);
+      return response.status === 200;
+    } catch (primaryError) {
+      console.warn('Primary interview health check failed, trying alternative endpoint:', primaryError.message);
+      
+      // If primary endpoint fails, try the alternative
+      const altResponse = await axios.get(ALTERNATIVE_INTERVIEW_HEALTH_ENDPOINT, {
+        timeout: HEALTH_CHECK_TIMEOUT,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        withCredentials: false
+      });
+      
+      console.log('Alternative interview backend health check response:', altResponse.status);
+      return altResponse.status === 200;
+    }
   } catch (error) {
-    console.error('Interview backend health check failed:', error.message);
+    console.error('All interview backend health checks failed:', error.message);
     return false;
   }
 };
