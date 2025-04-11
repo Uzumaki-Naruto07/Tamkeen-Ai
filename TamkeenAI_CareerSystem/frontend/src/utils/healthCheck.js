@@ -4,22 +4,12 @@ import { API_BASE_URL, INTERVIEW_API_BASE_URL } from './apiConfig';
 // Health check timeout in milliseconds
 const HEALTH_CHECK_TIMEOUT = 10000;
 
-// Use a public CORS proxy to bypass CORS restrictions
-const useCorsProxy = true;
-const corsProxy = 'https://corsproxy.io/?';
+// Health check endpoints - Using only relative paths
+const MAIN_HEALTH_ENDPOINT = '/api/health-check';
+const INTERVIEW_HEALTH_ENDPOINT = '/api/interviews/health-check';
+const BACKEND_HEALTH_ENDPOINT = '/api/backend-health';
 
-// Function to prepend CORS proxy to URL if needed
-const withCorsProxy = (url) => useCorsProxy ? `${corsProxy}${encodeURIComponent(url)}` : url;
-
-// Health check endpoints - Using the correct endpoints that exist in the backend
-const MAIN_HEALTH_ENDPOINT = `${API_BASE_URL}/api/health-check`;
-const INTERVIEW_HEALTH_ENDPOINT = `${INTERVIEW_API_BASE_URL}/api/health-check`;
-
-// Alternative health endpoints to try if the primary ones fail
-const ALTERNATIVE_MAIN_HEALTH_ENDPOINT = `${API_BASE_URL}/health`;
-const ALTERNATIVE_INTERVIEW_HEALTH_ENDPOINT = `${INTERVIEW_API_BASE_URL}/health`;
-
-// Create a dedicated axios instance for health checks with CORS settings
+// Create a dedicated axios instance for health checks
 const healthCheckClient = axios.create({
   timeout: HEALTH_CHECK_TIMEOUT,
   headers: {
@@ -38,21 +28,18 @@ export const checkMainBackendHealth = async () => {
   try {
     // Try all possible health endpoints in sequence
     const endpoints = [
+      // Frontend health check
       MAIN_HEALTH_ENDPOINT,
-      ALTERNATIVE_MAIN_HEALTH_ENDPOINT,
-      // Try without API prefix as fallback
-      `${API_BASE_URL}/health-check`,
-      // Try direct domain with explicit paths
-      `https://tamkeen-main-api.onrender.com/api/health-check`,
-      `https://tamkeen-main-api.onrender.com/health`
+      // Backend health check via proxy
+      BACKEND_HEALTH_ENDPOINT,
+      // Try health check without /api prefix
+      '/health-check'
     ];
     
     for (const endpoint of endpoints) {
       try {
-        // Apply CORS proxy to the URL
-        const proxiedUrl = withCorsProxy(endpoint);
-        console.log('Checking main backend health at:', endpoint, '(via proxy)');
-        const response = await healthCheckClient.get(proxiedUrl);
+        console.log('Checking main backend health at:', endpoint);
+        const response = await healthCheckClient.get(endpoint);
         
         if (response.status === 200) {
           console.log('Main backend health check response:', response.status);
@@ -64,10 +51,9 @@ export const checkMainBackendHealth = async () => {
       }
     }
     
-    // Emergency fallback - fake successful connection if we fail to connect
-    // This allows the app to work with mock data even when backend is down
-    console.warn('All health checks failed, using emergency fallback');
-    return true;
+    // All health checks failed
+    console.warn('All main backend health checks failed');
+    return true; // Emergency fallback
   } catch (error) {
     console.error('All main backend health checks failed:', error.message);
     return true; // Emergency fallback
@@ -83,20 +69,13 @@ export const checkInterviewBackendHealth = async () => {
     // Try all possible health endpoints in sequence
     const endpoints = [
       INTERVIEW_HEALTH_ENDPOINT,
-      ALTERNATIVE_INTERVIEW_HEALTH_ENDPOINT,
-      // Try without API prefix as fallback
-      `${INTERVIEW_API_BASE_URL}/health-check`,
-      // Try direct domain with explicit paths
-      `https://tamkeen-interview-api.onrender.com/api/health-check`,
-      `https://tamkeen-interview-api.onrender.com/health`
+      '/api/interviews/health'
     ];
     
     for (const endpoint of endpoints) {
       try {
-        // Apply CORS proxy to the URL
-        const proxiedUrl = withCorsProxy(endpoint);
-        console.log('Checking interview backend health at:', endpoint, '(via proxy)');
-        const response = await healthCheckClient.get(proxiedUrl);
+        console.log('Checking interview backend health at:', endpoint);
+        const response = await healthCheckClient.get(endpoint);
         
         if (response.status === 200) {
           console.log('Interview backend health check response:', response.status);
@@ -108,9 +87,9 @@ export const checkInterviewBackendHealth = async () => {
       }
     }
     
-    // Emergency fallback
+    // All health checks failed
     console.warn('All interview health checks failed, using emergency fallback');
-    return true;
+    return true; // Emergency fallback
   } catch (error) {
     console.error('All interview backend health checks failed:', error.message);
     return true; // Emergency fallback

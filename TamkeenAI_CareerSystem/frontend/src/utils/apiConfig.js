@@ -3,11 +3,11 @@
  * Centralizes all API URLs and settings
  */
 
-// Get environment variables with fallbacks
-export const API_BASE_URL = process.env.VITE_API_URL || 'http://localhost:5001';
-export const INTERVIEW_API_BASE_URL = process.env.VITE_INTERVIEW_API_URL || 'http://localhost:5002';
-export const UPLOAD_SERVER_URL = process.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:5004';
-export const PREDICT_API_URL = process.env.VITE_PREDICT_API_URL || 'http://localhost:5003';
+// Use relative URLs for all API endpoints to go through proxy
+export const API_BASE_URL = '/api';
+export const INTERVIEW_API_BASE_URL = '/api/interviews';
+export const UPLOAD_SERVER_URL = '/api/upload';
+export const PREDICT_API_URL = '/api/predict';
 
 // Feature flags from environment
 export const ENABLE_BACKEND_CHECK = process.env.VITE_ENABLE_BACKEND_CHECK === 'true';

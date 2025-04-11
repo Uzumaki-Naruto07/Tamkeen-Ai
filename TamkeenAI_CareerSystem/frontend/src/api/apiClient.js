@@ -18,36 +18,9 @@ let pendingLoginRequest = null;
 // Configuration
 const MOCK_ENABLED = process.env.NODE_ENV === 'development';
 
-// Direct backend URLs
-const MAIN_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-const INTERVIEW_API_URL = import.meta.env.VITE_INTERVIEW_API_URL || 'http://localhost:5002';
-const UPLOAD_API_URL = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:5004';
-
-// CORS proxy configuration
-// Use a more reliable CORS proxy - Netlify function if available, or fallback to allorigins
-const NETLIFY_FUNCTION_URL = '/.netlify/functions/cors-proxy';
-const CORS_PROXY_URL = isDevelopment 
-  ? 'https://api.allorigins.win/raw?url=' 
-  : NETLIFY_FUNCTION_URL;
-
-// Use a public CORS proxy to bypass CORS restrictions for production
-const useCorsProxy = import.meta.env.PROD; // Only use in production
-const corsProxy = 'https://corsproxy.io/?';
-
-// Function to prepend CORS proxy to URL if needed
-const withCorsProxy = (url) => {
-  // Only proxy absolute URLs, not relative paths
-  if (useCorsProxy && (url.startsWith('http://') || url.startsWith('https://'))) {
-    return `${corsProxy}${encodeURIComponent(url)}`;
-  }
-  return url;
-};
-
 // Create an axios instance with default config
 const apiClient = axios.create({
-  baseURL: isDevelopment 
-    ? '/api' // This will use the Vite proxy defined in vite.config.js
-    : `${MAIN_API_URL}`, // Use direct API URL from .env.production
+  baseURL: '/api', // Always use relative URL to work with proxy
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -55,6 +28,48 @@ const apiClient = axios.create({
   },
   withCredentials: true // Enable withCredentials for cross-domain cookie support
 });
+
+// Request interceptor for adding the auth token
+apiClient.interceptors.request.use(
+  (config) => {
+    // Get the token from localStorage
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // Fix URL path issues
+    if (config.url && config.url.startsWith('/api/')) {
+      // If URL already starts with /api/, remove the prefix because baseURL already has it
+      config.url = config.url.substring(5);
+    } else if (config.url && config.url.startsWith('https://')) {
+      // If it's an absolute URL to a backend service, convert it to a relative URL
+      const url = new URL(config.url);
+      if (url.hostname.includes('tamkeen') && url.hostname.includes('onrender.com')) {
+        const pathWithSearch = url.pathname + url.search;
+        console.log(`Converting absolute URL ${config.url} to relative path ${pathWithSearch}`);
+        
+        // If the path already starts with /api, use it as is
+        // Otherwise prefix it with /api
+        config.url = pathWithSearch.startsWith('/api') 
+          ? pathWithSearch.substring(4) // Remove /api since baseURL has it
+          : pathWithSearch;
+      }
+    }
+
+    // Debug logging
+    console.log(`Making API request to: ${config.baseURL}${config.url}`);
+    
+    return config;
+  },
+  (error) => {
+    console.error('Request error:', error);
+    return Promise.reject({
+      message: 'Network error. Please check your connection.',
+      originalError: error
+    });
+  }
+);
 
 // Mock data for development mode
 const mockUsers = [
@@ -128,40 +143,6 @@ const mockLogin = (credentials) => {
   
   return pendingLoginRequest;
 };
-
-// Request interceptor for adding the auth token
-apiClient.interceptors.request.use(
-  (config) => {
-    // Get the token from localStorage
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    
-    // Fix URL path issues - ensure baseURL doesn't conflict with URLs that include /api
-    if (!isDevelopment && !config.url.startsWith('/api') && !config.url.startsWith('http')) {
-      // If we're in production and the URL doesn't already start with /api, add it
-      config.url = `/api${config.url.startsWith('/') ? '' : '/'}${config.url}`;
-    }
-
-    // Apply CORS proxy if this is an absolute URL
-    if (config.url.startsWith('http')) {
-      config.url = withCorsProxy(config.url);
-    }
-
-    // Debug logging
-    console.log(`Making API request to: ${config.baseURL}${config.url}`);
-    
-    return config;
-  },
-  (error) => {
-    console.error('Request error:', error);
-    return Promise.reject({
-      message: 'Network error. Please check your connection.',
-      originalError: error
-    });
-  }
-);
 
 // Response interceptor for handling common errors
 apiClient.interceptors.response.use(

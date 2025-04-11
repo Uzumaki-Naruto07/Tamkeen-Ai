@@ -3,10 +3,8 @@
  * Maps to backend /api/utils/endpoints.py
  */
 
-// Base API URL - support mock API in development mode
-const BASE_URL = import.meta.env.DEV 
-  ? '/api'  // This will be mocked 
-  : (import.meta.env.VITE_API_URL || 'http://localhost:5001') + '/api';
+// Base API URL - always use relative paths to go through the proxy
+const BASE_URL = '/api';
 
 /**
  * Centralized API endpoint definitions
