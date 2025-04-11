@@ -14,7 +14,13 @@ const authService = {
   login: async (email, password) => {
     try {
       console.log('Login attempt with:', { email });
-      const response = await apiClient.post(AUTH_ENDPOINTS.LOGIN || '/api/auth/login', { email, password });
+      // Use environment variable for API URL
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const loginUrl = `${apiUrl}/api/auth/login`;
+      
+      console.log('Making login request to:', loginUrl);
+      
+      const response = await apiClient.post(loginUrl, { email, password });
       
       console.log('Login response:', response);
       

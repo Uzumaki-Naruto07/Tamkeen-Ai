@@ -1,13 +1,26 @@
 import axios from 'axios';
-import { API_BASE_URL, INTERVIEW_API_BASE_URL } from './apiConfig';
+
+// Get API URLs from environment variables
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const INTERVIEW_API_URL = import.meta.env.VITE_INTERVIEW_API_URL || 'http://localhost:5002';
 
 // Health check timeout in milliseconds
 const HEALTH_CHECK_TIMEOUT = 10000;
 
-// Health check endpoints - Using only relative paths
-const MAIN_HEALTH_ENDPOINT = '/api/health-check';
-const INTERVIEW_HEALTH_ENDPOINT = '/api/interviews/health-check';
-const BACKEND_HEALTH_ENDPOINT = '/api/backend-health';
+// Health check endpoints with absolute URLs
+const MAIN_HEALTH_ENDPOINTS = [
+  `${API_URL}/api/health-check`,
+  `${API_URL}/api/health`,
+  `${API_URL}/health-check`,
+  `${API_URL}/health`
+];
+
+const INTERVIEW_HEALTH_ENDPOINTS = [
+  `${INTERVIEW_API_URL}/api/interviews/health-check`,
+  `${INTERVIEW_API_URL}/api/health-check`,
+  `${INTERVIEW_API_URL}/health-check`,
+  `${INTERVIEW_API_URL}/health`
+];
 
 // Create a dedicated axios instance for health checks
 const healthCheckClient = axios.create({
@@ -27,16 +40,7 @@ const healthCheckClient = axios.create({
 export const checkMainBackendHealth = async () => {
   try {
     // Try all possible health endpoints in sequence
-    const endpoints = [
-      // Frontend health check
-      MAIN_HEALTH_ENDPOINT,
-      // Backend health check via proxy
-      BACKEND_HEALTH_ENDPOINT,
-      // Try health check without /api prefix
-      '/health-check'
-    ];
-    
-    for (const endpoint of endpoints) {
+    for (const endpoint of MAIN_HEALTH_ENDPOINTS) {
       try {
         console.log('Checking main backend health at:', endpoint);
         const response = await healthCheckClient.get(endpoint);
@@ -67,12 +71,7 @@ export const checkMainBackendHealth = async () => {
 export const checkInterviewBackendHealth = async () => {
   try {
     // Try all possible health endpoints in sequence
-    const endpoints = [
-      INTERVIEW_HEALTH_ENDPOINT,
-      '/api/interviews/health'
-    ];
-    
-    for (const endpoint of endpoints) {
+    for (const endpoint of INTERVIEW_HEALTH_ENDPOINTS) {
       try {
         console.log('Checking interview backend health at:', endpoint);
         const response = await healthCheckClient.get(endpoint);
@@ -106,6 +105,8 @@ export const checkAllBackendHealth = async () => {
     checkInterviewBackendHealth().catch(() => true)
   ]);
 
+  console.log('All backend services are now available');
+  
   return {
     main: mainHealth,
     interview: interviewHealth,

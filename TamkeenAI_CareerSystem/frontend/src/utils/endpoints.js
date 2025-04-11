@@ -1,124 +1,131 @@
 // frontend/src/utils/endpoints.js
 
-// Base API URL - read from environment or use default
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+// Base API URLs - read from environment or use defaults
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const INTERVIEW_API_URL = import.meta.env.VITE_INTERVIEW_API_URL || 'http://localhost:5002';
+const UPLOAD_API_URL = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:5004';
 
 // Auth endpoints
 export const AUTH_ENDPOINTS = {
-  LOGIN: `${API_BASE_URL}/auth/login`,
-  REGISTER: `${API_BASE_URL}/auth/register`,
-  LOGOUT: `${API_BASE_URL}/auth/logout`,
-  ME: `${API_BASE_URL}/auth/me`,
-  FORGOT_PASSWORD: `${API_BASE_URL}/auth/forgot-password`,
-  RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
-  VERIFY_EMAIL: `${API_BASE_URL}/auth/verify-email`,
-  REFRESH_TOKEN: `${API_BASE_URL}/auth/refresh-token`,
-  CHANGE_PASSWORD: `${API_BASE_URL}/auth/change-password`,
-  USER_INFO: `${API_BASE_URL}/auth/user-info`,
+  LOGIN: `${API_URL}/api/auth/login`,
+  REGISTER: `${API_URL}/api/auth/register`,
+  LOGOUT: `${API_URL}/api/auth/logout`,
+  ME: `${API_URL}/api/auth/me`,
+  FORGOT_PASSWORD: `${API_URL}/api/auth/forgot-password`,
+  RESET_PASSWORD: `${API_URL}/api/auth/reset-password`,
+  VERIFY_EMAIL: `${API_URL}/api/auth/verify-email`,
+  REFRESH_TOKEN: `${API_URL}/api/auth/refresh-token`,
+  CHANGE_PASSWORD: `${API_URL}/api/auth/change-password`,
+  USER_INFO: `${API_URL}/api/auth/user-info`,
 };
 
 // Resume endpoints
 export const RESUME_ENDPOINTS = {
-  UPLOAD: `${API_BASE_URL}/resume/upload`,
-  ANALYZE: `${API_BASE_URL}/resume/analyze`,
-  GET_ALL: `${API_BASE_URL}/resume/all`,
-  GET_BY_ID: (id) => `${API_BASE_URL}/resume/${id}`,
-  DELETE: (id) => `${API_BASE_URL}/resume/${id}`,
-  GET_USER_RESUMES: (userId) => `${API_BASE_URL}/resume/user/${userId}`,
-  GET_RESUME_DETAILS: (resumeId) => `${API_BASE_URL}/resume/${resumeId}/details`,
-  GET_RESUME_TEMPLATES: `${API_BASE_URL}/resume/templates`,
-  CREATE_RESUME: `${API_BASE_URL}/resume/create`,
-  UPDATE_RESUME: (resumeId) => `${API_BASE_URL}/resume/${resumeId}/update`,
-  SCORE: `${API_BASE_URL}/resume/score`,
-  OPTIMIZE: `${API_BASE_URL}/resume/optimize`,
-  EXTRACT_KEYWORDS: `${API_BASE_URL}/resume/extract-keywords`,
-  GENERATE_PDF: `${API_BASE_URL}/resume/generate-pdf`,
-  TRACK_SCORE: `${API_BASE_URL}/resume/track-score`,
+  UPLOAD: `${UPLOAD_API_URL}/api/resume/upload`,
+  ANALYZE: `${API_URL}/api/resume/analyze`,
+  GET_ALL: `${API_URL}/api/resume/all`,
+  GET_BY_ID: (id) => `${API_URL}/api/resume/${id}`,
+  DELETE: (id) => `${API_URL}/api/resume/${id}`,
+  GET_USER_RESUMES: (userId) => `${API_URL}/api/resume/user/${userId}`,
+  GET_RESUME_DETAILS: (resumeId) => `${API_URL}/api/resume/${resumeId}/details`,
+  GET_RESUME_TEMPLATES: `${API_URL}/api/resume/templates`,
+  CREATE_RESUME: `${API_URL}/api/resume`,
+  UPDATE_RESUME: (resumeId) => `${API_URL}/api/resume/${resumeId}`,
+  SCORE: `${API_URL}/api/resume/score`,
+  OPTIMIZE: `${API_URL}/api/resume/optimize`,
+  EXTRACT_KEYWORDS: `${API_URL}/api/resume/extract-keywords`,
+  GENERATE_PDF: `${API_URL}/api/resume/generate-pdf`,
+  TRACK_SCORE: `${API_URL}/api/resume/track-score`,
 };
 
 // Interview endpoints
 export const INTERVIEW_ENDPOINTS = {
-  CREATE: `${API_BASE_URL}/interview/create`,
-  GET_ALL: `${API_BASE_URL}/interview/all`,
-  GET_BY_ID: (id) => `${API_BASE_URL}/interview/${id}`,
-  UPDATE: (id) => `${API_BASE_URL}/interview/${id}`,
-  DELETE: (id) => `${API_BASE_URL}/interview/${id}`,
-  GENERATE_QUESTIONS: `${API_BASE_URL}/interview/generate-questions`,
-  MOCK_INTERVIEW: `${API_BASE_URL}/interview/mock`,
-  ANALYZE_ANSWERS: `${API_BASE_URL}/interview/analyze-answers`,
-  PROVIDE_FEEDBACK: `${API_BASE_URL}/interview/feedback`,
-  GET_COACHES: `${API_BASE_URL}/interview/coaches`,
-  GET_COACH_BY_ID: (id) => `${API_BASE_URL}/interview/coaches/${id}`,
-  BOOK_SESSION: `${API_BASE_URL}/interview/book-session`,
-  GET_BOOKINGS: `${API_BASE_URL}/interview/bookings`,
+  CREATE: `${API_URL}/api/interview/create`,
+  GET_ALL: `${API_URL}/api/interview/all`,
+  GET_BY_ID: (id) => `${API_URL}/api/interview/${id}`,
+  UPDATE: (id) => `${API_URL}/api/interview/${id}`,
+  DELETE: (id) => `${API_URL}/api/interview/${id}`,
+  GENERATE_QUESTIONS: `${API_URL}/api/interview/generate-questions`,
+  MOCK_INTERVIEW: `${API_URL}/api/interview/mock`,
+  ANALYZE_ANSWERS: `${API_URL}/api/interview/analyze-answers`,
+  PROVIDE_FEEDBACK: `${API_URL}/api/interview/feedback`,
+  GET_COACHES: `${API_URL}/api/interview/coaches`,
+  GET_COACH_BY_ID: (id) => `${API_URL}/api/interview/coaches/${id}`,
+  BOOK_SESSION: `${API_URL}/api/interview/book-session`,
+  GET_BOOKINGS: `${API_URL}/api/interview/bookings`,
 };
 
 // Job endpoints
 export const JOB_ENDPOINTS = {
-  SEARCH: `${API_BASE_URL}/job/search`,
-  RECOMMEND: `${API_BASE_URL}/job/recommend`,
-  GET_BY_ID: (id) => `${API_BASE_URL}/job/${id}`,
-  SAVE: (id) => `${API_BASE_URL}/job/${id}/save`,
-  UNSAVE: (id) => `${API_BASE_URL}/job/${id}/unsave`,
-  GET_SAVED: `${API_BASE_URL}/job/saved`,
-  JOB_TITLES: `${API_BASE_URL}/jobs/titles`,
-  GET_INDUSTRIES: `${API_BASE_URL}/job/industries`,
-  GET_SKILLS: `${API_BASE_URL}/job/skills`,
-  GET_RECENT: `${API_BASE_URL}/job/recent`,
-  GET_SAVED_SEARCHES: `${API_BASE_URL}/job/saved-searches`,
-  GET_SEARCH_HISTORY: `${API_BASE_URL}/job/search-history`,
+  SEARCH: `${API_URL}/api/jobs/search`,
+  RECOMMEND: `${API_URL}/api/jobs/recommendations`,
+  GET_BY_ID: (id) => `${API_URL}/api/jobs/${id}`,
+  SAVE: (id) => `${API_URL}/api/jobs/${id}/save`,
+  UNSAVE: (id) => `${API_URL}/api/jobs/${id}/unsave`,
+  GET_SAVED: `${API_URL}/api/jobs/saved`,
+  JOB_TITLES: `${API_URL}/api/jobs/titles`,
+  GET_INDUSTRIES: `${API_URL}/api/job/industries`,
+  GET_SKILLS: `${API_URL}/api/job/skills`,
+  GET_RECENT: `${API_URL}/api/jobs/recent`,
+  GET_SAVED_SEARCHES: `${API_URL}/api/jobs/saved-searches`,
+  GET_SEARCH_HISTORY: `${API_URL}/api/jobs/search-history`,
   // Job application endpoints
-  GET_APPLICATIONS: `${API_BASE_URL}/job-application/history`,
-  APPLY: `${API_BASE_URL}/job-application/apply`,
-  AUTOMATE_APPLICATION: `${API_BASE_URL}/job-application/automate-application`,
-  BATCH_APPLY: `${API_BASE_URL}/job-application/batch-apply`,
-  GET_APPLICATION_SETTINGS: `${API_BASE_URL}/job-application/settings`,
-  UPDATE_APPLICATION_SETTINGS: `${API_BASE_URL}/job-application/settings/update`,
-  GET_APPLICATION_TEMPLATES: `${API_BASE_URL}/job-application/templates`,
-  CREATE_APPLICATION_TEMPLATE: `${API_BASE_URL}/job-application/templates/create`,
-  UPDATE_APPLICATION_TEMPLATE: (id) => `${API_BASE_URL}/job-application/templates/${id}`,
-  DELETE_APPLICATION_TEMPLATE: (id) => `${API_BASE_URL}/job-application/templates/${id}`,
-  GENERATE_COVER_LETTER: `${API_BASE_URL}/job-application/generate-cover-letter`,
-  AUTOMATE_LINKEDIN_APPLICATION: `${API_BASE_URL}/job-application/linkedin-automation`,
+  GET_APPLICATIONS: `${API_URL}/api/jobs/applications`,
+  APPLY: (id) => `${API_URL}/api/jobs/${id}/apply`,
+  AUTOMATE_APPLICATION: `${API_URL}/api/jobs/automate-application`,
+  BATCH_APPLY: `${API_URL}/api/jobs/batch-apply`,
+  GET_APPLICATION_SETTINGS: `${API_URL}/api/jobs/applications/settings`,
+  UPDATE_APPLICATION_SETTINGS: `${API_URL}/api/jobs/applications/settings/update`,
+  GET_APPLICATION_TEMPLATES: `${API_URL}/api/jobs/applications/templates`,
+  CREATE_APPLICATION_TEMPLATE: `${API_URL}/api/jobs/applications/templates/create`,
+  UPDATE_APPLICATION_TEMPLATE: (id) => `${API_URL}/api/jobs/applications/templates/${id}`,
+  DELETE_APPLICATION_TEMPLATE: (id) => `${API_URL}/api/jobs/applications/templates/${id}`,
+  GENERATE_COVER_LETTER: `${API_URL}/api/jobs/applications/generate-cover-letter`,
+  AUTOMATE_LINKEDIN_APPLICATION: `${API_URL}/api/jobs/applications/linkedin-automation`,
 };
 
 // User endpoints
 export const USER_ENDPOINTS = {
-  PROFILE: `${API_BASE_URL}/user/profile`,
-  UPDATE_PROFILE: `${API_BASE_URL}/user/profile`,
-  UPLOAD_AVATAR: `${API_BASE_URL}/user/avatar`,
-  GET_NOTIFICATIONS: `${API_BASE_URL}/user/notifications`,
-  UPDATE_SETTINGS: `${API_BASE_URL}/user/settings`,
-  DELETE_ACCOUNT: `${API_BASE_URL}/user/account`,
+  PROFILE: `${API_URL}/api/user/profile`,
+  UPDATE_PROFILE: `${API_URL}/api/user/profile`,
+  UPLOAD_AVATAR: `${API_URL}/api/user/avatar`,
+  GET_NOTIFICATIONS: `${API_URL}/api/user/notifications`,
+  UPDATE_SETTINGS: `${API_URL}/api/user/settings`,
+  DELETE_ACCOUNT: `${API_URL}/api/user/account`,
 };
 
 // Health check
 export const SYSTEM_ENDPOINTS = {
-  HEALTH_CHECK: `${API_BASE_URL}/health-check`,
+  HEALTH_CHECK: `${API_URL}/api/health-check`,
+  INTERVIEW_HEALTH_CHECK: `${INTERVIEW_API_URL}/api/interviews/health-check`,
+  UPLOAD_HEALTH_CHECK: `${UPLOAD_API_URL}/api/health-check`,
+  MAIN_HEALTH: `${API_URL}/health-check`,
+  INTERVIEW_HEALTH: `${INTERVIEW_API_URL}/health-check`,
+  UPLOAD_HEALTH: `${UPLOAD_API_URL}/health-check`,
 };
 
 // Dashboard endpoints
 export const DASHBOARD_ENDPOINTS = {
-  GET_DATA: (userId) => `${API_BASE_URL}/dashboard/${userId}`,
+  GET_DATA: (userId) => `${API_URL}/api/user/dashboard/${userId}`,
 };
 
 // Admin endpoints
 export const ADMIN_ENDPOINTS = {
-  ANALYTICS_DASHBOARD: `${API_BASE_URL}/analytics/dashboard`,
+  ANALYTICS_DASHBOARD: `${API_URL}/api/analytics/dashboard`,
 };
 
 // Skills endpoints
 export const SKILLS_ENDPOINTS = {
-  GET_CATEGORIES: `${API_BASE_URL}/skills/categories`,
-  GET_USER_SKILLS: (userId) => `${API_BASE_URL}/skills/user/${userId}`,
-  GET_COMPLETED_ASSESSMENTS: (userId) => `${API_BASE_URL}/skills/assessments/${userId}`,
-  GET_ASSESSMENT_QUESTIONS: (categoryId) => `${API_BASE_URL}/skills/assessment/${categoryId}/questions`,
-  GET_SKILL_GAP: (userId, jobId) => `${API_BASE_URL}/skills/gap/${userId}/${jobId}`,
-  GET_JOB_TITLES: `${API_BASE_URL}/jobs/titles`,
-  ASSESS: `${API_BASE_URL}/skill/assess`,
-  GAP_ANALYSIS: `${API_BASE_URL}/skill/gap-analysis`,
-  RECOMMENDATIONS: `${API_BASE_URL}/skill/recommendations`,
-  TRACK_PROGRESS: `${API_BASE_URL}/skill/track-progress`,
+  GET_CATEGORIES: `${API_URL}/api/skills/categories`,
+  GET_USER_SKILLS: (userId) => `${API_URL}/api/skills/user/${userId}`,
+  GET_COMPLETED_ASSESSMENTS: (userId) => `${API_URL}/api/skills/assessments/${userId}`,
+  GET_ASSESSMENT_QUESTIONS: (categoryId) => `${API_URL}/api/skills/assessment/${categoryId}/questions`,
+  GET_SKILL_GAP: (userId, jobId) => `${API_URL}/api/skills/gap/${userId}/${jobId}`,
+  GET_JOB_TITLES: `${API_URL}/api/jobs/titles`,
+  ASSESS: `${API_URL}/api/skill/assess`,
+  GAP_ANALYSIS: `${API_URL}/api/skill/gap-analysis`,
+  RECOMMENDATIONS: `${API_URL}/api/skill/recommendations`,
+  TRACK_PROGRESS: `${API_URL}/api/skill/track-progress`,
 };
 
 // Add mock data for UAE jobs

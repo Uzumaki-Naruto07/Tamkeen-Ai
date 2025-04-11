@@ -127,11 +127,15 @@ const checkBackendAvailability = async () => {
       return true;
     }
     
-    // Always use relative URL for health check - will be properly handled by proxy
-    const healthCheckUrl = '/api/health-check';
+    // Get API URLs from environment variables
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    const interviewApiUrl = import.meta.env.VITE_INTERVIEW_API_URL || 'http://localhost:5002';
+    
+    // Use absolute URL for health check
+    const healthCheckUrl = `${apiUrl}/api/health-check`;
     console.log('Checking backend availability at:', healthCheckUrl);
     
-    // First try frontend health check endpoint
+    // Try main API health check
     try {
       const response = await axios({
         method: 'get',
@@ -144,14 +148,14 @@ const checkBackendAvailability = async () => {
       });
       
       isBackendAvailable = response.status === 200;
-      console.log('Frontend health check response:', response.status);
+      console.log('Backend health check response:', response.status);
       
-      // If frontend is available, try checking main backend via proxy
+      // If main API is available, try checking interview API
       if (isBackendAvailable) {
         try {
-          const backendResponse = await axios({
+          const interviewResponse = await axios({
             method: 'get',
-            url: '/api/backend-health',
+            url: `${interviewApiUrl}/api/interviews/health-check`,
             timeout: 5000,
             headers: {
               'Accept': 'application/json'
@@ -159,30 +163,35 @@ const checkBackendAvailability = async () => {
             withCredentials: false
           });
           
-          console.log('Backend health check via proxy response:', backendResponse.status);
-        } catch (backendErr) {
-          console.warn('Backend health check via proxy failed but frontend is available:', backendErr.message);
-          // Continue with frontend-only mode
+          console.log('Interview API health check response:', interviewResponse.status);
+        } catch (interviewErr) {
+          console.warn('Interview API health check failed but main API is available:', interviewErr.message);
+          // Continue with main API only mode
         }
       }
       
     } catch (err) {
       console.error('Backend availability check failed:', err.message);
       isBackendAvailable = false;
-      // Check interview backend separately
+      
+      // Try alternative health check endpoints
       try {
-        const interviewResponse = await axios({
+        const alternativeResponse = await axios({
           method: 'get',
-          url: '/api/interviews/health-check',
+          url: `${apiUrl}/health-check`,
           timeout: 5000,
           headers: {
             'Accept': 'application/json'
           },
           withCredentials: false
         });
-        console.log('Interview backend health check response:', interviewResponse.status);
-      } catch (interviewErr) {
-        console.error('Interview backend health check failed:', interviewErr.message);
+        
+        if (alternativeResponse.status === 200) {
+          isBackendAvailable = true;
+          console.log('Alternative health check successful');
+        }
+      } catch (altErr) {
+        console.error('Alternative health check failed:', altErr.message);
       }
     }
   } finally {
@@ -190,6 +199,7 @@ const checkBackendAvailability = async () => {
     // Log the final determination
     console.log('Backend availability check:', isBackendAvailable ? 'CONNECTED' : 'DISCONNECTED');
   }
+  
   return isBackendAvailable;
 };
 
