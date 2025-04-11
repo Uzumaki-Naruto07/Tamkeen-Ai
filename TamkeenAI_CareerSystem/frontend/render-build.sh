@@ -29,7 +29,7 @@ cp package.render.json package.build.json
 # Set up PostCSS configuration
 echo "Setting up PostCSS configuration..."
 cat > postcss.config.js << 'EOF'
-module.exports = {
+export default {
   plugins: {
     tailwindcss: {},
     autoprefixer: {}
@@ -41,7 +41,7 @@ EOF
 echo "Setting up Tailwind configuration..."
 cat > tailwind.config.js << 'EOF'
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
     "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
