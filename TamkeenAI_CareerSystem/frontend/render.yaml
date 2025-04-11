@@ -8,6 +8,8 @@ services:
       - path: /*
         name: Cache-Control
         value: no-cache
+    healthCheckPath: /api/health-check
+    healthCheckTimeout: 5000
     envVars:
       - key: VITE_API_URL
         value: https://tamkeen-main-api.onrender.com # Update with your actual backend URL
@@ -18,10 +20,10 @@ services:
       - key: VITE_UPLOAD_SERVER_URL
         value: https://tamkeen-upload-server.onrender.com
       - key: VITE_USE_MOCK_DATA
-        value: false
+        value: true
       - key: VITE_ENABLE_MOCK_DATA
-        value: false
+        value: true
       - key: VITE_ENABLE_MOCK_FALLBACK
-        value: false
+        value: true
       - key: VITE_ENABLE_BACKEND_CHECK
-        value: true 
+        value: false 

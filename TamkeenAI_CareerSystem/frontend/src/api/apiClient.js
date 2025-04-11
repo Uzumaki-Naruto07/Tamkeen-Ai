@@ -30,6 +30,19 @@ const CORS_PROXY_URL = isDevelopment
   ? 'https://api.allorigins.win/raw?url=' 
   : NETLIFY_FUNCTION_URL;
 
+// Use a public CORS proxy to bypass CORS restrictions for production
+const useCorsProxy = import.meta.env.PROD; // Only use in production
+const corsProxy = 'https://corsproxy.io/?';
+
+// Function to prepend CORS proxy to URL if needed
+const withCorsProxy = (url) => {
+  // Only proxy absolute URLs, not relative paths
+  if (useCorsProxy && (url.startsWith('http://') || url.startsWith('https://'))) {
+    return `${corsProxy}${encodeURIComponent(url)}`;
+  }
+  return url;
+};
+
 // Create an axios instance with default config
 const apiClient = axios.create({
   baseURL: isDevelopment 
@@ -129,6 +142,11 @@ apiClient.interceptors.request.use(
     if (!isDevelopment && !config.url.startsWith('/api') && !config.url.startsWith('http')) {
       // If we're in production and the URL doesn't already start with /api, add it
       config.url = `/api${config.url.startsWith('/') ? '' : '/'}${config.url}`;
+    }
+
+    // Apply CORS proxy if this is an absolute URL
+    if (config.url.startsWith('http')) {
+      config.url = withCorsProxy(config.url);
     }
 
     // Debug logging

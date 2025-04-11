@@ -24,7 +24,7 @@ const INTERVIEW_API_URL = process.env.VITE_INTERVIEW_API_URL || 'https://tamkeen
 const PREDICT_API_URL = process.env.VITE_PREDICT_API_URL || 'https://tamkeen-predict-api.onrender.com';
 const UPLOAD_SERVER_URL = process.env.VITE_UPLOAD_SERVER_URL || 'https://tamkeen-upload-server.onrender.com';
 
-// Simple health check endpoint
+// Set up health check endpoint - make sure this is defined BEFORE proxy routes
 app.get('/api/health-check', (req, res) => {
   res.json({
     status: 'ok',
@@ -39,68 +39,112 @@ app.use((req, res, next) => {
   next();
 });
 
-// Configure enhanced proxy middleware with detailed logging and CORS handling
-const createEnhancedProxy = (path, target) => {
-  console.log(`Creating proxy for ${path} -> ${target}`);
-  
-  return createProxyMiddleware({
+// Make sure OPTIONS requests are handled properly for CORS
+app.options('*', cors());
+
+// Health check should be available at the root level too
+app.get('/health-check', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Frontend server is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Configure proxy middleware with CORS handling
+const createProxyWithCors = (path, target) => {
+  return createProxyMiddleware(path, {
     target: target,
     changeOrigin: true,
-    pathRewrite: (pathToRewrite, req) => {
-      // Don't rewrite paths that already have the right prefix
-      // This keeps the /api prefix intact when forwarding to the backend
-      const newPath = pathToRewrite;
-      console.log(`Proxy path rewrite: ${pathToRewrite} -> ${newPath}`);
-      return newPath;
-    },
     onProxyReq: (proxyReq, req, res) => {
       // Add origin to proxy request
       proxyReq.setHeader('Origin', target);
       
-      // Set proper content type for POST/PUT requests with JSON body
-      if (['POST', 'PUT'].includes(req.method) && req.body) {
+      // For POST requests, ensure the body is properly forwarded
+      if (req.method === 'POST' && req.body) {
         const bodyData = JSON.stringify(req.body);
         proxyReq.setHeader('Content-Type', 'application/json');
         proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
-        
-        // Log request details
-        console.log(`Proxying ${req.method} request to: ${req.url}`);
-        console.log('Request headers:', proxyReq.getHeaders());
-        
+        // Write body to request
         proxyReq.write(bodyData);
       }
     },
     onProxyRes: (proxyRes, req, res) => {
-      // Force CORS headers on all responses
+      // Add CORS headers to proxy response
       proxyRes.headers['Access-Control-Allow-Origin'] = '*';
       proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
       proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Auth-Token, Accept';
-      
-      // Log response code
-      console.log(`Proxy response from ${req.url}: ${proxyRes.statusCode}`);
+      proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
     },
-    onError: (err, req, res) => {
-      console.error(`Proxy error for ${req.url}:`, err);
-      res.status(500).json({
-        status: 'error',
-        message: 'Proxy error occurred',
-        error: err.message
-      });
+    pathRewrite: {
+      // Don't rewrite paths as the backend already has the /api prefix
+      //'^/api': '/api'
     },
     logLevel: 'debug'
   });
 };
 
 // Set up proxy routes - order matters! More specific routes first
-app.use('/api/interviews', createEnhancedProxy('/api/interviews', INTERVIEW_API_URL));
-app.use('/api/predict', createEnhancedProxy('/api/predict', PREDICT_API_URL));
-app.use('/api/upload', createEnhancedProxy('/api/upload', UPLOAD_SERVER_URL));
+app.use('/api/interviews', createProxyWithCors('/api/interviews', INTERVIEW_API_URL));
+app.use('/api/predict', createProxyWithCors('/api/predict', PREDICT_API_URL));
+app.use('/api/upload', createProxyWithCors('/api/upload', UPLOAD_SERVER_URL));
 
 // Main API catches all other /api routes
-app.use('/api', createEnhancedProxy('/api', MAIN_API_URL));
+app.use('/api', createProxyWithCors('/api', MAIN_API_URL));
 
-// Special handling for auth endpoints
-app.use('/api/auth', createEnhancedProxy('/api/auth', MAIN_API_URL));
+// Direct pass-through for auth endpoints for better CORS handling
+app.all('/auth/*', (req, res) => {
+  const targetUrl = `${MAIN_API_URL}/auth${req.url.substring(5)}`;
+  console.log(`Direct auth proxy to: ${targetUrl}`);
+  
+  // Create a direct proxy to the auth endpoint
+  const authProxy = createProxyMiddleware({
+    target: MAIN_API_URL,
+    changeOrigin: true,
+    pathRewrite: {
+      '^/auth': '/auth'
+    },
+    onProxyRes: (proxyRes, req, res) => {
+      proxyRes.headers['Access-Control-Allow-Origin'] = '*';
+      proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+      proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Auth-Token, Accept';
+      proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
+    },
+    logLevel: 'debug'
+  });
+  
+  authProxy(req, res);
+});
+
+// Special handler for login route
+app.all('/api/auth/login', (req, res, next) => {
+  console.log('Special handling for login request');
+  
+  // Create a direct proxy specifically for login
+  const loginProxy = createProxyMiddleware({
+    target: MAIN_API_URL,
+    changeOrigin: true,
+    onProxyReq: (proxyReq, req, res) => {
+      // Make sure content-type is set properly for POST requests
+      if (req.method === 'POST' && req.body) {
+        const bodyData = JSON.stringify(req.body);
+        proxyReq.setHeader('Content-Type', 'application/json');
+        proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+        proxyReq.write(bodyData);
+      }
+    },
+    onProxyRes: (proxyRes, req, res) => {
+      // Add CORS headers to proxy response
+      proxyRes.headers['Access-Control-Allow-Origin'] = '*';
+      proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+      proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Auth-Token, Accept';
+      proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
+    },
+    logLevel: 'debug'
+  });
+  
+  loginProxy(req, res, next);
+});
 
 // Serve static files from the dist directory
 app.use(express.static(path.join(__dirname, 'dist')));

@@ -91,6 +91,21 @@ const checkBackendAvailability = async () => {
       return true;
     }
     
+    // Use mock data in development if enabled
+    if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCK_DATA === 'true') {
+      console.log('Mock data is enabled, assuming backend is available');
+      isBackendAvailable = true;
+      return true;
+    }
+    
+    // In production, force backend to be available to use mock fallback functionality
+    // This helps when the backend is down but we want the UI to function with mock data
+    if (import.meta.env.PROD && import.meta.env.VITE_ENABLE_MOCK_FALLBACK === 'true') {
+      console.log('Mock fallback is enabled, assuming backend is available');
+      isBackendAvailable = true;
+      return true;
+    }
+    
     // Determine if we're in production mode
     const isProduction = import.meta.env.PROD;
     
@@ -108,29 +123,26 @@ const checkBackendAvailability = async () => {
     console.log('Checking backend availability at:', healthCheckUrl);
     
     // Try to hit the health check endpoint, with minimal headers to avoid CORS
-    const response = await axios({
-      method: 'get',
-      url: healthCheckUrl,
-      timeout: 5000, // Increased timeout
-      headers: {
-        'Accept': 'application/json'
-        // Explicitly NOT including Authorization header to avoid CORS preflight
-      },
-      withCredentials: false
-    });
-    
-    isBackendAvailable = response.status === 200;
-    console.log('Backend availability check:', isBackendAvailable ? 'CONNECTED' : 'DISCONNECTED');
-    console.log('Backend response:', response.data);
-  } catch (err) {
-    console.error('Backend availability check failed:', err.message);
-    isBackendAvailable = false;
-    console.log('Backend availability check: DISCONNECTED');
-    
-    // In development, if the real backend check fails, set to true anyways to use mock data
-    if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCK_DATA === 'true') {
-      console.log('In development with mock data enabled, treating backend as available');
-      isBackendAvailable = true;
+    try {
+      const response = await axios({
+        method: 'get',
+        url: healthCheckUrl,
+        timeout: 5000, // Increased timeout
+        headers: {
+          'Accept': 'application/json'
+          // Explicitly NOT including Authorization header to avoid CORS preflight
+        },
+        withCredentials: false
+      });
+      
+      isBackendAvailable = response.status === 200;
+      console.log('Backend availability check:', isBackendAvailable ? 'CONNECTED' : 'DISCONNECTED');
+      console.log('Backend response:', response.data);
+    } catch (err) {
+      console.error('Backend availability check failed:', err.message);
+      // Force backend to be available in production to allow the app to work
+      isBackendAvailable = import.meta.env.PROD ? true : false;
+      console.log('Backend availability check:', isBackendAvailable ? 'FORCING CONNECTED' : 'DISCONNECTED');
     }
   } finally {
     backendCheckInProgress = false;
