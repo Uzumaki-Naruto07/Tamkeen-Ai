@@ -14,7 +14,7 @@ const authService = {
   login: async (email, password) => {
     try {
       console.log('Login attempt with:', { email });
-      const response = await apiClient.post(AUTH_ENDPOINTS.LOGIN, { email, password });
+      const response = await apiClient.post(AUTH_ENDPOINTS.LOGIN || '/api/auth/login', { email, password });
       
       console.log('Login response:', response);
       
@@ -25,6 +25,7 @@ const authService = {
         // Store the token in localStorage - support different response formats
         const token = data.token || response.data.token;
         localStorage.setItem('token', token);
+        localStorage.setItem('authToken', token); // Store with both key names for compatibility
         
         // If user data is included in response, store it as well
         const userData = data.user || response.data.user || {};
@@ -44,44 +45,18 @@ const authService = {
         };
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error:', error.response || error);
       
-      // Handle different types of errors
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        const statusCode = error.response.status;
-        const errorData = error.response.data || {};
-        
-        if (statusCode === 401) {
-          return { 
-            success: false, 
-            message: errorData.message || 'Invalid email or password'
-          };
-        } else if (statusCode === 404) {
-          return { 
-            success: false, 
-            message: 'Authentication service not found. Please try again later.'
-          };
-        } else {
-          return { 
-            success: false, 
-            message: errorData.message || 'Login failed. Please try again.'
-          };
-        }
-      } else if (error.request) {
-        // The request was made but no response was received
-        return { 
-          success: false, 
-          message: 'No response from server. Please check your internet connection and try again.'
-        };
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        return { 
-          success: false, 
-          message: error.message || 'Login error. Please try again.'
-        };
-      }
+      // Handle different error responses
+      const errorMsg = error.response?.data?.message || 
+                      error.response?.data?.error || 
+                      error.message || 
+                      'Login failed';
+                      
+      return {
+        success: false,
+        message: errorMsg
+      };
     }
   },
 

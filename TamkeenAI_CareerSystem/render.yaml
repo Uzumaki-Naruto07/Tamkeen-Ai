@@ -27,6 +27,8 @@ services:
         value: 86400
       - key: PORT
         value: 5001
+      - key: FRONTEND_URL
+        value: https://tamkeen-frontend.onrender.com
 
   # Frontend app
   - type: web
@@ -61,6 +63,8 @@ services:
         sync: false
       - key: PORT
         value: 5002
+      - key: FRONTEND_URL
+        value: https://tamkeen-frontend.onrender.com
 
   # Upload Server (Port 5004)
   - type: web
@@ -73,4 +77,6 @@ services:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: PORT
-        value: 5004 
+        value: 5004
+      - key: FRONTEND_URL
+        value: https://tamkeen-frontend.onrender.com 

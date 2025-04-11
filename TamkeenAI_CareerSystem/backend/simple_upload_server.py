@@ -84,7 +84,29 @@ def lemma_term_in_text(term, text):
 def create_app():
     """Create and configure Flask application for gunicorn"""
     app = Flask(__name__)
-    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+    
+    # Configure CORS properly for production
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://tamkeen-frontend.onrender.com')
+    allowed_origins = [
+        frontend_url,
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000", 
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173",
+        "https://hessa-tamkeen-ai.netlify.app",
+        "https://hessa-tamkeen-ai.onrender.com",
+        "https://tamkeen-frontend.onrender.com"
+    ]
+    
+    # Apply CORS to all routes
+    CORS(app, resources={r"/*": {
+        "origins": allowed_origins,
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+        "supports_credentials": True
+    }})
+    
+    print(f"Upload Server CORS configured with allowed origins: {allowed_origins}")
 
     # Set up upload folder
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
@@ -110,7 +132,9 @@ def create_app():
         """Handle CORS preflight requests"""
         return '', 204
 
+    @app.route('/health-check', methods=['GET'])
     @app.route('/api/health-check', methods=['GET'])
+    @app.route('/api/upload/health-check', methods=['GET'])
     def health_check():
         """Simple health check endpoint"""
         return jsonify({
@@ -156,30 +180,6 @@ def create_app():
         else:
             return jsonify({"error": "File type not allowed"}), 400
 
-    @app.route('/api/upload/health-check', methods=['GET', 'OPTIONS'])
-    def upload_health_check():
-        """Health check endpoint for the upload server"""
-        # Handle OPTIONS requests for CORS preflight
-        if request.method == 'OPTIONS':
-            response = jsonify({"status": "ok"})
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
-            return response
-        
-        response = jsonify({
-            "status": "ok",
-            "service": "Upload Server",
-            "version": "1.0.0"
-        })
-        
-        # Add CORS headers directly
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
-        
-        return response
-
     return app
 
 # Create app instance for direct running
@@ -187,8 +187,14 @@ app = create_app()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Simple upload server')
-    parser.add_argument('--port', type=int, default=5001, help='Port to run server on')
+    parser.add_argument('--port', type=int, default=int(os.environ.get('PORT', 5004)), 
+                        help='Port to run server on')
+    parser.add_argument('--debug', action='store_true', 
+                        default=(os.environ.get('DEBUG', 'false').lower() == 'true'),
+                        help='Run in debug mode')
     args = parser.parse_args()
     
-    print(f"Starting simple upload server on port {args.port}...")
-    app.run(host='0.0.0.0', port=args.port, debug=True) 
+    port = args.port
+    print(f"Starting simple upload server on port {port}...")
+    print(f"Debug mode: {args.debug}")
+    app.run(host='0.0.0.0', port=port, debug=args.debug)

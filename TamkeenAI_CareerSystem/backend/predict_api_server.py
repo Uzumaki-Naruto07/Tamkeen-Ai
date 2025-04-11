@@ -81,32 +81,6 @@ def api_health_check():
     
     return response
 
-# Add a health check endpoint that matches the path expected by frontend and Render
-@app.route('/api/predict/health-check', methods=['GET', 'OPTIONS'])
-def predict_health_check():
-    """Health check endpoint for the predict API"""
-    # Handle OPTIONS requests for CORS preflight
-    if request.method == 'OPTIONS':
-        response = jsonify({"status": "ok"})
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
-        return response
-        
-    response = jsonify({
-        "status": "ok",
-        "service": "Predict API Server",
-        "version": "1.0.0",
-        "using_mock": get_deepseek_client().is_using_mock()
-    })
-    
-    # Add CORS headers directly
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
-    
-    return response
-
 # Resume analysis endpoint
 @app.route('/analyze-resume', methods=['POST'])
 def analyze_resume():

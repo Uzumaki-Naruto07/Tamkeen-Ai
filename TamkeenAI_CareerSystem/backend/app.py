@@ -84,54 +84,29 @@ def create_app():
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload size
     
-    # CORS configuration - simplified to prevent duplicate headers
-    # Instead of using the Flask-CORS extension with complex options
-    @app.after_request
-    def add_cors_headers(response):
-        """Add CORS headers to all responses to prevent duplicates"""
-        # First remove any existing CORS headers to prevent duplicates
-        headers_to_remove = [
-            'Access-Control-Allow-Origin',
-            'Access-Control-Allow-Methods',
-            'Access-Control-Allow-Headers',
-            'Access-Control-Allow-Credentials',
-            'Access-Control-Expose-Headers'
-        ]
-        for header in headers_to_remove:
-            if header in response.headers:
-                del response.headers[header]
-        
-        # Get origin from request
-        origin = request.headers.get('Origin', '*')
-        
-        # Get allowed origins from environment or use default list
-        cors_origins_env = os.getenv('CORS_ORIGINS', '')
-        allowed_origins = cors_origins_env.split(',') if cors_origins_env else [
-            "http://localhost:3000", 
-            "http://127.0.0.1:3000", 
-            "http://localhost:5173", 
-            "http://127.0.0.1:5173",
-            "http://localhost:3001",
-            "http://127.0.0.1:3001",
-            "https://hessa-tamkeen-ai.netlify.app",  # Add Netlify domain
-            "https://hessa-tamkeen-ai.onrender.com",  # Add Render domain
-            "https://tamkeen-frontend.onrender.com",  # Add the frontend domain
-            "http://tamkeen-frontend.onrender.com",   # Also allow HTTP version for development
-            "*"  # Allow all origins as a fallback
-        ]
-        
-        # Always log the request origin and allowed origins for debugging
-        print(f"Request origin: {origin}")
-        print(f"Allowed origins: {allowed_origins}")
-        
-        # Set CORS headers for all responses
-        response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept'
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        
-        print(f"CORS: Setting origin header to: {origin}")
-        return response
+    # Configure CORS properly with Flask-CORS
+    frontend_url = os.getenv('FRONTEND_URL', 'https://tamkeen-frontend.onrender.com')
+    allowed_origins = [
+        frontend_url,
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000", 
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173",
+        "https://hessa-tamkeen-ai.netlify.app",
+        "https://hessa-tamkeen-ai.onrender.com",
+        "https://tamkeen-frontend.onrender.com",
+    ]
+    
+    # Apply CORS to all routes
+    CORS(app, resources={r"/*": {
+        "origins": allowed_origins,
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+        "supports_credentials": True
+    }})
+    
+    # Log CORS configuration
+    logger.info(f"CORS configured with allowed origins: {allowed_origins}")
     
     # Register blueprints
     app.register_blueprint(user_bp, url_prefix='/api/user')
@@ -178,30 +153,25 @@ def create_app():
         # Handle OPTIONS request
         if request.method == 'OPTIONS':
             response = jsonify({'status': 'success'})
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
             return response
             
         # Import here to check MongoDB status during health check
         from api.database.connector import db
         mongo_status = "connected" if db is not None else "disconnected (using mock)"
         
-        # Set CORS headers directly
-        response = jsonify({
+        return jsonify({
             "status": "success",
             "message": "API is running",
             "version": "1.0.0",
             "mongodb": mongo_status
         })
-        
-        # Add CORS headers directly to this response
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
-        
-        return response
-
+    
+    # Simple health check at root path - useful for some monitoring systems
+    @app.route('/health-check', methods=['GET'])
+    def simple_health_check():
+        """Simple health check endpoint at root level"""
+        return jsonify({"status": "ok"}), 200
+    
     @app.route('/api/health', methods=['GET', 'OPTIONS'])
     def api_health():
         """Health check endpoint (alternative path)"""

@@ -55,8 +55,29 @@ interview_qa_pairs = [
 # Setup Flask app
 app = Flask(__name__)
 
-# Use very permissive CORS settings for development
-CORS(app, resources={r"/*": {"origins": "*", "allow_headers": ["Content-Type", "Accept", "X-Requested-With"], "methods": ["GET", "POST", "OPTIONS"]}})
+# Configure CORS properly for production
+frontend_url = os.environ.get('FRONTEND_URL', 'https://tamkeen-frontend.onrender.com')
+allowed_origins = [
+    frontend_url,
+    "http://localhost:3000", 
+    "http://127.0.0.1:3000", 
+    "http://localhost:5173", 
+    "http://127.0.0.1:5173",
+    "https://hessa-tamkeen-ai.netlify.app",
+    "https://hessa-tamkeen-ai.onrender.com",
+    "https://tamkeen-frontend.onrender.com"
+]
+
+# Apply CORS to all routes
+CORS(app, resources={r"/*": {
+    "origins": allowed_origins,
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+    "supports_credentials": True
+}})
+
+# Log CORS configuration
+logger.info(f"Interview API CORS configured with allowed origins: {allowed_origins}")
 
 # DeepSeek API configuration
 DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
@@ -65,50 +86,27 @@ DEEPSEEK_API_URL = "https://api.deepseek.com/v1/models/deepseek-coder/generate"
 @app.route('/health-check', methods=['GET'])
 def health_check():
     port = int(os.environ.get('PORT', 5001))
-    response = jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
-    
-    # Add CORS headers directly to this response
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
-    
-    return response
+    return jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"}), 200
 
 @app.route('/api/health-check', methods=['GET'])
 def api_health_check():
     port = int(os.environ.get('PORT', 5001))
-    response = jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
-    
-    # Add CORS headers directly to this response
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
-    
-    return response
+    return jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"}), 200
+
+@app.route('/api/interviews/health-check', methods=['GET'])
+def interviews_health_check():
+    port = int(os.environ.get('PORT', 5001))
+    return jsonify({"status": "ok", "message": f"Interview API health check passed on port {port}"}), 200
 
 @app.route('/api/health', methods=['GET'])
 def api_health():
     port = int(os.environ.get('PORT', 5001))
-    response = jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
-    
-    # Add CORS headers directly to this response
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
-    
-    return response
+    return jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"}), 200
 
 @app.route('/health', methods=['GET'])
 def health_simple():
     port = int(os.environ.get('PORT', 5001))
-    response = jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
-    
-    # Add CORS headers directly to this response
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
-    
-    return response
+    return jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"}), 200
 
 @app.route('/api/interviews/conversation', methods=['POST'])
 def create_or_load_conversation():
@@ -506,43 +504,21 @@ def analyze_response_local(transcript, question, job_role):
 @app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
 @app.route('/<path:path>', methods=['OPTIONS'])
 def options_handler(path):
-    response = make_response()
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
-    return response
-
-# Add a health check endpoint that matches the path expected by frontend and Render
-@app.route('/api/interviews/health-check', methods=['GET', 'OPTIONS'])
-def interviews_health_check():
-    """Health check endpoint for the interview API"""
-    # Handle OPTIONS requests for CORS preflight
-    if request.method == 'OPTIONS':
-        response = jsonify({"status": "ok"})
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
-        return response
-        
-    response = jsonify({
-        "status": "ok",
-        "service": "Interview API Server",
-        "version": "1.0.0"
-    })
-    
-    # Add CORS headers directly
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
-    
+    """Handle OPTIONS requests for CORS preflight"""
+    response = jsonify({'status': 'ok'})
     return response
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Simple Interview API')
-    parser.add_argument('--port', type=int, default=5001, help='Port to run the API on')
+    parser = argparse.ArgumentParser(description='Simple Interview API Server')
+    parser.add_argument('--port', type=int, default=int(os.environ.get('PORT', 5002)),
+                        help='Port to run the server on')
+    parser.add_argument('--debug', action='store_true', help='Run in debug mode')
     args = parser.parse_args()
     
-    # Use environment PORT variable if set (for cloud deployment), otherwise use args.port
-    port = int(os.environ.get('PORT', args.port))
-    print(f"Starting Simple Interview API on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=True) 
+    # Log startup information
+    port = args.port
+    logger.info(f"Starting Simple Interview API on port {port}")
+    logger.info(f"Debug mode: {args.debug}")
+    
+    # Run the app
+    app.run(host='0.0.0.0', port=port, debug=args.debug) 
