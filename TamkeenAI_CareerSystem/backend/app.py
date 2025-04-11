@@ -116,41 +116,21 @@ def create_app():
             "https://hessa-tamkeen-ai.netlify.app",  # Add Netlify domain
             "https://hessa-tamkeen-ai.onrender.com",  # Add Render domain
             "https://tamkeen-frontend.onrender.com",  # Add the frontend domain
-            "http://tamkeen-frontend.onrender.com"   # Also allow HTTP version for development
+            "http://tamkeen-frontend.onrender.com",   # Also allow HTTP version for development
+            "*"  # Allow all origins as a fallback
         ]
         
         # Always log the request origin and allowed origins for debugging
         print(f"Request origin: {origin}")
         print(f"Allowed origins: {allowed_origins}")
         
-        # Always allow requests directly from the Render.com domain
-        if origin and ('onrender.com' in origin or 'netlify.app' in origin):
-            response.headers['Access-Control-Allow-Origin'] = origin
-            print(f"CORS: Allowing Render/Netlify origin: {origin}")
-        # Check if wildcard is in the list
-        elif '*' in allowed_origins or 'https://*.netlify.app' in allowed_origins:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            print(f"CORS: Allowing origin via wildcard: {origin}")
-        # Otherwise check if the origin is in the allowed list
-        elif origin in allowed_origins or any(origin.endswith(domain.replace('*.', '.')) for domain in allowed_origins if '*.' in domain):
-            response.headers['Access-Control-Allow-Origin'] = origin
-            print(f"CORS: Allowing origin in allowed list: {origin}")
-        # In development mode, be permissive
-        elif os.getenv('FLASK_ENV') != 'production' or app.debug:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            print(f"CORS: Allowing origin in development mode: {origin}")
-        else:
-            print(f"CORS: Origin not allowed: {origin}")
-            
+        # Set CORS headers for all responses
+        response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, X-Force-Real-API, X-Skip-Mock, x-auth-token, Accept'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept'
         response.headers['Access-Control-Allow-Credentials'] = 'true'
-        response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition'
         
-        # Ensure OPTIONS requests always return 200
-        if request.method == "OPTIONS":
-            response.status_code = 200
-            
+        print(f"CORS: Setting origin header to: {origin}")
         return response
     
     # Register blueprints

@@ -55,6 +55,32 @@ def health_check():
         "using_mock": get_deepseek_client().is_using_mock()
     })
 
+# Additional API health check endpoint (for consistency)
+@app.route('/api/health-check', methods=['GET', 'OPTIONS'])
+def api_health_check():
+    """API-prefixed health check endpoint"""
+    # Handle OPTIONS requests for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({"status": "ok"})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+        return response
+        
+    response = jsonify({
+        "status": "ok",
+        "service": "PredictAPI Server",
+        "version": "1.0.0",
+        "using_mock": get_deepseek_client().is_using_mock()
+    })
+    
+    # Add CORS headers directly
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+    
+    return response
+
 # Resume analysis endpoint
 @app.route('/analyze-resume', methods=['POST'])
 def analyze_resume():
