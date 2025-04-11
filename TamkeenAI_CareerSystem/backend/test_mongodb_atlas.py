@@ -11,6 +11,28 @@ import sys
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+
+def sanitize_mongo_uri(uri):
+    """Remove conflicting TLS options from MongoDB URI."""
+    try:
+        parsed = urlparse(uri)
+        query_params = parse_qs(parsed.query)
+        
+        # If both conflicting options exist, remove tlsAllowInvalidCertificates
+        if 'tlsInsecure' in query_params and 'tlsAllowInvalidCertificates' in query_params:
+            del query_params['tlsAllowInvalidCertificates']
+            print("Removed conflicting TLS option: tlsAllowInvalidCertificates")
+        
+        # Rebuild query string
+        new_query = urlencode(query_params, doseq=True)
+        new_parts = list(parsed)
+        new_parts[4] = new_query  # Replace query component
+        
+        return urlunparse(tuple(new_parts))
+    except Exception as e:
+        print(f"Error sanitizing MongoDB URI: {e}. Using original URI.")
+        return uri
 
 def test_mongodb_connection():
     """Test connection to MongoDB Atlas."""
@@ -23,6 +45,9 @@ def test_mongodb_connection():
     if not mongo_uri:
         print("Error: MONGO_URI environment variable not set.")
         sys.exit(1)
+    
+    # Sanitize the MongoDB URI to remove conflicting TLS options
+    mongo_uri = sanitize_mongo_uri(mongo_uri)
     
     try:
         # Connect to MongoDB Atlas with Server API version

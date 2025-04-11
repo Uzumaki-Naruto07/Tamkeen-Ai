@@ -35,6 +35,7 @@ def sanitize_mongo_uri(uri):
         # If both conflicting options exist, remove tlsAllowInvalidCertificates
         if 'tlsInsecure' in query_params and 'tlsAllowInvalidCertificates' in query_params:
             del query_params['tlsAllowInvalidCertificates']
+            logger.info("Removed conflicting TLS option: tlsAllowInvalidCertificates")
         
         # Rebuild query string
         new_query = urlencode(query_params, doseq=True)
@@ -166,20 +167,14 @@ try:
     # Configure SSL/TLS options - use a simplified approach with only one option
     ssl_options = {}
     
-    try:
-        # Only set tlsInsecure, never both options
-        if MONGO_TLS == 'CERT_NONE' or PYMONGO_TLS_INSECURE:
-            ssl_options['tlsInsecure'] = True
-    except Exception as ssl_config_error:
-        logger.warning(f"Error setting SSL options: {ssl_config_error}. Proceeding with default SSL settings.")
-        ssl_options = {}
-        
+    # Do not add any TLS options here as they are already in the URI
+    # and have been sanitized by sanitize_mongo_uri
+    
     # Add SSL options to connection
     mongo_client = MongoClient(
         MONGO_URI, 
         server_api=ServerApi('1'), 
-        serverSelectionTimeoutMS=5000,
-        **ssl_options
+        serverSelectionTimeoutMS=5000
     )
     
     # Verify connection
@@ -239,21 +234,15 @@ else:
         # Configure SSL/TLS options - use a simplified approach with only one option
         ssl_options = {}
         
-        try:
-            # Only set tlsInsecure, never both options
-            if MONGO_TLS == 'CERT_NONE' or PYMONGO_TLS_INSECURE:
-                ssl_options['tlsInsecure'] = True
-        except Exception as ssl_config_error:
-            logger.warning(f"Error setting SSL options: {ssl_config_error}. Proceeding with default SSL settings.")
-            ssl_options = {}
+        # Do not add any TLS options here as they are already in the URI
+        # and have been sanitized by sanitize_mongo_uri
         
         # Create MongoDB Atlas client (with a longer timeout for development)
         client = MongoClient(
             MONGO_URI, 
             server_api=ServerApi('1'), 
             serverSelectionTimeoutMS=20000, 
-            connectTimeoutMS=20000,
-            **ssl_options
+            connectTimeoutMS=20000
         )
         
         # Verify connection

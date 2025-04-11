@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from pymongo import MongoClient
 from bson import ObjectId
 import logging
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -19,11 +20,34 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
+def sanitize_mongo_uri(uri):
+    """Remove conflicting TLS options from MongoDB URI."""
+    try:
+        parsed = urlparse(uri)
+        query_params = parse_qs(parsed.query)
+        
+        # If both conflicting options exist, remove tlsAllowInvalidCertificates
+        if 'tlsInsecure' in query_params and 'tlsAllowInvalidCertificates' in query_params:
+            del query_params['tlsAllowInvalidCertificates']
+            logger.info("Removed conflicting TLS option: tlsAllowInvalidCertificates")
+        
+        # Rebuild query string
+        new_query = urlencode(query_params, doseq=True)
+        new_parts = list(parsed)
+        new_parts[4] = new_query  # Replace query component
+        
+        return urlunparse(tuple(new_parts))
+    except Exception as e:
+        logger.warning(f"Error sanitizing MongoDB URI: {e}. Using original URI.")
+        return uri
+
 def init_db():
     """Initialize MongoDB collections for the Interview Coach"""
     try:
         # Connect to MongoDB
         mongo_uri = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
+        # Sanitize URI to avoid conflicting TLS options
+        mongo_uri = sanitize_mongo_uri(mongo_uri)
         client = MongoClient(mongo_uri)
         db = client['tamkeen_ai']
         

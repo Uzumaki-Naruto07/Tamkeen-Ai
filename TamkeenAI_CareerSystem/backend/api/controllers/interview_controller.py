@@ -7,14 +7,39 @@ from bson import ObjectId
 from pymongo import MongoClient
 import openai
 import logging
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Helper function to sanitize MongoDB URI
+def sanitize_mongo_uri(uri):
+    """Remove conflicting TLS options from MongoDB URI."""
+    try:
+        parsed = urlparse(uri)
+        query_params = parse_qs(parsed.query)
+        
+        # If both conflicting options exist, remove tlsAllowInvalidCertificates
+        if 'tlsInsecure' in query_params and 'tlsAllowInvalidCertificates' in query_params:
+            del query_params['tlsAllowInvalidCertificates']
+            logger.info("Removed conflicting TLS option: tlsAllowInvalidCertificates")
+        
+        # Rebuild query string
+        new_query = urlencode(query_params, doseq=True)
+        new_parts = list(parsed)
+        new_parts[4] = new_query  # Replace query component
+        
+        return urlunparse(tuple(new_parts))
+    except Exception as e:
+        logger.warning(f"Error sanitizing MongoDB URI: {e}. Using original URI.")
+        return uri
+
 # Set up MongoDB connection
 try:
     mongo_uri = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
+    # Sanitize URI to avoid conflicting TLS options
+    mongo_uri = sanitize_mongo_uri(mongo_uri)
     client = MongoClient(mongo_uri, serverSelectionTimeoutMS=3000)  # Add a shorter timeout
     # Test the connection
     client.server_info()  # This will raise an exception if not connected
