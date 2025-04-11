@@ -1,7 +1,8 @@
 import './reactRouterFlags.js';
 
 import React from 'react';
-import ReactDOM from 'react-dom/client';
+// Import from our wrapper instead of directly from react-dom/client
+import { createRoot } from './reactDomClient';
 import App from './App';
 import './index.css';
 import { startTransition } from 'react';
@@ -33,16 +34,13 @@ try {
     throw new Error('Root element not found in the document');
   }
   
-  const root = ReactDOM.createRoot(rootElement);
+  // Use our wrapper's createRoot
+  const root = createRoot(rootElement);
   
   // Wrap the app in startTransition to work with the React Router future flags
   root.render(
     <React.StrictMode>
-      {React.createElement(
-        React.Fragment,
-        null,
-        <App />
-      )}
+      <App />
     </React.StrictMode>
   );
   

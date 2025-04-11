@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import fs from 'fs'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -9,8 +10,9 @@ export default defineConfig({
     alias: {
       '@': '/src',
       src: path.resolve(__dirname, './src'),
+      'react': path.resolve(__dirname, 'node_modules/react'),
       'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
-      'react': path.resolve(__dirname, 'node_modules/react')
+      'react-dom/client': path.resolve(__dirname, 'node_modules/react-dom/client.js')
     },
   },
   build: {
@@ -26,7 +28,20 @@ export default defineConfig({
           ui: ['@mui/material', '@mui/icons-material'],
         }
       }
+    },
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true
     }
+  },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-dom/client',
+      'react-router-dom'
+    ],
+    force: true
   },
   define: {
     'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'https://tamkeen-main-api.onrender.com'),

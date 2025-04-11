@@ -5,8 +5,16 @@ set -e
 
 echo "Starting Render build process..."
 
-# Install dependencies with legacy peer deps
-echo "Installing dependencies..."
+# Clean up node_modules to ensure fresh installation
+echo "Cleaning previous installations..."
+rm -rf node_modules
+
+# Install React 18 core packages first
+echo "Installing React 18 core dependencies..."
+npm install --no-save react@18.2.0 react-dom@18.2.0
+
+# Install all dependencies with legacy peer deps
+echo "Installing remaining dependencies..."
 npm install --legacy-peer-deps
 
 # Copy simplified configuration for Render
