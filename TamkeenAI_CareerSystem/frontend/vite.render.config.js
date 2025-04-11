@@ -34,14 +34,9 @@ export default defineConfig({
       transformMixedEsModules: true
     }
   },
+  // Let PostCSS handle Tailwind through the separate config file
   css: {
-    // Disable PostCSS preprocessing in Vite itself
-    // since we're handling it with our custom config
-    postcss: false,
-    // Ensure CSS modules are processed correctly
-    modules: {
-      localsConvention: 'camelCaseOnly'
-    }
+    postcss: './postcss.config.js'
   },
   optimizeDeps: {
     include: [
