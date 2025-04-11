@@ -77,7 +77,7 @@ import { Chart } from 'react-chartjs-2';
 import { useUser } from '../context/AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
-import SpeechControl from './Speech/SpeechControl';
+import SpeechControl from './Speech/SpeechControl.jsx';
 
 // Mock data for development and fallback purposes
 const sampleSkillCategories = [

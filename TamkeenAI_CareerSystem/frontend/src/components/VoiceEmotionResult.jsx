@@ -10,7 +10,7 @@ import {
   Speed, Psychology, Timer, Check
 } from '@mui/icons-material';
 import { Radar, Line } from 'react-chartjs-2';
-import SpeechControl from './SpeechControl';
+import SpeechControl from './SpeechControl.jsx';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
 

@@ -62,7 +62,7 @@ import {
 import { useJob, useUser } from './AppContext';
 import apiEndpoints from '../utils/api';
 import LoadingSpinner from './LoadingSpinner';
-import SpeechControl from './Speech/SpeechControl';
+import SpeechControl from './Speech/SpeechControl.jsx';
 import CameraFeed from './CameraFeed';
 
 const InterviewContainer = styled(Box)(({ theme }) => ({

@@ -23,7 +23,80 @@ npm install --legacy-peer-deps
 
 # Copy simplified configuration for Render
 echo "Configuring for Render deployment..."
-cp vite.render.config.js vite.config.js
+cp vite.render.config.js vite.config.js.template
+
+# Create a modified version of the config
+cat > vite.config.js << 'EOF'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+import fs from 'fs'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': '/src',
+      src: path.resolve(__dirname, './src'),
+      'react': path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+      'react-dom/client': path.resolve(__dirname, 'node_modules/react-dom/client.js')
+    },
+    extensions: ['.mjs', '.js', '.jsx', '.ts', '.tsx', '.json']
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    minify: true,
+    rollupOptions: {
+      external: [],
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['@mui/material', '@mui/icons-material'],
+        }
+      }
+    },
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true
+    }
+  },
+  esbuild: {
+    loader: 'jsx',
+    include: [/\.jsx$/, /\.js$/],
+    exclude: [],
+  },
+  // Let PostCSS handle Tailwind through the separate config file
+  css: {
+    postcss: './postcss.config.js'
+  },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-dom/client',
+      'react-router-dom'
+    ],
+    force: true,
+    esbuildOptions: {
+      loader: {
+        '.js': 'jsx',
+      },
+    }
+  },
+  define: {
+    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'https://tamkeen-main-api.onrender.com'),
+    'process.env.VITE_INTERVIEW_API_URL': JSON.stringify(process.env.VITE_INTERVIEW_API_URL || 'https://tamkeen-interview-api.onrender.com'),
+    'process.env.VITE_USE_MOCK_DATA': JSON.stringify(process.env.VITE_USE_MOCK_DATA || 'false'),
+    'process.env.VITE_ENABLE_MOCK_DATA': JSON.stringify(process.env.VITE_ENABLE_MOCK_DATA || 'false'),
+    'process.env.VITE_ENABLE_BACKEND_CHECK': JSON.stringify(process.env.VITE_ENABLE_BACKEND_CHECK || 'true')
+  },
+}) 
+EOF
+
 cp package.render.json package.build.json
 
 # Set up PostCSS configuration
