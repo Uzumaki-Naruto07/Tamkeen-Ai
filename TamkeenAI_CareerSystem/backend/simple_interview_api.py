@@ -512,6 +512,31 @@ def options_handler(path):
     response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
     return response
 
+# Add a health check endpoint that matches the path expected by frontend and Render
+@app.route('/api/interviews/health-check', methods=['GET', 'OPTIONS'])
+def api_health_check():
+    """Health check endpoint for the interview API"""
+    # Handle OPTIONS requests for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({"status": "ok"})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+        return response
+        
+    response = jsonify({
+        "status": "ok",
+        "service": "Interview API Server",
+        "version": "1.0.0"
+    })
+    
+    # Add CORS headers directly
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+    
+    return response
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Simple Interview API')
     parser.add_argument('--port', type=int, default=5001, help='Port to run the API on')

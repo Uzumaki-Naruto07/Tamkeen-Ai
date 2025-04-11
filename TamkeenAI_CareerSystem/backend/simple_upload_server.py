@@ -156,6 +156,30 @@ def create_app():
         else:
             return jsonify({"error": "File type not allowed"}), 400
 
+    @app.route('/api/upload/health-check', methods=['GET', 'OPTIONS'])
+    def upload_health_check():
+        """Health check endpoint for the upload server"""
+        # Handle OPTIONS requests for CORS preflight
+        if request.method == 'OPTIONS':
+            response = jsonify({"status": "ok"})
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+            return response
+        
+        response = jsonify({
+            "status": "ok",
+            "service": "Upload Server",
+            "version": "1.0.0"
+        })
+        
+        # Add CORS headers directly
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+        
+        return response
+
     return app
 
 # Create app instance for direct running

@@ -4,7 +4,15 @@ import os
 from .auth import generate_token, token_required, role_required, refresh_access_token
 
 app = Flask(__name__)
-CORS(app)
+# Configure CORS to allow requests from the frontend
+CORS(app, resources={r"/*": {
+    "origins": [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://tamkeen-frontend.onrender.com"
+    ],
+    "supports_credentials": True
+}})
 
 # Configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'tamkeen-ai-secret-key')
@@ -169,5 +177,24 @@ def health_check():
         'status': 'success'
     }), 200
 
+# Additional health check endpoint for Render
+@app.route('/api/health-check', methods=['GET', 'OPTIONS'])
+def render_health_check():
+    """Health check endpoint for Render"""
+    # Handle OPTIONS requests for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({"status": "ok"})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+        return response
+        
+    return jsonify({
+        "status": "ok",
+        "service": "Tamkeen API Server",
+        "version": "1.0.0"
+    }), 200
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port) 
