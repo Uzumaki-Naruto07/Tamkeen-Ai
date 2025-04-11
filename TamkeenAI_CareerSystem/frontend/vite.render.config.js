@@ -34,6 +34,15 @@ export default defineConfig({
       transformMixedEsModules: true
     }
   },
+  css: {
+    // Disable PostCSS preprocessing in Vite itself
+    // since we're handling it with our custom config
+    postcss: false,
+    // Ensure CSS modules are processed correctly
+    modules: {
+      localsConvention: 'camelCaseOnly'
+    }
+  },
   optimizeDeps: {
     include: [
       'react',
