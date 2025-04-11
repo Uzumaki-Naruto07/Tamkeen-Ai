@@ -20,9 +20,14 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # MongoDB Atlas connection details
-MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://loveanime200o0:R8tdEvgOvId5FEZv@tamkeen.0fmhury.mongodb.net/?retryWrites=true&w=majority&appName=Tamkeen")
+MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://loveanime200o0:R8tdEvgOvId5FEZv@tamkeen.0fmhury.mongodb.net/?retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=false&appName=Tamkeen")
 MONGO_DB = os.getenv("MONGO_DB", "tamkeen")
 USE_MOCK_DB = os.getenv('USE_MOCK_DB', 'false').lower() == 'true'
+
+# Get SSL/TLS settings from environment
+MONGO_TLS = os.getenv('MONGO_TLS', None)
+TLS_CERT_PATH = os.getenv('TLS_CERT_PATH', None)
+PYMONGO_TLS_INSECURE = os.getenv('PYMONGO_TLS_INSECURE_SKIP_VERIFY', 'false').lower() == 'true'
 
 # Mock collection for testing or when MongoDB is not available
 class MockCollection:
@@ -128,7 +133,29 @@ collections = {}
 try:
     # Connect to MongoDB Atlas with timeout and server API version
     logger.info(f"Connecting to MongoDB Atlas...")
-    mongo_client = MongoClient(MONGO_URI, server_api=ServerApi('1'), serverSelectionTimeoutMS=5000)
+    
+    # Configure SSL/TLS options
+    ssl_options = {}
+    
+    if MONGO_TLS == 'CERT_NONE':
+        import ssl
+        ssl_options['ssl_cert_reqs'] = ssl.CERT_NONE
+    
+    if TLS_CERT_PATH == 'system':
+        # Use system certificate store
+        ssl_options['ssl_ca_certs'] = None
+    
+    if PYMONGO_TLS_INSECURE:
+        ssl_options['ssl_cert_reqs'] = ssl.CERT_NONE
+        
+    # Add SSL options to connection
+    mongo_client = MongoClient(
+        MONGO_URI, 
+        server_api=ServerApi('1'), 
+        serverSelectionTimeoutMS=5000,
+        **ssl_options
+    )
+    
     # Verify connection
     mongo_client.admin.command('ping')
     db = mongo_client[MONGO_DB]
@@ -179,11 +206,31 @@ else:
     try:
         # Try to import pymongo
         import pymongo
+        import ssl
         from pymongo import MongoClient
         from pymongo.server_api import ServerApi
         
+        # Configure SSL/TLS options
+        ssl_options = {}
+        
+        if MONGO_TLS == 'CERT_NONE':
+            ssl_options['ssl_cert_reqs'] = ssl.CERT_NONE
+        
+        if TLS_CERT_PATH == 'system':
+            # Use system certificate store
+            ssl_options['ssl_ca_certs'] = None
+        
+        if PYMONGO_TLS_INSECURE:
+            ssl_options['ssl_cert_reqs'] = ssl.CERT_NONE
+        
         # Create MongoDB Atlas client (with a longer timeout for development)
-        client = MongoClient(MONGO_URI, server_api=ServerApi('1'), serverSelectionTimeoutMS=20000, connectTimeoutMS=20000)
+        client = MongoClient(
+            MONGO_URI, 
+            server_api=ServerApi('1'), 
+            serverSelectionTimeoutMS=20000, 
+            connectTimeoutMS=20000,
+            **ssl_options
+        )
         
         # Verify connection
         client.admin.command('ping')  # Will raise an exception if connection fails
