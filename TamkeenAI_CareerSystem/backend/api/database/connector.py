@@ -11,6 +11,7 @@ from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 from dotenv import load_dotenv
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +21,35 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # MongoDB Atlas connection details
-MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://loveanime200o0:R8tdEvgOvId5FEZv@tamkeen.0fmhury.mongodb.net/?retryWrites=true&w=majority&tls=true&appName=Tamkeen")
+# Ensure we don't have conflicting TLS parameters in the URI
+MONGO_URI_DEFAULT = "mongodb+srv://loveanime200o0:R8tdEvgOvId5FEZv@tamkeen.0fmhury.mongodb.net/?retryWrites=true&w=majority&tls=true&appName=Tamkeen"
+MONGO_URI_ENV = os.getenv("MONGO_URI", MONGO_URI_DEFAULT)
+
+# Prevent conflicting TLS options in URI
+def sanitize_mongo_uri(uri):
+    """Remove conflicting TLS options from MongoDB URI."""
+    try:
+        parsed = urlparse(uri)
+        query_params = parse_qs(parsed.query)
+        
+        # If both conflicting options exist, remove tlsAllowInvalidCertificates
+        if 'tlsInsecure' in query_params and 'tlsAllowInvalidCertificates' in query_params:
+            del query_params['tlsAllowInvalidCertificates']
+        
+        # Rebuild query string
+        new_query = urlencode(query_params, doseq=True)
+        new_parts = list(parsed)
+        new_parts[4] = new_query  # Replace query component
+        
+        return urlunparse(tuple(new_parts))
+    except Exception as e:
+        logger.warning(f"Error sanitizing MongoDB URI: {e}. Using original URI.")
+        return uri
+
+# Apply sanitization to URI
+MONGO_URI = sanitize_mongo_uri(MONGO_URI_ENV)
+logger.info(f"Using MongoDB URI with sanitized TLS options")
+
 MONGO_DB = os.getenv("MONGO_DB", "tamkeen")
 USE_MOCK_DB = os.getenv('USE_MOCK_DB', 'false').lower() == 'true'
 
@@ -134,25 +163,15 @@ try:
     # Connect to MongoDB Atlas with timeout and server API version
     logger.info(f"Connecting to MongoDB Atlas...")
     
-    # Configure SSL/TLS options
+    # Configure SSL/TLS options - use a simplified approach with only one option
     ssl_options = {}
     
     try:
-        if MONGO_TLS == 'CERT_NONE':
-            import ssl
-            # Use only one of the two options, not both
-            ssl_options['tlsInsecure'] = True
-        
-        if TLS_CERT_PATH == 'system':
-            # Use system certificate store
-            pass  # Modern PyMongo handles this automatically
-        
-        if PYMONGO_TLS_INSECURE:
-            # Use only one of the two options, not both
+        # Only set tlsInsecure, never both options
+        if MONGO_TLS == 'CERT_NONE' or PYMONGO_TLS_INSECURE:
             ssl_options['tlsInsecure'] = True
     except Exception as ssl_config_error:
         logger.warning(f"Error setting SSL options: {ssl_config_error}. Proceeding with default SSL settings.")
-        # Reset options and use URI parameters instead
         ssl_options = {}
         
     # Add SSL options to connection
@@ -217,24 +236,15 @@ else:
         from pymongo import MongoClient
         from pymongo.server_api import ServerApi
         
-        # Configure SSL/TLS options
+        # Configure SSL/TLS options - use a simplified approach with only one option
         ssl_options = {}
         
         try:
-            if MONGO_TLS == 'CERT_NONE':
-                # Use only one of the two options, not both
-                ssl_options['tlsInsecure'] = True
-            
-            if TLS_CERT_PATH == 'system':
-                # Use system certificate store
-                pass  # Modern PyMongo handles this automatically
-            
-            if PYMONGO_TLS_INSECURE:
-                # Use only one of the two options, not both
+            # Only set tlsInsecure, never both options
+            if MONGO_TLS == 'CERT_NONE' or PYMONGO_TLS_INSECURE:
                 ssl_options['tlsInsecure'] = True
         except Exception as ssl_config_error:
             logger.warning(f"Error setting SSL options: {ssl_config_error}. Proceeding with default SSL settings.")
-            # Reset options and use URI parameters instead
             ssl_options = {}
         
         # Create MongoDB Atlas client (with a longer timeout for development)
