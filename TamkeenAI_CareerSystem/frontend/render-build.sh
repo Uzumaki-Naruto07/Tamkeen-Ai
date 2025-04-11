@@ -15,7 +15,7 @@ npm install --no-save react@18.2.0 react-dom@18.2.0
 
 # Install Tailwind CSS and PostCSS plugins explicitly with exact versions
 echo "Installing Tailwind CSS and PostCSS plugins..."
-npm install --no-save tailwindcss@3.3.3 postcss@8.4.31 autoprefixer@10.4.15
+npm install --no-save tailwindcss@3.3.3 postcss@8.4.31 autoprefixer@10.4.15 @tailwindcss/postcss@4.0.17
 
 # Install all dependencies with legacy peer deps
 echo "Installing remaining dependencies..."
@@ -31,7 +31,7 @@ echo "Setting up PostCSS configuration..."
 cat > postcss.config.js << 'EOF'
 export default {
   plugins: {
-    tailwindcss: {},
+    '@tailwindcss/postcss': {},
     autoprefixer: {}
   }
 }

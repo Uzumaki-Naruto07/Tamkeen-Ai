@@ -83,9 +83,7 @@ export default defineConfig(({ command, mode }) => {
       }
     },
     css: {
-      postcss: {
-        plugins: [], // Temporarily remove all PostCSS plugins
-      },
+      postcss: './postcss.config.js',
     },
     esbuild: {
       loader: 'jsx',
