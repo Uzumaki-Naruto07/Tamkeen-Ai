@@ -114,7 +114,9 @@ def create_app():
             "http://localhost:3001",
             "http://127.0.0.1:3001",
             "https://hessa-tamkeen-ai.netlify.app",  # Add Netlify domain
-            "https://hessa-tamkeen-ai.onrender.com"  # Add Render domain
+            "https://hessa-tamkeen-ai.onrender.com",  # Add Render domain
+            "https://tamkeen-frontend.onrender.com",  # Add the frontend domain
+            "http://tamkeen-frontend.onrender.com"   # Also allow HTTP version for development
         ]
         
         # Check if wildcard is in the list
