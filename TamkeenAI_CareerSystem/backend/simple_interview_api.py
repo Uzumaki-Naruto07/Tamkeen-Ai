@@ -514,7 +514,7 @@ def options_handler(path):
 
 # Add a health check endpoint that matches the path expected by frontend and Render
 @app.route('/api/interviews/health-check', methods=['GET', 'OPTIONS'])
-def api_health_check():
+def interviews_health_check():
     """Health check endpoint for the interview API"""
     # Handle OPTIONS requests for CORS preflight
     if request.method == 'OPTIONS':
