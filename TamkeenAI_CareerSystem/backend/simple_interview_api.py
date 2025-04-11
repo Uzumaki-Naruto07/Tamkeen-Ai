@@ -72,6 +72,11 @@ def api_health_check():
     port = int(os.environ.get('PORT', 5001))
     return jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
 
+@app.route('/api/health', methods=['GET'])
+def api_health():
+    port = int(os.environ.get('PORT', 5001))
+    return jsonify({"status": "ok", "message": f"Simple Interview API is running on port {port}"})
+
 @app.route('/api/interviews/conversation', methods=['POST'])
 def create_or_load_conversation():
     logger.info("Received request to create/load conversation")

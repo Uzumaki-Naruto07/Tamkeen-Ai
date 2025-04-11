@@ -119,18 +119,31 @@ def create_app():
             "http://tamkeen-frontend.onrender.com"   # Also allow HTTP version for development
         ]
         
-        # Check if wildcard is in the list
-        if '*' in allowed_origins or 'https://*.netlify.app' in allowed_origins:
+        # Always log the request origin and allowed origins for debugging
+        print(f"Request origin: {origin}")
+        print(f"Allowed origins: {allowed_origins}")
+        
+        # Always allow requests directly from the Render.com domain
+        if origin and ('onrender.com' in origin or 'netlify.app' in origin):
             response.headers['Access-Control-Allow-Origin'] = origin
+            print(f"CORS: Allowing Render/Netlify origin: {origin}")
+        # Check if wildcard is in the list
+        elif '*' in allowed_origins or 'https://*.netlify.app' in allowed_origins:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            print(f"CORS: Allowing origin via wildcard: {origin}")
         # Otherwise check if the origin is in the allowed list
         elif origin in allowed_origins or any(origin.endswith(domain.replace('*.', '.')) for domain in allowed_origins if '*.' in domain):
             response.headers['Access-Control-Allow-Origin'] = origin
+            print(f"CORS: Allowing origin in allowed list: {origin}")
         # In development mode, be permissive
         elif os.getenv('FLASK_ENV') != 'production' or app.debug:
             response.headers['Access-Control-Allow-Origin'] = origin
+            print(f"CORS: Allowing origin in development mode: {origin}")
+        else:
+            print(f"CORS: Origin not allowed: {origin}")
             
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, X-Force-Real-API, X-Skip-Mock, x-auth-token'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, X-Force-Real-API, X-Skip-Mock, x-auth-token, Accept'
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition'
         
@@ -182,6 +195,20 @@ def create_app():
     @app.route('/api/health-check')
     def health_check():
         """Health check endpoint"""
+        # Import here to check MongoDB status during health check
+        from api.database.connector import db
+        mongo_status = "connected" if db is not None else "disconnected (using mock)"
+        
+        return jsonify({
+            "status": "success",
+            "message": "API is running",
+            "version": "1.0.0",
+            "mongodb": mongo_status
+        })
+    
+    @app.route('/api/health')
+    def api_health():
+        """Health check endpoint (alternative path)"""
         # Import here to check MongoDB status during health check
         from api.database.connector import db
         mongo_status = "connected" if db is not None else "disconnected (using mock)"

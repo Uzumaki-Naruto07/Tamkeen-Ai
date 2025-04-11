@@ -4,9 +4,9 @@ import { API_BASE_URL, INTERVIEW_API_BASE_URL } from './apiConfig';
 // Health check timeout in milliseconds
 const HEALTH_CHECK_TIMEOUT = 10000;
 
-// Health check endpoints
-const MAIN_HEALTH_ENDPOINT = `${API_BASE_URL}/api/health`;
-const INTERVIEW_HEALTH_ENDPOINT = `${INTERVIEW_API_BASE_URL}/api/health`;
+// Health check endpoints - Using the correct endpoints that exist in the backend
+const MAIN_HEALTH_ENDPOINT = `${API_BASE_URL}/api/health-check`;
+const INTERVIEW_HEALTH_ENDPOINT = `${INTERVIEW_API_BASE_URL}/api/health-check`;
 
 /**
  * Check if the main backend is available
@@ -15,7 +15,12 @@ const INTERVIEW_HEALTH_ENDPOINT = `${INTERVIEW_API_BASE_URL}/api/health`;
 export const checkMainBackendHealth = async () => {
   try {
     const response = await axios.get(MAIN_HEALTH_ENDPOINT, {
-      timeout: HEALTH_CHECK_TIMEOUT
+      timeout: HEALTH_CHECK_TIMEOUT,
+      // Add these headers to help with CORS issues
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
     });
     return response.status === 200;
   } catch (error) {
@@ -31,7 +36,12 @@ export const checkMainBackendHealth = async () => {
 export const checkInterviewBackendHealth = async () => {
   try {
     const response = await axios.get(INTERVIEW_HEALTH_ENDPOINT, {
-      timeout: HEALTH_CHECK_TIMEOUT
+      timeout: HEALTH_CHECK_TIMEOUT,
+      // Add these headers to help with CORS issues
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
     });
     return response.status === 200;
   } catch (error) {
