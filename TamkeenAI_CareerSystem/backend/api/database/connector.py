@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # MongoDB Atlas connection details
-MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://loveanime200o0:R8tdEvgOvId5FEZv@tamkeen.0fmhury.mongodb.net/?retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=false&appName=Tamkeen")
+MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://loveanime200o0:R8tdEvgOvId5FEZv@tamkeen.0fmhury.mongodb.net/?retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=true&appName=Tamkeen")
 MONGO_DB = os.getenv("MONGO_DB", "tamkeen")
 USE_MOCK_DB = os.getenv('USE_MOCK_DB', 'false').lower() == 'true'
 
@@ -137,16 +137,24 @@ try:
     # Configure SSL/TLS options
     ssl_options = {}
     
-    if MONGO_TLS == 'CERT_NONE':
-        import ssl
-        ssl_options['ssl_cert_reqs'] = ssl.CERT_NONE
-    
-    if TLS_CERT_PATH == 'system':
-        # Use system certificate store
-        ssl_options['ssl_ca_certs'] = None
-    
-    if PYMONGO_TLS_INSECURE:
-        ssl_options['ssl_cert_reqs'] = ssl.CERT_NONE
+    try:
+        if MONGO_TLS == 'CERT_NONE':
+            import ssl
+            # Modern PyMongo uses tlsInsecure instead of ssl_cert_reqs
+            ssl_options['tlsInsecure'] = True
+            ssl_options['tlsAllowInvalidCertificates'] = True
+        
+        if TLS_CERT_PATH == 'system':
+            # Use system certificate store
+            pass  # Modern PyMongo handles this automatically
+        
+        if PYMONGO_TLS_INSECURE:
+            ssl_options['tlsInsecure'] = True
+            ssl_options['tlsAllowInvalidCertificates'] = True
+    except Exception as ssl_config_error:
+        logger.warning(f"Error setting SSL options: {ssl_config_error}. Proceeding with default SSL settings.")
+        # Reset options and use URI parameters instead
+        ssl_options = {}
         
     # Add SSL options to connection
     mongo_client = MongoClient(
@@ -213,15 +221,22 @@ else:
         # Configure SSL/TLS options
         ssl_options = {}
         
-        if MONGO_TLS == 'CERT_NONE':
-            ssl_options['ssl_cert_reqs'] = ssl.CERT_NONE
-        
-        if TLS_CERT_PATH == 'system':
-            # Use system certificate store
-            ssl_options['ssl_ca_certs'] = None
-        
-        if PYMONGO_TLS_INSECURE:
-            ssl_options['ssl_cert_reqs'] = ssl.CERT_NONE
+        try:
+            if MONGO_TLS == 'CERT_NONE':
+                ssl_options['tlsInsecure'] = True
+                ssl_options['tlsAllowInvalidCertificates'] = True
+            
+            if TLS_CERT_PATH == 'system':
+                # Use system certificate store
+                pass  # Modern PyMongo handles this automatically
+            
+            if PYMONGO_TLS_INSECURE:
+                ssl_options['tlsInsecure'] = True
+                ssl_options['tlsAllowInvalidCertificates'] = True
+        except Exception as ssl_config_error:
+            logger.warning(f"Error setting SSL options: {ssl_config_error}. Proceeding with default SSL settings.")
+            # Reset options and use URI parameters instead
+            ssl_options = {}
         
         # Create MongoDB Atlas client (with a longer timeout for development)
         client = MongoClient(
