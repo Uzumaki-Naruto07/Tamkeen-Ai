@@ -2,7 +2,7 @@ services:
   - type: web
     name: tamkeen-frontend
     env: static
-    buildCommand: npm install --legacy-peer-deps && npm run build
+    buildCommand: ./render-build.sh
     staticPublishPath: ./dist
     headers:
       - path: /*
@@ -14,4 +14,14 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        value: https://tamkeen-main-api.onrender.com # Update with your actual backend URL 
+        value: https://tamkeen-main-api.onrender.com # Update with your actual backend URL
+      - key: VITE_INTERVIEW_API_URL
+        value: https://tamkeen-interview-api.onrender.com
+      - key: VITE_USE_MOCK_DATA
+        value: false
+      - key: VITE_ENABLE_MOCK_DATA
+        value: false
+      - key: VITE_ENABLE_MOCK_FALLBACK
+        value: false
+      - key: VITE_ENABLE_BACKEND_CHECK
+        value: true 

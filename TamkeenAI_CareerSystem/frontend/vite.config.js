@@ -56,7 +56,9 @@ export default defineConfig(({ command, mode }) => {
       alias: {
         '@': '/src',
         src: path.resolve(__dirname, './src'),
-        'uuid': path.resolve(__dirname, 'node_modules/uuid')
+        'uuid': path.resolve(__dirname, 'node_modules/uuid'),
+        'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+        'react': path.resolve(__dirname, 'node_modules/react')
       },
     },
     build: {
@@ -70,9 +72,7 @@ export default defineConfig(({ command, mode }) => {
             mui: ['@mui/material', '@mui/icons-material'],
           },
         },
-        external: [
-          'react-wordcloud'
-        ]
+        external: []
       },
       commonjsOptions: {
         transformMixedEsModules: true,
@@ -96,6 +96,7 @@ export default defineConfig(({ command, mode }) => {
       include: [
         'react', 
         'react-dom', 
+        'react-dom/client',
         'react-router-dom',
         'date-fns',
         '@mui/material',
